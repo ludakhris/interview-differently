@@ -1,10 +1,27 @@
 import { useNavigate } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
 import { TrackIcon } from '@/components/TrackIcon'
-import { scenarios, trackMeta } from '@/lib/scenarios'
+import { useScenarios } from '@/hooks/useScenarios'
 
 export function DashboardPage() {
   const navigate = useNavigate()
+  const { scenarios, trackMeta, isLoading, error } = useScenarios()
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <p className="text-slate-mid text-[14px]">Loading simulations...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <p className="text-red-400 text-[14px]">Failed to load simulations. Please try again.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
@@ -33,16 +50,14 @@ export function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {scenarios.map((scenario) => {
               const meta = trackMeta[scenario.track]
+              if (!meta) return null
               return (
                 <div
                   key={scenario.scenarioId}
                   className="bg-[#111111] rounded-2xl border border-white/10 hover:border-white/20 transition-all hover:-translate-y-0.5 overflow-hidden cursor-pointer group"
                   onClick={() => navigate(`/scenario/${scenario.scenarioId}/briefing`)}
                 >
-                  <div
-                    className="h-2 w-full"
-                    style={{ backgroundColor: meta.color }}
-                  />
+                  <div className="h-2 w-full" style={{ backgroundColor: meta.color }} />
                   <div className="p-6">
                     <div className="mb-4">
                       <TrackIcon name={meta.icon} size={28} color={meta.color} />

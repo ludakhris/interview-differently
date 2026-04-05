@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
 import { ScoreRing } from '@/components/ScoreRing'
-import { trackMeta } from '@/lib/scenarios'
+import { useScenarios } from '@/hooks/useScenarios'
 import type { ScenarioResult } from '@id/types'
 
 const qualityLabel = {
@@ -27,6 +27,7 @@ export function FeedbackPage() {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const navigate = useNavigate()
   const [result, setResult] = useState<ScenarioResult | null>(null)
+  const { trackMeta } = useScenarios()
 
   useEffect(() => {
     const stored = sessionStorage.getItem(`result-${scenarioId}`)
@@ -39,14 +40,13 @@ export function FeedbackPage() {
 
   if (!result) return null
 
-  const meta = trackMeta[result.track] ?? trackMeta['operations']
-
+  const meta = trackMeta[result.track]
   const overallQuality =
     result.overallScore >= 80 ? 'strong' : result.overallScore >= 60 ? 'proficient' : 'developing'
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
-      <Nav trackLabel={meta.label} />
+      <Nav trackLabel={meta?.label} />
 
       <div className="max-w-3xl mx-auto px-6 py-12 animate-fade-in">
         <div className="text-center mb-10">
@@ -76,10 +76,7 @@ export function FeedbackPage() {
           </h2>
           <div className="space-y-4">
             {result.dimensionScores.map((dim) => (
-              <div
-                key={dim.dimension}
-                className="bg-[#111111] rounded-xl border border-white/10 p-5"
-              >
+              <div key={dim.dimension} className="bg-[#111111] rounded-xl border border-white/10 p-5">
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-display font-bold text-[15px] text-[#f5f3ee]">
                     {dim.dimension}
@@ -88,10 +85,7 @@ export function FeedbackPage() {
                     <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-700"
-                        style={{
-                          width: `${dim.score}%`,
-                          backgroundColor: qualityColor[dim.quality],
-                        }}
+                        style={{ width: `${dim.score}%`, backgroundColor: qualityColor[dim.quality] }}
                       />
                     </div>
                     <span
@@ -112,14 +106,12 @@ export function FeedbackPage() {
           <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-3">
             What to work on
           </h3>
-          {result.dimensionScores
-            .filter((d) => d.quality === 'developing')
-            .map((dim) => (
-              <div key={dim.dimension} className="flex items-start gap-3 mb-3 last:mb-0">
-                <span className="text-red-400 mt-0.5">→</span>
-                <span className="text-[14px] text-[#f5f3ee] font-light">{dim.dimension}</span>
-              </div>
-            ))}
+          {result.dimensionScores.filter((d) => d.quality === 'developing').map((dim) => (
+            <div key={dim.dimension} className="flex items-start gap-3 mb-3 last:mb-0">
+              <span className="text-red-400 mt-0.5">→</span>
+              <span className="text-[14px] text-[#f5f3ee] font-light">{dim.dimension}</span>
+            </div>
+          ))}
           {result.dimensionScores.every((d) => d.quality !== 'developing') && (
             <p className="text-[14px] text-[#f5f3ee] font-light">
               No critical gaps identified. Try a harder track to push your ceiling.

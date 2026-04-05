@@ -77,11 +77,20 @@ export interface RubricDimension {
   description: string
 }
 
+export interface ScenarioBriefing {
+  situation: string
+  role: string
+  organisation: string
+  reportsTo: string
+  timeInRole: string
+}
+
 export interface Scenario {
   scenarioId: string
   title: string
   track: TrackType
   estimatedMinutes: number
+  briefing: ScenarioBriefing
   createdBy?: string // institution id for custom scenarios
   publishedTo?: string[] // cohort ids
   nodes: ScenarioNode[]

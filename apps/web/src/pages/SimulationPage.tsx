@@ -4,26 +4,48 @@ import { Nav } from '@/components/Nav'
 import { ChoiceCard } from '@/components/ChoiceCard'
 import { ContextPanel } from '@/components/ContextPanel'
 import { useSimulation } from '@/hooks/useSimulation'
-import { scenarios, trackMeta } from '@/lib/scenarios'
+import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import type { Scenario } from '@id/types'
+import type { TrackMeta } from '@/hooks/useScenarios'
 
 export function SimulationPage() {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const navigate = useNavigate()
-  const scenario = scenarios.find((s) => s.scenarioId === scenarioId)
+  const { scenario, isLoading } = useScenario(scenarioId)
+  const { trackMeta } = useScenarios()
 
   useEffect(() => {
-    if (!scenario) {
+    if (!isLoading && !scenario) {
       navigate('/dashboard')
     }
-  }, [scenario, navigate])
+  }, [isLoading, scenario, navigate])
 
-  if (!scenario) return null
+  if (isLoading || !scenario) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <p className="text-slate-mid text-[14px]">Loading simulation...</p>
+      </div>
+    )
+  }
 
-  return <SimulationContent scenario={scenario} scenarioId={scenarioId!} />
+  return (
+    <SimulationContent
+      scenario={scenario}
+      scenarioId={scenarioId!}
+      trackMeta={trackMeta}
+    />
+  )
 }
 
-function SimulationContent({ scenario, scenarioId }: { scenario: Scenario; scenarioId: string }) {
+function SimulationContent({
+  scenario,
+  scenarioId,
+  trackMeta,
+}: {
+  scenario: Scenario
+  scenarioId: string
+  trackMeta: Record<string, TrackMeta>
+}) {
   const navigate = useNavigate()
   const meta = trackMeta[scenario.track]
 
@@ -66,14 +88,14 @@ function SimulationContent({ scenario, scenarioId }: { scenario: Scenario; scena
 
   return (
     <div className={`min-h-screen bg-[#0a0a0a] transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
-      <Nav trackLabel={meta.label} stepLabel={stepLabel} />
+      <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
 
       {currentNode.type === 'transition' && (
         <div className="max-w-2xl mx-auto px-6 py-16 animate-fade-in">
           <div className="bg-[#111111] border border-white/10 rounded-2xl p-8 mb-8">
             <div
               className="text-[11px] font-bold uppercase tracking-widest mb-4"
-              style={{ color: meta.color === '#1a6b3c' ? '#2d9e5f' : meta.color }}
+              style={{ color: meta?.color }}
             >
               What happened next
             </div>
