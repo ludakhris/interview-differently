@@ -39,17 +39,19 @@ export function LandingPage() {
             Simulations built to get you interview ready. Step inside real workplace decisions and let AI show you exactly how you think under pressure.
           </p>
 
-          <div className="flex items-center justify-center gap-6 mb-16 flex-wrap">
+          <div className="flex items-center justify-center gap-6 mb-10 flex-wrap">
             {[
-              { num: '48%', label: 'of candidates feel unprepared for interviews', red: true },
-              { num: '84%', label: 'of hiring managers say candidates aren\'t interview ready', red: true },
-              { num: '200+', label: 'applications per candidate before a single offer', red: true },
-            ].map(({ num, label, red }) => (
+              { num: '80%', label: 'of job seekers feel unprepared', footnote: 1 },
+              { num: '50%+', label: 'of hiring managers say grads are unprepared', footnote: 2 },
+              { num: '400–750+', label: 'applications before landing a job', footnote: 3 },
+            ].map(({ num, label, footnote }) => (
               <div key={num} className="text-center">
-                <span className={`font-display font-extrabold text-[36px] block leading-none ${red ? 'text-red-400' : 'text-[#f5f3ee]'}`}>
+                <span className="font-display font-extrabold text-[36px] block leading-none text-red-400">
                   {num}
                 </span>
-                <span className="text-[12px] text-slate-light font-light mt-1 block">{label}</span>
+                <span className="text-[12px] text-slate-light font-light mt-1 block">
+                  {label}<sup className="text-[9px] text-slate-mid ml-0.5">{footnote}</sup>
+                </span>
               </div>
             ))}
           </div>
@@ -77,8 +79,20 @@ export function LandingPage() {
         </div>
       </main>
 
-      <footer className="text-center py-6 text-[12px] text-slate-mid">
-        © 2026 InterviewDifferently™. All rights reserved.
+      <footer className="text-center py-6 text-[12px] text-slate-mid space-y-2">
+        <div className="flex items-center justify-center gap-4 flex-wrap">
+          {[
+            { num: 1, label: 'Yahoo Finance / Resume.io, 2025', href: 'https://www.yahoo.com/news/articles/feels-challenging-break-most-recruiters-173906163.html' },
+            { num: 2, label: 'HR Dive, 2025', href: 'https://www.hrdive.com/news/recent-grads-unprepared-for-workforce/747746/' },
+            { num: 3, label: 'Lifeshack, 2025', href: 'https://www.lifeshack.com/resources/job-search/how-many-applications-does-it-take-to-find-a-job-in-2025/' },
+          ].map(({ num, label, href }) => (
+            <a key={num} href={href} target="_blank" rel="noopener noreferrer"
+              className="hover:text-slate-light transition-colors">
+              <sup className="mr-0.5">{num}</sup>{label}
+            </a>
+          ))}
+        </div>
+        <p>© 2026 InterviewDifferently™. All rights reserved.</p>
       </footer>
     </div>
   )
