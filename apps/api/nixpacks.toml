@@ -1,5 +1,5 @@
 [phases.install]
-cmds = ["npm install --no-warnings"]
+cmds = ["npm install --include=dev --no-warnings"]
 cacheDirectories = ["/root/.npm"]
 
 [phases.build]
