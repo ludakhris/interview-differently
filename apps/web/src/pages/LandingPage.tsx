@@ -69,12 +69,6 @@ export function LandingPage() {
             >
               Start Simulation
             </button>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="border border-white/20 hover:border-white/50 text-[#f5f3ee] font-display font-semibold text-[14px] px-8 py-3.5 rounded-lg transition-colors"
-            >
-              View Demo
-            </button>
           </div>
         </div>
       </main>
