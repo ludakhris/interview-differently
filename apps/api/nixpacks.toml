@@ -1,2 +1,6 @@
 [phases.install]
-cmds = []
+cmds = ["npm install --no-warnings"]
+cacheDirectories = ["/root/.npm"]
+
+[phases.build]
+cmds = ["npx turbo run build --filter=@id/api"]
