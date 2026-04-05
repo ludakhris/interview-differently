@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <!-- Subtle green ambient glow behind the dot -->
+    <radialGradient id="glow" cx="50%" cy="32%" r="55%">
+      <stop offset="0%" stop-color="#1a6b3c" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#1a6b3c" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background: dark rounded square -->
+  <rect width="32" height="32" rx="7" fill="#0d0d0d"/>
+  <!-- Ambient glow overlay -->
+  <rect width="32" height="32" rx="7" fill="url(#glow)"/>
+
+  <!-- "i" dot — brand green -->
+  <circle cx="16" cy="10" r="3.2" fill="#2d9e5f"/>
+
+  <!-- "i" stem — off-white, matching the body text colour -->
+  <rect x="13.5" y="15" width="5" height="11" rx="2.5" fill="#f5f3ee"/>
+</svg>
