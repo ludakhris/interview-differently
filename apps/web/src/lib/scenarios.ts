@@ -14,6 +14,45 @@ export const scenarios: Scenario[] = [
       reportsTo: 'Senior Operations Manager',
       timeInRole: '3 months',
     },
+    display: {
+      contextStyle: 'monitor',
+      alertBanner: {
+        icon: '⚠',
+        title: 'ACTIVE INCIDENT — P1',
+        body: 'Multiple monitors firing simultaneously. Payment service degraded. You have been paged as on-call engineer. SLA breach window: 13 minutes.',
+      },
+      sidebar: [
+        {
+          title: 'Your Role',
+          style: 'text',
+          items: [
+            { label: 'Title', value: 'Junior Operations Analyst' },
+            { label: 'Organisation', value: 'Fintech Platform' },
+            { label: 'Reports to', value: 'Senior Ops Manager' },
+            { label: 'Time in role', value: '3 months' },
+          ],
+        },
+        {
+          title: 'Org Context',
+          style: 'text',
+          items: [
+            { label: 'Daily transactions', value: '2.4M' },
+            { label: 'Uptime SLA', value: '98.9%' },
+            { label: 'Incident tier', value: 'P1 — Critical' },
+          ],
+        },
+        {
+          title: "Manager's Priorities",
+          style: 'list',
+          items: [
+            { label: 'Payment processing', value: 'P1', emphasis: 'danger' },
+            { label: 'User authentication', value: 'P1', emphasis: 'danger' },
+            { label: 'Reporting dashboard', value: 'P3' },
+            { label: 'Internal tooling', value: 'P4' },
+          ],
+        },
+      ],
+    },
     rubric: {
       dimensions: [
         {
@@ -49,6 +88,8 @@ export const scenarios: Scenario[] = [
           { label: 'Auth latency', value: '+340ms', type: 'alert' },
           { label: 'DB connections', value: '94%', type: 'alert' },
           { label: 'SLA breach in', value: '13 min', type: 'metric' },
+          { label: 'Queue depth', value: '12,400', type: 'alert' },
+          { label: 'CDN / Static', value: 'OK', type: 'info' },
         ],
         choices: [
           {
@@ -123,9 +164,11 @@ export const scenarios: Scenario[] = [
         narrative:
           'Database investigation confirms it: the reporting service is running an unoptimized analytics query that holds connections open for 30+ seconds during peak load. You can kill the reporting service process now to immediately free connections, or you can throttle the query and monitor. Your manager has just joined the incident channel.',
         contextPanels: [
-          { label: 'Root cause', value: 'Reporting query', type: 'info' },
-          { label: 'Connection hold time', value: '30s avg', type: 'alert' },
+          { label: 'Root cause', value: 'Reporting svc', type: 'info' },
+          { label: 'Connection hold', value: '30s avg', type: 'alert' },
+          { label: 'DB connections', value: '94%', type: 'alert' },
           { label: 'SLA breach in', value: '7 min', type: 'metric' },
+          { label: 'Payment errors', value: 'Still active', type: 'alert' },
           { label: 'Manager', value: 'Online', type: 'info' },
         ],
         choices: [
@@ -209,6 +252,41 @@ export const scenarios: Scenario[] = [
       organisation: 'Media and publishing company',
       reportsTo: 'VP of Business Development',
       timeInRole: '3 months',
+    },
+    display: {
+      contextStyle: 'table',
+      sidebar: [
+        {
+          title: 'Your Role',
+          style: 'text',
+          items: [
+            { label: 'Title', value: 'Strategy Analyst' },
+            { label: 'Organisation', value: 'Media & Publishing Co.' },
+            { label: 'Reports to', value: 'VP of Business Development' },
+            { label: 'Time in role', value: '3 months' },
+          ],
+        },
+        {
+          title: 'The Brief',
+          style: 'text',
+          items: [
+            { label: 'Assignment', value: 'Magazine launch viability' },
+            { label: 'Deadline', value: 'Friday EOD' },
+            { label: 'Format', value: 'Recommendation memo' },
+          ],
+        },
+        {
+          title: 'Financial Reference',
+          style: 'list',
+          items: [
+            { label: 'Annual subscription', value: '£49' },
+            { label: 'Print cost / unit', value: '£1.20' },
+            { label: 'Distribution margin', value: '35%', emphasis: 'warning' },
+            { label: 'Content cost / yr', value: '£1M' },
+            { label: 'Category growth', value: '+4% YoY', emphasis: 'success' },
+          ],
+        },
+      ],
     },
     rubric: {
       dimensions: [
@@ -404,6 +482,49 @@ export const scenarios: Scenario[] = [
       organisation: 'Regulated financial services firm',
       reportsTo: 'Director of Risk and Compliance',
       timeInRole: '3 months',
+    },
+    display: {
+      contextStyle: 'finding',
+      incidentMeta: {
+        id: 'INC-2026-0341',
+        discoveredAt: '10:22 AM — Today',
+        severity: 'High',
+        status: 'Open — Uncontained',
+        assignedTo: 'Unassigned',
+        regulatoryFlag: 'SOX / GLBA — mandatory review required',
+      },
+      sidebar: [
+        {
+          title: 'Your Role',
+          style: 'text',
+          items: [
+            { label: 'Title', value: 'Compliance Analyst' },
+            { label: 'Organisation', value: 'Regulated Financial Services' },
+            { label: 'Reports to', value: 'Director of Risk & Compliance' },
+            { label: 'Time in role', value: '3 months' },
+          ],
+        },
+        {
+          title: 'The Finding',
+          style: 'highlight',
+          items: [
+            { label: 'Type', value: 'Credential Exposure', emphasis: 'danger' },
+            { label: 'Access scope', value: 'Org-wide', emphasis: 'danger' },
+            { label: 'Regulatory regime', value: 'SOX / GLBA', emphasis: 'warning' },
+            { label: 'Active breach', value: 'None confirmed' },
+          ],
+        },
+        {
+          title: 'Key Stakeholders',
+          style: 'list',
+          items: [
+            { label: 'Your manager', value: 'Director of Risk & Compliance' },
+            { label: 'Security lead', value: 'Head of InfoSec' },
+            { label: 'Legal', value: 'General Counsel' },
+            { label: 'CTO', value: 'C-suite (handle with care)', emphasis: 'warning' },
+          ],
+        },
+      ],
     },
     rubric: {
       dimensions: [

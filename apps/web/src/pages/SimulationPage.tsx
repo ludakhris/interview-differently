@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
 import { ChoiceCard } from '@/components/ChoiceCard'
 import { ContextPanel } from '@/components/ContextPanel'
+import { ScenarioSidebar } from '@/components/ScenarioSidebar'
 import { useSimulation } from '@/hooks/useSimulation'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import type { Scenario } from '@id/types'
@@ -35,6 +36,12 @@ export function SimulationPage() {
       trackMeta={trackMeta}
     />
   )
+}
+
+const contextSectionLabel: Record<string, string> = {
+  monitor: 'Live Metrics',
+  table: 'Key Data',
+  finding: 'Security Finding',
 }
 
 function SimulationContent({
@@ -86,92 +93,143 @@ function SimulationContent({
       ? `Step ${stepNumber} of ${totalDecisionNodes}`
       : 'Outcome'
 
+  const display = scenario.display
+  const ctxStyle = display?.contextStyle ?? 'monitor'
+  const ctxLabel = contextSectionLabel[ctxStyle] ?? 'Live Metrics'
+
   return (
-    <div className={`min-h-screen bg-[#0a0a0a] transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
+    <div
+      className={`min-h-screen bg-[#0a0a0a] flex flex-col transition-opacity duration-300 ${
+        isTransitioning ? 'opacity-50' : 'opacity-100'
+      }`}
+    >
       <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
 
-      {currentNode.type === 'transition' && (
-        <div className="max-w-2xl mx-auto px-6 py-16 animate-fade-in">
-          <div className="bg-[#111111] border border-white/10 rounded-2xl p-8 mb-8">
-            <div
-              className="text-[11px] font-bold uppercase tracking-widest mb-4"
-              style={{ color: meta?.color }}
-            >
-              What happened next
-            </div>
-            <p className="text-[16px] text-[#f5f3ee] leading-relaxed font-light">
-              {currentNode.narrative}
-            </p>
-          </div>
-          <div className="flex justify-end">
-            <button
-              onClick={advanceTransition}
-              className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="flex flex-1">
+        {/* Sidebar — only on lg+ screens */}
+        {display && (
+          <ScenarioSidebar
+            sections={display.sidebar}
+            contextStyle={ctxStyle}
+            accentColor={meta?.color}
+          />
+        )}
 
-      {currentNode.type === 'decision' && (
-        <div className="max-w-5xl mx-auto px-6 py-8 animate-slide-up">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
-            <div>
-              <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-5">
-                <p className="text-[15px] text-[#f5f3ee] leading-[1.75] font-light">
+        {/* Main scrollable content */}
+        <div className="flex-1 min-w-0 overflow-y-auto">
+
+          {/* ── Transition node ── */}
+          {currentNode.type === 'transition' && (
+            <div className="max-w-2xl mx-auto px-6 py-16 animate-fade-in">
+              <div className="bg-[#111111] border border-white/10 rounded-2xl p-8 mb-8">
+                <div
+                  className="text-[11px] font-bold uppercase tracking-widest mb-4"
+                  style={{ color: meta?.color }}
+                >
+                  What happened next
+                </div>
+                <p className="text-[16px] text-[#f5f3ee] leading-relaxed font-light">
                   {currentNode.narrative}
                 </p>
               </div>
-
-              {currentNode.contextPanels && currentNode.contextPanels.length > 0 && (
-                <div className="mb-5">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3">
-                    Live Metrics
-                  </p>
-                  <ContextPanel panels={currentNode.contextPanels} />
-                </div>
-              )}
-            </div>
-
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3">
-                What do you do?
-              </p>
-              <div className="space-y-3">
-                {currentNode.choices?.map((choice) => (
-                  <ChoiceCard
-                    key={choice.id}
-                    id={choice.id}
-                    text={choice.text}
-                    selected={selectedChoice === choice.id}
-                    onSelect={setSelectedChoice}
-                  />
-                ))}
-              </div>
-
-              <div className="mt-5 flex items-center justify-between">
-                <span className="text-[12px] text-slate-light">
-                  {selectedChoice ? 'Ready to submit' : 'Select an action'}
-                </span>
+              <div className="flex justify-end">
                 <button
-                  onClick={() => selectedChoice && submitChoice(selectedChoice)}
-                  disabled={!selectedChoice}
-                  className={`
-                    font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
-                    ${selectedChoice
-                      ? 'bg-green hover:bg-green-light text-white cursor-pointer'
-                      : 'bg-white/10 text-slate-light cursor-not-allowed'
-                    }
-                  `}
+                  onClick={advanceTransition}
+                  className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
                 >
-                  Submit
+                  Continue
                 </button>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* ── Decision node ── */}
+          {currentNode.type === 'decision' && (
+            <div className="max-w-4xl mx-auto px-6 py-8 animate-slide-up">
+
+              {/* Alert banner (ops P1 alert, shown on first step) */}
+              {display?.alertBanner && stepNumber === 1 && (
+                <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 mb-5">
+                  <span className="text-amber-400 text-[18px] flex-shrink-0 mt-0.5">
+                    {display.alertBanner.icon}
+                  </span>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">
+                      {display.alertBanner.title}
+                    </p>
+                    <p className="text-[13px] text-[#f5f3ee]/80 leading-relaxed">
+                      {display.alertBanner.body}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Context display — full width above narrative */}
+              {currentNode.contextPanels && currentNode.contextPanels.length > 0 && (
+                <div className="mb-6">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-3">
+                    {ctxLabel}
+                  </p>
+                  <ContextPanel
+                    panels={currentNode.contextPanels}
+                    contextStyle={ctxStyle}
+                    incidentMeta={display?.incidentMeta}
+                  />
+                </div>
+              )}
+
+              {/* Narrative + choices grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+                <div>
+                  <div className="bg-[#111111] rounded-2xl border border-white/10 p-6">
+                    <p className="text-[15px] text-[#f5f3ee] leading-[1.75] font-light">
+                      {currentNode.narrative}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3">
+                    What do you do?
+                  </p>
+                  <div className="space-y-3">
+                    {currentNode.choices?.map((choice) => (
+                      <ChoiceCard
+                        key={choice.id}
+                        id={choice.id}
+                        text={choice.text}
+                        selected={selectedChoice === choice.id}
+                        onSelect={setSelectedChoice}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="mt-5 flex items-center justify-between">
+                    <span className="text-[12px] text-slate-light">
+                      {selectedChoice ? 'Ready to submit' : 'Select an action'}
+                    </span>
+                    <button
+                      onClick={() => selectedChoice && submitChoice(selectedChoice)}
+                      disabled={!selectedChoice}
+                      className={`
+                        font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
+                        ${selectedChoice
+                          ? 'bg-green hover:bg-green-light text-white cursor-pointer'
+                          : 'bg-white/10 text-slate-light cursor-not-allowed'
+                        }
+                      `}
+                    >
+                      Submit
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
         </div>
-      )}
+      </div>
     </div>
   )
 }

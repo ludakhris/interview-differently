@@ -54,6 +54,42 @@ export interface ContextPanel {
   type: 'metric' | 'alert' | 'info'
 }
 
+// ── Scenario Display ──────────────────────────────────────────────────────────
+
+export type ContextDisplayStyle = 'monitor' | 'table' | 'finding'
+
+export interface SidebarItem {
+  label: string
+  value: string
+  emphasis?: 'danger' | 'warning' | 'success'
+}
+
+export interface SidebarSection {
+  title: string
+  style?: 'text' | 'list' | 'highlight'
+  items: SidebarItem[]
+}
+
+export interface IncidentMeta {
+  id: string           // e.g. 'INC-2026-0341'
+  discoveredAt: string // display string, e.g. '10:22 AM'
+  severity: string     // e.g. 'High', 'P2'
+  status: string       // e.g. 'Open — Uncontained'
+  assignedTo?: string
+  regulatoryFlag?: string  // e.g. 'SOX / GLBA — mandatory review'
+}
+
+export interface ScenarioDisplay {
+  contextStyle: ContextDisplayStyle
+  sidebar: SidebarSection[]
+  alertBanner?: {
+    icon: string
+    title: string
+    body: string
+  }
+  incidentMeta?: IncidentMeta
+}
+
 export interface Choice {
   id: 'A' | 'B' | 'C' | 'D'
   text: string
@@ -91,6 +127,7 @@ export interface Scenario {
   track: TrackType
   estimatedMinutes: number
   briefing: ScenarioBriefing
+  display?: ScenarioDisplay
   createdBy?: string // institution id for custom scenarios
   publishedTo?: string[] // cohort ids
   nodes: ScenarioNode[]
