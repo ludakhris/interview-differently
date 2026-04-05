@@ -5,17 +5,26 @@ import { ChoiceCard } from '@/components/ChoiceCard'
 import { ContextPanel } from '@/components/ContextPanel'
 import { useSimulation } from '@/hooks/useSimulation'
 import { scenarios, trackMeta } from '@/lib/scenarios'
+import type { Scenario } from '@id/types'
 
 export function SimulationPage() {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const navigate = useNavigate()
-
   const scenario = scenarios.find((s) => s.scenarioId === scenarioId)
-  if (!scenario) {
-    navigate('/dashboard')
-    return null
-  }
 
+  useEffect(() => {
+    if (!scenario) {
+      navigate('/dashboard')
+    }
+  }, [scenario, navigate])
+
+  if (!scenario) return null
+
+  return <SimulationContent scenario={scenario} scenarioId={scenarioId!} />
+}
+
+function SimulationContent({ scenario, scenarioId }: { scenario: Scenario; scenarioId: string }) {
+  const navigate = useNavigate()
   const meta = trackMeta[scenario.track]
 
   const {
