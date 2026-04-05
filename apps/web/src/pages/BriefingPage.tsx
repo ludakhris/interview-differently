@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
+import { TrackIcon } from '@/components/TrackIcon'
 import { scenarios, trackMeta } from '@/lib/scenarios'
 
 export function BriefingPage() {
@@ -47,7 +48,7 @@ export function BriefingPage() {
           className="text-[11px] font-bold uppercase tracking-widest mb-3"
           style={{ color: meta.color }}
         >
-          {meta.icon} {meta.label} Track
+          <TrackIcon name={meta.icon} size={12} color={meta.color} className="inline mr-1.5 -mt-0.5" /> {meta.label} Track
         </div>
 
         <h1 className="font-display font-extrabold text-[28px] text-[#f5f3ee] tracking-tight leading-snug mb-8">

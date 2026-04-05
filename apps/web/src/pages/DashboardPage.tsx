@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
+import { TrackIcon } from '@/components/TrackIcon'
 import { scenarios, trackMeta } from '@/lib/scenarios'
 
 export function DashboardPage() {
@@ -43,7 +44,9 @@ export function DashboardPage() {
                     style={{ backgroundColor: meta.color }}
                   />
                   <div className="p-6">
-                    <div className="text-3xl mb-4">{meta.icon}</div>
+                    <div className="mb-4">
+                      <TrackIcon name={meta.icon} size={28} color={meta.color} />
+                    </div>
                     <div
                       className="text-[10px] font-bold uppercase tracking-widest mb-2"
                       style={{ color: meta.color }}

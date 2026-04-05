@@ -574,18 +574,18 @@ export const trackMeta: Record<
     label: 'Incident Response',
     description: 'Triage live system failures, prioritize under pressure, communicate with stakeholders.',
     color: '#1a6b3c',
-    icon: '⚡',
+    icon: 'AlertTriangle',
   },
   business: {
     label: 'Business Case',
     description: 'Structure ambiguous problems, build analytical frameworks, present clear recommendations.',
     color: '#d4830a',
-    icon: '📊',
+    icon: 'BarChart3',
   },
   risk: {
     label: 'Risk and Compliance',
     description: 'Identify control failures, calibrate severity, escalate through the correct channels.',
     color: '#7b3fa0',
-    icon: '🔒',
+    icon: 'Scale',
   },
 }
