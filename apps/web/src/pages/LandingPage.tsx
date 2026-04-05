@@ -31,8 +31,8 @@ export function LandingPage() {
           </span>
 
           <h1 className="font-display font-extrabold text-[clamp(44px,7vw,84px)] text-[#f5f3ee] leading-[1.0] tracking-[-2px] mb-7">
-            Practice the job<br />
-            <em className="not-italic text-green-light">before you get it.</em>
+            Get interview ready.<br />
+            <em className="not-italic text-green-light">For real this time.</em>
           </h1>
 
           <p className="text-[18px] text-slate-light font-light leading-relaxed max-w-[480px] mx-auto mb-12">
