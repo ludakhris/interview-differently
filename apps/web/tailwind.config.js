@@ -24,8 +24,8 @@ export default {
         border: '#e0dbd2',
       },
       fontFamily: {
-        display: ['Syne', 'sans-serif'],
-        body: ['DM Sans', 'sans-serif'],
+        display: ['Inter', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
       },
       boxShadow: {
         card: '0 4px 24px rgba(0,0,0,0.08)',
