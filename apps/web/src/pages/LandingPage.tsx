@@ -27,7 +27,7 @@ export function LandingPage() {
 
         <div className="relative z-10 max-w-3xl mx-auto animate-fade-in">
           <span className="inline-block text-[11px] font-medium tracking-[2px] uppercase text-green-light border border-green/30 px-4 py-1.5 rounded-full mb-8">
-            AI Career Simulation Platform
+            AI Powered Interview Simulations
           </span>
 
           <h1 className="font-display font-extrabold text-[clamp(44px,7vw,84px)] text-[#f5f3ee] leading-[1.0] tracking-[-2px] mb-7">
@@ -36,14 +36,14 @@ export function LandingPage() {
           </h1>
 
           <p className="text-[18px] text-slate-light font-light leading-relaxed max-w-[480px] mx-auto mb-12">
-            Branching simulations that put you inside real workplace decisions. AI evaluates how you think, not just what you answer.
+            Simulations built to get you interview ready. Step inside real workplace decisions and let AI show you exactly how you think under pressure.
           </p>
 
           <div className="flex items-center justify-center gap-6 mb-16 flex-wrap">
             {[
-              { num: '75%', label: 'of grads feel unprepared', red: true },
-              { num: '450:1', label: 'students per career coach', red: true },
-              { num: '3 tracks', label: 'launching in pilot', red: false },
+              { num: '48%', label: 'of candidates feel unprepared for interviews', red: true },
+              { num: '84%', label: 'of hiring managers say candidates aren\'t interview ready', red: true },
+              { num: '200+', label: 'applications per candidate before a single offer', red: true },
             ].map(({ num, label, red }) => (
               <div key={num} className="text-center">
                 <span className={`font-display font-extrabold text-[36px] block leading-none ${red ? 'text-red-400' : 'text-[#f5f3ee]'}`}>
@@ -53,6 +53,12 @@ export function LandingPage() {
               </div>
             ))}
           </div>
+
+          <p className="text-[15px] text-slate-light font-light max-w-[420px] mx-auto mb-12 leading-relaxed">
+            The job market has never been harder to break into.{' '}
+            <span className="text-[#f5f3ee] font-medium">Interview<span className="text-green-light">Differently</span></span>{' '}
+            gives you the reps — run a simulation and find out where you really stand.
+          </p>
 
           <div className="flex gap-4 justify-center flex-wrap">
             <button
@@ -72,7 +78,7 @@ export function LandingPage() {
       </main>
 
       <footer className="text-center py-6 text-[12px] text-slate-mid">
-        interviewdifferently.com — Pilot cohort open April 2026
+        © 2026 InterviewDifferently™. All rights reserved.
       </footer>
     </div>
   )
