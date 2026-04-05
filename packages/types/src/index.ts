@@ -97,11 +97,29 @@ export interface Choice {
   qualitySignals: QualitySignal[]
 }
 
+export interface ChartDataPoint {
+  t: string   // x-axis label, e.g. '14:39'
+  v: number   // y value
+}
+
+export interface ChartConfig {
+  title: string
+  unit: string                         // e.g. '%', 'ms'
+  color: 'red' | 'amber' | 'green'
+  baseline?: number                    // normal operating level — renders as dashed reference line
+  annotation?: {
+    tIndex: number                     // index into series array
+    label: string                      // e.g. '↑ Incident start'
+  }
+  series: ChartDataPoint[]
+}
+
 export interface ScenarioNode {
   nodeId: string
   type: NodeType
   narrative: string
   contextPanels?: ContextPanel[]
+  chart?: ChartConfig                  // optional time-series chart for monitor-style nodes
   choices?: Choice[]
   // transition nodes
   transitionText?: string

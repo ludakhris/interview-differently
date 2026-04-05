@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
 import { ChoiceCard } from '@/components/ChoiceCard'
 import { ContextPanel } from '@/components/ContextPanel'
+import { MetricChart } from '@/components/MetricChart'
 import { ScenarioSidebar } from '@/components/ScenarioSidebar'
 import { useSimulation } from '@/hooks/useSimulation'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
@@ -170,6 +171,9 @@ function SimulationContent({
                   <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-3">
                     {ctxLabel}
                   </p>
+                  {currentNode.chart && (
+                    <MetricChart config={currentNode.chart} />
+                  )}
                   <ContextPanel
                     panels={currentNode.contextPanels}
                     contextStyle={ctxStyle}
