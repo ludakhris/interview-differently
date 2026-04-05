@@ -5,9 +5,9 @@ interface Props {
 }
 
 const typeStyles = {
-  alert: 'bg-red-50 border-red-200 text-red-800',
-  metric: 'bg-[#f5f3ee] border-border text-[#0a0a0a]',
-  info: 'bg-green-pale border-green/20 text-green',
+  alert: 'bg-red-500/10 border-red-500/30 text-red-400',
+  metric: 'bg-white/5 border-white/10 text-[#f5f3ee]',
+  info: 'bg-green/10 border-green/30 text-green-light',
 }
 
 export function ContextPanel({ panels }: Props) {

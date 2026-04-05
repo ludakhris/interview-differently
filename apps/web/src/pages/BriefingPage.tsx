@@ -39,7 +39,7 @@ export function BriefingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen bg-[#0a0a0a]">
       <Nav trackLabel={meta.label} />
 
       <div className="max-w-2xl mx-auto px-6 py-14 animate-fade-in">
@@ -50,11 +50,11 @@ export function BriefingPage() {
           {meta.icon} {meta.label} Track
         </div>
 
-        <h1 className="font-display font-extrabold text-[28px] text-[#0a0a0a] tracking-tight leading-snug mb-8">
+        <h1 className="font-display font-extrabold text-[28px] text-[#f5f3ee] tracking-tight leading-snug mb-8">
           {scenario.title}
         </h1>
 
-        <div className="bg-white rounded-2xl border border-border shadow-card p-6 mb-6">
+        <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
           <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-4">
             Your Role
           </h3>
@@ -69,13 +69,13 @@ export function BriefingPage() {
                 <span className="text-[12px] font-medium text-slate-mid w-28 flex-shrink-0 pt-0.5">
                   {label}
                 </span>
-                <span className="text-[14px] text-[#0a0a0a] font-medium">{value}</span>
+                <span className="text-[14px] text-[#f5f3ee] font-medium">{value}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-border shadow-card p-6 mb-6">
+        <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
           <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-4">
             What You Will Be Evaluated On
           </h3>
@@ -87,7 +87,7 @@ export function BriefingPage() {
                   style={{ backgroundColor: meta.color }}
                 />
                 <div>
-                  <div className="text-[14px] font-semibold text-[#0a0a0a]">{dim.name}</div>
+                  <div className="text-[14px] font-semibold text-[#f5f3ee]">{dim.name}</div>
                   <div className="text-[12px] text-slate-mid leading-relaxed">{dim.description}</div>
                 </div>
               </div>
@@ -95,7 +95,7 @@ export function BriefingPage() {
           </div>
         </div>
 
-        <div className="bg-amber-pale border border-amber/20 rounded-xl p-4 mb-8">
+        <div className="bg-amber/10 border border-amber/20 rounded-xl p-4 mb-8">
           <p className="text-[13px] text-amber leading-relaxed">
             <strong>How it works:</strong> You will move through a real workplace scenario and make decisions at each step. There are no trick questions. The AI evaluates the reasoning behind your choices, not just which answer you pick.
           </p>
@@ -104,13 +104,13 @@ export function BriefingPage() {
         <div className="flex items-center justify-between">
           <button
             onClick={() => navigate('/dashboard')}
-            className="text-[13px] text-slate-mid hover:text-[#0a0a0a] transition-colors"
+            className="text-[13px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
           >
             Back to dashboard
           </button>
           <button
             onClick={() => navigate(`/scenario/${scenarioId}/play`)}
-            className="bg-[#0a0a0a] hover:bg-slate text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors tracking-wide"
+            className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors tracking-wide"
           >
             Begin Simulation
           </button>

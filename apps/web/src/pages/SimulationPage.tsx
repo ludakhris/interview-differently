@@ -50,10 +50,10 @@ function SimulationContent({ scenario, scenarioId }: { scenario: Scenario; scena
 
   if (isComplete) {
     return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="text-center animate-fade-in">
           <div className="text-4xl mb-4">✓</div>
-          <p className="font-display font-bold text-[18px] text-[#0a0a0a]">Evaluating your responses...</p>
+          <p className="font-display font-bold text-[18px] text-[#f5f3ee]">Evaluating your responses...</p>
         </div>
       </div>
     )
@@ -65,12 +65,12 @@ function SimulationContent({ scenario, scenarioId }: { scenario: Scenario; scena
       : 'Outcome'
 
   return (
-    <div className={`min-h-screen bg-cream transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
+    <div className={`min-h-screen bg-[#0a0a0a] transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
       <Nav trackLabel={meta.label} stepLabel={stepLabel} />
 
       {currentNode.type === 'transition' && (
         <div className="max-w-2xl mx-auto px-6 py-16 animate-fade-in">
-          <div className="bg-[#0a0a0a] rounded-2xl p-8 mb-8">
+          <div className="bg-[#111111] border border-white/10 rounded-2xl p-8 mb-8">
             <div
               className="text-[11px] font-bold uppercase tracking-widest mb-4"
               style={{ color: meta.color === '#1a6b3c' ? '#2d9e5f' : meta.color }}
@@ -84,7 +84,7 @@ function SimulationContent({ scenario, scenarioId }: { scenario: Scenario; scena
           <div className="flex justify-end">
             <button
               onClick={advanceTransition}
-              className="bg-[#0a0a0a] hover:bg-slate text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+              className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
             >
               Continue
             </button>
@@ -96,8 +96,8 @@ function SimulationContent({ scenario, scenarioId }: { scenario: Scenario; scena
         <div className="max-w-5xl mx-auto px-6 py-8 animate-slide-up">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
             <div>
-              <div className="bg-white rounded-2xl border border-border shadow-card p-6 mb-5">
-                <p className="text-[15px] text-[#0a0a0a] leading-[1.75] font-light">
+              <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-5">
+                <p className="text-[15px] text-[#f5f3ee] leading-[1.75] font-light">
                   {currentNode.narrative}
                 </p>
               </div>
@@ -138,8 +138,8 @@ function SimulationContent({ scenario, scenarioId }: { scenario: Scenario; scena
                   className={`
                     font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
                     ${selectedChoice
-                      ? 'bg-[#0a0a0a] text-white hover:bg-slate cursor-pointer'
-                      : 'bg-border text-slate-light cursor-not-allowed'
+                      ? 'bg-green hover:bg-green-light text-white cursor-pointer'
+                      : 'bg-white/10 text-slate-light cursor-not-allowed'
                     }
                   `}
                 >
