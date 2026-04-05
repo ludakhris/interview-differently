@@ -1,59 +1,57 @@
+import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
 import { TrackIcon } from '@/components/TrackIcon'
-import { scenarios, trackMeta } from '@/lib/scenarios'
+import { useScenario, useScenarios } from '@/hooks/useScenarios'
 
 export function BriefingPage() {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const navigate = useNavigate()
+  const { scenario, isLoading } = useScenario(scenarioId)
+  const { trackMeta } = useScenarios()
 
-  const scenario = scenarios.find((s) => s.scenarioId === scenarioId)
-  if (!scenario) {
-    navigate('/dashboard')
-    return null
+  useEffect(() => {
+    if (!isLoading && !scenario) {
+      navigate('/dashboard')
+    }
+  }, [isLoading, scenario, navigate])
+
+  if (isLoading || !scenario) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <p className="text-slate-mid text-[14px]">Loading...</p>
+      </div>
+    )
   }
 
   const meta = trackMeta[scenario.track]
-
-  const roleMap: Record<string, { role: string; org: string; reports: string }> = {
-    'ops-001': {
-      role: 'Junior Operations Analyst',
-      org: 'Fintech company, 400 employees',
-      reports: 'Senior Operations Manager',
-    },
-    'biz-001': {
-      role: 'Strategy Analyst',
-      org: 'Media and publishing company',
-      reports: 'VP of Business Development',
-    },
-    'risk-001': {
-      role: 'Compliance Analyst',
-      org: 'Financial services firm, regulated',
-      reports: 'Director of Risk and Compliance',
-    },
-  }
-
-  const context = roleMap[scenarioId ?? ''] ?? {
-    role: 'Analyst',
-    org: 'Mid-size company',
-    reports: 'Senior Manager',
-  }
+  const { briefing } = scenario
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
-      <Nav trackLabel={meta.label} />
+      <Nav trackLabel={meta?.label} />
 
       <div className="max-w-2xl mx-auto px-6 py-14 animate-fade-in">
         <div
-          className="text-[11px] font-bold uppercase tracking-widest mb-3"
-          style={{ color: meta.color }}
+          className="text-[11px] font-bold uppercase tracking-widest mb-3 flex items-center gap-1.5"
+          style={{ color: meta?.color }}
         >
-          <TrackIcon name={meta.icon} size={12} color={meta.color} className="inline mr-1.5 -mt-0.5" /> {meta.label} Track
+          {meta && <TrackIcon name={meta.icon} size={12} color={meta.color} className="inline -mt-0.5" />}
+          {meta?.label} Track
         </div>
 
         <h1 className="font-display font-extrabold text-[28px] text-[#f5f3ee] tracking-tight leading-snug mb-8">
           {scenario.title}
         </h1>
+
+        {briefing.situation && (
+          <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
+            <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-4">
+              The Situation
+            </h3>
+            <p className="text-[15px] text-[#f5f3ee] leading-relaxed font-light">{briefing.situation}</p>
+          </div>
+        )}
 
         <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
           <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-4">
@@ -61,10 +59,10 @@ export function BriefingPage() {
           </h3>
           <div className="space-y-3">
             {[
-              { label: 'Position', value: context.role },
-              { label: 'Organization', value: context.org },
-              { label: 'Reports to', value: context.reports },
-              { label: 'Time in role', value: '3 months' },
+              { label: 'Position', value: briefing.role },
+              { label: 'Organisation', value: briefing.organisation },
+              { label: 'Reports to', value: briefing.reportsTo },
+              { label: 'Time in role', value: briefing.timeInRole },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-start gap-3">
                 <span className="text-[12px] font-medium text-slate-mid w-28 flex-shrink-0 pt-0.5">
@@ -85,7 +83,7 @@ export function BriefingPage() {
               <div key={dim.name} className="flex items-start gap-3">
                 <span
                   className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: meta.color }}
+                  style={{ backgroundColor: meta?.color }}
                 />
                 <div>
                   <div className="text-[14px] font-semibold text-[#f5f3ee]">{dim.name}</div>

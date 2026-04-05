@@ -6,6 +6,14 @@ export const scenarios: Scenario[] = [
     title: 'Incident Response: Payment Degradation',
     track: 'operations',
     estimatedMinutes: 20,
+    briefing: {
+      situation:
+        "It's 2:47 PM on a Tuesday. You're three months into your role when your pager fires. Payment API error rates are climbing. Authentication is degraded. Database connections are at 94% capacity. Your manager has pre-defined organisational priorities. Your SLA breach window is 13 minutes. Multiple things are failing at once — and not all of them matter equally.",
+      role: 'Junior Operations Analyst',
+      organisation: 'Fintech platform — 2.4M transactions/day, 98.9% uptime SLA',
+      reportsTo: 'Senior Operations Manager',
+      timeInRole: '3 months',
+    },
     rubric: {
       dimensions: [
         {
@@ -194,6 +202,14 @@ export const scenarios: Scenario[] = [
     title: 'Business Case: New Magazine Launch',
     track: 'business',
     estimatedMinutes: 20,
+    briefing: {
+      situation:
+        "Your VP needs a recommendation by end of week. The company is evaluating whether to launch a new print magazine targeting young professionals. Early questions are broad — what factors matter when entering this market? They quickly narrow. What are the unit economics? What does break-even look like once distribution and content costs are modelled? And what happens when a marketing cost you didn't initially account for eliminates your margin entirely? Getting the numbers right is the floor. Questioning your own confident conclusion is the ceiling.",
+      role: 'Strategy Analyst',
+      organisation: 'Media and publishing company',
+      reportsTo: 'VP of Business Development',
+      timeInRole: '3 months',
+    },
     rubric: {
       dimensions: [
         {
@@ -381,6 +397,14 @@ export const scenarios: Scenario[] = [
     title: 'Risk and Compliance: Password Storage Breach',
     track: 'risk',
     estimatedMinutes: 20,
+    briefing: {
+      situation:
+        "You're three months in, doing routine process documentation, when you find it — employee credentials stored in plain text in a shared internal document accessible across the organisation. No breach has been detected. No one knows you've found it yet. The scenario doesn't tell you what to do next. It asks you. Who do you notify first? How do you frame the risk to a non-technical manager? Do you escalate immediately, or investigate scope first?",
+      role: 'Compliance Analyst',
+      organisation: 'Regulated financial services firm',
+      reportsTo: 'Director of Risk and Compliance',
+      timeInRole: '3 months',
+    },
     rubric: {
       dimensions: [
         {
@@ -566,26 +590,46 @@ export const scenarios: Scenario[] = [
   },
 ]
 
+// Rotating palette — tracks are assigned colors in definition order.
+// Add new tracks and their color will be picked automatically.
+const TRACK_PALETTE = ['#1a6b3c', '#d4830a', '#7b3fa0', '#1a5a8a', '#8a3a1a', '#1a7a7a']
+
 export const trackMeta: Record<
   string,
   { label: string; description: string; color: string; icon: string }
-> = {
-  operations: {
-    label: 'Incident Response',
-    description: 'Triage live system failures, prioritize under pressure, communicate with stakeholders.',
-    color: '#1a6b3c',
-    icon: 'AlertTriangle',
-  },
-  business: {
-    label: 'Business Case',
-    description: 'Structure ambiguous problems, build analytical frameworks, present clear recommendations.',
-    color: '#d4830a',
-    icon: 'BarChart3',
-  },
-  risk: {
-    label: 'Risk and Compliance',
-    description: 'Identify control failures, calibrate severity, escalate through the correct channels.',
-    color: '#7b3fa0',
-    icon: 'Scale',
-  },
-}
+> = Object.fromEntries(
+  (
+    [
+      [
+        'operations',
+        {
+          label: 'Incident Response',
+          description:
+            "A critical, customer-impacting issue surfaces. Monitors are alerting across payment processing and authentication. Your SLA breach window is 13 minutes. You're the on-call engineer. What's your first move?",
+          icon: 'AlertTriangle',
+        },
+      ],
+      [
+        'business',
+        {
+          label: 'Business Case',
+          description:
+            "You're evaluating whether to launch a new print magazine. Each decision unlocks a new constraint — distribution costs, content overhead, a marketing spend that eliminates your margin entirely. Getting the numbers right is the floor. Questioning your own conclusion is the ceiling.",
+          icon: 'BarChart3',
+        },
+      ],
+      [
+        'risk',
+        {
+          label: 'Risk & Compliance',
+          description:
+            "During a routine review, you discover employee passwords stored in plain text in a shared internal document. No incident has occurred. No one flagged it. The scenario doesn't tell you what to do — it asks you. Who do you notify first, and how?",
+          icon: 'Scale',
+        },
+      ],
+    ] as [string, { label: string; description: string; icon: string }][]
+  ).map(([key, meta], i) => [
+    key,
+    { ...meta, color: TRACK_PALETTE[i % TRACK_PALETTE.length] },
+  ])
+)
