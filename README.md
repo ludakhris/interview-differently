@@ -81,7 +81,13 @@ Each scenario defines:
 
 | Phase | Scope | Status |
 |---|---|---|
-| 1 | Student simulation — 3 tracks, branching engine, scenario-specific displays, scored feedback | In progress |
-| 2 | AI evaluation — replace static scoring with Claude API evaluation of decision reasoning | Planned |
-| 3 | No-code scenario builder — React Flow canvas for institutions to author their own tracks | Planned |
-| 4 | Institution analytics — competency heatmap, cohort views, aggregate scoring dashboard | Planned |
+| 1 | Student simulation — 3 tracks, branching engine, scenario-specific instrument panels, scored feedback | ✅ In progress |
+| 2 | No-code scenario builder — React Flow canvas, node editor, rubric templates, validation, publish | 🔜 Next |
+| 3 | Auth — Clerk integration, institutional email sign-in, student and admin roles | Planned |
+| 4 | AI feedback — Claude API replaces template scoring; structured feedback per competency dimension | Planned |
+| 5 | Score persistence — database-backed results, running competency profile per student across simulations | Planned |
+| 6 | Institution analytics — competency heatmap, cohort views, drop-off analysis, CSV/PDF export | Planned |
+
+Phases 2 and 3 can run in parallel. Phase 4 is blocked on Phase 3 (AI feedback requires an authenticated user ID). Phases 5 and 6 are sequential — analytics has nothing to show until persistence is in place.
+
+→ [Phase 2 technical delivery spec](docs/phase2-builder-spec.md)
