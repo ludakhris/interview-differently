@@ -94,7 +94,7 @@ export function LandingPage() {
             </a>
           ))}
         </div>
-        <p>© 2026 InterviewDifferently™. All rights reserved. v0.1.0</p>
+        <p>© 2026 InterviewDifferently™. All rights reserved.</p>
       </footer>
     </div>
   )
