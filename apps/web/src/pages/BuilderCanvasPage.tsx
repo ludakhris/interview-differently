@@ -88,7 +88,6 @@ export function BuilderCanvasPage() {
         updateScenario(scenarioRef.current)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── Not found (sync load — if null here it truly doesn't exist) ───────────
