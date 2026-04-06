@@ -48,6 +48,6 @@ jobs:
         with:
           node-version: '20'
       - run: npm install -g @railway/cli
-      - run: railway up --service api
+      - run: railway up --service interview-differently
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
