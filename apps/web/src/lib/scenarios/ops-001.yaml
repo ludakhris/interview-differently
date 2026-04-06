@@ -1,0 +1,295 @@
+id: ops-001
+title: 'Incident Response: Payment Degradation'
+track: operations
+estimatedMinutes: 20
+
+briefing:
+  situation: >
+    It's 2:47 PM on a Tuesday. You're three months into your role when your pager fires.
+    Payment API error rates are climbing. Authentication is degraded. Database connections
+    are at 94% capacity. Your manager has pre-defined organisational priorities. Your SLA
+    breach window is 13 minutes. Multiple things are failing at once — and not all of them
+    matter equally.
+  role: Junior Operations Analyst
+  organisation: Fintech platform — 2.4M transactions/day, 98.9% uptime SLA
+  reportsTo: Senior Operations Manager
+  timeInRole: 3 months
+
+display:
+  contextStyle: monitor
+  alertBanner:
+    icon: ⚠
+    title: ACTIVE INCIDENT — P1
+    body: 'Multiple monitors firing simultaneously. Payment service degraded. You have been paged as on-call engineer. SLA breach window: 13 minutes.'
+  sidebar:
+    - title: Your Role
+      style: text
+      items:
+        - label: Title
+          value: Junior Operations Analyst
+        - label: Organisation
+          value: Fintech Platform
+        - label: Reports to
+          value: Senior Ops Manager
+        - label: Time in role
+          value: 3 months
+    - title: Org Context
+      style: text
+      items:
+        - label: Daily transactions
+          value: 2.4M
+        - label: Uptime SLA
+          value: 98.9%
+        - label: Incident tier
+          value: P1 — Critical
+    - title: Manager's Priorities
+      style: list
+      items:
+        - label: Payment processing
+          value: P1
+          emphasis: danger
+        - label: User authentication
+          value: P1
+          emphasis: danger
+        - label: Reporting dashboard
+          value: P3
+        - label: Internal tooling
+          value: P4
+
+rubric:
+  - name: Prioritization Logic
+    description: Does the candidate identify the highest-impact issue first and sequence their response correctly?
+  - name: Stakeholder Communication
+    description: Does the candidate communicate to the right people, at the right time, with the right level of detail?
+  - name: Root Cause Reasoning
+    description: Does the candidate think systematically about underlying causes rather than reacting to surface symptoms?
+  - name: Confidence Under Pressure
+    description: Does the candidate act decisively without overclaiming certainty or freezing in ambiguity?
+
+nodes:
+  - id: ops-001-n1
+    type: decision
+    narrative: >
+      It's 2:47 PM on a Tuesday. You're three weeks into your role as a junior operations
+      analyst at a fintech company. Your monitor lights up: payment API error rates have
+      climbed to 14% in the last four minutes. Simultaneously, the auth service is showing
+      elevated latency. The database connection pool shows a spike to 94% utilization. Your
+      SLA breach window is 13 minutes away.
+    contextPanels:
+      - label: Payment API errors
+        value: 14.2%
+        type: alert
+      - label: Auth latency
+        value: +340ms
+        type: alert
+      - label: DB connections
+        value: 94%
+        type: alert
+      - label: SLA breach in
+        value: 13 min
+        type: metric
+      - label: Queue depth
+        value: '12,400'
+        type: alert
+      - label: CDN / Static
+        value: OK
+        type: info
+    chart:
+      title: Payment API — Error Rate
+      unit: '%'
+      color: red
+      baseline: 0.5
+      annotation:
+        tIndex: 9
+        label: ↑ Incident start
+      series:
+        - t: '14:30'
+          v: 0.3
+        - t: '14:31'
+          v: 0.4
+        - t: '14:32'
+          v: 0.3
+        - t: '14:33'
+          v: 0.5
+        - t: '14:34'
+          v: 0.3
+        - t: '14:35'
+          v: 0.4
+        - t: '14:36'
+          v: 0.3
+        - t: '14:37'
+          v: 0.5
+        - t: '14:38'
+          v: 0.4
+        - t: '14:39'
+          v: 1.2
+        - t: '14:40'
+          v: 4.8
+        - t: '14:41'
+          v: 8.6
+        - t: '14:42'
+          v: 11.4
+        - t: '14:43'
+          v: 13.1
+        - t: '14:44'
+          v: 14.2
+    choices:
+      - id: A
+        text: Immediately page your manager and the broader engineering team so everyone is aware.
+        next: ops-001-n2a
+        signals:
+          Prioritization Logic: developing
+          Stakeholder Communication: proficient
+      - id: B
+        text: Investigate the database connection spike first — it is likely the root cause of both the payment and auth issues.
+        next: ops-001-n2b
+        signals:
+          Prioritization Logic: strong
+          Root Cause Reasoning: strong
+      - id: C
+        text: Acknowledge the alert, post a brief status update to the incident channel, then begin investigating the payment API degradation as the highest-priority service.
+        next: ops-001-n2c
+        signals:
+          Prioritization Logic: proficient
+          Stakeholder Communication: strong
+      - id: D
+        text: Roll back the last deployment immediately — degraded services after a deployment is almost always a code issue.
+        next: ops-001-n2d
+        signals:
+          Prioritization Logic: developing
+          Root Cause Reasoning: developing
+
+  - id: ops-001-n2b
+    type: transition
+    narrative: >
+      You pull the database metrics. The connection spike started 6 minutes ago — two minutes
+      before the payment errors appeared. A query from the reporting service is holding
+      long-running transactions open. This is almost certainly the cascade source.
+    next: ops-001-n3
+
+  - id: ops-001-n2c
+    type: transition
+    narrative: >
+      You post a quick status to #incidents and begin investigating. Your lead notices the
+      update and thanks you for the heads-up. You have 10 minutes until SLA breach. The
+      payment logs show errors originating from database timeouts.
+    next: ops-001-n3
+
+  - id: ops-001-n2a
+    type: transition
+    narrative: >
+      You page the team. Three engineers join the call. Everyone is waiting for someone to
+      take point. Your manager asks: "What have you found so far?" You have not investigated
+      yet. Six minutes have passed.
+    next: ops-001-n3
+
+  - id: ops-001-n2d
+    type: transition
+    narrative: >
+      You initiate a rollback. It takes four minutes to complete. When services come back up,
+      the errors persist — the last deployment was not the cause. You now have nine minutes
+      less and no closer to root cause.
+    next: ops-001-n3
+
+  - id: ops-001-n3
+    type: decision
+    narrative: >
+      Database investigation confirms it: the reporting service is running an unoptimized
+      analytics query that holds connections open for 30+ seconds during peak load. You can
+      kill the reporting service process now to immediately free connections, or you can
+      throttle the query and monitor. Your manager has just joined the incident channel.
+    contextPanels:
+      - label: Root cause
+        value: Reporting svc
+        type: info
+      - label: Connection hold
+        value: 30s avg
+        type: alert
+      - label: DB connections
+        value: 94%
+        type: alert
+      - label: SLA breach in
+        value: 7 min
+        type: metric
+      - label: Payment errors
+        value: Still active
+        type: alert
+      - label: Manager
+        value: Online
+        type: info
+    chart:
+      title: Payment API — Error Rate
+      unit: '%'
+      color: red
+      baseline: 0.5
+      annotation:
+        tIndex: 4
+        label: ↑ Incident start
+      series:
+        - t: '14:35'
+          v: 0.4
+        - t: '14:36'
+          v: 0.3
+        - t: '14:37'
+          v: 0.5
+        - t: '14:38'
+          v: 0.4
+        - t: '14:39'
+          v: 1.2
+        - t: '14:40'
+          v: 4.8
+        - t: '14:41'
+          v: 8.6
+        - t: '14:42'
+          v: 11.4
+        - t: '14:43'
+          v: 13.1
+        - t: '14:44'
+          v: 14.2
+        - t: '14:45'
+          v: 13.8
+        - t: '14:46'
+          v: 14.5
+        - t: '14:47'
+          v: 14.1
+    choices:
+      - id: A
+        text: Kill the reporting service process immediately to free database connections — fastest path to payment recovery.
+        next: ops-001-n4a
+        signals:
+          Confidence Under Pressure: strong
+          Prioritization Logic: strong
+      - id: B
+        text: Brief your manager first, then execute whichever action they recommend.
+        next: ops-001-n4b
+        signals:
+          Stakeholder Communication: proficient
+          Confidence Under Pressure: developing
+      - id: C
+        text: Throttle the reporting query at the database level and watch whether connection utilization drops within 90 seconds before taking further action.
+        next: ops-001-n4c
+        signals:
+          Root Cause Reasoning: strong
+          Confidence Under Pressure: proficient
+      - id: D
+        text: Document the root cause fully before taking action so the post-mortem write-up is accurate.
+        next: ops-001-n4d
+        signals:
+          Prioritization Logic: developing
+          Confidence Under Pressure: developing
+
+  - id: ops-001-n4a
+    type: feedback
+    narrative: resolved
+
+  - id: ops-001-n4b
+    type: feedback
+    narrative: escalated
+
+  - id: ops-001-n4c
+    type: feedback
+    narrative: throttled
+
+  - id: ops-001-n4d
+    type: feedback
+    narrative: documented

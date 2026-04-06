@@ -1,0 +1,210 @@
+id: biz-001
+title: 'Business Case: New Magazine Launch'
+track: business
+estimatedMinutes: 20
+
+briefing:
+  situation: >
+    Your VP needs a recommendation by end of week. The company is evaluating whether to
+    launch a new print magazine targeting young professionals. Early questions are broad —
+    what factors matter when entering this market? They quickly narrow. What are the unit
+    economics? What does break-even look like once distribution and content costs are
+    modelled? And what happens when a marketing cost you didn't initially account for
+    eliminates your margin entirely? Getting the numbers right is the floor. Questioning
+    your own confident conclusion is the ceiling.
+  role: Strategy Analyst
+  organisation: Media and publishing company
+  reportsTo: VP of Business Development
+  timeInRole: 3 months
+
+display:
+  contextStyle: table
+  sidebar:
+    - title: Your Role
+      style: text
+      items:
+        - label: Title
+          value: Strategy Analyst
+        - label: Organisation
+          value: Media & Publishing Co.
+        - label: Reports to
+          value: VP of Business Development
+        - label: Time in role
+          value: 3 months
+    - title: The Brief
+      style: text
+      items:
+        - label: Assignment
+          value: Magazine launch viability
+        - label: Deadline
+          value: Friday EOD
+        - label: Format
+          value: Recommendation memo
+    - title: Financial Reference
+      style: list
+      items:
+        - label: Annual subscription
+          value: £49
+        - label: Print cost / unit
+          value: £1.20
+        - label: Distribution margin
+          value: 35%
+          emphasis: warning
+        - label: Content cost / yr
+          value: £1M
+        - label: Category growth
+          value: +4% YoY
+          emphasis: success
+
+rubric:
+  - name: Quantitative Accuracy
+    description: Does the candidate use numbers correctly and identify when data is missing or unreliable?
+  - name: Structured Reasoning
+    description: Does the candidate frame the problem before jumping to conclusions and organize their analysis logically?
+  - name: Challenging Assumptions
+    description: Does the candidate identify and question the assumptions baked into the request?
+  - name: Communication Clarity
+    description: Does the candidate communicate findings in a way that is clear and actionable for a non-technical audience?
+
+nodes:
+  - id: biz-001-n1
+    type: decision
+    narrative: >
+      You are a strategy analyst at a media and publishing company. You report to the VP of
+      Business Development. It's Monday morning and she drops a brief into your inbox:
+      leadership wants a recommendation by Friday on whether to launch a new lifestyle
+      magazine targeting women aged 25-40. She has attached three slides. Slide 1: the
+      category grew 4% last year. Slide 2: your company has printing capacity. Slide 3: a
+      competitor launched in this category two years ago. She says: 'I need to know if this
+      is worth pursuing.'
+    contextPanels:
+      - label: Category growth
+        value: +4% YoY
+        type: info
+      - label: Printing capacity
+        value: Available
+        type: info
+      - label: Competitor entrants
+        value: 1 (2yr ago)
+        type: info
+      - label: Deadline
+        value: Friday
+        type: metric
+    choices:
+      - id: A
+        text: Start building a financial model immediately — revenue projections and cost structure will tell you whether this is worth pursuing.
+        next: biz-001-n2a
+        signals:
+          Structured Reasoning: developing
+          Quantitative Accuracy: proficient
+      - id: B
+        text: Request a meeting with the VP to clarify what "worth pursuing" means — does she want a go/no-go or a prioritized list of risks?
+        next: biz-001-n2b
+        signals:
+          Structured Reasoning: strong
+          Challenging Assumptions: strong
+      - id: C
+        text: Write a one-page framework first — define the evaluation criteria before gathering any data so your research is directed.
+        next: biz-001-n2c
+        signals:
+          Structured Reasoning: strong
+          Quantitative Accuracy: proficient
+      - id: D
+        text: Research what the competitor who launched two years ago has done — their trajectory is the most relevant market signal you have.
+        next: biz-001-n2d
+        signals:
+          Structured Reasoning: proficient
+          Challenging Assumptions: proficient
+
+  - id: biz-001-n2b
+    type: transition
+    narrative: >
+      Your VP appreciates the question. She says leadership has already directionally decided
+      to launch — what they actually need is a risk assessment and a recommendation on launch
+      timing. The framing of your entire analysis just changed.
+    next: biz-001-n3
+
+  - id: biz-001-n2c
+    type: transition
+    narrative: >
+      Your framework identifies five evaluation criteria: market size, competitive intensity,
+      customer acquisition cost, content differentiation, and break-even timeline. You now
+      know exactly what data you need and what you can deprioritize.
+    next: biz-001-n3
+
+  - id: biz-001-n2a
+    type: transition
+    narrative: >
+      You build a model, but you realize halfway through that you're missing subscriber
+      acquisition cost, average revenue per user, and churn rate assumptions. You've spent
+      six hours on inputs you'll have to guess at.
+    next: biz-001-n3
+
+  - id: biz-001-n2d
+    type: transition
+    narrative: >
+      The competitor data is useful but hard to interpret in isolation. You find their
+      circulation numbers but can't determine profitability or whether their model is
+      comparable to yours.
+    next: biz-001-n3
+
+  - id: biz-001-n3
+    type: decision
+    narrative: >
+      It's Wednesday. You have your analysis draft. The core finding: the market is real but
+      the economics depend entirely on digital-physical bundling — standalone print doesn't
+      pencil out. You need to present to your VP tomorrow. How do you frame the recommendation?
+    contextPanels:
+      - label: Print-only IRR
+        value: Negative
+        type: alert
+      - label: Bundled IRR
+        value: +18% (est.)
+        type: info
+      - label: Key dependency
+        value: Digital strategy
+        type: metric
+      - label: Presentation
+        value: Tomorrow
+        type: metric
+    choices:
+      - id: A
+        text: Lead with the negative finding on print — "We recommend against launch" — then show the bundled scenario as a conditional path.
+        next: biz-001-n4a
+        signals:
+          Communication Clarity: strong
+          Challenging Assumptions: strong
+      - id: B
+        text: Present both scenarios without a recommendation and let leadership decide — you don't have enough information to commit.
+        next: biz-001-n4b
+        signals:
+          Communication Clarity: developing
+          Structured Reasoning: developing
+      - id: C
+        text: Lead with the bundled opportunity — frame it as "launch if we pair it with digital" with a clear set of conditions leadership needs to meet.
+        next: biz-001-n4c
+        signals:
+          Communication Clarity: strong
+          Structured Reasoning: strong
+      - id: D
+        text: Ask your VP how she wants you to frame it before you structure the presentation.
+        next: biz-001-n4d
+        signals:
+          Communication Clarity: proficient
+          Challenging Assumptions: proficient
+
+  - id: biz-001-n4a
+    type: feedback
+    narrative: direct
+
+  - id: biz-001-n4b
+    type: feedback
+    narrative: hedged
+
+  - id: biz-001-n4c
+    type: feedback
+    narrative: opportunity
+
+  - id: biz-001-n4d
+    type: feedback
+    narrative: deferred

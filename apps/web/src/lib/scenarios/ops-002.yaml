@@ -1,0 +1,359 @@
+id: ops-002
+title: Server Capacity Crisis
+track: operations
+estimatedMinutes: 20
+
+briefing:
+  situation: >
+    It's Friday at 4:12pm. A major tech publication just ran an unexpected feature on your
+    product. Traffic has spiked 340% in the last 22 minutes and is still climbing. Your
+    monitoring dashboard is firing alerts — servers are at 89% capacity, API response times
+    have degraded to 4.2s (SLA is 800ms), and your on-call rotation doesn't start for
+    another 48 minutes. Your manager is in back-to-back meetings until 5pm.
+  role: Junior Infrastructure Analyst
+  organisation: B2B SaaS platform — 180k daily active users, 99.5% uptime SLA
+  reportsTo: Head of Engineering
+  timeInRole: 6 weeks
+
+display:
+  contextStyle: monitor
+  alertBanner:
+    icon: ⚠
+    title: CAPACITY ALERT — SLA AT RISK
+    body: Traffic spike 340% above baseline. API response time 4.2s (SLA 800ms). Servers at 89% capacity and climbing. On-call starts in 48 minutes.
+  sidebar:
+    - title: Your Role
+      style: text
+      items:
+        - label: Title
+          value: Junior Infrastructure Analyst
+        - label: Organisation
+          value: B2B SaaS Platform
+        - label: Reports to
+          value: Head of Engineering
+        - label: Time in role
+          value: 6 weeks
+    - title: Platform Context
+      style: text
+      items:
+        - label: Daily active users
+          value: 180k
+        - label: Uptime SLA
+          value: 99.5%
+        - label: Current capacity
+          value: 89%
+        - label: API response
+          value: 4.2s
+    - title: Alert Status
+      style: list
+      items:
+        - label: Server capacity
+          value: 89%
+          emphasis: danger
+        - label: API response time
+          value: 4.2s
+          emphasis: danger
+        - label: Database connections
+          value: Normal
+        - label: On-call availability
+          value: 48 min
+          emphasis: warning
+
+rubric:
+  - name: Prioritisation Under Pressure
+    description: Does the candidate correctly sequence actions when multiple systems are degrading simultaneously? Do they address the highest-impact issue first rather than the most visible or easiest one?
+  - name: Root Cause Orientation
+    description: Do they seek to understand why something is happening before or alongside responding to symptoms? Do they distinguish between treating the cause and treating the effect?
+  - name: Escalation Judgement
+    description: Do they know when a situation exceeds their authority or expertise and involves the right people? Do they escalate with relevant context rather than just alerting?
+  - name: Stakeholder Communication
+    description: Do they keep the right people informed at the right time with the right level of detail? Do they avoid both over-communicating noise and under-communicating risk?
+  - name: Post-Incident Practice
+    description: Do they close the loop? Documentation, retrospective thinking, and prevention steps — not just restoring service and moving on.
+
+nodes:
+  - id: node-1
+    type: decision
+    narrative: >
+      It's 4:12pm. Capacity is at 89% and climbing. API response times are at 4.2s — your
+      SLA threshold is 800ms. You have three monitoring alerts open, a Slack thread growing
+      in #incidents, and a direct message from a customer success manager asking if there's
+      an outage. What do you do first?
+    contextPanels:
+      - label: Server capacity
+        value: 89%
+        type: alert
+      - label: API response
+        value: 4.2s
+        type: alert
+      - label: SLA threshold
+        value: 800ms
+        type: metric
+      - label: Active alerts
+        value: '3'
+        type: alert
+      - label: On-call in
+        value: 48 min
+        type: metric
+      - label: CS enquiry
+        value: Pending
+        type: info
+    choices:
+      - id: A
+        text: Scale up server instances immediately to get ahead of the capacity ceiling
+        next: node-2a
+        signals:
+          Prioritisation Under Pressure: strong
+          Root Cause Orientation: developing
+          Escalation Judgement: proficient
+      - id: B
+        text: Message the Head of Engineering to flag the situation before taking action
+        next: node-2b
+        signals:
+          Prioritisation Under Pressure: developing
+          Escalation Judgement: strong
+          Stakeholder Communication: proficient
+      - id: C
+        text: Pull up the traffic analytics to understand what's driving the spike
+        next: node-2c
+        signals:
+          Prioritisation Under Pressure: proficient
+          Root Cause Orientation: strong
+          Escalation Judgement: proficient
+      - id: D
+        text: Reply to the customer success manager and post a status update in #incidents
+        next: node-2d
+        signals:
+          Prioritisation Under Pressure: developing
+          Stakeholder Communication: strong
+          Root Cause Orientation: developing
+
+  - id: node-2a
+    type: transition
+    narrative: >
+      You trigger a scale-up. New instances will be ready in approximately 4 minutes.
+      Capacity temporarily stabilises at 91% as the request queue backs up. While you wait,
+      a second alert fires — database connection pool is now at 94% utilisation. This wasn't
+      in the original alert set.
+    next: node-3a
+
+  - id: node-2b
+    type: transition
+    narrative: >
+      You message the Head of Engineering. She responds in 40 seconds: "Good flag. You're
+      cleared to scale. Also check the DB connection pool — I saw it trending up before my
+      meeting. Keep me posted every 10 mins." Capacity is now at 93%.
+    next: node-3a
+
+  - id: node-2c
+    type: transition
+    narrative: >
+      You pull the traffic analytics. The spike is real — originating from thousands of
+      unique IPs globally following the press article. But buried in the data you notice
+      something else: 34% of requests are coming from a narrow range of IPs in a single
+      region, hitting the same endpoint repeatedly at inhuman intervals. This could be a
+      scraper or the early signature of a DDoS riding the press spike as cover.
+    next: node-3b
+
+  - id: node-2d
+    type: transition
+    narrative: >
+      You reply to the CS manager and post a status update. Within 2 minutes, six more
+      people have replied in #incidents including two senior engineers who are now asking
+      what the remediation plan is. The Head of Engineering has seen the thread and DMs you:
+      "What's the plan? Capacity is at 91%." You now have an audience and no remediation
+      underway.
+    next: node-3a
+
+  - id: node-3a
+    type: decision
+    narrative: >
+      Capacity is at 91-93% and the database connection pool is at 94%. New server instances
+      are either spinning up or not yet initiated. The Head of Engineering is aware. What do
+      you prioritise next?
+    contextPanels:
+      - label: Server capacity
+        value: 91-93%
+        type: alert
+      - label: DB connection pool
+        value: 94%
+        type: alert
+      - label: Scale-up status
+        value: In progress
+        type: info
+      - label: HoE
+        value: Aware
+        type: info
+    choices:
+      - id: A
+        text: Initiate scale-up now if not already done, then investigate the DB connection pool spike
+        next: node-4a
+        signals:
+          Prioritisation Under Pressure: strong
+          Root Cause Orientation: strong
+      - id: B
+        text: Focus entirely on the DB connection pool — it's the more unusual signal
+        next: node-4a
+        signals:
+          Prioritisation Under Pressure: proficient
+          Root Cause Orientation: strong
+      - id: C
+        text: Hold until the scale-up completes and see if DB connections self-correct
+        next: node-4a
+        signals:
+          Prioritisation Under Pressure: developing
+          Root Cause Orientation: developing
+      - id: D
+        text: Loop in the on-call DBA immediately given the DB signal
+        next: node-4a
+        signals:
+          Prioritisation Under Pressure: proficient
+          Escalation Judgement: strong
+
+  - id: node-3b
+    type: decision
+    narrative: >
+      You've identified a suspicious traffic pattern — potentially a DDoS using the press
+      spike as cover. 34% of requests are from a narrow IP range hitting the same endpoint
+      at automated intervals. Capacity is at 89% and the real organic traffic is still
+      growing. You have about 6 minutes before you breach SLA.
+    contextPanels:
+      - label: Suspicious traffic
+        value: 34% of requests
+        type: alert
+      - label: Pattern
+        value: Automated intervals
+        type: alert
+      - label: Capacity
+        value: 89%
+        type: alert
+      - label: Time to SLA breach
+        value: ~6 min
+        type: metric
+    choices:
+      - id: A
+        text: Escalate immediately to the security team and Head of Engineering with your findings
+        next: node-4b
+        signals:
+          Escalation Judgement: strong
+          Root Cause Orientation: strong
+          Stakeholder Communication: strong
+      - id: B
+        text: Block the suspicious IP range at the firewall and scale up simultaneously
+        next: node-4b
+        signals:
+          Prioritisation Under Pressure: strong
+          Escalation Judgement: developing
+          Root Cause Orientation: proficient
+      - id: C
+        text: Scale up to handle the combined load and monitor the suspicious IPs before acting
+        next: node-4b
+        signals:
+          Prioritisation Under Pressure: proficient
+          Root Cause Orientation: proficient
+          Escalation Judgement: developing
+      - id: D
+        text: Document your findings in the incident channel and ask the team what to do
+        next: node-4b
+        signals:
+          Escalation Judgement: proficient
+          Stakeholder Communication: proficient
+          Prioritisation Under Pressure: developing
+
+  - id: node-4a
+    type: decision
+    narrative: >
+      It's 4:38pm. Capacity has stabilised at 74% after the scale-up. The DB connection pool
+      dropped to 71% once load reduced — it was a downstream symptom, not an independent
+      issue. The press traffic is plateauing. The Head of Engineering has asked for a
+      post-incident summary by end of day. The on-call engineer starts in 22 minutes. What
+      do you do?
+    contextPanels:
+      - label: Server capacity
+        value: 74%
+        type: info
+      - label: DB connection pool
+        value: 71%
+        type: info
+      - label: Traffic
+        value: Plateauing
+        type: info
+      - label: On-call in
+        value: 22 min
+        type: metric
+    choices:
+      - id: A
+        text: Write the post-incident summary now while context is fresh, then hand over to on-call
+        next: node-5
+        signals:
+          Post-Incident Practice: strong
+          Stakeholder Communication: strong
+      - id: B
+        text: Set up auto-scaling rules to prevent a repeat before writing anything up
+        next: node-5
+        signals:
+          Post-Incident Practice: proficient
+          Prioritisation Under Pressure: proficient
+      - id: C
+        text: Brief the on-call engineer verbally and let them decide next steps
+        next: node-5
+        signals:
+          Post-Incident Practice: developing
+          Escalation Judgement: proficient
+      - id: D
+        text: Monitor for another hour to confirm stability before declaring the incident closed
+        next: node-5
+        signals:
+          Post-Incident Practice: developing
+          Prioritisation Under Pressure: developing
+
+  - id: node-4b
+    type: decision
+    narrative: >
+      It's 4:41pm. The suspicious traffic has been handled — either blocked or escalated
+      depending on your earlier choice. Capacity has stabilised. The security team (if
+      involved) has confirmed it was a low-sophistication scraper, not a coordinated DDoS.
+      The Head of Engineering wants a full incident report including the security element by
+      Monday morning. What's your next move?
+    contextPanels:
+      - label: Capacity
+        value: Stabilised
+        type: info
+      - label: Scraper confirmed
+        value: Low sophistication
+        type: info
+      - label: Security team
+        value: Notified
+        type: info
+      - label: Report due
+        value: Monday AM
+        type: metric
+    choices:
+      - id: A
+        text: Draft a full incident timeline tonight covering both the capacity event and the scraper finding
+        next: node-5
+        signals:
+          Post-Incident Practice: strong
+          Stakeholder Communication: strong
+      - id: B
+        text: File a security ticket for the scraper and write the capacity incident report separately
+        next: node-5
+        signals:
+          Post-Incident Practice: strong
+          Root Cause Orientation: strong
+      - id: C
+        text: Ask the security team to own the scraper writeup and focus on the capacity report yourself
+        next: node-5
+        signals:
+          Post-Incident Practice: proficient
+          Escalation Judgement: strong
+      - id: D
+        text: Send a brief Slack summary to the Head of Engineering now and write the full report Monday
+        next: node-5
+        signals:
+          Post-Incident Practice: developing
+          Stakeholder Communication: proficient
+
+  - id: node-5
+    type: feedback
+    narrative: complete

@@ -1,0 +1,215 @@
+id: risk-001
+title: 'Risk and Compliance: Password Storage Breach'
+track: risk
+estimatedMinutes: 20
+
+briefing:
+  situation: >
+    You're three months in, doing routine process documentation, when you find it — employee
+    credentials stored in plain text in a shared internal document accessible across the
+    organisation. No breach has been detected. No one knows you've found it yet. The scenario
+    doesn't tell you what to do next. It asks you. Who do you notify first? How do you frame
+    the risk to a non-technical manager? Do you escalate immediately, or investigate scope first?
+  role: Compliance Analyst
+  organisation: Regulated financial services firm
+  reportsTo: Director of Risk and Compliance
+  timeInRole: 3 months
+
+display:
+  contextStyle: finding
+  incidentMeta:
+    id: INC-2026-0341
+    discoveredAt: 10:22 AM — Today
+    severity: High
+    status: Open — Uncontained
+    assignedTo: Unassigned
+    regulatoryFlag: SOX / GLBA — mandatory review required
+  sidebar:
+    - title: Your Role
+      style: text
+      items:
+        - label: Title
+          value: Compliance Analyst
+        - label: Organisation
+          value: Regulated Financial Services
+        - label: Reports to
+          value: Director of Risk & Compliance
+        - label: Time in role
+          value: 3 months
+    - title: The Finding
+      style: highlight
+      items:
+        - label: Type
+          value: Credential Exposure
+          emphasis: danger
+        - label: Access scope
+          value: Org-wide
+          emphasis: danger
+        - label: Regulatory regime
+          value: SOX / GLBA
+          emphasis: warning
+        - label: Active breach
+          value: None confirmed
+    - title: Key Stakeholders
+      style: list
+      items:
+        - label: Your manager
+          value: Director of Risk & Compliance
+        - label: Security lead
+          value: Head of InfoSec
+        - label: Legal
+          value: General Counsel
+        - label: CTO
+          value: C-suite (handle with care)
+          emphasis: warning
+
+rubric:
+  - name: Escalation Path
+    description: Does the candidate notify the right stakeholders in the right order given the risk severity?
+  - name: Risk Calibration
+    description: Does the candidate accurately assess severity — neither overstating nor understating the risk?
+  - name: Regulatory Awareness
+    description: Does the candidate recognize potential regulatory implications and factor them into their response?
+  - name: Communication Clarity
+    description: Does the candidate communicate technical risk clearly to a non-technical audience without creating panic?
+
+nodes:
+  - id: risk-001-n1
+    type: decision
+    narrative: >
+      You are a new analyst at a financial services firm, three months in. During a routine
+      process review, you discover that employee login passwords are stored in plain text in
+      a shared internal document accessible across the organization. No one has flagged it.
+      There is no evidence of misuse. No incident has occurred. You found it by accident.
+    contextPanels:
+      - label: Data exposed
+        value: Employee passwords
+        type: alert
+      - label: Access scope
+        value: Org-wide
+        type: alert
+      - label: Known incidents
+        value: None
+        type: info
+      - label: Regulatory regime
+        value: SOX / GLBA
+        type: metric
+    choices:
+      - id: A
+        text: Report it immediately to your direct manager and document that you did — this is above your authorization level to act on alone.
+        next: risk-001-n2a
+        signals:
+          Escalation Path: strong
+          Risk Calibration: proficient
+      - id: B
+        text: Delete the document yourself — eliminating the exposure is the fastest way to reduce risk.
+        next: risk-001-n2b
+        signals:
+          Escalation Path: developing
+          Regulatory Awareness: developing
+      - id: C
+        text: Investigate further first — confirm the scope of access and whether any external parties could have reached the document before escalating.
+        next: risk-001-n2c
+        signals:
+          Risk Calibration: strong
+          Escalation Path: proficient
+      - id: D
+        text: Email the entire security team directly, CC the CTO, and describe the finding in detail.
+        next: risk-001-n2d
+        signals:
+          Escalation Path: developing
+          Communication Clarity: developing
+
+  - id: risk-001-n2a
+    type: transition
+    narrative: >
+      Your manager thanks you and immediately escalates to the security team lead. Within an
+      hour, the document is locked. Your manager asks you to write a brief incident summary
+      for the compliance record. This will go into the audit trail.
+    next: risk-001-n3
+
+  - id: risk-001-n2c
+    type: transition
+    narrative: >
+      Your investigation shows the document has been accessible for at least 14 months and
+      was last edited by the IT team. No external sharing links were ever generated. You now
+      have better scope data, but you spent two hours before escalating.
+    next: risk-001-n3
+
+  - id: risk-001-n2b
+    type: transition
+    narrative: >
+      You delete the document. The next day, security discovers it in the audit log and asks
+      who removed a shared credential store without authorization. You are called into a
+      meeting with your manager and the security lead.
+    next: risk-001-n3
+
+  - id: risk-001-n2d
+    type: transition
+    narrative: >
+      The CTO replies all and asks why they weren't informed through the proper channel. The
+      security lead is frustrated that the finding was shared over email before a containment
+      plan was in place. Your manager calls you to debrief.
+    next: risk-001-n3
+
+  - id: risk-001-n3
+    type: decision
+    narrative: >
+      You have been asked to write the compliance incident summary. The security team has
+      confirmed: no external breach occurred, exposure was internal only, and the root cause
+      was a legacy IT onboarding document that was never decommissioned. How do you
+      characterize the severity in your written summary?
+    contextPanels:
+      - label: External breach
+        value: None confirmed
+        type: info
+      - label: Exposure scope
+        value: Internal only
+        type: info
+      - label: Root cause
+        value: Legacy document
+        type: info
+      - label: Regulatory flag
+        value: Required
+        type: alert
+    choices:
+      - id: A
+        text: Characterize as high severity — any credential exposure in a regulated financial institution requires conservative classification regardless of confirmed impact.
+        next: risk-001-n4a
+        signals:
+          Risk Calibration: strong
+          Regulatory Awareness: strong
+      - id: B
+        text: Characterize as low severity — no breach occurred, exposure was internal, and the document has been remediated.
+        next: risk-001-n4b
+        signals:
+          Risk Calibration: developing
+          Regulatory Awareness: developing
+      - id: C
+        text: Characterize as medium severity — acknowledge the exposure and gap in controls, note the absence of confirmed impact, and flag for review by legal and compliance.
+        next: risk-001-n4c
+        signals:
+          Risk Calibration: strong
+          Communication Clarity: strong
+      - id: D
+        text: Ask legal to classify it for you — they should own the severity call on anything with regulatory implications.
+        next: risk-001-n4d
+        signals:
+          Escalation Path: proficient
+          Risk Calibration: proficient
+
+  - id: risk-001-n4a
+    type: feedback
+    narrative: conservative
+
+  - id: risk-001-n4b
+    type: feedback
+    narrative: minimized
+
+  - id: risk-001-n4c
+    type: feedback
+    narrative: calibrated
+
+  - id: risk-001-n4d
+    type: feedback
+    narrative: delegated

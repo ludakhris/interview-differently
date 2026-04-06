@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
 import { MobileWarning } from '@/components/builder/MobileWarning'
@@ -10,7 +10,57 @@ import {
 } from '@/services/builderService'
 import { TRACK_LABELS } from '@/lib/builderTemplates'
 import { scenarios as staticScenarios } from '@/lib/scenarios'
+import { downloadScenarioYaml, yamlToScenario } from '@/lib/yamlScenario'
 import type { Scenario } from '@id/types'
+
+// ── Row action menu ───────────────────────────────────────────────────────────
+
+interface MenuAction {
+  label: string
+  onClick: () => void
+  danger?: boolean
+}
+
+function RowMenu({ actions }: { actions: MenuAction[] }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="text-[13px] text-white/30 hover:text-white/60 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg w-8 h-8 flex items-center justify-center transition-all"
+      >
+        ···
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-40 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-20 overflow-hidden">
+          {actions.map(action => (
+            <button
+              key={action.label}
+              onClick={() => { action.onClick(); setOpen(false) }}
+              className={`w-full text-left px-4 py-2.5 text-[12px] font-medium transition-colors hover:bg-white/5 ${
+                action.danger ? 'text-red-400/70 hover:text-red-400' : 'text-white/50 hover:text-white/80'
+              }`}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const TRACK_COLORS: Record<string, string> = {
   operations: '#e05a2b',
@@ -37,6 +87,8 @@ export function BuilderListPage() {
   const navigate = useNavigate()
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function refresh() {
     setScenarios(listScenarios())
@@ -53,6 +105,30 @@ export function BuilderListPage() {
   function handleImportAndEdit(scenario: Scenario) {
     importStaticScenario(scenario)
     navigate(`/builder/${scenario.scenarioId}`)
+  }
+
+  function handleYamlImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportError(null)
+    const reader = new FileReader()
+    reader.onload = ev => {
+      try {
+        const scenario = yamlToScenario(ev.target?.result as string)
+        const existing = listScenarios().find(s => s.scenarioId === scenario.scenarioId)
+        if (existing) {
+          setImportError(`A scenario with ID "${scenario.scenarioId}" already exists.`)
+          return
+        }
+        importStaticScenario({ ...scenario, builderMeta: undefined } as Scenario)
+        refresh()
+        navigate(`/builder/${scenario.scenarioId}`)
+      } catch {
+        setImportError('Invalid YAML file. Please check the format and try again.')
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
   }
 
   function handleDelete(id: string) {
@@ -81,12 +157,30 @@ export function BuilderListPage() {
               Your Scenarios
             </h2>
           </div>
-          <button
-            onClick={() => navigate('/builder/new')}
-            className="bg-[#1a6b3c] hover:bg-[#2d9e5f] text-white font-display font-semibold text-[13px] px-5 py-2.5 rounded-xl transition-colors"
-          >
-            + New Scenario
-          </button>
+          <div className="flex items-center gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".yaml,.yml"
+              onChange={handleYamlImport}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="text-[13px] font-medium text-white/50 hover:text-white/80 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl px-4 py-2.5 transition-all"
+            >
+              Import YAML
+            </button>
+            <button
+              onClick={() => navigate('/builder/new')}
+              className="bg-[#1a6b3c] hover:bg-[#2d9e5f] text-white font-display font-semibold text-[13px] px-5 py-2.5 rounded-xl transition-colors"
+            >
+              + New Scenario
+            </button>
+          </div>
+          {importError && (
+            <p className="w-full text-[12px] text-red-400 mt-2">{importError}</p>
+          )}
         </div>
 
         {/* Table */}
@@ -104,7 +198,7 @@ export function BuilderListPage() {
             </button>
           </div>
         ) : scenarios.length > 0 ? (
-          <div className="bg-[#111111] border border-white/10 rounded-2xl overflow-hidden">
+          <div className="bg-[#111111] border border-white/10 rounded-2xl">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/10">
@@ -184,45 +278,31 @@ export function BuilderListPage() {
                         </span>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="flex items-center gap-2 justify-end">
-                          <button
-                            onClick={() => navigate(`/builder/${scenario.scenarioId}`)}
-                            className="text-[11px] text-white/40 hover:text-white/70 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg px-3 py-1.5 transition-all"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDuplicate(scenario.scenarioId)}
-                            className="text-[11px] text-white/40 hover:text-white/70 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg px-3 py-1.5 transition-all"
-                          >
-                            Duplicate
-                          </button>
-                          {(status === 'draft' || isImportedStatic) && (
-                            <>
-                              {confirmDelete === scenario.scenarioId ? (
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    onClick={() => handleDelete(scenario.scenarioId)}
-                                    className="text-[11px] text-red-400 hover:text-red-300 bg-red-400/10 border border-red-400/20 rounded-lg px-2 py-1.5 transition-all"
-                                  >
-                                    Confirm
-                                  </button>
-                                  <button
-                                    onClick={() => setConfirmDelete(null)}
-                                    className="text-[11px] text-white/30 hover:text-white/50 px-2 py-1.5"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => setConfirmDelete(scenario.scenarioId)}
-                                  className="text-[11px] text-red-400/50 hover:text-red-400 bg-white/5 hover:bg-red-400/10 border border-white/10 hover:border-red-400/20 rounded-lg px-3 py-1.5 transition-all"
-                                >
-                                  Delete
-                                </button>
-                              )}
-                            </>
+                        <div className="flex justify-end">
+                          {confirmDelete === scenario.scenarioId ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleDelete(scenario.scenarioId)}
+                                className="text-[11px] text-red-400 hover:text-red-300 bg-red-400/10 border border-red-400/20 rounded-lg px-2 py-1.5 transition-all"
+                              >
+                                Confirm delete
+                              </button>
+                              <button
+                                onClick={() => setConfirmDelete(null)}
+                                className="text-[11px] text-white/30 hover:text-white/50 px-2 py-1.5"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <RowMenu actions={[
+                              { label: 'Edit', onClick: () => navigate(`/builder/${scenario.scenarioId}`) },
+                              { label: 'Duplicate', onClick: () => handleDuplicate(scenario.scenarioId) },
+                              { label: 'Export YAML', onClick: () => downloadScenarioYaml(scenario) },
+                              ...(status === 'draft' || isImportedStatic
+                                ? [{ label: 'Delete', onClick: () => setConfirmDelete(scenario.scenarioId), danger: true }]
+                                : []),
+                            ]} />
                           )}
                         </div>
                       </td>
@@ -245,7 +325,7 @@ export function BuilderListPage() {
                 Pre-built scenarios included with the platform. Import one to view and edit it in the canvas — changes save to your account, not the original.
               </p>
             </div>
-            <div className="bg-[#111111] border border-white/10 rounded-2xl overflow-hidden">
+            <div className="bg-[#111111] border border-white/10 rounded-2xl">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-white/10">
@@ -294,13 +374,11 @@ export function BuilderListPage() {
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <div className="flex items-center gap-2 justify-end">
-                            <button
-                              onClick={() => handleImportAndEdit(scenario)}
-                              className="text-[11px] text-white/40 hover:text-white/70 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg px-3 py-1.5 transition-all"
-                            >
-                              Import &amp; Edit
-                            </button>
+                          <div className="flex justify-end">
+                            <RowMenu actions={[
+                              { label: 'Import & Edit', onClick: () => handleImportAndEdit(scenario) },
+                              { label: 'Export YAML', onClick: () => downloadScenarioYaml(scenario) },
+                            ]} />
                           </div>
                         </td>
                       </tr>
