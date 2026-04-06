@@ -21,10 +21,31 @@ jobs:
       - run: npm run build
       - run: npm run test
 
-  deploy-web:
-    name: Deploy Web (Vercel)
+  changes:
+    name: Detect Changed Paths
     needs: [ci]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      api: ${{ steps.filter.outputs.api }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'apps/web/**'
+              - 'packages/**'
+            api:
+              - 'apps/api/**'
+              - 'packages/**'
+
+  deploy-web:
+    name: Deploy Web (Vercel)
+    needs: [changes]
+    if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,8 +60,8 @@ jobs:
 
   deploy-api:
     name: Deploy API (Railway)
-    needs: [ci]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [changes]
+    if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
