@@ -12,8 +12,8 @@ Tasks that are identified but not yet scheduled. Ordered roughly by dependency /
 - [x] **Builder: mobile warning** — Dismissible toast on mobile with 10s countdown; uses `navigator.userAgent` so it only fires on real mobile devices.
 - [x] **Builder: briefing editor** — Slide-over panel for situation, role, organisation, reportsTo, timeInRole, and estimatedMinutes. Opened by clicking the Start node on the canvas.
 - [x] **Builder: node deletion** — Delete button in the node editor panel header; also wired to Delete and Backspace keyboard shortcuts.
-- [ ] **Builder: preview wired to simulation** — Preview button currently navigates to the live play route. Need a proper preview mode that uses a test session and shows a watermark, without writing to the database.
-- [ ] **Builder: export / import JSON** — Allow admins to download a scenario as a portable JSON file and re-import it. Useful for sharing templates between institutions.
+- [x] **Builder: preview wired to simulation** — Preview button saves canvas state to sessionStorage and navigates with `?builderPreview=true`; SimulationPage loads from sessionStorage, shows a fixed amber "Preview Mode" banner, skips writing results, and returns to builder on completion.
+- [x] **Builder: export / import JSON** — Allow admins to download a scenario as a portable JSON file and re-import it. Useful for sharing templates between institutions.
 - [ ] **Builder: context panels UI** — The `contextPanels` and `display` fields on a scenario are not editable from the builder. Add an optional panel editor per node for monitor/table/finding display config.
 - [ ] **Builder: protect admin routes** — `/builder` and sub-routes should require an admin role. Currently any URL visitor can access them. Blocked on Phase 3 (auth).
 

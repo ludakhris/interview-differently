@@ -185,7 +185,7 @@ export function BuilderCanvasPage() {
 
   function handlePreview() {
     sessionStorage.setItem(`builder-preview-${scenarioId}`, JSON.stringify(currentScenario))
-    navigate(`/scenario/${scenarioId}/play`)
+    navigate(`/scenario/${scenarioId}/play?builderPreview=true`)
   }
 
   function handlePublish() {

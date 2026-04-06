@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useMemo } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
 import { ChoiceCard } from '@/components/ChoiceCard'
 import { ContextPanel } from '@/components/ContextPanel'
@@ -13,8 +13,24 @@ import type { TrackMeta } from '@/hooks/useScenarios'
 export function SimulationPage() {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const navigate = useNavigate()
-  const { scenario, isLoading } = useScenario(scenarioId)
+  const [searchParams] = useSearchParams()
+  const isPreview = searchParams.get('builderPreview') === 'true'
+
+  const { scenario: liveScenario, isLoading } = useScenario(scenarioId)
   const { trackMeta } = useScenarios()
+
+  // In preview mode, load the scenario from sessionStorage (saved by BuilderCanvasPage)
+  const previewScenario = useMemo<Scenario | null>(() => {
+    if (!isPreview || !scenarioId) return null
+    try {
+      const stored = sessionStorage.getItem(`builder-preview-${scenarioId}`)
+      return stored ? (JSON.parse(stored) as Scenario) : null
+    } catch {
+      return null
+    }
+  }, [isPreview, scenarioId])
+
+  const scenario = isPreview ? previewScenario : liveScenario
 
   useEffect(() => {
     if (!isLoading && !scenario) {
@@ -22,7 +38,7 @@ export function SimulationPage() {
     }
   }, [isLoading, scenario, navigate])
 
-  if (isLoading || !scenario) {
+  if ((isLoading && !isPreview) || !scenario) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <p className="text-slate-mid text-[14px]">Loading simulation...</p>
@@ -35,6 +51,7 @@ export function SimulationPage() {
       scenario={scenario}
       scenarioId={scenarioId!}
       trackMeta={trackMeta}
+      isPreview={isPreview}
     />
   )
 }
@@ -49,10 +66,12 @@ function SimulationContent({
   scenario,
   scenarioId,
   trackMeta,
+  isPreview = false,
 }: {
   scenario: Scenario
   scenarioId: string
   trackMeta: Record<string, TrackMeta>
+  isPreview?: boolean
 }) {
   const navigate = useNavigate()
   const meta = trackMeta[scenario.track]
@@ -72,18 +91,25 @@ function SimulationContent({
 
   useEffect(() => {
     if (isComplete) {
-      const result = computeResult()
-      sessionStorage.setItem(`result-${scenarioId}`, JSON.stringify(result))
-      setTimeout(() => navigate(`/scenario/${scenarioId}/feedback`), 600)
+      if (isPreview) {
+        // Preview mode: skip writing results; return to builder canvas
+        setTimeout(() => navigate(`/builder/${scenarioId}`), 600)
+      } else {
+        const result = computeResult()
+        sessionStorage.setItem(`result-${scenarioId}`, JSON.stringify(result))
+        setTimeout(() => navigate(`/scenario/${scenarioId}/feedback`), 600)
+      }
     }
-  }, [isComplete, scenarioId, navigate, computeResult])
+  }, [isComplete, isPreview, scenarioId, navigate, computeResult])
 
   if (isComplete) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="text-center animate-fade-in">
           <div className="text-4xl mb-4">✓</div>
-          <p className="font-display font-bold text-[18px] text-[#f5f3ee]">Evaluating your responses...</p>
+          <p className="font-display font-bold text-[18px] text-[#f5f3ee]">
+            {isPreview ? 'Preview complete — returning to builder...' : 'Evaluating your responses...'}
+          </p>
         </div>
       </div>
     )
@@ -104,6 +130,21 @@ function SimulationContent({
         isTransitioning ? 'opacity-50' : 'opacity-100'
       }`}
     >
+      {isPreview && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 bg-[#1a1a1a] border-t border-amber-500/30">
+          <div className="flex items-center gap-2.5">
+            <span className="text-amber-400 text-[13px]">◈</span>
+            <span className="text-[12px] font-semibold text-amber-400 uppercase tracking-widest">Preview Mode</span>
+            <span className="text-[12px] text-white/30">— responses are not saved</span>
+          </div>
+          <button
+            onClick={() => navigate(`/builder/${scenarioId}`)}
+            className="text-[12px] font-medium text-white/40 hover:text-white/70 transition-colors"
+          >
+            ← Back to builder
+          </button>
+        </div>
+      )}
       <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
 
       <div className="flex flex-1">
@@ -117,7 +158,7 @@ function SimulationContent({
         )}
 
         {/* Main scrollable content */}
-        <div className="flex-1 min-w-0 overflow-y-auto">
+        <div className={`flex-1 min-w-0 overflow-y-auto ${isPreview ? 'pb-14' : ''}`}>
 
           {/* ── Transition node ── */}
           {currentNode.type === 'transition' && (
