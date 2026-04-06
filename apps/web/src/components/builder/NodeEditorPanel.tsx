@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { ScenarioNode, RubricDimension, Choice, ScoreQuality } from '@id/types'
+import type { ScenarioNode, RubricDimension, Choice, ScoreQuality, ContextPanel } from '@id/types'
 
 interface NodeEditorPanelProps {
   selectedNode: ScenarioNode | null
@@ -141,6 +141,9 @@ function DecisionNodeEditor({
         <p className="text-[10px] text-white/20 mt-1 text-right">{node.narrative.length}/800</p>
       </div>
 
+      {/* Context Panels */}
+      <ContextPanelsEditor node={node} onUpdate={onUpdate} />
+
       {/* Choices */}
       <div>
         <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2">
@@ -225,6 +228,107 @@ function DecisionNodeEditor({
           })}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Context Panels Editor ────────────────────────────────────────────────────
+
+const PANEL_TYPES: { value: ContextPanel['type']; label: string; color: string }[] = [
+  { value: 'alert',  label: 'alert',  color: '#c0392b' },
+  { value: 'metric', label: 'metric', color: '#1a5a8a' },
+  { value: 'info',   label: 'info',   color: 'rgba(255,255,255,0.4)' },
+]
+
+function ContextPanelsEditor({
+  node,
+  onUpdate,
+}: {
+  node: ScenarioNode
+  onUpdate: (node: ScenarioNode) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const panels = node.contextPanels ?? []
+
+  function addPanel() {
+    onUpdate({ ...node, contextPanels: [...panels, { label: '', value: '', type: 'metric' }] })
+    setOpen(true)
+  }
+
+  function updatePanel(i: number, updates: Partial<ContextPanel>) {
+    onUpdate({ ...node, contextPanels: panels.map((p, idx) => (idx === i ? { ...p, ...updates } : p)) })
+  }
+
+  function removePanel(i: number) {
+    onUpdate({ ...node, contextPanels: panels.filter((_, idx) => idx !== i) })
+  }
+
+  return (
+    <div>
+      <button
+        className="w-full flex items-center justify-between mb-2"
+        onClick={() => setOpen(v => !v)}
+      >
+        <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 cursor-pointer">
+          Context Panels
+          {panels.length > 0 && (
+            <span className="ml-1.5 text-white/25">({panels.length})</span>
+          )}
+        </label>
+        <span className="text-white/25 text-[10px]">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="space-y-1.5">
+          {panels.length === 0 && (
+            <p className="text-[11px] text-white/20 py-2 text-center border border-dashed border-white/10 rounded-lg">
+              No panels yet — metrics shown above the narrative.
+            </p>
+          )}
+          {panels.map((panel, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <select
+                value={panel.type}
+                onChange={e => updatePanel(i, { type: e.target.value as ContextPanel['type'] })}
+                className="w-[58px] flex-shrink-0 bg-[#111111] border border-white/10 rounded-md px-1.5 py-1.5 text-[10px] focus:outline-none focus:border-white/30"
+                style={{ color: PANEL_TYPES.find(t => t.value === panel.type)?.color }}
+              >
+                {PANEL_TYPES.map(t => (
+                  <option key={t.value} value={t.value} style={{ color: t.color }}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={panel.label}
+                onChange={e => updatePanel(i, { label: e.target.value })}
+                placeholder="Label"
+                className="flex-1 bg-[#111111] border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-[#f5f3ee] placeholder:text-white/20 focus:outline-none focus:border-white/30"
+              />
+              <input
+                type="text"
+                value={panel.value}
+                onChange={e => updatePanel(i, { value: e.target.value })}
+                placeholder="Value"
+                className="w-[60px] flex-shrink-0 bg-[#111111] border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-[#f5f3ee] placeholder:text-white/20 focus:outline-none focus:border-white/30"
+              />
+              <button
+                onClick={() => removePanel(i)}
+                className="text-[11px] text-red-400/40 hover:text-red-400 transition-colors px-1 flex-shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button
+            onClick={addPanel}
+            className="w-full text-[11px] text-white/30 hover:text-white/60 transition-colors py-1.5 border border-dashed border-white/10 rounded-lg hover:border-white/20"
+          >
+            + Add Panel
+          </button>
+        </div>
+      )}
     </div>
   )
 }

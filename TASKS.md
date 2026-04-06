@@ -14,7 +14,7 @@ Tasks that are identified but not yet scheduled. Ordered roughly by dependency /
 - [x] **Builder: node deletion** — Delete button in the node editor panel header; also wired to Delete and Backspace keyboard shortcuts.
 - [x] **Builder: preview wired to simulation** — Preview button saves canvas state to sessionStorage and navigates with `?builderPreview=true`; SimulationPage loads from sessionStorage, shows a fixed amber "Preview Mode" banner, skips writing results, and returns to builder on completion.
 - [x] **Builder: export / import JSON** — Allow admins to download a scenario as a portable JSON file and re-import it. Useful for sharing templates between institutions.
-- [ ] **Builder: context panels UI** — The `contextPanels` and `display` fields on a scenario are not editable from the builder. Add an optional panel editor per node for monitor/table/finding display config.
+- [x] **Builder: context panels UI** — `contextPanels` editable per decision node (type/label/value inline editor). Scenario-level `display` editable via toolbar "Display" button: contextStyle selector, alert banner, incident metadata, and sidebar section/item editor.
 - [ ] **Builder: protect admin routes** — `/builder` and sub-routes should require an admin role. Currently any URL visitor can access them. Blocked on Phase 3 (auth).
 
 ---
@@ -72,9 +72,9 @@ Tasks that are identified but not yet scheduled. Ordered roughly by dependency /
 
 ## Infrastructure and ops
 
-- [ ] Set `FRONTEND_URL` env var in Railway to `https://interview-differently.vercel.app`
-- [ ] PostgreSQL on Railway (required for Phases 4–6)
-- [ ] Redis session state on Railway (optional, for Phase 4 performance)
+- [x] Set `FRONTEND_URL` env var in Railway to `https://interview-differently.vercel.app`
+- [x] PostgreSQL on Railway (required for Phases 4–6)
+- [x] Redis session state on Railway (optional, for Phase 4 performance)
 - [ ] Swap `builderService.ts` localStorage CRUD for real API calls once backend is ready
 - [ ] Swap `scenariosService.ts` static import for API fetch once backend serves scenarios
 

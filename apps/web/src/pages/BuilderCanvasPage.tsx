@@ -159,7 +159,7 @@ export function BuilderCanvasPage() {
     setSaveStatus('unsaved')
   }
 
-  function handleBriefingUpdate(updates: Pick<Scenario, 'briefing' | 'estimatedMinutes'>) {
+  function handleBriefingUpdate(updates: Pick<Scenario, 'briefing' | 'estimatedMinutes' | 'display'>) {
     const updatedScenario: Scenario = { ...currentScenario, ...updates }
     setScenario(updatedScenario)
     handleSave(updatedScenario)
@@ -280,6 +280,7 @@ export function BuilderCanvasPage() {
           onClose={() => setRubricOpen(false)}
         />
       )}
+
 
       {validationErrors !== null && (
         <ValidationModal
