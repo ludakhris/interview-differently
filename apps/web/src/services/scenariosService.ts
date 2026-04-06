@@ -1,4 +1,5 @@
 import { scenarios, trackMeta } from '@/lib/scenarios'
+import { listScenarios } from '@/services/builderService'
 import type { Scenario } from '@id/types'
 
 export type TrackMeta = {
@@ -24,7 +25,11 @@ export type ScenariosData = {
  *   return res.json()
  */
 export async function fetchScenarios(): Promise<ScenariosData> {
-  return { scenarios, trackMeta }
+  const builderScenarios = listScenarios().filter(s => s.builderMeta?.status === 'published')
+  const builderIds = new Set(builderScenarios.map(s => s.scenarioId))
+  // If a static scenario has been imported to the builder, use the builder version
+  const staticScenarios = scenarios.filter(s => !builderIds.has(s.scenarioId))
+  return { scenarios: [...staticScenarios, ...builderScenarios], trackMeta }
 }
 
 /**
@@ -36,6 +41,8 @@ export async function fetchScenarios(): Promise<ScenariosData> {
  *   return res.json()
  */
 export async function fetchScenario(id: string): Promise<Scenario | null> {
-  const { scenarios } = await fetchScenarios()
+  // Prefer builder version — it may be an edited copy of a static scenario
+  const builderVersion = listScenarios().find((s) => s.scenarioId === id)
+  if (builderVersion) return builderVersion
   return scenarios.find((s) => s.scenarioId === id) ?? null
 }

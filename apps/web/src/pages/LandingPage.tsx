@@ -9,12 +9,20 @@ export function LandingPage() {
         <span className="font-display font-extrabold text-[17px] text-[#f5f3ee] tracking-tight">
           Interview<span className="text-green-light">Differently</span>
         </span>
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="text-[13px] font-medium text-slate-light hover:text-white transition-colors"
-        >
-          Sign in
-        </button>
+        <div className="flex items-center gap-5">
+          <button
+            onClick={() => navigate('/builder')}
+            className="text-[13px] font-medium text-white/30 hover:text-white/60 transition-colors"
+          >
+            Admin
+          </button>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="text-[13px] font-medium text-slate-light hover:text-white transition-colors"
+          >
+            Sign in
+          </button>
+        </div>
       </nav>
 
       <main className="flex-1 flex flex-col items-center justify-center px-6 text-center relative overflow-hidden">

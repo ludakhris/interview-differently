@@ -105,6 +105,15 @@ export function DashboardPage() {
             </p>
           </div>
         </div>
+
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={() => navigate('/builder')}
+            className="text-[13px] font-semibold text-[#2d9e5f] hover:text-[#2d9e5f]/80 transition-colors underline-offset-2 hover:underline"
+          >
+            Build a scenario →
+          </button>
+        </div>
       </div>
     </div>
   )

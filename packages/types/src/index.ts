@@ -139,6 +139,17 @@ export interface ScenarioBriefing {
   timeInRole: string
 }
 
+export interface BuilderNodePosition {
+  x: number
+  y: number
+}
+
+export interface BuilderMeta {
+  status: 'draft' | 'published'
+  lastEditedAt: string
+  positions: Record<string, BuilderNodePosition> // nodeId → canvas position
+}
+
 export interface Scenario {
   scenarioId: string
   title: string
@@ -152,6 +163,7 @@ export interface Scenario {
   rubric: {
     dimensions: RubricDimension[]
   }
+  builderMeta?: BuilderMeta
 }
 
 // ── Session ──────────────────────────────────────────────────────────────────
