@@ -254,6 +254,11 @@ export function useBuilderCanvas(scenario: Scenario | null, onSave: (s: Scenario
     )
   }
 
+  function removeNode(nodeId: string) {
+    setNodes(nds => nds.filter(n => n.id !== nodeId))
+    setEdges(eds => eds.filter(e => e.source !== nodeId && e.target !== nodeId))
+  }
+
   function syncFromScenario(s: Scenario) {
     setNodes(scenarioToRFNodes(s))
     setEdges(scenarioToRFEdges(s))
@@ -268,6 +273,7 @@ export function useBuilderCanvas(scenario: Scenario | null, onSave: (s: Scenario
     onDragOver,
     addNode,
     updateNode,
+    removeNode,
     toScenario,
     syncFromScenario,
   }

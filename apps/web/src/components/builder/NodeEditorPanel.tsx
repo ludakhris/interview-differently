@@ -6,9 +6,10 @@ interface NodeEditorPanelProps {
   rubricDimensions: RubricDimension[]
   allNodes: ScenarioNode[]
   onUpdate: (node: ScenarioNode) => void
+  onDelete: (nodeId: string) => void
 }
 
-export function NodeEditorPanel({ selectedNode, rubricDimensions, allNodes, onUpdate }: NodeEditorPanelProps) {
+export function NodeEditorPanel({ selectedNode, rubricDimensions, allNodes, onUpdate, onDelete }: NodeEditorPanelProps) {
   if (!selectedNode) {
     return (
       <div className="w-80 flex-shrink-0 border-l border-white/10 bg-[#0d0d0d] flex items-center justify-center p-6">
@@ -21,13 +22,21 @@ export function NodeEditorPanel({ selectedNode, rubricDimensions, allNodes, onUp
 
   return (
     <div className="w-80 flex-shrink-0 border-l border-white/10 bg-[#0d0d0d] overflow-y-auto">
-      <div className="p-4 border-b border-white/10">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">
-          Node Editor
-        </p>
-        <p className="text-[13px] font-semibold text-[#f5f3ee] mt-1 capitalize">
-          {selectedNode.type} Node
-        </p>
+      <div className="p-4 border-b border-white/10 flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+            Node Editor
+          </p>
+          <p className="text-[13px] font-semibold text-[#f5f3ee] mt-1 capitalize">
+            {selectedNode.type} Node
+          </p>
+        </div>
+        <button
+          onClick={() => onDelete(selectedNode.nodeId)}
+          className="text-[11px] text-red-400/50 hover:text-red-400 bg-white/5 hover:bg-red-400/10 border border-white/10 hover:border-red-400/20 rounded-lg px-2.5 py-1.5 transition-all flex-shrink-0 mt-0.5"
+        >
+          Delete
+        </button>
       </div>
 
       {selectedNode.type === 'decision' && (

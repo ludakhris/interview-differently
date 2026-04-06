@@ -32,6 +32,9 @@ export function StartNode({ selected }: NodeProps<ScenarioNode>) {
         <div style={{ fontSize: 13, color: '#f5f3ee', fontWeight: 600 }}>
           Entry Point
         </div>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>
+          Click to edit briefing
+        </div>
       </div>
       <Handle
         type="source"

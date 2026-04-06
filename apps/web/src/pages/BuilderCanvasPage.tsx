@@ -12,6 +12,7 @@ import { BuilderToolbar, type SaveStatus } from '@/components/builder/BuilderToo
 import { NodePalette } from '@/components/builder/NodePalette'
 import { NodeEditorPanel } from '@/components/builder/NodeEditorPanel'
 import { RubricEditor } from '@/components/builder/RubricEditor'
+import { BriefingEditor } from '@/components/builder/BriefingEditor'
 import { ValidationModal } from '@/components/builder/ValidationModal'
 import { StartNode } from '@/components/builder/nodes/StartNode'
 import { DecisionNode } from '@/components/builder/nodes/DecisionNode'
@@ -41,6 +42,7 @@ export function BuilderCanvasPage() {
   )
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
+  const [briefingOpen, setBriefingOpen] = useState(false)
   const [rubricOpen, setRubricOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ReturnType<typeof validateScenario> | null>(null)
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null)
@@ -59,7 +61,7 @@ export function BuilderCanvasPage() {
 
   // Pass real scenario on first render — no empty-scenario corruption
   const canvas = useBuilderCanvas(scenario, handleSave)
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onDragOver } = canvas
+  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onDragOver, removeNode } = canvas
 
   // Mark unsaved when canvas structure changes (but not on the first mount)
   const mountedRef = useRef(false)
@@ -134,6 +136,17 @@ export function BuilderCanvasPage() {
     setSaveStatus('unsaved')
   }
 
+  function handleNodeDelete(nodeId: string) {
+    removeNode(nodeId)
+    const updatedScenario: Scenario = {
+      ...currentScenario,
+      nodes: currentScenario.nodes.filter(n => n.nodeId !== nodeId),
+    }
+    setScenario(updatedScenario)
+    setSelectedNodeId(null)
+    setSaveStatus('unsaved')
+  }
+
   function handleNodeUpdate(updatedNode: ScenarioNode) {
     canvas.updateNode(updatedNode)
     const updatedScenario: Scenario = {
@@ -144,6 +157,12 @@ export function BuilderCanvasPage() {
     }
     setScenario(updatedScenario)
     setSaveStatus('unsaved')
+  }
+
+  function handleBriefingUpdate(updates: Pick<Scenario, 'briefing' | 'estimatedMinutes'>) {
+    const updatedScenario: Scenario = { ...currentScenario, ...updates }
+    setScenario(updatedScenario)
+    handleSave(updatedScenario)
   }
 
   function handleRubricUpdate(dimensions: RubricDimension[]) {
@@ -214,13 +233,17 @@ export function BuilderCanvasPage() {
             onInit={setRfInstance}
             nodeTypes={nodeTypes}
             onNodeClick={(_, node) => {
-              setSelectedNodeId(node.type !== 'startNode' ? node.id : null)
+              if (node.type === 'startNode') {
+                setBriefingOpen(true)
+              } else {
+                setSelectedNodeId(node.id)
+              }
             }}
             onPaneClick={() => setSelectedNodeId(null)}
             fitView
             fitViewOptions={{ padding: 0.4 }}
             style={{ background: '#0a0a0a' }}
-            deleteKeyCode="Delete"
+            deleteKeyCode={['Delete', 'Backspace']}
           >
             <Background color="rgba(255,255,255,0.04)" gap={24} size={1} />
             <Controls
@@ -238,8 +261,17 @@ export function BuilderCanvasPage() {
           rubricDimensions={currentScenario.rubric.dimensions}
           allNodes={currentScenario.nodes}
           onUpdate={handleNodeUpdate}
+          onDelete={handleNodeDelete}
         />
       </div>
+
+      {briefingOpen && (
+        <BriefingEditor
+          scenario={currentScenario}
+          onUpdate={handleBriefingUpdate}
+          onClose={() => setBriefingOpen(false)}
+        />
+      )}
 
       {rubricOpen && (
         <RubricEditor
