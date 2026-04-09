@@ -8,6 +8,7 @@ import { FeedbackPage } from '@/pages/FeedbackPage'
 import { BuilderListPage } from '@/pages/BuilderListPage'
 import { BuilderSetupPage } from '@/pages/BuilderSetupPage'
 import { BuilderCanvasPage } from '@/pages/BuilderCanvasPage'
+import { AdminSettingsPage } from '@/pages/AdminSettingsPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
 
@@ -41,9 +42,11 @@ export default function App() {
       {/* Protected */}
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/scenario/:scenarioId/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
+      <Route path="/scenario/:scenarioId/feedback/:resultId" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
       <Route path="/builder" element={<AdminRoute><BuilderListPage /></AdminRoute>} />
       <Route path="/builder/new" element={<AdminRoute><BuilderSetupPage /></AdminRoute>} />
       <Route path="/builder/:scenarioId" element={<AdminRoute><BuilderCanvasPage /></AdminRoute>} />
+      <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

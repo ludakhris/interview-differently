@@ -165,6 +165,12 @@ export function DashboardPage() {
                     <div className="flex items-center gap-4">
                       <span className="text-[13px] font-bold" style={{ color }}>{item.overallScore}</span>
                       <button
+                        onClick={() => navigate(`/scenario/${item.scenarioId}/feedback/${item.id}`)}
+                        className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                      >
+                        View →
+                      </button>
+                      <button
                         onClick={() => navigate(`/scenario/${item.scenarioId}/briefing`)}
                         className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
                       >

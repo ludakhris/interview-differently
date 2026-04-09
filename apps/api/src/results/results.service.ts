@@ -36,6 +36,15 @@ export class ResultsService {
     })
   }
 
+  async getById(id: string) {
+    const result = await this.prisma.simulationResult.findUnique({
+      where: { id },
+      include: { dimensionScores: true },
+    })
+    if (!result) throw new NotFoundException(`Result ${id} not found`)
+    return result
+  }
+
   async getProfile(userId: string): Promise<CompetencyProfile> {
     const results = await this.prisma.simulationResult.findMany({
       where: { userId },

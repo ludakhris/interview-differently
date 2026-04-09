@@ -109,6 +109,14 @@ function yamlToScenario(yamlStr: string): Scenario {
 }
 
 async function main() {
+  // Upsert platform config defaults
+  await prisma.platformConfig.upsert({
+    where: { key: 'ai_feedback_enabled' },
+    update: {},
+    create: { key: 'ai_feedback_enabled', value: 'true' },
+  })
+  console.log('✓ Platform config seeded.')
+
   const count = await prisma.scenario.count()
   if (count > 0) {
     console.log(`Database already has ${count} scenario(s) — skipping seed.`)

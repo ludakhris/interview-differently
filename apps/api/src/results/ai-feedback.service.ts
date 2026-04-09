@@ -19,7 +19,7 @@ export class AiFeedbackService {
     rubricDimensions: RubricDimension[],
     dimensionScores: DimensionScoreInput[],
     decisions: DecisionContext[],
-    timeoutMs = 6000,
+    timeoutMs = 25000,
   ): Promise<AiFeedbackResult> {
     const prompt = this.buildPrompt(rubricDimensions, dimensionScores, decisions)
     const controller = new AbortController()

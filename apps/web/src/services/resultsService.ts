@@ -32,6 +32,27 @@ export async function saveResult(result: ScenarioResult & { scenarioTitle: strin
   }
 }
 
+export async function fetchResult(resultId: string): Promise<ScenarioResult> {
+  const res = await fetch(`${API_URL}/api/results/${resultId}`)
+  if (!res.ok) throw new Error(`Result fetch failed: ${res.status}`)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const row = await res.json() as any
+  return {
+    id: row.id,
+    scenarioId: row.scenarioId,
+    track: row.track,
+    overallScore: row.overallScore,
+    completedAt: row.completedAt,
+    choiceSequence: row.choiceSequence,
+    dimensionScores: row.dimensionScores.map((d: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+      dimension: d.dimension,
+      score: d.score,
+      quality: d.quality as 'strong' | 'proficient' | 'developing',
+      feedback: d.feedback,
+    })),
+  }
+}
+
 export async function fetchProfile(userId: string): Promise<CompetencyProfile> {
   const res = await fetch(`${API_URL}/api/results/profile/${userId}`)
   if (!res.ok) throw new Error('Failed to fetch competency profile')

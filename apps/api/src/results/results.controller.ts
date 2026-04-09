@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, HttpCode, HttpException, HttpStatus } from '@nestjs/common'
+import { Controller, Post, Get, Body, Param, HttpCode, HttpException, HttpStatus, NotFoundException } from '@nestjs/common'
 import { ResultsService } from './results.service'
 import type { CreateResultDto } from './results.types'
 
@@ -15,6 +15,16 @@ export class ResultsController {
   @Get('profile/:userId')
   getProfile(@Param('userId') userId: string) {
     return this.resultsService.getProfile(userId)
+  }
+
+  @Get(':id')
+  async getById(@Param('id') id: string) {
+    try {
+      return await this.resultsService.getById(id)
+    } catch (err) {
+      if (err instanceof NotFoundException) throw err
+      throw new HttpException('Failed to fetch result', HttpStatus.INTERNAL_SERVER_ERROR)
+    }
   }
 
   @Get(':id/ai-feedback')

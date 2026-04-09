@@ -4,7 +4,7 @@ import { Nav } from '@/components/Nav'
 import { ScoreRing } from '@/components/ScoreRing'
 import { useScenarios } from '@/hooks/useScenarios'
 import { useConfig } from '@/hooks/useConfig'
-import { fetchAiFeedback } from '@/services/resultsService'
+import { fetchAiFeedback, fetchResult } from '@/services/resultsService'
 import type { ScenarioResult } from '@id/types'
 
 const qualityLabel = {
@@ -26,29 +26,38 @@ const qualityBg = {
 }
 
 export function FeedbackPage() {
-  const { scenarioId } = useParams<{ scenarioId: string }>()
+  const { scenarioId, resultId } = useParams<{ scenarioId: string; resultId?: string }>()
   const navigate = useNavigate()
   const [result, setResult] = useState<ScenarioResult | null>(null)
   const [aiFeedback, setAiFeedback] = useState<Map<string, string> | null>(null)
   const [aiFeedbackStatus, setAiFeedbackStatus] = useState<'loading' | 'ready' | 'failed'>('loading')
   const { trackMeta } = useScenarios()
+  const { aiFeedbackEnabled } = useConfig()
 
   useEffect(() => {
     const stored = sessionStorage.getItem(`result-${scenarioId}`)
     if (stored) {
       setResult(JSON.parse(stored) as ScenarioResult)
+    } else if (resultId) {
+      fetchResult(resultId)
+        .then(setResult)
+        .catch(() => navigate('/dashboard'))
     } else {
       navigate('/dashboard')
     }
-  }, [scenarioId, navigate])
+  }, [scenarioId, resultId, navigate])
 
   useEffect(() => {
     if (!result) return
+    if (!aiFeedbackEnabled) {
+      setAiFeedbackStatus('failed')
+      return
+    }
     let cancelled = false
 
     const timeout = setTimeout(() => {
       if (!cancelled) setAiFeedbackStatus('failed')
-    }, 8000)
+    }, 25000)
 
     fetchAiFeedback(result.id)
       .then((data) => {
@@ -62,7 +71,7 @@ export function FeedbackPage() {
       .finally(() => clearTimeout(timeout))
 
     return () => { cancelled = true }
-  }, [result])
+  }, [result, aiFeedbackEnabled])
 
   if (!result) return null
 
@@ -101,16 +110,6 @@ export function FeedbackPage() {
             <h2 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid">
               Competency Breakdown
             </h2>
-            {aiFeedbackStatus === 'ready' && (
-              <span className="text-[10px] font-medium text-slate-mid/50 uppercase tracking-widest">
-                AI feedback
-              </span>
-            )}
-            {aiFeedbackStatus === 'loading' && (
-              <span className="text-[10px] font-medium text-slate-mid/40 uppercase tracking-widest animate-pulse">
-                Generating feedback…
-              </span>
-            )}
           </div>
           <div className="space-y-4">
             {result.dimensionScores.map((dim) => (
@@ -134,13 +133,29 @@ export function FeedbackPage() {
                     </span>
                   </div>
                 </div>
-                <p
-                  className={`text-[13px] text-slate-mid leading-relaxed transition-opacity duration-500 ${
-                    aiFeedbackStatus === 'loading' ? 'opacity-60' : 'opacity-100'
-                  }`}
-                >
-                  {aiFeedback?.get(dim.dimension) ?? dim.feedback}
-                </p>
+                {aiFeedbackStatus === 'loading' ? (
+                  <div className="mt-1 space-y-2 animate-pulse">
+                    <div className="h-3 bg-white/20 rounded-full w-full" />
+                    <div className="h-3 bg-white/20 rounded-full w-11/12" />
+                    <div className="h-3 bg-white/20 rounded-full w-4/5" />
+                    <div className="mt-3 flex items-center gap-1.5">
+                      <span className="text-slate-mid/40 text-[10px]">✦</span>
+                      <span className="text-[10px] font-medium text-slate-mid/40 uppercase tracking-widest">Generating AI feedback…</span>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-[13px] text-slate-mid leading-relaxed">
+                      {aiFeedback?.get(dim.dimension) ?? dim.feedback}
+                    </p>
+                    {aiFeedbackStatus === 'ready' && aiFeedback?.get(dim.dimension) && (
+                      <div className="mt-3 flex items-center gap-1.5">
+                        <span className="text-green-light text-[10px]">✦</span>
+                        <span className="text-[10px] font-medium text-green-light/70 uppercase tracking-widest">AI feedback</span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             ))}
           </div>
