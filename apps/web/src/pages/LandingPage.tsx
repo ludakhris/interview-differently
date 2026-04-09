@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom'
+import { useAuth, UserButton } from '@clerk/clerk-react'
 
 export function LandingPage() {
   const navigate = useNavigate()
+  const { isSignedIn, isLoaded } = useAuth()
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
@@ -10,18 +12,26 @@ export function LandingPage() {
           Interview<span className="text-green-light">Differently</span>
         </span>
         <div className="flex items-center gap-5">
-          <button
-            onClick={() => navigate('/builder')}
-            className="text-[13px] font-medium text-white/30 hover:text-white/60 transition-colors"
-          >
-            Admin
-          </button>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="text-[13px] font-medium text-slate-light hover:text-white transition-colors"
-          >
-            Sign in
-          </button>
+          {isLoaded && isSignedIn && (
+            <button
+              onClick={() => navigate('/builder')}
+              className="text-[13px] font-medium text-white/30 hover:text-white/60 transition-colors"
+            >
+              Admin
+            </button>
+          )}
+          {isLoaded && (
+            isSignedIn
+              ? <UserButton afterSignOutUrl="/" />
+              : (
+                <button
+                  onClick={() => navigate('/sign-in')}
+                  className="text-[13px] font-medium text-slate-light hover:text-white transition-colors"
+                >
+                  Sign in
+                </button>
+              )
+          )}
         </div>
       </nav>
 
