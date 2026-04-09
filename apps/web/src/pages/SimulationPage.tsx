@@ -86,7 +86,6 @@ function SimulationContent({
     setSelectedChoice,
     submitChoice,
     advanceTransition,
-    isTransitioning,
     isComplete,
     stepNumber,
     totalDecisionNodes,
@@ -133,11 +132,7 @@ function SimulationContent({
   const ctxLabel = contextSectionLabel[ctxStyle] ?? 'Live Metrics'
 
   return (
-    <div
-      className={`min-h-screen bg-[#0a0a0a] flex flex-col transition-opacity duration-300 ${
-        isTransitioning ? 'opacity-50' : 'opacity-100'
-      }`}
-    >
+    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
       {isPreview && (
         <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 bg-[#1a1a1a] border-t border-amber-500/30">
           <div className="flex items-center gap-2.5">
