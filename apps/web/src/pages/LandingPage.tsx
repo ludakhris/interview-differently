@@ -61,7 +61,7 @@ export function LandingPage() {
             {[
               { num: '80%', label: 'of job seekers feel unprepared', footnote: 1 },
               { num: '50%+', label: 'of hiring managers say grads are unprepared', footnote: 2 },
-              { num: '400–750+', label: 'applications before landing a job', footnote: 3 },
+              { num: '400-750+', label: 'applications before landing a job', footnote: 3 },
             ].map(({ num, label, footnote }) => (
               <div key={num} className="text-center">
                 <span className="font-display font-extrabold text-[36px] block leading-none text-red-400">
