@@ -33,14 +33,15 @@ Tasks that are identified but not yet scheduled. Ordered roughly by dependency /
 
 ## Phase 4 — AI feedback (Anthropic)
 
-- [ ] Move scoring engine from frontend hook to backend (NestJS)
-- [ ] Assemble session transcript on the backend after scenario completion
-- [ ] Call Claude API with transcript + pre-calculated scores + rubric dimensions
-- [ ] Parse structured JSON response (one feedback string per dimension)
-- [ ] Store scores and feedback in PostgreSQL
-- [ ] Fallback to template feedback if API call fails
-- [ ] Target: feedback generation completes in under 6 seconds
-- [ ] Blocked on Phase 3 (needs authenticated user ID to store results against)
+- [x] Assemble session transcript on the backend after scenario completion
+- [x] Call Claude API (`claude-haiku-4-5-20251001`) with transcript + scores + rubric dimensions
+- [x] Parse structured JSON response (one feedback string per dimension)
+- [x] Store AI feedback in `aiFeedback Json?` column on `SimulationResult` — cached after first generation
+- [x] Fallback to template feedback if API call fails or times out
+- [x] Per-dimension skeleton loading state while Claude generates
+- [x] `✦ AI FEEDBACK` badge on each dimension card when AI feedback is active
+- [x] Admin toggle (`/admin/settings`) to enable/disable AI feedback at runtime via `PlatformConfig` table
+- [x] View past results with AI feedback from dashboard history via `GET /api/results/:id`
 
 ---
 
