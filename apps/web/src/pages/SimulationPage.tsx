@@ -109,7 +109,7 @@ function SimulationContent({
         setTimeout(() => navigate(`/scenario/${scenarioId}/feedback`), 600)
       }
     }
-  }, [isComplete, isPreview, scenarioId, navigate, computeResult])
+  }, [isComplete, isPreview, scenarioId, navigate, computeResult, isSignedIn, scenario.title])
 
   if (isComplete) {
     return (
