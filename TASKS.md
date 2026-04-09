@@ -46,13 +46,12 @@ Tasks that are identified but not yet scheduled. Ordered roughly by dependency /
 
 ## Phase 5 — Score persistence and competency profile
 
-- [ ] PostgreSQL schema: `competency_scores` table
-- [ ] Write dimension scores on every simulation completion
-- [ ] Student dashboard: competency profile showing average per dimension across all completions
-- [ ] Simulation history list (date, track, overall score)
-- [ ] Retrying a scenario creates a new record — prior attempts preserved
-- [ ] Profile visualization updates immediately after completing a new simulation
-- [ ] Blocked on Phase 3 and 4
+- [x] PostgreSQL schema: `SimulationResult` + `DimensionScore` tables
+- [x] Write dimension scores on every simulation completion
+- [x] Student dashboard: competency profile showing average per dimension across all completions
+- [x] Simulation history list (date, track, overall score)
+- [x] Retrying a scenario creates a new record — prior attempts preserved
+- [x] Profile visualization updates immediately after completing a new simulation
 
 ---
 
