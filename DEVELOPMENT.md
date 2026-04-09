@@ -65,6 +65,15 @@ npx prisma migrate deploy && npm run db:seed && node dist/main.js
 
 So the first production deploy seeds the database automatically. No manual steps needed.
 
+**If Railway skips your deploy** (path-based triggers only fire when `apps/api` or `packages/types` change), force a redeploy by touching any file in `apps/api`:
+
+```bash
+echo "" >> apps/api/README.md
+git add apps/api/README.md
+git commit -m "chore: trigger Railway deploy"
+git push
+```
+
 ## Accounts you need
 
 Before deploying, create accounts at:
