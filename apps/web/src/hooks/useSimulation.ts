@@ -100,7 +100,7 @@ export function useSimulation(scenario: Scenario) {
       dimensionScores,
       choiceSequence: Object.values(state.choicesMade),
     }
-  }, [scenario, state.choicesMade])
+  }, [scenario, state.choicesMade, userId])
 
   const isComplete = currentNode?.type === 'feedback'
   const stepNumber = Object.keys(state.choicesMade).length + 1
