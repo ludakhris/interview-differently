@@ -39,6 +39,7 @@ export async function fetchResult(resultId: string): Promise<ScenarioResult> {
   const row = await res.json() as any
   return {
     id: row.id,
+    userId: row.userId,
     scenarioId: row.scenarioId,
     track: row.track,
     overallScore: row.overallScore,
