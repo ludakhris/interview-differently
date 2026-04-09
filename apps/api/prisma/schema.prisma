@@ -24,11 +24,18 @@ model SimulationResult {
   completedAt     DateTime
   overallScore    Int
   choiceSequence  String[]
+  aiFeedback      Json?
   createdAt       DateTime         @default(now())
   dimensionScores DimensionScore[]
 
   @@index([userId])
   @@index([userId, scenarioId])
+}
+
+model PlatformConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 model DimensionScore {

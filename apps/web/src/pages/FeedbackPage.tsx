@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
 import { ScoreRing } from '@/components/ScoreRing'
 import { useScenarios } from '@/hooks/useScenarios'
+import { useConfig } from '@/hooks/useConfig'
+import { fetchAiFeedback } from '@/services/resultsService'
 import type { ScenarioResult } from '@id/types'
 
 const qualityLabel = {
@@ -27,6 +29,8 @@ export function FeedbackPage() {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const navigate = useNavigate()
   const [result, setResult] = useState<ScenarioResult | null>(null)
+  const [aiFeedback, setAiFeedback] = useState<Map<string, string> | null>(null)
+  const [aiFeedbackStatus, setAiFeedbackStatus] = useState<'loading' | 'ready' | 'failed'>('loading')
   const { trackMeta } = useScenarios()
 
   useEffect(() => {
@@ -37,6 +41,28 @@ export function FeedbackPage() {
       navigate('/dashboard')
     }
   }, [scenarioId, navigate])
+
+  useEffect(() => {
+    if (!result) return
+    let cancelled = false
+
+    const timeout = setTimeout(() => {
+      if (!cancelled) setAiFeedbackStatus('failed')
+    }, 8000)
+
+    fetchAiFeedback(result.id)
+      .then((data) => {
+        if (cancelled) return
+        setAiFeedback(new Map(data.dimensions.map((d) => [d.dimension, d.feedback])))
+        setAiFeedbackStatus('ready')
+      })
+      .catch(() => {
+        if (!cancelled) setAiFeedbackStatus('failed')
+      })
+      .finally(() => clearTimeout(timeout))
+
+    return () => { cancelled = true }
+  }, [result])
 
   if (!result) return null
 
@@ -71,9 +97,21 @@ export function FeedbackPage() {
         </div>
 
         <div className="mb-8">
-          <h2 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid mb-4">
-            Competency Breakdown
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid">
+              Competency Breakdown
+            </h2>
+            {aiFeedbackStatus === 'ready' && (
+              <span className="text-[10px] font-medium text-slate-mid/50 uppercase tracking-widest">
+                AI feedback
+              </span>
+            )}
+            {aiFeedbackStatus === 'loading' && (
+              <span className="text-[10px] font-medium text-slate-mid/40 uppercase tracking-widest animate-pulse">
+                Generating feedback…
+              </span>
+            )}
+          </div>
           <div className="space-y-4">
             {result.dimensionScores.map((dim) => (
               <div key={dim.dimension} className="bg-[#111111] rounded-xl border border-white/10 p-5">
@@ -96,7 +134,13 @@ export function FeedbackPage() {
                     </span>
                   </div>
                 </div>
-                <p className="text-[13px] text-slate-mid leading-relaxed">{dim.feedback}</p>
+                <p
+                  className={`text-[13px] text-slate-mid leading-relaxed transition-opacity duration-500 ${
+                    aiFeedbackStatus === 'loading' ? 'opacity-60' : 'opacity-100'
+                  }`}
+                >
+                  {aiFeedback?.get(dim.dimension) ?? dim.feedback}
+                </p>
               </div>
             ))}
           </div>

@@ -1,10 +1,14 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { AiFeedbackService, type AiFeedbackResult } from './ai-feedback.service'
 import type { CreateResultDto, CompetencyProfile } from './results.types'
 
 @Injectable()
 export class ResultsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private aiFeedbackSvc: AiFeedbackService,
+  ) {}
 
   async create(dto: CreateResultDto) {
     const existing = await this.prisma.simulationResult.findUnique({ where: { id: dto.id } })
@@ -62,5 +66,53 @@ export class ResultsService {
     }))
 
     return { dimensionAverages, history }
+  }
+
+  async getOrGenerateAiFeedback(resultId: string): Promise<AiFeedbackResult> {
+    const result = await this.prisma.simulationResult.findUnique({
+      where: { id: resultId },
+      include: { dimensionScores: true },
+    })
+    if (!result) throw new NotFoundException(`Result ${resultId} not found`)
+
+    if (result.aiFeedback) {
+      return result.aiFeedback as unknown as AiFeedbackResult
+    }
+
+    const scenarioRow = await this.prisma.scenario.findUnique({
+      where: { scenarioId: result.scenarioId },
+    })
+    if (!scenarioRow) throw new NotFoundException(`Scenario ${result.scenarioId} not found`)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const scenario = scenarioRow.data as any
+
+    // Reconstruct decisions: decision nodes in encounter order, zipped with choiceSequence
+    // NOTE: Assumes linear scenarios where all decision nodes are encountered in node array order
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const decisionNodes = scenario.nodes.filter((n: any) => n.type === 'decision')
+    const decisions = result.choiceSequence.map((chosenId: string, i: number) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const node = decisionNodes[i] as any
+      return {
+        narrative: node?.narrative ?? '',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        choices: (node?.choices ?? []).map((c: any) => ({ id: c.id, text: c.text })),
+        chosenId,
+      }
+    })
+
+    const aiFeedback = await this.aiFeedbackSvc.generateFeedback(
+      scenario.rubric.dimensions,
+      result.dimensionScores,
+      decisions,
+    )
+
+    await this.prisma.simulationResult.update({
+      where: { id: resultId },
+      data: { aiFeedback: aiFeedback as object },
+    })
+
+    return aiFeedback
   }
 }

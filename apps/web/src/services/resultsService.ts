@@ -37,3 +37,19 @@ export async function fetchProfile(userId: string): Promise<CompetencyProfile> {
   if (!res.ok) throw new Error('Failed to fetch competency profile')
   return res.json() as Promise<CompetencyProfile>
 }
+
+export interface AiFeedbackDimension {
+  dimension: string
+  feedback: string
+}
+
+export interface AiFeedbackResponse {
+  dimensions: AiFeedbackDimension[]
+  generatedAt: string
+}
+
+export async function fetchAiFeedback(resultId: string): Promise<AiFeedbackResponse> {
+  const res = await fetch(`${API_URL}/api/results/${resultId}/ai-feedback`)
+  if (!res.ok) throw new Error(`AI feedback fetch failed: ${res.status}`)
+  return res.json() as Promise<AiFeedbackResponse>
+}
