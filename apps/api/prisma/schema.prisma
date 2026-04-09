@@ -14,3 +14,31 @@ model Scenario {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+
+model SimulationResult {
+  id              String           @id
+  userId          String
+  scenarioId      String
+  scenarioTitle   String
+  track           String
+  completedAt     DateTime
+  overallScore    Int
+  choiceSequence  String[]
+  createdAt       DateTime         @default(now())
+  dimensionScores DimensionScore[]
+
+  @@index([userId])
+  @@index([userId, scenarioId])
+}
+
+model DimensionScore {
+  id                 String           @id @default(uuid())
+  simulationResultId String
+  dimension          String
+  score              Int
+  quality            String
+  feedback           String
+  simulationResult   SimulationResult @relation(fields: [simulationResultId], references: [id], onDelete: Cascade)
+
+  @@index([simulationResultId])
+}

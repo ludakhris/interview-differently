@@ -75,8 +75,8 @@ Tasks that are identified but not yet scheduled. Ordered roughly by dependency /
 - [x] Set `FRONTEND_URL` env var in Railway to `https://interview-differently.vercel.app`
 - [x] PostgreSQL on Railway (required for Phases 4–6)
 - [x] Redis session state on Railway (optional, for Phase 4 performance)
-- [ ] Swap `builderService.ts` localStorage CRUD for real API calls once backend is ready
-- [ ] Swap `scenariosService.ts` static import for API fetch once backend serves scenarios
+- [x] Swap `builderService.ts` localStorage CRUD for real API calls once backend is ready
+- [x] Swap `scenariosService.ts` static import for API fetch once backend serves scenarios
 
 ---
 

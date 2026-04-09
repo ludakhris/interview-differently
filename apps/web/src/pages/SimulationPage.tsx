@@ -7,6 +7,7 @@ import { ContextPanel } from '@/components/ContextPanel'
 import { MetricChart } from '@/components/MetricChart'
 import { ScenarioSidebar } from '@/components/ScenarioSidebar'
 import { PreviewGate } from '@/components/PreviewGate'
+import { saveResult } from '@/services/resultsService'
 import { useSimulation } from '@/hooks/useSimulation'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import type { Scenario } from '@id/types'
@@ -104,6 +105,7 @@ function SimulationContent({
       } else {
         const result = computeResult()
         sessionStorage.setItem(`result-${scenarioId}`, JSON.stringify(result))
+        if (isSignedIn) void saveResult({ ...result, scenarioTitle: scenario.title })
         setTimeout(() => navigate(`/scenario/${scenarioId}/feedback`), 600)
       }
     }

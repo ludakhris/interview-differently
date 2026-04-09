@@ -1,14 +1,19 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth, useUser } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { TrackIcon } from '@/components/TrackIcon'
 import { useScenarios } from '@/hooks/useScenarios'
+import { useProfile } from '@/hooks/useProfile'
+import type { ResultSummary } from '@/services/resultsService'
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const { isSignedIn } = useAuth()
+  const location = useLocation()
+  const { isSignedIn, userId } = useAuth()
   const { user } = useUser()
   const { scenarios, trackMeta, isLoading, error } = useScenarios()
+  const refreshKey = (location.state as { refreshedAt?: number } | null)?.refreshedAt
+  const { profile, isLoading: profileLoading } = useProfile(isSignedIn ? userId : null, refreshKey)
 
   if (isLoading) {
     return (
@@ -40,9 +45,9 @@ export function DashboardPage() {
               {isSignedIn ? (user?.fullName ?? user?.firstName ?? 'Welcome') : 'Choose a scenario'}
             </h2>
           </div>
-          {/* Cohort badge — hidden until cohort assignment is implemented */}
         </div>
 
+        {/* ── Simulation Tracks ── */}
         <div className="mb-10">
           <h3 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid mb-5">
             Simulation Tracks
@@ -92,22 +97,89 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-[#111111] rounded-2xl border border-white/10 p-6">
-          <h3 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid mb-4">
+        {/* ── Competency Profile ── */}
+        <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
+          <h3 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid mb-5">
             Competency Profile
           </h3>
-          <div className="flex items-center gap-3 text-slate-mid">
-            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[16px]">
-              📈
+          {!isSignedIn ? (
+            <div className="flex items-center gap-3 text-slate-mid">
+              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[16px]">📈</div>
+              <p className="text-[14px]">Sign in to track your competency scores.</p>
             </div>
-            <p className="text-[14px]">
-              Complete a simulation to see your competency scores appear here.
-            </p>
-          </div>
+          ) : profileLoading ? (
+            <p className="text-[13px] text-slate-mid">Loading profile...</p>
+          ) : !profile || profile.dimensionAverages.length === 0 ? (
+            <div className="flex items-center gap-3 text-slate-mid">
+              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[16px]">📈</div>
+              <p className="text-[14px]">Complete a simulation to see your competency scores appear here.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {profile.dimensionAverages.map((dim) => {
+                const color = dim.averageScore >= 80 ? '#2d9e5f' : dim.averageScore >= 60 ? '#d4830a' : '#c0392b'
+                return (
+                  <div key={dim.dimension}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[13px] font-semibold text-[#f5f3ee]">{dim.dimension}</span>
+                      <span className="text-[13px] font-bold" style={{ color }}>{dim.averageScore}</span>
+                    </div>
+                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${dim.averageScore}%`, backgroundColor: color }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
+        {/* ── Simulation History ── */}
+        {isSignedIn && profile && profile.history.length > 0 && (
+          <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
+            <h3 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid mb-5">
+              Simulation History
+            </h3>
+            <div className="space-y-1">
+              {profile.history.map((item: ResultSummary) => {
+                const meta = trackMeta[item.track]
+                const color = item.overallScore >= 80 ? '#2d9e5f' : item.overallScore >= 60 ? '#d4830a' : '#c0392b'
+                const date = new Date(item.completedAt).toLocaleDateString('en-GB', {
+                  day: 'numeric', month: 'short', year: 'numeric',
+                })
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between py-3 border-b border-white/5 last:border-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: meta?.color ?? '#888' }} />
+                      <div>
+                        <p className="text-[13px] font-semibold text-[#f5f3ee]">{item.scenarioTitle}</p>
+                        <p className="text-[11px] text-slate-mid">{date}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-[13px] font-bold" style={{ color }}>{item.overallScore}</span>
+                      <button
+                        onClick={() => navigate(`/scenario/${item.scenarioId}/briefing`)}
+                        className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                      >
+                        Retry →
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {isSignedIn && (
-          <div className="mt-6 flex justify-end">
+          <div className="flex justify-end">
             <button
               onClick={() => navigate('/builder')}
               className="text-[13px] font-semibold text-[#2d9e5f] hover:text-[#2d9e5f]/80 transition-colors underline-offset-2 hover:underline"

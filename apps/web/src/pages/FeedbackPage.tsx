@@ -127,7 +127,7 @@ export function FeedbackPage() {
             Retry this scenario
           </button>
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/dashboard', { state: { refreshedAt: Date.now() } })}
             className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
           >
             Back to Dashboard
