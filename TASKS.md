@@ -15,18 +15,18 @@ Tasks that are identified but not yet scheduled. Ordered roughly by dependency /
 - [x] **Builder: preview wired to simulation** — Preview button saves canvas state to sessionStorage and navigates with `?builderPreview=true`; SimulationPage loads from sessionStorage, shows a fixed amber "Preview Mode" banner, skips writing results, and returns to builder on completion.
 - [x] **Builder: export / import JSON** — Allow admins to download a scenario as a portable JSON file and re-import it. Useful for sharing templates between institutions.
 - [x] **Builder: context panels UI** — `contextPanels` editable per decision node (type/label/value inline editor). Scenario-level `display` editable via toolbar "Display" button: contextStyle selector, alert banner, incident metadata, and sidebar section/item editor.
-- [ ] **Builder: protect admin routes** — `/builder` and sub-routes should require an admin role. Currently any URL visitor can access them. Blocked on Phase 3 (auth).
+- [x] **Builder: protect admin routes** — `/builder` and sub-routes require `role: 'admin'` in Clerk public metadata. Non-admins see an "Access restricted" screen.
 
 ---
 
 ## Phase 3 — Real auth (Clerk)
 
-- [ ] Replace hardcoded demo user (`JD` avatar) with real Clerk authentication
-- [ ] Email + password sign-in for students
+- [x] Replace hardcoded demo user (`JD` avatar) with real Clerk authentication
+- [x] Email + password sign-in for students
 - [ ] Institutional email domain detection → auto-assign institution
-- [ ] Admin role in Clerk metadata → gates builder access
+- [x] Admin role in Clerk metadata → gates builder access
 - [ ] Session persistence across devices
-- [ ] Completed simulation results tied to authenticated user ID
+- [x] Completed simulation results tied to authenticated user ID
 - [ ] Institutional SSO via SAML/OIDC (post-pilot)
 
 ---

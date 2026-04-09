@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useAuth, UserButton } from '@clerk/clerk-react'
 
 interface NavProps {
   trackLabel?: string
@@ -7,6 +8,7 @@ interface NavProps {
 
 export function Nav({ trackLabel, stepLabel }: NavProps) {
   const navigate = useNavigate()
+  const { isSignedIn, isLoaded } = useAuth()
 
   return (
     <nav className="flex items-center justify-between px-8 py-4 bg-[#0a0a0a] sticky top-0 z-50">
@@ -24,9 +26,18 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
             {stepLabel && <span className="text-white/40 ml-2">{stepLabel}</span>}
           </span>
         )}
-        <div className="w-8 h-8 rounded-full bg-green flex items-center justify-center text-white text-[12px] font-display font-bold cursor-pointer select-none">
-          JD
-        </div>
+        {isLoaded && (
+          isSignedIn
+            ? <UserButton afterSignOutUrl="/dashboard" />
+            : (
+              <button
+                onClick={() => navigate('/sign-in')}
+                className="text-[13px] font-semibold text-[#f5f3ee] hover:text-white/70 transition-colors"
+              >
+                Sign in
+              </button>
+            )
+        )}
       </div>
     </nav>
   )

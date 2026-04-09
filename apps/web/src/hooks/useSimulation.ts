@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useAuth } from '@clerk/clerk-react'
 import type { Scenario, ScenarioResult, DimensionScore, ScoreQuality } from '@id/types'
 
 interface SimulationState {
@@ -14,6 +15,7 @@ const qualityToScore: Record<ScoreQuality, number> = {
 }
 
 export function useSimulation(scenario: Scenario) {
+  const { userId } = useAuth()
   const firstNode = scenario.nodes.find((n) => n.type === 'decision')!
 
   const [state, setState] = useState<SimulationState>({
@@ -90,7 +92,7 @@ export function useSimulation(scenario: Scenario) {
 
     return {
       id: crypto.randomUUID(),
-      userId: 'demo-user',
+      userId: userId ?? 'guest',
       scenarioId: scenario.scenarioId,
       track: scenario.track,
       completedAt: new Date().toISOString(),

@@ -1,10 +1,13 @@
 import { useNavigate } from 'react-router-dom'
+import { useAuth, useUser } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { TrackIcon } from '@/components/TrackIcon'
 import { useScenarios } from '@/hooks/useScenarios'
 
 export function DashboardPage() {
   const navigate = useNavigate()
+  const { isSignedIn } = useAuth()
+  const { user } = useUser()
   const { scenarios, trackMeta, isLoading, error } = useScenarios()
 
   if (isLoading) {
@@ -31,16 +34,13 @@ export function DashboardPage() {
         <div className="flex items-end justify-between mb-10 flex-wrap gap-4">
           <div>
             <p className="text-[12px] font-medium tracking-widest uppercase text-slate-mid mb-1">
-              Welcome back
+              {isSignedIn ? 'Welcome back' : 'Explore simulations'}
             </p>
             <h2 className="font-display font-extrabold text-[32px] text-[#f5f3ee] tracking-tight">
-              Jordan Davis
+              {isSignedIn ? (user?.fullName ?? user?.firstName ?? 'Welcome') : 'Choose a scenario'}
             </h2>
           </div>
-          <div className="flex items-center gap-2 bg-green/10 border border-green/30 rounded-lg px-4 py-2">
-            <span className="w-2 h-2 rounded-full bg-green-light animate-pulse" />
-            <span className="text-[13px] font-medium text-green-light">Spring 2026 Cohort</span>
-          </div>
+          {/* Cohort badge — hidden until cohort assignment is implemented */}
         </div>
 
         <div className="mb-10">
@@ -106,14 +106,16 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={() => navigate('/builder')}
-            className="text-[13px] font-semibold text-[#2d9e5f] hover:text-[#2d9e5f]/80 transition-colors underline-offset-2 hover:underline"
-          >
-            Build a scenario →
-          </button>
-        </div>
+        {isSignedIn && (
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={() => navigate('/builder')}
+              className="text-[13px] font-semibold text-[#2d9e5f] hover:text-[#2d9e5f]/80 transition-colors underline-offset-2 hover:underline"
+            >
+              Build a scenario →
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

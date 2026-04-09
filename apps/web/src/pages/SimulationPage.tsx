@@ -1,10 +1,12 @@
 import { useEffect, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { ChoiceCard } from '@/components/ChoiceCard'
 import { ContextPanel } from '@/components/ContextPanel'
 import { MetricChart } from '@/components/MetricChart'
 import { ScenarioSidebar } from '@/components/ScenarioSidebar'
+import { PreviewGate } from '@/components/PreviewGate'
 import { useSimulation } from '@/hooks/useSimulation'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import type { Scenario } from '@id/types'
@@ -76,6 +78,8 @@ function SimulationContent({
   const navigate = useNavigate()
   const meta = trackMeta[scenario.track]
 
+  const { isSignedIn, isLoaded } = useAuth()
+
   const {
     currentNode,
     selectedChoice,
@@ -87,7 +91,11 @@ function SimulationContent({
     stepNumber,
     totalDecisionNodes,
     computeResult,
+    choicesMade,
   } = useSimulation(scenario)
+
+  // Show the preview gate after the first decision is submitted, for unauthenticated visitors
+  const isGated = isLoaded && !isSignedIn && !isPreview && Object.keys(choicesMade).length >= 1
 
   useEffect(() => {
     if (isComplete) {
@@ -158,7 +166,10 @@ function SimulationContent({
         )}
 
         {/* Main scrollable content */}
-        <div className={`flex-1 min-w-0 overflow-y-auto ${isPreview ? 'pb-14' : ''}`}>
+        <div className={`relative flex-1 min-w-0 overflow-y-auto ${isPreview ? 'pb-14' : ''}`}>
+
+          {/* Content blurred when gated */}
+          <div className={isGated ? 'blur-[2px] pointer-events-none select-none' : ''}>
 
           {/* ── Transition node ── */}
           {currentNode.type === 'transition' && (
@@ -272,6 +283,11 @@ function SimulationContent({
 
             </div>
           )}
+
+          </div>{/* end blur wrapper */}
+
+          {/* Preview gate overlay — floats above blurred content */}
+          {isGated && <PreviewGate scenarioId={scenarioId} />}
 
         </div>
       </div>
