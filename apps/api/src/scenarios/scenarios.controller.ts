@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Patch, Param, Body, HttpCode } from '@nestjs/common'
 import { ScenariosService } from './scenarios.service'
-import type { Scenario } from '@id/types'
+type Scenario = Record<string, unknown>
 
 @Controller('scenarios')
 export class ScenariosController {

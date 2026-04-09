@@ -16,10 +16,7 @@
     "noImplicitAny": true,
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "paths": {
-      "@id/types": ["../../packages/types/src/index.ts"]
-    }
+    "noFallthroughCasesInSwitch": true
   },
   "include": ["src"]
 }

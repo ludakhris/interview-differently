@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { TRACK_META } from './track-meta'
-import type { Scenario } from '@id/types'
+type Scenario = Record<string, unknown>
 
 @Injectable()
 export class ScenariosService {
