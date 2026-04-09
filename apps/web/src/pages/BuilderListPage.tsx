@@ -9,7 +9,6 @@ import {
   importStaticScenario,
 } from '@/services/builderService'
 import { TRACK_LABELS } from '@/lib/builderTemplates'
-import { scenarios as staticScenarios } from '@/lib/scenarios'
 import { downloadScenarioYaml, yamlToScenario } from '@/lib/yamlScenario'
 import type { Scenario } from '@id/types'
 
@@ -105,15 +104,6 @@ export function BuilderListPage() {
     refresh()
   }, [])
 
-  // Static scenarios not yet imported into the builder
-  const importedIds = new Set(scenarios.map(s => s.scenarioId))
-  const unimportedStatics = staticScenarios.filter(s => !importedIds.has(s.scenarioId))
-
-  async function handleImportAndEdit(scenario: Scenario) {
-    await importStaticScenario(scenario)
-    navigate(`/builder/${scenario.scenarioId}`)
-  }
-
   function handleYamlImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -195,7 +185,7 @@ export function BuilderListPage() {
           <div className="bg-[#111111] border border-white/10 rounded-2xl p-16 text-center">
             <p className="text-[14px] text-white/30">Loading scenarios...</p>
           </div>
-        ) : scenarios.length === 0 && unimportedStatics.length === 0 ? (
+        ) : scenarios.length === 0 ? (
           <div className="bg-[#111111] border border-white/10 rounded-2xl p-16 text-center">
             <p className="text-[16px] font-semibold text-[#f5f3ee] mb-2">No scenarios yet.</p>
             <p className="text-[14px] text-white/30 mb-8">
@@ -233,7 +223,6 @@ export function BuilderListPage() {
                   const trackColor = TRACK_COLORS[scenario.track] ?? '#888'
                   const status = scenario.builderMeta?.status ?? 'draft'
                   const lastEdited = scenario.builderMeta?.lastEditedAt ?? ''
-                  const isImportedStatic = staticScenarios.some(s => s.scenarioId === scenario.scenarioId)
 
                   return (
                     <tr
@@ -310,9 +299,7 @@ export function BuilderListPage() {
                               { label: 'Edit', onClick: () => navigate(`/builder/${scenario.scenarioId}`) },
                               { label: 'Duplicate', onClick: () => handleDuplicate(scenario.scenarioId) },
                               { label: 'Export YAML', onClick: () => downloadScenarioYaml(scenario) },
-                              ...(status === 'draft' || isImportedStatic
-                                ? [{ label: 'Delete', onClick: () => setConfirmDelete(scenario.scenarioId), danger: true }]
-                                : []),
+                              { label: 'Delete', onClick: () => setConfirmDelete(scenario.scenarioId), danger: true },
                             ]} />
                           )}
                         </div>
@@ -325,81 +312,6 @@ export function BuilderListPage() {
           </div>
         ) : null}
 
-        {/* Built-in scenarios */}
-        {!isLoading && unimportedStatics.length > 0 && (
-          <div className="mt-10">
-            <div className="mb-5">
-              <p className="text-[12px] font-medium tracking-widest uppercase text-white/30 mb-1">
-                Built-in Scenarios
-              </p>
-              <p className="text-[13px] text-white/30">
-                Pre-built scenarios included with the platform. Import one to view and edit it in the canvas — changes save to your account, not the original.
-              </p>
-            </div>
-            <div className="bg-[#111111] border border-white/10 rounded-2xl">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left text-[10px] font-bold uppercase tracking-widest text-white/30 px-6 py-4">Title</th>
-                    <th className="text-left text-[10px] font-bold uppercase tracking-widest text-white/30 px-4 py-4">Track</th>
-                    <th className="text-left text-[10px] font-bold uppercase tracking-widest text-white/30 px-4 py-4">Status</th>
-                    <th className="px-4 py-4" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {unimportedStatics.map((scenario, i) => {
-                    const trackColor = TRACK_COLORS[scenario.track] ?? '#888'
-                    return (
-                      <tr
-                        key={scenario.scenarioId}
-                        className={`border-b border-white/5 ${i === unimportedStatics.length - 1 ? 'border-b-0' : ''}`}
-                      >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-1 h-8 rounded-full flex-shrink-0 opacity-50"
-                              style={{ background: trackColor }}
-                            />
-                            <div>
-                              <p className="text-[14px] font-semibold text-[#f5f3ee]/70">
-                                {scenario.title}
-                              </p>
-                              <p className="text-[11px] text-white/25">
-                                {scenario.nodes.length} node{scenario.nodes.length !== 1 ? 's' : ''}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span
-                            className="text-[11px] font-medium px-2 py-1 rounded-md opacity-60"
-                            style={{ color: trackColor, background: `${trackColor}18` }}
-                          >
-                            {TRACK_LABELS[scenario.track] ?? scenario.track}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#2d9e5f] bg-[#2d9e5f]/10 border border-[#2d9e5f]/20 px-2 py-1 rounded-md">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#2d9e5f]" />
-                            Built-in
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="flex justify-end">
-                            <RowMenu actions={[
-                              { label: 'Import & Edit', onClick: () => handleImportAndEdit(scenario) },
-                              { label: 'Export YAML', onClick: () => downloadScenarioYaml(scenario) },
-                            ]} />
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

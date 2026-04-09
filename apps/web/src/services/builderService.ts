@@ -64,7 +64,7 @@ export async function publishScenario(id: string): Promise<Scenario> {
   return apiFetch<Scenario>(`/scenarios/${id}/publish`, { method: 'PATCH' })
 }
 
-function autoLayoutPositions(scenario: Scenario): Record<string, { x: number; y: number }> {
+export function autoLayoutPositions(scenario: Scenario): Record<string, { x: number; y: number }> {
   const positions: Record<string, { x: number; y: number }> = {}
   const nodes = scenario.nodes
   if (!nodes.length) return positions

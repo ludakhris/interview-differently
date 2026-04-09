@@ -11,13 +11,15 @@ import {
   type Connection,
 } from 'reactflow'
 import type { Scenario, ScenarioNode } from '@id/types'
+import { autoLayoutPositions } from '@/services/builderService'
 
 export type RFNode = Node<ScenarioNode>
 export type RFEdge = Edge
 
 function scenarioToRFNodes(scenario: Scenario): RFNode[] {
   if (!scenario?.nodes) return []
-  const positions = scenario.builderMeta?.positions ?? {}
+  const stored = scenario.builderMeta?.positions ?? {}
+  const positions = Object.keys(stored).length > 0 ? stored : autoLayoutPositions(scenario)
   const nodes: RFNode[] = []
 
   // Create a special start node for entry
@@ -165,6 +167,13 @@ export function useBuilderCanvas(scenario: Scenario | null, onSave: (s: Scenario
 
   // Keep ref in sync
   scenarioRef.current = scenario
+
+  // Populate canvas when scenario loads from API (initial state was null)
+  useEffect(() => {
+    if (!scenario) return
+    setNodes(scenarioToRFNodes(scenario))
+    setEdges(scenarioToRFEdges(scenario))
+  }, [scenario?.scenarioId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const onNodesChange: OnNodesChange = useCallback(changes => {
     setNodes(nds => applyNodeChanges(changes, nds))
