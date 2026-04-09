@@ -2,7 +2,7 @@
 
 ## Local development
 
-**Prerequisites:** Node 20+, Docker
+**Prerequisites:** Node 20+
 
 ```bash
 # 1. Clone
@@ -12,19 +12,58 @@ cd interview-differently
 # 2. Install
 npm install
 
-# 3. Copy env files
-cp apps/web/.env.example apps/web/.env
+# 3. Set up env files (see Environment variables below)
+cp apps/web/.env.example apps/web/.env.local
 cp apps/api/.env.example apps/api/.env
+# Then fill in the values — DATABASE_URL and VITE_CLERK_PUBLISHABLE_KEY are required to run locally
+```
 
-# 4. Start Postgres and Redis
-docker compose up -d
+### Database setup (required before first run)
 
-# 5. Run everything
-npm run dev
+The project uses **Railway Postgres** — no local Postgres or Docker needed.
+
+**Get your DATABASE_URL:**
+1. Open [railway.app](https://railway.app) → your project → **PostgreSQL** service
+2. Click the **Connect** tab
+3. Copy the **DATABASE_URL** and paste it into `apps/api/.env`
+
+**Run migrations and seed:**
+```bash
+cd apps/api
+npx prisma generate       # generates the Prisma client
+npm run db:migrate        # creates tables in Railway Postgres
+npm run db:seed           # populates built-in scenarios from YAML files
+cd ../..
+```
+
+> **Note:** Run these from inside `apps/api/`, not the monorepo root.
+
+**Start everything:**
+```bash
+npm run dev               # from monorepo root — starts both API and frontend
 ```
 
 Frontend runs at http://localhost:5173  
 API runs at http://localhost:3000/api/health
+
+**Resetting the database** (if scenarios get corrupted or you want a clean slate):
+```bash
+cd apps/api && npm run db:reset
+```
+
+This wipes all data and re-seeds from the static YAML files in `apps/web/src/lib/scenarios/`. The YAML files are the source of truth for built-in scenarios.
+
+### Production database (Railway)
+
+On every deploy, Railway automatically runs:
+```
+npx prisma migrate deploy && npm run db:seed && node dist/main.js
+```
+
+- `prisma migrate deploy` — applies any pending migrations (safe to run repeatedly)
+- `npm run db:seed` — seeds built-in scenarios only if the database is empty, skips otherwise
+
+So the first production deploy seeds the database automatically. No manual steps needed.
 
 ## Accounts you need
 
@@ -69,8 +108,9 @@ No manual deploys needed after initial setup.
 
 ## Environment variables
 
-**apps/web/.env**
+**apps/web/.env.local**
 ```
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...   # from dashboard.clerk.com
 VITE_API_URL=http://localhost:3000
 ```
 
@@ -78,8 +118,8 @@ VITE_API_URL=http://localhost:3000
 ```
 PORT=3000
 FRONTEND_URL=http://localhost:5173
-DATABASE_URL=postgresql://id_user:id_password@localhost:5432/interview_differently
-REDIS_URL=redis://localhost:6379
-ANTHROPIC_API_KEY=your_key_here
-CLERK_SECRET_KEY=your_key_here
+DATABASE_URL=postgresql://...            # from Railway → PostgreSQL → Connect
+REDIS_URL=redis://...                    # from Railway → Redis → Connect (Phase 4+)
+ANTHROPIC_API_KEY=your_key_here          # from console.anthropic.com (Phase 4+)
+CLERK_SECRET_KEY=your_key_here           # from dashboard.clerk.com (Phase 4+)
 ```

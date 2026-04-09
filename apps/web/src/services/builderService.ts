@@ -1,31 +1,35 @@
 import type { Scenario } from '@id/types'
 import { RUBRIC_TEMPLATES } from '@/lib/builderTemplates'
 
-const KEY = 'id-builder-scenarios'
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
-function load(): Scenario[] {
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_URL}/api${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...init,
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`API error ${res.status}: ${text}`)
+  }
+  if (res.status === 204) return undefined as T
+  return res.json() as Promise<T>
+}
+
+export async function listScenarios(): Promise<Scenario[]> {
+  const data = await apiFetch<{ scenarios: Scenario[] }>('/scenarios')
+  return data.scenarios
+}
+
+export async function getScenario(id: string): Promise<Scenario | null> {
   try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return []
-    return JSON.parse(raw) as Scenario[]
+    return await apiFetch<Scenario>(`/scenarios/${id}`)
   } catch {
-    return []
+    return null
   }
 }
 
-function save(scenarios: Scenario[]): void {
-  localStorage.setItem(KEY, JSON.stringify(scenarios))
-}
-
-export function listScenarios(): Scenario[] {
-  return load()
-}
-
-export function getScenario(id: string): Scenario | null {
-  return load().find(s => s.scenarioId === id) ?? null
-}
-
-export function createScenario(title: string, track: string): Scenario {
+export async function createScenario(title: string, track: string): Promise<Scenario> {
   const id = crypto.randomUUID()
   const startNodeId = crypto.randomUUID()
   const scenario: Scenario = {
@@ -42,45 +46,22 @@ export function createScenario(title: string, track: string): Scenario {
       positions: { [startNodeId]: { x: 300, y: 100 } },
     },
   }
-  save([...load(), scenario])
-  return scenario
+  return apiFetch<Scenario>('/scenarios', { method: 'POST', body: JSON.stringify(scenario) })
 }
 
-export function updateScenario(scenario: Scenario): void {
-  const all = load()
-  save(all.map(s =>
-    s.scenarioId === scenario.scenarioId
-      ? {
-          ...scenario,
-          builderMeta: {
-            ...scenario.builderMeta!,
-            lastEditedAt: new Date().toISOString(),
-          },
-        }
-      : s
-  ))
+export async function updateScenario(scenario: Scenario): Promise<Scenario> {
+  return apiFetch<Scenario>(`/scenarios/${scenario.scenarioId}`, {
+    method: 'PUT',
+    body: JSON.stringify(scenario),
+  })
 }
 
-export function deleteScenario(id: string): void {
-  save(load().filter(s => s.scenarioId !== id))
+export async function deleteScenario(id: string): Promise<void> {
+  return apiFetch<void>(`/scenarios/${id}`, { method: 'DELETE' })
 }
 
-export function publishScenario(id: string): void {
-  const all = load()
-  save(
-    all.map(s =>
-      s.scenarioId === id
-        ? {
-            ...s,
-            builderMeta: {
-              ...s.builderMeta!,
-              status: 'published' as const,
-              lastEditedAt: new Date().toISOString(),
-            },
-          }
-        : s
-    )
-  )
+export async function publishScenario(id: string): Promise<Scenario> {
+  return apiFetch<Scenario>(`/scenarios/${id}/publish`, { method: 'PATCH' })
 }
 
 function autoLayoutPositions(scenario: Scenario): Record<string, { x: number; y: number }> {
@@ -88,19 +69,19 @@ function autoLayoutPositions(scenario: Scenario): Record<string, { x: number; y:
   const nodes = scenario.nodes
   if (!nodes.length) return positions
 
-  // Build children map from node connections
   const children: Record<string, string[]> = {}
-  nodes.forEach(n => {
+  nodes.forEach((n) => {
     children[n.nodeId] = []
     if (n.type === 'decision' && n.choices) {
-      n.choices.forEach(c => { if (c.nextNodeId) children[n.nodeId].push(c.nextNodeId) })
+      n.choices.forEach((c) => {
+        if (c.nextNodeId) children[n.nodeId].push(c.nextNodeId)
+      })
     }
     if (n.type === 'transition' && n.nextNodeId) {
       children[n.nodeId].push(n.nextNodeId)
     }
   })
 
-  // BFS from first node to assign depth layers
   const firstNodeId = nodes[0].nodeId
   const layers: string[][] = []
   const visited = new Set<string>()
@@ -110,8 +91,8 @@ function autoLayoutPositions(scenario: Scenario): Record<string, { x: number; y:
   while (queue.length > 0) {
     layers.push(queue)
     const next: string[] = []
-    queue.forEach(id => {
-      ;(children[id] ?? []).forEach(childId => {
+    queue.forEach((id) => {
+      ;(children[id] ?? []).forEach((childId) => {
         if (!visited.has(childId)) {
           visited.add(childId)
           next.push(childId)
@@ -121,8 +102,7 @@ function autoLayoutPositions(scenario: Scenario): Record<string, { x: number; y:
     queue = next
   }
 
-  // Any disconnected nodes go at the end
-  nodes.forEach(n => {
+  nodes.forEach((n) => {
     if (!visited.has(n.nodeId)) layers.push([n.nodeId])
   })
 
@@ -130,25 +110,22 @@ function autoLayoutPositions(scenario: Scenario): Record<string, { x: number; y:
   const NODE_W = 300
   const CENTER_X = 400
 
-  // Start placeholder sits above the first real node
   positions[`start-${firstNodeId}`] = { x: CENTER_X, y: 20 }
 
   layers.forEach((layer, depth) => {
     const totalWidth = (layer.length - 1) * NODE_W
     const startX = CENTER_X - totalWidth / 2
     layer.forEach((nodeId, i) => {
-      positions[nodeId] = {
-        x: startX + i * NODE_W,
-        y: 160 + depth * LAYER_H,
-      }
+      positions[nodeId] = { x: startX + i * NODE_W, y: 160 + depth * LAYER_H }
     })
   })
 
   return positions
 }
 
-export function importStaticScenario(scenario: Scenario): Scenario {
-  const existing = getScenario(scenario.scenarioId)
+export async function importStaticScenario(scenario: Scenario): Promise<Scenario> {
+  // Check if already exists
+  const existing = await getScenario(scenario.scenarioId)
   if (existing) return existing
   const imported: Scenario = {
     ...scenario,
@@ -158,12 +135,11 @@ export function importStaticScenario(scenario: Scenario): Scenario {
       positions: autoLayoutPositions(scenario),
     },
   }
-  save([...load(), imported])
-  return imported
+  return apiFetch<Scenario>('/scenarios', { method: 'POST', body: JSON.stringify(imported) })
 }
 
-export function duplicateScenario(id: string): Scenario | null {
-  const original = getScenario(id)
+export async function duplicateScenario(id: string): Promise<Scenario | null> {
+  const original = await getScenario(id)
   if (!original) return null
   const copy: Scenario = {
     ...original,
@@ -175,6 +151,5 @@ export function duplicateScenario(id: string): Scenario | null {
       lastEditedAt: new Date().toISOString(),
     },
   }
-  save([...load(), copy])
-  return copy
+  return apiFetch<Scenario>('/scenarios', { method: 'POST', body: JSON.stringify(copy) })
 }

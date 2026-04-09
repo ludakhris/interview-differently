@@ -36,10 +36,8 @@ export function BuilderCanvasPage() {
   const [searchParams] = useSearchParams()
   const isPreview = searchParams.get('preview') === 'true'
 
-  // Load synchronously from localStorage so canvas initializes with real data
-  const [scenario, setScenario] = useState<Scenario | null>(() =>
-    scenarioId ? getScenario(scenarioId) : null
-  )
+  const [scenario, setScenario] = useState<Scenario | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [briefingOpen, setBriefingOpen] = useState(false)
@@ -47,6 +45,18 @@ export function BuilderCanvasPage() {
   const [validationErrors, setValidationErrors] = useState<ReturnType<typeof validateScenario> | null>(null)
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null)
   const saveStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Load scenario asynchronously on mount
+  useEffect(() => {
+    if (!scenarioId) {
+      setIsLoading(false)
+      return
+    }
+    getScenario(scenarioId).then((loaded) => {
+      setScenario(loaded)
+      setIsLoading(false)
+    })
+  }, [scenarioId])
 
   const handleSave = useCallback(
     (updated: Scenario) => {
@@ -92,7 +102,18 @@ export function BuilderCanvasPage() {
     }
   }, [])
 
-  // ── Not found (sync load — if null here it truly doesn't exist) ───────────
+  // ── Loading screen ─────────────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-[#f5f3ee]/40 text-[14px]">Loading scenario...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Not found ──────────────────────────────────────────────────────────────
   if (!scenario || !scenarioId) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">

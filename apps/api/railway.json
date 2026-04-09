@@ -5,7 +5,7 @@
     "buildCommand": "/app/node_modules/.bin/nest build"
   },
   "deploy": {
-    "startCommand": "node dist/main.js",
+    "startCommand": "npx prisma migrate deploy && npm run db:seed && node dist/main.js",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }

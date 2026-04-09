@@ -86,12 +86,19 @@ function formatDate(iso: string): string {
 export function BuilderListPage() {
   const navigate = useNavigate()
   const [scenarios, setScenarios] = useState<Scenario[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  function refresh() {
-    setScenarios(listScenarios())
+  async function refresh() {
+    setIsLoading(true)
+    try {
+      const result = await listScenarios()
+      setScenarios(result)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -102,8 +109,8 @@ export function BuilderListPage() {
   const importedIds = new Set(scenarios.map(s => s.scenarioId))
   const unimportedStatics = staticScenarios.filter(s => !importedIds.has(s.scenarioId))
 
-  function handleImportAndEdit(scenario: Scenario) {
-    importStaticScenario(scenario)
+  async function handleImportAndEdit(scenario: Scenario) {
+    await importStaticScenario(scenario)
     navigate(`/builder/${scenario.scenarioId}`)
   }
 
@@ -112,16 +119,16 @@ export function BuilderListPage() {
     if (!file) return
     setImportError(null)
     const reader = new FileReader()
-    reader.onload = ev => {
+    reader.onload = async ev => {
       try {
         const scenario = yamlToScenario(ev.target?.result as string)
-        const existing = listScenarios().find(s => s.scenarioId === scenario.scenarioId)
+        const existing = scenarios.find(s => s.scenarioId === scenario.scenarioId)
         if (existing) {
           setImportError(`A scenario with ID "${scenario.scenarioId}" already exists.`)
           return
         }
-        importStaticScenario({ ...scenario, builderMeta: undefined } as Scenario)
-        refresh()
+        await importStaticScenario({ ...scenario, builderMeta: undefined } as Scenario)
+        await refresh()
         navigate(`/builder/${scenario.scenarioId}`)
       } catch {
         setImportError('Invalid YAML file. Please check the format and try again.')
@@ -131,15 +138,15 @@ export function BuilderListPage() {
     e.target.value = ''
   }
 
-  function handleDelete(id: string) {
-    deleteScenario(id)
-    refresh()
+  async function handleDelete(id: string) {
+    await deleteScenario(id)
+    await refresh()
     setConfirmDelete(null)
   }
 
-  function handleDuplicate(id: string) {
-    duplicateScenario(id)
-    refresh()
+  async function handleDuplicate(id: string) {
+    await duplicateScenario(id)
+    await refresh()
   }
 
   return (
@@ -183,8 +190,12 @@ export function BuilderListPage() {
           )}
         </div>
 
-        {/* Table */}
-        {scenarios.length === 0 && unimportedStatics.length === 0 ? (
+        {/* Loading state */}
+        {isLoading ? (
+          <div className="bg-[#111111] border border-white/10 rounded-2xl p-16 text-center">
+            <p className="text-[14px] text-white/30">Loading scenarios...</p>
+          </div>
+        ) : scenarios.length === 0 && unimportedStatics.length === 0 ? (
           <div className="bg-[#111111] border border-white/10 rounded-2xl p-16 text-center">
             <p className="text-[16px] font-semibold text-[#f5f3ee] mb-2">No scenarios yet.</p>
             <p className="text-[14px] text-white/30 mb-8">
@@ -315,7 +326,7 @@ export function BuilderListPage() {
         ) : null}
 
         {/* Built-in scenarios */}
-        {unimportedStatics.length > 0 && (
+        {!isLoading && unimportedStatics.length > 0 && (
           <div className="mt-10">
             <div className="mb-5">
               <p className="text-[12px] font-medium tracking-widest uppercase text-white/30 mb-1">

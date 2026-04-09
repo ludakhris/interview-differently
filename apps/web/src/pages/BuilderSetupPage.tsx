@@ -59,7 +59,7 @@ export function BuilderSetupPage() {
   const selectedTrackOption = TRACK_OPTIONS.find(t => t.value === track)
   const previewDimensions = track ? (RUBRIC_TEMPLATES[track] ?? []) : []
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!title.trim()) {
       setError('Please enter a scenario title.')
       return
@@ -68,7 +68,7 @@ export function BuilderSetupPage() {
       setError('Please select a track.')
       return
     }
-    const scenario = createScenario(title.trim(), track)
+    const scenario = await createScenario(title.trim(), track)
     navigate(`/builder/${scenario.scenarioId}`)
   }
 
