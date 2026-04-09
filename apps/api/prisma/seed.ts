@@ -2,7 +2,12 @@ import { PrismaClient } from '@prisma/client'
 import { readFileSync, readdirSync } from 'fs'
 import { join, resolve } from 'path'
 import * as yaml from 'js-yaml'
-import type { Scenario, ScenarioNode, Choice } from '@id/types'
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Scenario = any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ScenarioNode = any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Choice = any
 
 const prisma = new PrismaClient()
 
