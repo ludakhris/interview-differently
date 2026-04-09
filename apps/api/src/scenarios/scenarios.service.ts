@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { TRACK_META } from './track-meta'
-type Scenario = Record<string, unknown>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Scenario = any
 
 @Injectable()
 export class ScenariosService {

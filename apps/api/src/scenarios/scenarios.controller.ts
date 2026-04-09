@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Patch, Param, Body, HttpCode } from '@nestjs/common'
 import { ScenariosService } from './scenarios.service'
-type Scenario = Record<string, unknown>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Scenario = any
 
 @Controller('scenarios')
 export class ScenariosController {
