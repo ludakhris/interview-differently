@@ -49,3 +49,32 @@ model DimensionScore {
 
   @@index([simulationResultId])
 }
+
+model ImmersiveSession {
+  id         String               @id @default(uuid())
+  scenarioId String
+  userId     String
+  status     String               @default("active") // active | completed | abandoned
+  summary    Json?                // cached ImmersiveSummary once all responses are evaluated
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+  responses  ImmersiveResponse[]
+
+  @@index([userId])
+  @@index([scenarioId])
+}
+
+model ImmersiveResponse {
+  id              String           @id @default(uuid())
+  sessionId       String
+  nodeId          String
+  questionText    String
+  mediaUrl        String?
+  transcript      String?
+  durationSeconds Int?
+  aiFeedback      Json?            // cached ImmersiveResponseFeedback
+  createdAt       DateTime         @default(now())
+  session         ImmersiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}

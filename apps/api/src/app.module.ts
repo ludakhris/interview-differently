@@ -4,8 +4,9 @@ import { ScenariosModule } from './scenarios/scenarios.module'
 import { PrismaModule } from './prisma/prisma.module'
 import { ResultsModule } from './results/results.module'
 import { PlatformConfigModule } from './platform-config/platform-config.module'
+import { ImmersiveSessionsModule } from './immersive-sessions/immersive-sessions.module'
 
 @Module({
-  imports: [PrismaModule, HealthModule, ScenariosModule, ResultsModule, PlatformConfigModule],
+  imports: [PrismaModule, HealthModule, ScenariosModule, ResultsModule, PlatformConfigModule, ImmersiveSessionsModule],
 })
 export class AppModule {}

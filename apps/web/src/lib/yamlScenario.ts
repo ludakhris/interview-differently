@@ -18,6 +18,8 @@ interface YamlNode {
   chart?: Scenario['nodes'][number]['chart']
   choices?: YamlChoice[]
   next?: string
+  audioScript?: string
+  responsePrompt?: string
 }
 
 interface YamlScenario {
@@ -25,6 +27,7 @@ interface YamlScenario {
   title: string
   track: string
   estimatedMinutes: number
+  mode?: 'text' | 'immersive'
   briefing: {
     situation: string
     role: string
@@ -60,6 +63,8 @@ export function yamlToScenario(yamlStr: string): Scenario {
       ...(n.chart ? { chart: n.chart } : {}),
       ...(choices ? { choices } : {}),
       ...(n.next ? { nextNodeId: n.next } : {}),
+      ...(n.audioScript ? { audioScript: n.audioScript } : {}),
+      ...(n.responsePrompt ? { responsePrompt: n.responsePrompt } : {}),
     }
   })
 
@@ -68,6 +73,7 @@ export function yamlToScenario(yamlStr: string): Scenario {
     title: raw.title,
     track: raw.track as Scenario['track'],
     estimatedMinutes: raw.estimatedMinutes,
+    ...(raw.mode ? { mode: raw.mode } : {}),
     briefing: {
       situation: raw.briefing.situation ?? '',
       role: raw.briefing.role ?? '',
@@ -91,6 +97,7 @@ export function scenarioToYaml(scenario: Scenario): string {
     title: scenario.title,
     track: scenario.track,
     estimatedMinutes: scenario.estimatedMinutes,
+    ...(scenario.mode ? { mode: scenario.mode } : {}),
     briefing: scenario.briefing,
     ...(scenario.display ? { display: scenario.display } : {}),
     rubric: scenario.rubric.dimensions,
@@ -116,6 +123,8 @@ export function scenarioToYaml(scenario: Scenario): string {
         ...(n.chart ? { chart: n.chart } : {}),
         ...(choices?.length ? { choices } : {}),
         ...(n.nextNodeId ? { next: n.nextNodeId } : {}),
+        ...(n.audioScript ? { audioScript: n.audioScript } : {}),
+        ...(n.responsePrompt ? { responsePrompt: n.responsePrompt } : {}),
       }
     }),
   }

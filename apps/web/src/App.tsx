@@ -5,6 +5,8 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { BriefingPage } from '@/pages/BriefingPage'
 import { SimulationPage } from '@/pages/SimulationPage'
 import { FeedbackPage } from '@/pages/FeedbackPage'
+import { ImmersiveSimulationPage } from '@/pages/ImmersiveSimulationPage'
+import { ImmersiveFeedbackPage } from '@/pages/ImmersiveFeedbackPage'
 import { BuilderListPage } from '@/pages/BuilderListPage'
 import { BuilderSetupPage } from '@/pages/BuilderSetupPage'
 import { BuilderCanvasPage } from '@/pages/BuilderCanvasPage'
@@ -43,6 +45,8 @@ export default function App() {
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/scenario/:scenarioId/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
       <Route path="/scenario/:scenarioId/feedback/:resultId" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
+      <Route path="/scenario/:scenarioId/immersive" element={<ProtectedRoute><ImmersiveSimulationPage /></ProtectedRoute>} />
+      <Route path="/scenario/:scenarioId/immersive/:sessionId/feedback" element={<ProtectedRoute><ImmersiveFeedbackPage /></ProtectedRoute>} />
       <Route path="/builder" element={<AdminRoute><BuilderListPage /></AdminRoute>} />
       <Route path="/builder/new" element={<AdminRoute><BuilderSetupPage /></AdminRoute>} />
       <Route path="/builder/:scenarioId" element={<AdminRoute><BuilderCanvasPage /></AdminRoute>} />

@@ -124,6 +124,9 @@ export interface ScenarioNode {
   // transition nodes
   transitionText?: string
   nextNodeId?: string
+  // immersive mode fields
+  audioScript?: string                 // exact words for AI narrator; falls back to narrative if absent
+  responsePrompt?: string              // open-ended question the candidate answers verbally
 }
 
 export interface RubricDimension {
@@ -155,6 +158,7 @@ export interface Scenario {
   title: string
   track: TrackType
   estimatedMinutes: number
+  mode?: 'text' | 'immersive'          // defaults to 'text' when absent
   briefing: ScenarioBriefing
   display?: ScenarioDisplay
   createdBy?: string // institution id for custom scenarios
@@ -192,6 +196,47 @@ export interface Cohort {
   institutionId: string
   name: string
   createdAt: string
+}
+
+// ── Immersive interview ───────────────────────────────────────────────────────
+
+export type ImmersiveSessionStatus = 'active' | 'completed' | 'abandoned'
+
+export interface ImmersiveResponse {
+  id: string
+  sessionId: string
+  nodeId: string
+  questionText: string
+  mediaUrl: string | null
+  transcript: string | null
+  durationSeconds: number | null
+  aiFeedback: ImmersiveResponseFeedback | null
+  createdAt: string
+}
+
+export interface ImmersiveResponseFeedback {
+  feedback: string
+  strengths: string
+  development: string
+  generatedAt: string
+}
+
+export interface ImmersiveSession {
+  id: string
+  scenarioId: string
+  userId: string
+  status: ImmersiveSessionStatus
+  createdAt: string
+  responses: ImmersiveResponse[]
+}
+
+export interface ImmersiveSummary {
+  sessionId: string
+  overallAssessment: string
+  strengths: string[]
+  developmentAreas: string[]
+  hiringRecommendation: 'strong yes' | 'yes' | 'maybe' | 'no'
+  generatedAt: string
 }
 
 // ── API responses ─────────────────────────────────────────────────────────────

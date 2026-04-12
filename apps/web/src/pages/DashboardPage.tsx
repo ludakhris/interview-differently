@@ -1,9 +1,11 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth, useUser } from '@clerk/clerk-react'
+import { useEffect, useState } from 'react'
 import { Nav } from '@/components/Nav'
 import { TrackIcon } from '@/components/TrackIcon'
 import { useScenarios } from '@/hooks/useScenarios'
 import { useProfile } from '@/hooks/useProfile'
+import { fetchImmersiveSessionsForUser, type ImmersiveSessionSummary } from '@/services/immersiveService'
 import type { ResultSummary } from '@/services/resultsService'
 
 export function DashboardPage() {
@@ -14,6 +16,14 @@ export function DashboardPage() {
   const { scenarios, trackMeta, isLoading, error } = useScenarios()
   const refreshKey = (location.state as { refreshedAt?: number } | null)?.refreshedAt
   const { profile, isLoading: profileLoading } = useProfile(isSignedIn ? userId : null, refreshKey)
+  const [immersiveSessions, setImmersiveSessions] = useState<ImmersiveSessionSummary[]>([])
+
+  useEffect(() => {
+    if (!isSignedIn || !userId) return
+    fetchImmersiveSessionsForUser(userId)
+      .then(setImmersiveSessions)
+      .catch(() => {/* non-critical */})
+  }, [isSignedIn, userId, refreshKey])
 
   if (isLoading) {
     return (
@@ -172,6 +182,61 @@ export function DashboardPage() {
                       </button>
                       <button
                         onClick={() => navigate(`/scenario/${item.scenarioId}/briefing`)}
+                        className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                      >
+                        Retry →
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Immersive Interview History ── */}
+        {isSignedIn && immersiveSessions.length > 0 && (
+          <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
+            <h3 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid mb-5">
+              Interview Practice History
+            </h3>
+            <div className="space-y-1">
+              {immersiveSessions.map((session) => {
+                const date = new Date(session.createdAt).toLocaleDateString('en-GB', {
+                  day: 'numeric', month: 'short', year: 'numeric',
+                })
+                const statusColor =
+                  session.status === 'completed' ? '#2d9e5f' : '#888'
+                return (
+                  <div
+                    key={session.id}
+                    className="flex items-center justify-between py-3 border-b border-white/5 last:border-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-[14px]">🎙</span>
+                      <div>
+                        <p className="text-[13px] font-semibold text-[#f5f3ee]">
+                          {session.scenarioId}
+                        </p>
+                        <p className="text-[11px] text-slate-mid">
+                          {date} · {session._count.responses} response{session._count.responses !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-[11px] font-medium capitalize" style={{ color: statusColor }}>
+                        {session.status}
+                      </span>
+                      {session.status === 'completed' && (
+                        <button
+                          onClick={() => navigate(`/scenario/${session.scenarioId}/immersive/${session.id}/feedback`)}
+                          className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                        >
+                          View →
+                        </button>
+                      )}
+                      <button
+                        onClick={() => navigate(`/scenario/${session.scenarioId}/immersive`)}
                         className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
                       >
                         Retry →
