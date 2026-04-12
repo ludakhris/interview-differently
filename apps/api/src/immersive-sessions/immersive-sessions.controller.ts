@@ -8,10 +8,7 @@ import {
   HttpException,
   HttpStatus,
   NotFoundException,
-  UploadedFile,
-  UseInterceptors,
 } from '@nestjs/common'
-import { FileInterceptor } from '@nestjs/platform-express'
 import { ImmersiveSessionsService } from './immersive-sessions.service'
 
 interface CreateSessionDto {
@@ -53,16 +50,12 @@ export class ImmersiveSessionsController {
 
   @Post(':sessionId/responses')
   @HttpCode(201)
-  @UseInterceptors(FileInterceptor('file'))
   async createResponse(
     @Param('sessionId') sessionId: string,
     @Body() dto: CreateResponseDto,
-    @UploadedFile() file?: Express.Multer.File,
   ) {
-    // mediaUrl is set to null here — storage upload is handled client-side via
-    // signed URL or can be wired to a storage service later. The file field is
-    // accepted to support future direct upload without a breaking API change.
-    const mediaUrl = file ? null : null
+    // File upload (mediaUrl) is deferred until storage service is wired up (Phase 7a).
+    const mediaUrl = null
     try {
       return await this.service.createResponse(
         sessionId,
