@@ -41,6 +41,16 @@ export class ImmersiveSessionsController {
     return this.service.getSessionsForUser(userId)
   }
 
+  @Get(':sessionId')
+  async getSession(@Param('sessionId') sessionId: string) {
+    try {
+      return await this.service.getSession(sessionId)
+    } catch (err) {
+      if (err instanceof NotFoundException) throw err
+      throw new HttpException('Failed to fetch session', HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+  }
+
   @Post(':sessionId/responses')
   @HttpCode(201)
   @UseInterceptors(FileInterceptor('file'))

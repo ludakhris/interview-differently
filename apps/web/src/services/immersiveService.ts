@@ -57,6 +57,12 @@ export async function fetchImmersiveResponse(
   return res.json() as Promise<ImmersiveResponse>
 }
 
+export async function fetchImmersiveSession(sessionId: string): Promise<ImmersiveSession> {
+  const res = await fetch(`${API_URL}/api/immersive-sessions/${sessionId}`)
+  if (!res.ok) throw new Error(`Failed to fetch session: ${res.status}`)
+  return res.json() as Promise<ImmersiveSession>
+}
+
 export async function fetchImmersiveSummary(sessionId: string): Promise<ImmersiveSummary> {
   const res = await fetch(`${API_URL}/api/immersive-sessions/${sessionId}/summary`)
   if (!res.ok) throw new Error(`Failed to fetch session summary: ${res.status}`)

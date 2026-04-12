@@ -52,6 +52,15 @@ export class ImmersiveSessionsService {
     return response
   }
 
+  async getSession(sessionId: string) {
+    const session = await this.prisma.immersiveSession.findUnique({
+      where: { id: sessionId },
+      include: { responses: { orderBy: { createdAt: 'asc' } } },
+    })
+    if (!session) throw new NotFoundException(`Session ${sessionId} not found`)
+    return session
+  }
+
   async getSessionsForUser(userId: string) {
     return this.prisma.immersiveSession.findMany({
       where: { userId },

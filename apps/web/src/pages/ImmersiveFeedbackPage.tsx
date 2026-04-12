@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
-import { fetchImmersiveSummary, fetchImmersiveResponse } from '@/services/immersiveService'
+import { fetchImmersiveSession, fetchImmersiveSummary, fetchImmersiveResponse } from '@/services/immersiveService'
 import { useScenario } from '@/hooks/useScenarios'
 import type { ImmersiveSummary, ImmersiveResponse } from '@id/types'
 
@@ -32,17 +32,12 @@ export function ImmersiveFeedbackPage() {
   useEffect(() => {
     if (!sessionId) { navigate('/dashboard'); return }
 
-    fetchImmersiveSummary(sessionId)
-      .then(s => { setSummary(s); setSummaryStatus('ready') })
-      .catch(() => setSummaryStatus('failed'))
+    // Fetch session (gives us response list) and summary in parallel
+    Promise.all([
+      fetchImmersiveSession(sessionId).then(s => setResponses(s.responses ?? [])),
+      fetchImmersiveSummary(sessionId).then(s => { setSummary(s); setSummaryStatus('ready') }),
+    ]).catch(() => setSummaryStatus('failed'))
   }, [sessionId, navigate])
-
-  // Fetch per-response feedback (with AI) for each response
-  useEffect(() => {
-    if (!sessionId) return
-    // We don't have response IDs on this page without an additional list endpoint,
-    // so responses are populated as the user expands accordions (lazy).
-  }, [sessionId])
 
   function toggleExpand(id: string) {
     setExpandedIds(prev => {
