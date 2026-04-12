@@ -28,6 +28,8 @@ interface YamlNode {
   next?: string
   contextPanels?: unknown[]
   chart?: unknown
+  audioScript?: string
+  responsePrompt?: string
 }
 
 interface YamlScenario {
@@ -35,6 +37,7 @@ interface YamlScenario {
   title: string
   track: string
   estimatedMinutes: number
+  mode?: 'text' | 'immersive'
   briefing: {
     situation: string
     role: string
@@ -59,6 +62,8 @@ function yamlToScenario(yamlStr: string): Scenario {
 
     if (n.contextPanels) Object.assign(base, { contextPanels: n.contextPanels })
     if (n.chart) Object.assign(base, { chart: n.chart })
+    if (n.audioScript) Object.assign(base, { audioScript: n.audioScript })
+    if (n.responsePrompt) Object.assign(base, { responsePrompt: n.responsePrompt })
 
     if (n.type === 'decision' && n.choices) {
       const choices: Choice[] = n.choices.map((c) => ({
@@ -85,6 +90,7 @@ function yamlToScenario(yamlStr: string): Scenario {
     title: raw.title,
     track: raw.track as Scenario['track'],
     estimatedMinutes: raw.estimatedMinutes,
+    ...(raw.mode ? { mode: raw.mode } : {}),
     briefing: {
       situation: raw.briefing.situation,
       role: raw.briefing.role,
@@ -117,26 +123,25 @@ async function main() {
   })
   console.log('✓ Platform config seeded.')
 
-  const count = await prisma.scenario.count()
-  if (count > 0) {
-    console.log(`Database already has ${count} scenario(s) — skipping seed.`)
-    return
-  }
-
   const scenariosDir = resolve(__dirname, '../../../apps/web/src/lib/scenarios')
 
   console.log('🌱 Seeding scenarios from YAML files...')
 
   const yamlFiles = readdirSync(scenariosDir).filter((f) => f.endsWith('.yaml'))
 
+  let seeded = 0
   for (const file of yamlFiles) {
     const yamlStr = readFileSync(join(scenariosDir, file), 'utf-8')
     const scenario = yamlToScenario(yamlStr)
 
-    await prisma.scenario.upsert({
-      where: { scenarioId: scenario.scenarioId },
-      update: { data: scenario as object, status: 'published' },
-      create: {
+    const existing = await prisma.scenario.findUnique({ where: { scenarioId: scenario.scenarioId } })
+    if (existing) {
+      console.log(`  — ${scenario.scenarioId} already exists, skipping.`)
+      continue
+    }
+
+    await prisma.scenario.create({
+      data: {
         scenarioId: scenario.scenarioId,
         status: 'published',
         data: scenario as object,
@@ -144,9 +149,10 @@ async function main() {
     })
 
     console.log(`  ✓ ${scenario.scenarioId} — ${scenario.title}`)
+    seeded++
   }
 
-  console.log(`\n✅ Seeded ${yamlFiles.length} scenarios.`)
+  console.log(`\n✅ Done. ${seeded} new scenario(s) seeded.`)
 }
 
 main()

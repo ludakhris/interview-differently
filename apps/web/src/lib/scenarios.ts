@@ -1,12 +1,14 @@
 import { yamlToScenario } from './yamlScenario'
 
 import ops001Yaml from './scenarios/ops-001.yaml?raw'
+import ops001ImmersiveYaml from './scenarios/ops-001-immersive.yaml?raw'
 import biz001Yaml from './scenarios/biz-001.yaml?raw'
 import risk001Yaml from './scenarios/risk-001.yaml?raw'
 import ops002Yaml from './scenarios/ops-002.yaml?raw'
 
 export const scenarios = [
   yamlToScenario(ops001Yaml),
+  yamlToScenario(ops001ImmersiveYaml),
   yamlToScenario(biz001Yaml),
   yamlToScenario(risk001Yaml),
   yamlToScenario(ops002Yaml),

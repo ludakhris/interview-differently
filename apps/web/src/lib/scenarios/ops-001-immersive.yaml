@@ -1,0 +1,297 @@
+id: ops-001-immersive
+title: 'Incident Response: Payment Degradation (Interview)'
+track: operations
+estimatedMinutes: 15
+mode: immersive
+
+briefing:
+  situation: >
+    It's 2:47 PM on a Tuesday. You're three months into your role when your pager fires.
+    Payment API error rates are climbing. Authentication is degraded. Database connections
+    are at 94% capacity. Your manager is online. Your SLA breach window is 13 minutes.
+    This is a verbal interview simulation — the interviewer will walk you through each
+    situation and ask you to explain your thinking out loud.
+  role: Junior Operations Analyst
+  organisation: Fintech platform — 2.4M transactions/day, 98.9% uptime SLA
+  reportsTo: Senior Operations Manager
+  timeInRole: 3 months
+
+display:
+  contextStyle: monitor
+  alertBanner:
+    icon: ⚠
+    title: ACTIVE INCIDENT — P1
+    body: 'Multiple monitors firing simultaneously. Payment service degraded. SLA breach window: 13 minutes.'
+  sidebar:
+    - title: Your Role
+      style: text
+      items:
+        - label: Title
+          value: Junior Operations Analyst
+        - label: Organisation
+          value: Fintech Platform
+        - label: Reports to
+          value: Senior Ops Manager
+        - label: Time in role
+          value: 3 months
+    - title: Org Context
+      style: text
+      items:
+        - label: Daily transactions
+          value: 2.4M
+        - label: Uptime SLA
+          value: 98.9%
+        - label: Incident tier
+          value: P1 — Critical
+    - title: Manager's Priorities
+      style: list
+      items:
+        - label: Payment processing
+          value: P1
+          emphasis: danger
+        - label: User authentication
+          value: P1
+          emphasis: danger
+        - label: Reporting dashboard
+          value: P3
+        - label: Internal tooling
+          value: P4
+
+rubric:
+  - name: Prioritization Logic
+    description: Does the candidate identify the highest-impact issue first and sequence their response correctly?
+  - name: Stakeholder Communication
+    description: Does the candidate communicate to the right people, at the right time, with the right level of detail?
+  - name: Root Cause Reasoning
+    description: Does the candidate think systematically about underlying causes rather than reacting to surface symptoms?
+  - name: Confidence Under Pressure
+    description: Does the candidate act decisively without overclaiming certainty or freezing in ambiguity?
+
+nodes:
+  - id: ops-001-im-n1
+    type: decision
+    narrative: >
+      It's 2:47 PM on a Tuesday. You're three months into your role as a junior operations
+      analyst. Your monitor lights up: payment API error rates have climbed to 14% in the
+      last four minutes. Simultaneously, the auth service is showing elevated latency, and
+      the database connection pool is at 94% utilisation. Your SLA breach window is 13
+      minutes away. Multiple things are failing at once.
+    audioScript: >
+      Thanks for joining us today. Let's jump straight in with a live scenario.
+      It's just gone 2:47 on a Tuesday afternoon. You're three months into your
+      role as a junior operations analyst when your pager fires. You're looking
+      at your monitoring dashboard right now — payment API errors have climbed to
+      14 percent in the last four minutes. Auth service latency is up 340
+      milliseconds. And your database connection pool is sitting at 94 percent
+      utilisation. Your SLA breach window is 13 minutes away.
+      Take a moment to look at the data on screen. When you're ready, tell me:
+      what's your immediate read on this situation, and what's your first move?
+    responsePrompt: >
+      Walk me through your immediate read on this situation. What's your first move, and why?
+    contextPanels:
+      - label: Payment API errors
+        value: 14.2%
+        type: alert
+      - label: Auth latency
+        value: +340ms
+        type: alert
+      - label: DB connections
+        value: 94%
+        type: alert
+      - label: SLA breach in
+        value: 13 min
+        type: metric
+      - label: Queue depth
+        value: '12,400'
+        type: alert
+      - label: CDN / Static
+        value: OK
+        type: info
+    chart:
+      title: Payment API — Error Rate
+      unit: '%'
+      color: red
+      baseline: 0.5
+      annotation:
+        tIndex: 9
+        label: ↑ Incident start
+      series:
+        - t: '14:30'
+          v: 0.3
+        - t: '14:31'
+          v: 0.4
+        - t: '14:32'
+          v: 0.3
+        - t: '14:33'
+          v: 0.5
+        - t: '14:34'
+          v: 0.3
+        - t: '14:35'
+          v: 0.4
+        - t: '14:36'
+          v: 0.3
+        - t: '14:37'
+          v: 0.5
+        - t: '14:38'
+          v: 0.4
+        - t: '14:39'
+          v: 1.2
+        - t: '14:40'
+          v: 4.8
+        - t: '14:41'
+          v: 8.6
+        - t: '14:42'
+          v: 11.4
+        - t: '14:43'
+          v: 13.1
+        - t: '14:44'
+          v: 14.2
+
+  - id: ops-001-im-n2
+    type: decision
+    narrative: >
+      You've pulled the database metrics. The connection spike started 6 minutes ago —
+      two minutes before the payment errors appeared. A query from the reporting service
+      is holding long-running transactions open for 30 seconds or more during peak load.
+      This is almost certainly the cascade source. You now have 7 minutes until SLA breach.
+      Your manager has just joined the incident channel.
+    audioScript: >
+      Good. Let's move forward. You've pulled the database metrics and here's what
+      you're seeing: the connection spike started six minutes ago — two minutes
+      before the payment errors appeared. A query from the reporting service is
+      holding transactions open for over 30 seconds during peak load. That's your
+      likely cascade source. You now have seven minutes until SLA breach, and your
+      manager has just joined the incident channel.
+      You've confirmed the root cause. Now I want to understand your decision-making
+      here: you have two immediate options — kill the reporting service process to
+      free connections instantly, or throttle the query and watch whether utilisation
+      drops. How do you think about this trade-off, and what do you do?
+    responsePrompt: >
+      You've identified the root cause. You can kill the reporting service process immediately or throttle the query and monitor. Walk me through how you think about that trade-off and what you'd do.
+    contextPanels:
+      - label: Root cause
+        value: Reporting svc
+        type: info
+      - label: Connection hold
+        value: 30s avg
+        type: alert
+      - label: DB connections
+        value: 94%
+        type: alert
+      - label: SLA breach in
+        value: 7 min
+        type: metric
+      - label: Payment errors
+        value: Still active
+        type: alert
+      - label: Manager
+        value: Online
+        type: info
+    chart:
+      title: Payment API — Error Rate
+      unit: '%'
+      color: red
+      baseline: 0.5
+      annotation:
+        tIndex: 4
+        label: ↑ Incident start
+      series:
+        - t: '14:35'
+          v: 0.4
+        - t: '14:36'
+          v: 0.3
+        - t: '14:37'
+          v: 0.5
+        - t: '14:38'
+          v: 0.4
+        - t: '14:39'
+          v: 1.2
+        - t: '14:40'
+          v: 4.8
+        - t: '14:41'
+          v: 8.6
+        - t: '14:42'
+          v: 11.4
+        - t: '14:43'
+          v: 13.1
+        - t: '14:44'
+          v: 14.2
+        - t: '14:45'
+          v: 13.8
+        - t: '14:46'
+          v: 14.5
+        - t: '14:47'
+          v: 14.1
+
+  - id: ops-001-im-n3
+    type: decision
+    narrative: >
+      The incident is contained. Payment error rates have dropped back below 1%.
+      Your manager asks you to communicate status to the broader engineering team
+      and begin preparing the post-incident write-up. You have a lot of information
+      but limited time — the team is still watching the dashboards.
+    audioScript: >
+      The incident is contained. Payment error rates have dropped back below one
+      percent. Nice work getting there. Now your manager turns to you and says:
+      I need you to send a status update to the broader engineering team, and start
+      on the post-incident write-up. You've got all the information in your head.
+      The team is still watching the dashboards and will want to know what happened.
+      Here's what I want to understand: how do you approach communicating what just
+      happened — both the immediate status update and the post-incident write-up?
+      What do you include, who do you write for, and what do you leave out?
+    responsePrompt: >
+      The incident is resolved. How do you communicate what happened to the broader engineering team, and what goes into your post-incident write-up?
+    contextPanels:
+      - label: Payment API errors
+        value: 0.6%
+        type: info
+      - label: DB connections
+        value: 41%
+        type: info
+      - label: Auth latency
+        value: Normal
+        type: info
+      - label: Incident duration
+        value: 22 min
+        type: metric
+      - label: SLA status
+        value: Maintained
+        type: info
+      - label: Manager
+        value: Online
+        type: info
+    chart:
+      title: Payment API — Error Rate
+      unit: '%'
+      color: green
+      baseline: 0.5
+      annotation:
+        tIndex: 10
+        label: ↓ Resolved
+      series:
+        - t: '14:39'
+          v: 1.2
+        - t: '14:40'
+          v: 4.8
+        - t: '14:41'
+          v: 8.6
+        - t: '14:42'
+          v: 11.4
+        - t: '14:43'
+          v: 13.1
+        - t: '14:44'
+          v: 14.2
+        - t: '14:45'
+          v: 13.8
+        - t: '14:46'
+          v: 14.5
+        - t: '14:47'
+          v: 14.1
+        - t: '14:48'
+          v: 9.2
+        - t: '14:49'
+          v: 3.1
+        - t: '14:50'
+          v: 0.9
+        - t: '14:51'
+          v: 0.6
