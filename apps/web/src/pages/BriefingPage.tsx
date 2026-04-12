@@ -108,10 +108,14 @@ export function BriefingPage() {
             Back to dashboard
           </button>
           <button
-            onClick={() => navigate(`/scenario/${scenarioId}/play`)}
+            onClick={() => navigate(
+              scenario.mode === 'immersive'
+                ? `/scenario/${scenarioId}/immersive`
+                : `/scenario/${scenarioId}/play`
+            )}
             className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors tracking-wide"
           >
-            Begin Simulation
+            {scenario.mode === 'immersive' ? 'Begin Interview' : 'Begin Simulation'}
           </button>
         </div>
       </div>
