@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { ContextPanel } from '@/components/ContextPanel'
 import { MetricChart } from '@/components/MetricChart'
 import { ScenarioSidebar } from '@/components/ScenarioSidebar'
 import { NarrationPlayer } from '@/components/immersive/NarrationPlayer'
+import { AvatarPlayer } from '@/components/immersive/AvatarPlayer'
 import { ResponseRecorder, type RecordingResult } from '@/components/immersive/ResponseRecorder'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import { useNarration } from '@/hooks/useNarration'
@@ -15,6 +16,7 @@ import {
 } from '@/services/immersiveService'
 import type { ScenarioNode } from '@id/types'
 
+type NarrationMode = 'voice' | 'avatar'
 type PageState = 'loading' | 'narrating' | 'responding' | 'submitting' | 'complete'
 
 const contextSectionLabel: Record<string, string> = {
@@ -25,16 +27,24 @@ const contextSectionLabel: Record<string, string> = {
 
 export function ImmersiveSimulationPage() {
   const { scenarioId } = useParams<{ scenarioId: string }>()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { userId, isLoaded, isSignedIn } = useAuth()
   const { scenario, isLoading } = useScenario(scenarioId)
   const { trackMeta } = useScenarios()
   const narration = useNarration()
 
+  const [narrationMode, setNarrationMode] = useState<NarrationMode>(
+    searchParams.get('mode') === 'avatar' ? 'avatar' : 'voice',
+  )
+
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [nodeIndex, setNodeIndex] = useState(0)
   const [pageState, setPageState] = useState<PageState>('loading')
-  const [responseIds, setResponseIds] = useState<string[]>([])
+  const [avatarSpeaking, setAvatarSpeaking] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
+  const [showErrorDetails, setShowErrorDetails] = useState(false)
+  const avatarSpeakRef = useRef<((text: string) => Promise<void>) | null>(null)
   const sessionCreatedRef = useRef(false)
 
   const decisionNodes: ScenarioNode[] = (scenario?.nodes ?? []).filter(
@@ -45,6 +55,9 @@ export function ImmersiveSimulationPage() {
   const totalNodes = decisionNodes.length
   const isLastNode = nodeIndex === totalNodes - 1
 
+  // Unified "is currently playing narration" across both modes
+  const isNarrating = narrationMode === 'voice' ? narration.isPlaying : avatarSpeaking
+
   // Redirect non-immersive scenarios back to normal play
   useEffect(() => {
     if (!isLoading && scenario && scenario.mode !== 'immersive') {
@@ -52,7 +65,7 @@ export function ImmersiveSimulationPage() {
     }
   }, [isLoading, scenario, scenarioId, navigate])
 
-  // Create the session once auth is loaded
+  // Create the session once auth is loaded, then show mode selection
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !scenarioId || sessionCreatedRef.current) return
     if (!userId) return
@@ -66,19 +79,60 @@ export function ImmersiveSimulationPage() {
       .catch(() => setPageState('narrating')) // gracefully continue without session
   }, [isLoaded, isSignedIn, userId, scenarioId])
 
-  // Auto-play narration when we enter 'narrating' state
+  // Auto-play narration when we enter 'narrating' state for a new node
   useEffect(() => {
     if (pageState !== 'narrating' || !currentNode) return
     const script = currentNode.audioScript ?? currentNode.narrative
-    narration.play(script)
+    if (narrationMode === 'voice') {
+      narration.play(script)
+    } else if (avatarSpeakRef.current) {
+      setAvatarSpeaking(true)
+      void avatarSpeakRef.current(script)
+    }
   }, [pageState, nodeIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Once narration ends, allow the candidate to respond
+  // D-ID fallback: if avatar fails at any point, switch to voice and play immediately
+  const handleAvatarError = useCallback((message: string) => {
+    setAvatarError(message)
+    setNarrationMode('voice')
+    setAvatarSpeaking(false)
+    if (pageState === 'narrating' && currentNode) {
+      narration.play(currentNode.audioScript ?? currentNode.narrative)
+    }
+  }, [pageState, currentNode, narration]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Voice mode: transition from narrating → responding when speech ends
   useEffect(() => {
+    if (narrationMode !== 'voice') return
     if (pageState === 'narrating' && !narration.isPlaying) {
       setPageState('responding')
     }
-  }, [narration.isPlaying, pageState])
+  }, [narration.isPlaying, pageState, narrationMode])
+
+  // Avatar mode: called by AvatarPlayer when the avatar finishes speaking
+  const handleAvatarDone = useCallback(() => {
+    setAvatarSpeaking(false)
+    setPageState(prev => (prev === 'narrating' ? 'responding' : prev))
+  }, [])
+
+  // Avatar mode: called by AvatarPlayer once WebRTC is connected and ready
+  const handleAvatarReady = useCallback((speak: (text: string) => Promise<void>) => {
+    const safeSpeak = async (text: string) => {
+      try {
+        await speak(text)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Talk request failed'
+        handleAvatarError(msg)
+      }
+    }
+    avatarSpeakRef.current = safeSpeak
+    // If we're already in narrating state (e.g. connection was slow), start speaking now
+    if (pageState === 'narrating' && currentNode) {
+      const script = currentNode.audioScript ?? currentNode.narrative
+      setAvatarSpeaking(true)
+      void safeSpeak(script)
+    }
+  }, [pageState, currentNode])
 
   const handleResponseSubmit = useCallback(
     async (result: RecordingResult) => {
@@ -93,7 +147,7 @@ export function ImmersiveSimulationPage() {
             durationSeconds: result.durationSeconds,
             audioBlob: result.blob,
           })
-          setResponseIds(prev => [...prev, resp.id])
+          void resp
         }
       } catch {
         // Don't block the flow on a submission failure
@@ -130,6 +184,7 @@ export function ImmersiveSimulationPage() {
     )
   }
 
+  // ── Complete ───────────────────────────────────────────────────────────────
   if (pageState === 'complete') {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -214,16 +269,55 @@ export function ImmersiveSimulationPage() {
               </div>
             )}
 
-            {/* Narration player */}
-            <NarrationPlayer
-              isPlaying={narration.isPlaying}
-              isMuted={narration.isMuted}
-              onToggleMute={narration.toggleMute}
-              onReplay={() => {
-                setPageState('narrating')
-                narration.play(currentNode.audioScript ?? currentNode.narrative)
-              }}
-            />
+            {/* Avatar fallback notice — sits directly above the narration player */}
+            {avatarError && (
+              <div className="bg-amber/5 border border-amber/20 rounded-xl px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[13px] text-amber">
+                    Avatar unavailable — switched to voice narration.
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setShowErrorDetails(v => !v)}
+                      className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors underline underline-offset-2"
+                    >
+                      {showErrorDetails ? 'Hide details' : 'Technical details'}
+                    </button>
+                    <button
+                      onClick={() => setAvatarError(null)}
+                      className="text-slate-mid hover:text-[#f5f3ee] transition-colors text-[16px] leading-none"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+                {showErrorDetails && (
+                  <pre className="mt-2 text-[11px] text-red-400/80 whitespace-pre-wrap break-all font-mono">
+                    {avatarError}
+                  </pre>
+                )}
+              </div>
+            )}
+
+            {/* Narration — voice or avatar */}
+            {narrationMode === 'avatar' ? (
+              <AvatarPlayer
+                onReady={handleAvatarReady}
+                onDone={handleAvatarDone}
+                onError={handleAvatarError}
+                className="w-full aspect-video"
+              />
+            ) : (
+              <NarrationPlayer
+                isPlaying={narration.isPlaying}
+                isMuted={narration.isMuted}
+                onToggleMute={narration.toggleMute}
+                onReplay={() => {
+                  setPageState('narrating')
+                  narration.play(currentNode.audioScript ?? currentNode.narrative)
+                }}
+              />
+            )}
 
             {/* Scenario context text */}
             <div className="bg-[#111111] rounded-2xl border border-white/10 p-6">
@@ -250,14 +344,16 @@ export function ImmersiveSimulationPage() {
                 />
               </div>
             ) : (
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setPageState('responding')}
-                  className="px-6 py-2.5 rounded-lg bg-green hover:bg-green/90 text-white text-[14px] font-medium transition-colors"
-                >
-                  Ready to respond
-                </button>
-              </div>
+              !isNarrating && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setPageState('responding')}
+                    className="px-6 py-2.5 rounded-lg bg-green hover:bg-green/90 text-white text-[14px] font-medium transition-colors"
+                  >
+                    Ready to respond
+                  </button>
+                </div>
+              )
             )}
 
           </div>

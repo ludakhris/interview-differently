@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
 import { TrackIcon } from '@/components/TrackIcon'
@@ -9,6 +9,7 @@ export function BriefingPage() {
   const navigate = useNavigate()
   const { scenario, isLoading } = useScenario(scenarioId)
   const { trackMeta } = useScenarios()
+  const [narrationMode, setNarrationMode] = useState<'voice' | 'avatar'>('voice')
 
   useEffect(() => {
     if (!isLoading && !scenario) {
@@ -94,6 +95,39 @@ export function BriefingPage() {
           </div>
         </div>
 
+        {scenario.mode === 'immersive' && (
+          <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
+            <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-4">
+              Presentation Style
+            </h3>
+            <div className="flex gap-3">
+              {(['voice', 'avatar'] as const).map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => setNarrationMode(mode)}
+                  className={`flex-1 flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                    narrationMode === mode
+                      ? 'border-green/50 bg-green/5'
+                      : 'border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${
+                    narrationMode === mode ? 'border-green bg-green' : 'border-white/30'
+                  }`} />
+                  <div>
+                    <div className="text-[13px] font-medium text-[#f5f3ee]">
+                      {mode === 'voice' ? 'Voice narration' : 'AI Avatar'}
+                    </div>
+                    {mode === 'avatar' && (
+                      <div className="text-[11px] text-amber">Beta</div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="bg-amber/10 border border-amber/20 rounded-xl p-4 mb-8">
           <p className="text-[13px] text-amber leading-relaxed">
             <strong>How it works:</strong> You will move through a real workplace scenario and make decisions at each step. There are no trick questions. The AI evaluates the reasoning behind your choices, not just which answer you pick.
@@ -110,7 +144,7 @@ export function BriefingPage() {
           <button
             onClick={() => navigate(
               scenario.mode === 'immersive'
-                ? `/scenario/${scenarioId}/immersive`
+                ? `/scenario/${scenarioId}/immersive?mode=${narrationMode}`
                 : `/scenario/${scenarioId}/play`
             )}
             className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors tracking-wide"

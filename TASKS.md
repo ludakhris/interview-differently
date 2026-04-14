@@ -99,8 +99,8 @@ The goal is a second simulation mode alongside the existing text-based one. The 
 ### 7a — Infrastructure
 
 - [x] **TTS narration** — `useNarration` hook wraps Web Speech API client-side; `play(text)`, `stop()`, `isPlaying`, `isMuted`, `toggleMute`; upgrade path to ElevenLabs/Polly with no API change
-- [ ] **Simli avatar integration (optional)** — when `VITE_SIMLI_API_KEY` is set, swap narration to `AvatarPlayer` component backed by Simli WebRTC + OpenAI TTS audio stream; falls back to Web Speech API when key is absent. Pick avatar from Simli stock library or uploaded photo.
-- [ ] **Post-pilot: cache generated avatar video clips** — `audioScript` content is static per node; store generated Simli video in R2 keyed by `{scenarioId}/{nodeId}` so each clip is only generated once regardless of candidate volume. Saves ~$0.10/attempt at scale.
+- [x] **D-ID avatar integration (optional)** — user chooses "Voice Only" or "AI Avatar" on a pre-simulation mode-select screen. Avatar mode uses D-ID Streaming API (WebRTC) with a randomly selected stock presenter; backend proxies all D-ID API calls (`/api/did/*`) keeping `DID_API_KEY` server-side. Falls back gracefully if D-ID is unavailable.
+- [ ] **Post-pilot: cache generated avatar video clips** — `audioScript` content is static per node; store generated video in R2 keyed by `{scenarioId}/{nodeId}` so each clip is only generated once regardless of candidate volume.
 - [ ] **Media storage** — add `STORAGE_BUCKET` env var; wire a storage service (`apps/api/src/storage/storage.service.ts`) backed by S3-compatible object store (Cloudflare R2 recommended). Stores uploaded `.webm`/`.mp4` blobs keyed by `interviewSessionId/responseId`.
 - [ ] **Transcription service** — `apps/api/src/transcription/transcription.service.ts`; calls OpenAI Whisper API (`whisper-1`). Falls back to empty string on timeout so the session is never blocked by a transcription failure.
 - [x] **Prisma schema additions** — `ImmersiveSession` + `ImmersiveResponse` models added and migrated (`20260412004936_add_immersive_sessions`)
