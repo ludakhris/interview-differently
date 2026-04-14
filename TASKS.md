@@ -99,6 +99,8 @@ The goal is a second simulation mode alongside the existing text-based one. The 
 ### 7a — Infrastructure
 
 - [x] **TTS narration** — `useNarration` hook wraps Web Speech API client-side; `play(text)`, `stop()`, `isPlaying`, `isMuted`, `toggleMute`; upgrade path to ElevenLabs/Polly with no API change
+- [ ] **Simli avatar integration (optional)** — when `VITE_SIMLI_API_KEY` is set, swap narration to `AvatarPlayer` component backed by Simli WebRTC + OpenAI TTS audio stream; falls back to Web Speech API when key is absent. Pick avatar from Simli stock library or uploaded photo.
+- [ ] **Post-pilot: cache generated avatar video clips** — `audioScript` content is static per node; store generated Simli video in R2 keyed by `{scenarioId}/{nodeId}` so each clip is only generated once regardless of candidate volume. Saves ~$0.10/attempt at scale.
 - [ ] **Media storage** — add `STORAGE_BUCKET` env var; wire a storage service (`apps/api/src/storage/storage.service.ts`) backed by S3-compatible object store (Cloudflare R2 recommended). Stores uploaded `.webm`/`.mp4` blobs keyed by `interviewSessionId/responseId`.
 - [ ] **Transcription service** — `apps/api/src/transcription/transcription.service.ts`; calls OpenAI Whisper API (`whisper-1`). Falls back to empty string on timeout so the session is never blocked by a transcription failure.
 - [x] **Prisma schema additions** — `ImmersiveSession` + `ImmersiveResponse` models added and migrated (`20260412004936_add_immersive_sessions`)
@@ -135,7 +137,7 @@ The goal is a second simulation mode alongside the existing text-based one. The 
 
 ### 7e — Scenario content
 
-- [ ] Create an immersive variant of `ops-001` as a new scenario (`ops-001-immersive`) — same situation and data context, rewritten as open-ended verbal response nodes with `audioScript` and `responsePrompt` per node; the original `ops-001` text scenario is left unchanged
+- [x] Create an immersive variant of `ops-001` as a new scenario (`ops-001-immersive`) — same situation and data context, rewritten as open-ended verbal response nodes with `audioScript` and `responsePrompt` per node; the original `ops-001` text scenario is left unchanged
 - [ ] Create one net-new immersive-only scenario purpose-built for the format (open-ended situational questions with data context)
 
 ---
