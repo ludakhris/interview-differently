@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { TrackIcon } from '@/components/TrackIcon'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
@@ -7,9 +8,11 @@ import { useScenario, useScenarios } from '@/hooks/useScenarios'
 export function BriefingPage() {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const navigate = useNavigate()
+  const { isSignedIn } = useAuth()
   const { scenario, isLoading } = useScenario(scenarioId)
   const { trackMeta } = useScenarios()
   const [narrationMode, setNarrationMode] = useState<'voice' | 'avatar'>('voice')
+  const [showSignInPrompt, setShowSignInPrompt] = useState(false)
 
   useEffect(() => {
     if (!isLoading && !scenario) {
@@ -27,6 +30,15 @@ export function BriefingPage() {
 
   const meta = trackMeta[scenario.track]
   const { briefing } = scenario
+  const immersiveUrl = `/scenario/${scenarioId}/immersive?mode=${narrationMode}`
+
+  function handleBegin() {
+    if (scenario!.mode === 'immersive' && !isSignedIn) {
+      setShowSignInPrompt(true)
+      return
+    }
+    navigate(scenario!.mode === 'immersive' ? immersiveUrl : `/scenario/${scenarioId}/play`)
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
@@ -142,16 +154,46 @@ export function BriefingPage() {
             Back to dashboard
           </button>
           <button
-            onClick={() => navigate(
-              scenario.mode === 'immersive'
-                ? `/scenario/${scenarioId}/immersive?mode=${narrationMode}`
-                : `/scenario/${scenarioId}/play`
-            )}
+            onClick={handleBegin}
             className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors tracking-wide"
           >
             {scenario.mode === 'immersive' ? 'Begin Interview' : 'Begin Simulation'}
           </button>
         </div>
+
+        {showSignInPrompt && (
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-[#111111] border border-white/10 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
+              <div className="w-10 h-10 rounded-full bg-green/10 border border-green/20 flex items-center justify-center mx-auto mb-5">
+                <span className="text-green text-[18px]">◈</span>
+              </div>
+              <h2 className="font-display font-bold text-[20px] text-[#f5f3ee] mb-2">
+                Ready to continue?
+              </h2>
+              <p className="text-[14px] text-slate-mid leading-relaxed mb-6">
+                Create a free account to complete this interview and receive AI feedback on your responses.
+              </p>
+              <button
+                onClick={() => navigate(`/sign-up?redirect_url=${encodeURIComponent(immersiveUrl)}`)}
+                className="w-full bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] py-3 rounded-lg transition-colors mb-3"
+              >
+                Create free account
+              </button>
+              <button
+                onClick={() => navigate(`/sign-in?redirect_url=${encodeURIComponent(immersiveUrl)}`)}
+                className="w-full text-[13px] text-slate-mid hover:text-[#f5f3ee] transition-colors py-1"
+              >
+                Already have an account? Sign in
+              </button>
+              <button
+                onClick={() => setShowSignInPrompt(false)}
+                className="w-full text-[12px] text-slate-mid/60 hover:text-slate-mid transition-colors py-1 mt-1"
+              >
+                Go back
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
