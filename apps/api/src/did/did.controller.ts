@@ -45,7 +45,7 @@ export class DidController {
   async getPresenters() {
     try {
       return await this.service.getPresenters()
-    } catch (err) {
+    } catch {
       throw new HttpException('Failed to fetch presenters', HttpStatus.SERVICE_UNAVAILABLE)
     }
   }
@@ -69,7 +69,7 @@ export class DidController {
   async sendAnswer(@Param('streamId') streamId: string, @Body() dto: SendAnswerDto) {
     try {
       return await this.service.sendAnswer(streamId, dto.answer, dto.sessionId)
-    } catch (err) {
+    } catch {
       throw new HttpException('Failed to send SDP answer', HttpStatus.SERVICE_UNAVAILABLE)
     }
   }
@@ -85,7 +85,7 @@ export class DidController {
         dto.sdpMLineIndex,
         dto.sessionId,
       )
-    } catch (err) {
+    } catch {
       throw new HttpException('Failed to send ICE candidate', HttpStatus.SERVICE_UNAVAILABLE)
     }
   }
@@ -95,7 +95,7 @@ export class DidController {
   async sendTalk(@Param('streamId') streamId: string, @Body() dto: SendTalkDto) {
     try {
       return await this.service.sendTalk(streamId, dto.text, dto.voiceId, dto.sessionId)
-    } catch (err) {
+    } catch {
       throw new HttpException('Failed to send talk request', HttpStatus.SERVICE_UNAVAILABLE)
     }
   }
@@ -105,7 +105,7 @@ export class DidController {
   async closeStream(@Param('streamId') streamId: string, @Body() dto: CloseStreamDto) {
     try {
       return await this.service.closeStream(streamId, dto.sessionId)
-    } catch (err) {
+    } catch {
       throw new HttpException('Failed to close stream', HttpStatus.SERVICE_UNAVAILABLE)
     }
   }

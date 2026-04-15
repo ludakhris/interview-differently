@@ -99,7 +99,7 @@ export function ImmersiveSimulationPage() {
     if (pageState === 'narrating' && currentNode) {
       narration.play(currentNode.audioScript ?? currentNode.narrative)
     }
-  }, [pageState, currentNode, narration]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pageState, currentNode, narration])
 
   // Voice mode: transition from narrating → responding when speech ends
   useEffect(() => {
@@ -132,7 +132,7 @@ export function ImmersiveSimulationPage() {
       setAvatarSpeaking(true)
       void safeSpeak(script)
     }
-  }, [pageState, currentNode])
+  }, [pageState, currentNode, handleAvatarError])
 
   const handleResponseSubmit = useCallback(
     async (result: RecordingResult) => {
