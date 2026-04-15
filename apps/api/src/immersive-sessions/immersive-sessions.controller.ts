@@ -8,24 +8,24 @@ import {
   HttpException,
   HttpStatus,
   NotFoundException,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common'
+import { FileInterceptor } from '@nestjs/platform-express'
 import { ImmersiveSessionsService } from './immersive-sessions.service'
+import { TranscriptionService } from '../transcription/transcription.service'
 
 interface CreateSessionDto {
   scenarioId: string
   userId: string
 }
 
-interface CreateResponseDto {
-  nodeId: string
-  questionText: string
-  transcript?: string
-  durationSeconds?: number
-}
-
 @Controller('immersive-sessions')
 export class ImmersiveSessionsController {
-  constructor(private readonly service: ImmersiveSessionsService) {}
+  constructor(
+    private readonly service: ImmersiveSessionsService,
+    private readonly transcription: TranscriptionService,
+  ) {}
 
   @Post()
   @HttpCode(201)
@@ -50,20 +50,24 @@ export class ImmersiveSessionsController {
 
   @Post(':sessionId/responses')
   @HttpCode(201)
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 25 * 1024 * 1024 } }))
   async createResponse(
     @Param('sessionId') sessionId: string,
-    @Body() dto: CreateResponseDto,
+    @Body() body: Record<string, string>,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    // File upload (mediaUrl) is deferred until storage service is wired up (Phase 7a).
-    const mediaUrl = null
     try {
+      const transcript = file?.buffer
+        ? await this.transcription.transcribe(file.buffer, file.originalname)
+        : null
+
       return await this.service.createResponse(
         sessionId,
-        dto.nodeId,
-        dto.questionText,
-        mediaUrl,
-        dto.transcript ?? null,
-        dto.durationSeconds ?? null,
+        body.nodeId,
+        body.questionText,
+        null,
+        transcript,
+        body.durationSeconds != null ? Number(body.durationSeconds) : null,
       )
     } catch (err) {
       if (err instanceof NotFoundException) throw err

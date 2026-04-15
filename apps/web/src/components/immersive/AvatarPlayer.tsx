@@ -132,7 +132,7 @@ export function AvatarPlayer({ onReady, onDone, onError, className }: AvatarPlay
         ref={videoRef}
         autoPlay
         playsInline
-        className="w-full h-full object-cover"
+        className="w-full h-full object-contain"
       />
 
       {/* Status overlays */}

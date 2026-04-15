@@ -56,7 +56,10 @@ export class DidController {
     try {
       return await this.service.createStream(dto.sourceUrl)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to create D-ID stream'
+      const raw = err instanceof Error ? err.message : ''
+      const msg = raw.includes('Max user sessions reached')
+        ? 'Avatar is temporarily busy — please wait a few seconds and try again'
+        : raw || 'Failed to create D-ID stream'
       throw new HttpException(msg, HttpStatus.SERVICE_UNAVAILABLE)
     }
   }

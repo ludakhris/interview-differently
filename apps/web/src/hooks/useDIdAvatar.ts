@@ -10,10 +10,6 @@ interface DIdStreamResponse {
   ice_servers: RTCIceServer[]
 }
 
-interface DIdDataMessage {
-  type?: string   // 'stream/ready' | 'stream/started' | 'stream/done' | 'stream/error'
-  status?: string // older D-ID API field
-}
 
 export interface UseDIdAvatarReturn {
   videoRef: React.RefObject<HTMLVideoElement>
@@ -107,26 +103,36 @@ export function useDIdAvatar(): UseDIdAvatarReturn {
       const streamReadyPromise = new Promise<void>(resolve => { streamReadyResolve = resolve })
 
       pc.ondatachannel = (event) => {
+        console.log('[D-ID] ondatachannel fired, channel:', event.channel.label, event.channel.readyState)
+        event.channel.onopen = () => console.log('[D-ID] data channel open')
         event.channel.onmessage = (msg) => {
-          try {
-            const data: DIdDataMessage = JSON.parse(msg.data as string)
-            if (data.type === 'stream/ready' || data.status === 'ready') {
-              setIsConnected(true)
-              streamReadyResolve?.()
-            }
-            if (data.type === 'stream/started' || data.status === 'start') setIsPlaying(true)
-            if (data.type === 'stream/done' || data.status === 'stop') setIsPlaying(false)
-          } catch {
-            // ignore unparseable messages
+          const raw = msg.data as string
+          // D-ID sends messages as "event_type:json_payload" (not plain JSON)
+          const colonIdx = raw.indexOf(':')
+          const type = colonIdx >= 0 ? raw.slice(0, colonIdx) : raw
+          console.log('[D-ID message type]', type)
+
+          if (type === 'stream/ready') {
+            setIsConnected(true)
+            streamReadyResolve?.()
+          } else if (type === 'stream/started') {
+            setIsPlaying(true)
+          } else if (type === 'stream/done') {
+            setIsPlaying(false)
           }
         }
       }
 
       pc.onconnectionstatechange = () => {
+        console.log('[D-ID] connection state:', pc.connectionState)
         if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
           setIsConnected(false)
           setError('Connection to avatar lost')
         }
+      }
+
+      pc.oniceconnectionstatechange = () => {
+        console.log('[D-ID] ICE state:', pc.iceConnectionState)
       }
 
       await pc.setRemoteDescription(stream.offer)
@@ -139,9 +145,9 @@ export function useDIdAvatar(): UseDIdAvatarReturn {
         body: JSON.stringify({ answer: pc.localDescription, sessionId: stream.session_id }),
       })
 
-      // Wait up to 12 seconds for stream/ready; if it never arrives (e.g. no credits), throw
+      // Wait up to 30 seconds for stream/ready; if it never arrives (e.g. no credits), throw
       const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Avatar timed out — check your D-ID credits')), 12000),
+        setTimeout(() => reject(new Error('Avatar timed out — check your D-ID credits')), 30000),
       )
       await Promise.race([streamReadyPromise, timeout])
     } catch (err) {
