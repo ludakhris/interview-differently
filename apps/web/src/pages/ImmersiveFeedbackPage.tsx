@@ -47,7 +47,8 @@ export function ImmersiveFeedbackPage() {
       } else {
         next.add(id)
         // If not yet fetched, try to fetch feedback for this response
-        if (!responses.find(r => r.id === id) && sessionId) {
+        const existing = responses.find(r => r.id === id)
+        if ((!existing || !existing.aiFeedback) && sessionId) {
           fetchImmersiveResponse(sessionId, id)
             .then(r => setResponses(prev => {
               const exists = prev.find(x => x.id === r.id)

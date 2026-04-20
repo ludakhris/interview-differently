@@ -57,18 +57,25 @@ export class ImmersiveSessionsController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     try {
-      const transcript = file?.buffer
-        ? await this.transcription.transcribe(file.buffer, file.originalname)
-        : null
-
-      return await this.service.createResponse(
+      // Save immediately so the frontend can navigate without waiting for Whisper
+      const response = await this.service.createResponse(
         sessionId,
         body.nodeId,
         body.questionText,
         null,
-        transcript,
+        null,
         body.durationSeconds != null ? Number(body.durationSeconds) : null,
       )
+
+      // Transcribe in the background — never blocks the HTTP response
+      if (file?.buffer) {
+        void this.transcription
+          .transcribe(file.buffer, file.originalname)
+          .then(transcript => transcript ? this.service.updateTranscript(response.id, transcript) : null)
+          .catch(() => {/* best effort */})
+      }
+
+      return response
     } catch (err) {
       if (err instanceof NotFoundException) throw err
       throw new HttpException('Failed to save response', HttpStatus.INTERNAL_SERVER_ERROR)

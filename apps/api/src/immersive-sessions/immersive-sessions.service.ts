@@ -31,6 +31,13 @@ export class ImmersiveSessionsService {
     })
   }
 
+  async updateTranscript(responseId: string, transcript: string) {
+    return this.prisma.immersiveResponse.update({
+      where: { id: responseId },
+      data: { transcript },
+    })
+  }
+
   async getResponse(sessionId: string, responseId: string) {
     const response = await this.prisma.immersiveResponse.findFirst({
       where: { id: responseId, sessionId },

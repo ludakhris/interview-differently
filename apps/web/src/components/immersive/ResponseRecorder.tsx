@@ -21,6 +21,7 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
   const [state, setState] = useState<RecorderState>('idle')
   const [elapsed, setElapsed] = useState(0)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [liveStream, setLiveStream] = useState<MediaStream | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -30,6 +31,14 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const blobRef = useRef<Blob | null>(null)
   const videoPreviewRef = useRef<HTMLVideoElement>(null)
+
+  // Attach live stream to video element once it's in the DOM
+  useEffect(() => {
+    if (liveStream && videoPreviewRef.current) {
+      videoPreviewRef.current.srcObject = liveStream
+      void videoPreviewRef.current.play()
+    }
+  }, [liveStream, state])
 
   // Clean up on unmount
   useEffect(() => {
@@ -57,13 +66,7 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints)
       streamRef.current = stream
-
-      // Show live video preview while recording
-      if (mode === 'video' && videoPreviewRef.current) {
-        videoPreviewRef.current.srcObject = stream
-        videoPreviewRef.current.muted = true
-        void videoPreviewRef.current.play()
-      }
+      if (mode === 'video') setLiveStream(stream)
 
       const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
         ? 'video/webm;codecs=vp9,opus'
@@ -78,6 +81,7 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
         blobRef.current = blob
         const url = URL.createObjectURL(blob)
         setPreviewUrl(url)
+        setLiveStream(null)
         setState('preview')
         stopStream()
       }
