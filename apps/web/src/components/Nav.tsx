@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useAuth, useUser, UserButton } from '@clerk/clerk-react'
+import { useAuth, UserButton } from '@clerk/clerk-react'
 
 interface NavProps {
   trackLabel?: string
@@ -9,8 +9,6 @@ interface NavProps {
 export function Nav({ trackLabel, stepLabel }: NavProps) {
   const navigate = useNavigate()
   const { isSignedIn, isLoaded } = useAuth()
-  const { user } = useUser()
-  const isAdmin = user?.publicMetadata?.role === 'admin'
 
   return (
     <nav className="flex items-center justify-between px-8 py-4 bg-[#0a0a0a] sticky top-0 z-50">
@@ -34,9 +32,9 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
         >
           Request a scenario
         </button>
-        {isLoaded && isSignedIn && isAdmin && (
+        {isLoaded && isSignedIn && (
           <button
-            onClick={() => navigate('/admin/settings')}
+            onClick={() => navigate('/settings')}
             className="text-[12px] font-medium text-slate-mid hover:text-[#f5f3ee] transition-colors"
           >
             Settings

@@ -10,7 +10,8 @@ import { ImmersiveFeedbackPage } from '@/pages/ImmersiveFeedbackPage'
 import { BuilderListPage } from '@/pages/BuilderListPage'
 import { BuilderSetupPage } from '@/pages/BuilderSetupPage'
 import { BuilderCanvasPage } from '@/pages/BuilderCanvasPage'
-import { AdminSettingsPage } from '@/pages/AdminSettingsPage'
+import { SettingsPage } from '@/pages/SettingsPage'
+import { WelcomePage } from '@/pages/WelcomePage'
 import { AdminInstitutionsPage } from '@/pages/AdminInstitutionsPage'
 import { RequestScenarioPage } from '@/pages/RequestScenarioPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
@@ -21,12 +22,20 @@ function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const [searchParams] = useSearchParams()
   const redirectUrl = searchParams.get('redirect_url') ?? '/dashboard'
 
+  // Route brand-new sign-ups through /welcome so they get the institution
+  // self-join flow before landing on the dashboard. Pass `next` so the
+  // welcome page can forward them to wherever they were originally headed.
+  const signUpRedirect =
+    redirectUrl === '/dashboard'
+      ? '/welcome'
+      : `/welcome?next=${encodeURIComponent(redirectUrl)}`
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
       {mode === 'sign-in' ? (
         <SignIn routing="path" path="/sign-in" forceRedirectUrl={redirectUrl} />
       ) : (
-        <SignUp routing="path" path="/sign-up" forceRedirectUrl={redirectUrl} />
+        <SignUp routing="path" path="/sign-up" forceRedirectUrl={signUpRedirect} />
       )}
     </div>
   )
@@ -55,7 +64,10 @@ export default function App() {
       <Route path="/builder" element={<AdminRoute><BuilderListPage /></AdminRoute>} />
       <Route path="/builder/new" element={<AdminRoute><BuilderSetupPage /></AdminRoute>} />
       <Route path="/builder/:scenarioId" element={<AdminRoute><BuilderCanvasPage /></AdminRoute>} />
-      <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route path="/welcome" element={<ProtectedRoute><WelcomePage /></ProtectedRoute>} />
+      {/* Legacy alias — old admin-only path now goes to the unified settings page */}
+      <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />
       <Route path="/admin/institutions" element={<AdminRoute><AdminInstitutionsPage /></AdminRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
