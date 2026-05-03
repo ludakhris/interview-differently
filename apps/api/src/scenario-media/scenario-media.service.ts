@@ -12,7 +12,7 @@ import { PrismaService } from '../prisma/prisma.service'
 import { DidService } from '../did/did.service'
 import { MEDIA_STORAGE, type MediaStorage } from './storage/media-storage.interface'
 
-const RENDER_TIMEOUT_MS = 180_000   // 180s — D-ID typically renders in 30–60s
+const RENDER_TIMEOUT_MS = 300_000   // 300s — D-ID renders typically take 30–180s; longest observed was 158s on a near-full 1200-char script. 5min gives ~2x headroom; bump again if scripts grow.
 const POLL_INTERVAL_MS = 2_000      // 2s
 
 interface ScenarioNodeShape {
