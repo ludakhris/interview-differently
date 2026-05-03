@@ -13,7 +13,8 @@
     "db:seed": "ts-node -r tsconfig-paths/register prisma/seed.ts",
     "db:reset": "prisma migrate reset --force && npm run db:seed",
     "backfill:media": "ts-node -r tsconfig-paths/register scripts/backfill-scenario-media.ts",
-    "seed:fake": "ts-node -r tsconfig-paths/register scripts/seed-fake-cohort.ts"
+    "seed:fake": "ts-node -r tsconfig-paths/register scripts/seed-fake-cohort.ts",
+    "remap:user": "ts-node -r tsconfig-paths/register scripts/remap-user-ids.ts"
   },
   "prisma": {
     "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts"
