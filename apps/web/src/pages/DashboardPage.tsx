@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth, useUser } from '@clerk/clerk-react'
 import { useEffect, useState } from 'react'
 import { Nav } from '@/components/Nav'
+import { Footer } from '@/components/Footer'
 import { TrackIcon } from '@/components/TrackIcon'
 import { useScenarios } from '@/hooks/useScenarios'
 import { useProfile } from '@/hooks/useProfile'
@@ -42,7 +43,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
       <Nav />
 
       <div className="max-w-5xl mx-auto px-6 py-12">
@@ -58,7 +59,7 @@ export function DashboardPage() {
         </div>
 
         {/* ── Simulation Tracks ── */}
-        <div className="mb-10">
+        <div className="mb-6">
           <h3 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid mb-5">
             Simulation Tracks
           </h3>
@@ -106,6 +107,24 @@ export function DashboardPage() {
             })}
           </div>
         </div>
+
+        {/* ── Custom-scenario CTA ── */}
+        <button
+          onClick={() => navigate('/request-scenario')}
+          className="w-full mb-10 rounded-2xl border border-dashed border-white/15 hover:border-green/40 bg-[#0d0d0d] hover:bg-[#101510] transition-all px-6 py-5 text-left flex items-center justify-between gap-4 group"
+        >
+          <div>
+            <p className="font-display font-bold text-[15px] text-[#f5f3ee] mb-1">
+              Don't see what you need?
+            </p>
+            <p className="text-[13px] text-slate-mid leading-relaxed">
+              Tell us about your scenario and we'll build a custom one for you.
+            </p>
+          </div>
+          <span className="text-[13px] font-semibold text-green group-hover:translate-x-1 transition-transform whitespace-nowrap">
+            Request a scenario →
+          </span>
+        </button>
 
         {/* ── Competency Profile ── */}
         <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
@@ -260,6 +279,9 @@ export function DashboardPage() {
           </div>
         )}
       </div>
+
+      <div className="flex-1" />
+      <Footer />
     </div>
   )
 }

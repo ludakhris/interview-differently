@@ -1,5 +1,7 @@
 # InterviewDifferently — Task Backlog
 
+> **New work is tracked in [GitHub Issues](../../issues).** This file remains as historical context for already-completed phases; new features and follow-ups should be opened as issues.
+
 Tasks that are identified but not yet scheduled. Ordered roughly by dependency / logical sequence.
 
 ---

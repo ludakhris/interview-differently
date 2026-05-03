@@ -79,6 +79,42 @@ model ImmersiveResponse {
   @@index([sessionId])
 }
 
+model ScenarioRequest {
+  id               String   @id @default(uuid())
+  // Briefing
+  situation        String                            // required
+  role             String?
+  reportsTo        String?
+  timeInRole       String?
+  // Scenario context
+  otherPeople      String?
+  metricsContext   String?
+  timePressure     String?
+  hardestMoment    String                            // required
+  temptingWrong    String?
+  greatLooksLike   String?
+  // Categorisation
+  track            String?  // operations | business | risk | customer-success | general | custom
+  estimatedMinutes Int?
+  // Contact (all optional — anonymous submissions allowed)
+  contactName      String?
+  contactEmail     String?
+  contactPhone     String?
+  // Triage
+  status           String   @default("new")          // new | contacted | building | published | declined
+  emailSent        Boolean  @default(false)
+  emailError       String?
+  notes            String?
+  // System
+  ipAddress        String?
+  userAgent        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
 model ScenarioMediaAsset {
   id           String   @id @default(uuid())
   scenarioId   String

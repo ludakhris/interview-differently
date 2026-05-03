@@ -28,6 +28,12 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
             {stepLabel && <span className="text-white/40 ml-2">{stepLabel}</span>}
           </span>
         )}
+        <button
+          onClick={() => navigate('/request-scenario')}
+          className="text-[12px] font-medium text-slate-mid hover:text-[#f5f3ee] transition-colors"
+        >
+          Request a scenario
+        </button>
         {isLoaded && isSignedIn && isAdmin && (
           <button
             onClick={() => navigate('/admin/settings')}

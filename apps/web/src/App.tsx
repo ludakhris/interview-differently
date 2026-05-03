@@ -11,6 +11,7 @@ import { BuilderListPage } from '@/pages/BuilderListPage'
 import { BuilderSetupPage } from '@/pages/BuilderSetupPage'
 import { BuilderCanvasPage } from '@/pages/BuilderCanvasPage'
 import { AdminSettingsPage } from '@/pages/AdminSettingsPage'
+import { RequestScenarioPage } from '@/pages/RequestScenarioPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
 
@@ -36,6 +37,7 @@ export default function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/scenario/:scenarioId/briefing" element={<BriefingPage />} />
       <Route path="/scenario/:scenarioId/play" element={<SimulationPage />} />
+      <Route path="/request-scenario" element={<RequestScenarioPage />} />
 
       {/* Auth pages — /* catches Clerk's internal sub-routes */}
       <Route path="/sign-in/*" element={<AuthPage mode="sign-in" />} />
