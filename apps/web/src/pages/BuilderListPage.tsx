@@ -10,6 +10,11 @@ import {
 } from '@/services/builderService'
 import { TRACK_LABELS } from '@/lib/builderTemplates'
 import { downloadScenarioYaml, yamlToScenario } from '@/lib/yamlScenario'
+import {
+  bulkRenderAllMedia,
+  type BulkRenderProgress,
+  type BulkRenderSummary,
+} from '@/services/scenarioMediaService'
 import type { Scenario } from '@id/types'
 
 // ── Row action menu ───────────────────────────────────────────────────────────
@@ -90,6 +95,51 @@ export function BuilderListPage() {
   const [importError, setImportError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Bulk re-render state — null when idle, in-flight progress, or final summary.
+  const [renderProgress, setRenderProgress] = useState<BulkRenderProgress | null>(null)
+  const [renderSummary, setRenderSummary] = useState<BulkRenderSummary | null>(null)
+  const [isRendering, setIsRendering] = useState(false)
+
+  async function handleBulkRender() {
+    const totalNodes = scenarios
+      .filter((s) => s.mode === 'immersive' && s.builderMeta?.status === 'published')
+      .reduce(
+        (sum, s) =>
+          sum +
+          (s.nodes ?? []).filter(
+            (n) =>
+              n.type === 'decision' &&
+              ((n.audioScript ?? '').trim() || (n.narrative ?? '').trim()),
+          ).length,
+        0,
+      )
+    if (totalNodes === 0) {
+      alert('No published immersive scenarios with renderable nodes.')
+      return
+    }
+    if (
+      !confirm(
+        `Re-render media for ${totalNodes} node${totalNodes === 1 ? '' : 's'}? ` +
+          `Each render takes 30-180 seconds via D-ID. Already-current nodes are skipped automatically.`,
+      )
+    ) {
+      return
+    }
+
+    setIsRendering(true)
+    setRenderSummary(null)
+    setRenderProgress(null)
+    try {
+      const summary = await bulkRenderAllMedia(scenarios as unknown as Parameters<typeof bulkRenderAllMedia>[0], {
+        onBeforeRender: (p) => setRenderProgress(p),
+      })
+      setRenderSummary(summary)
+      setRenderProgress(null)
+    } finally {
+      setIsRendering(false)
+    }
+  }
+
   async function refresh() {
     setIsLoading(true)
     try {
@@ -163,6 +213,14 @@ export function BuilderListPage() {
               className="hidden"
             />
             <button
+              onClick={handleBulkRender}
+              disabled={isRendering}
+              title="Re-render every published immersive scenario node via D-ID. Idempotent — already-current nodes skip in <1s."
+              className="text-[13px] font-medium text-white/50 hover:text-white/80 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl px-4 py-2.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isRendering ? 'Re-rendering…' : 'Re-render all media'}
+            </button>
+            <button
               onClick={() => fileInputRef.current?.click()}
               className="text-[13px] font-medium text-white/50 hover:text-white/80 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl px-4 py-2.5 transition-all"
             >
@@ -177,6 +235,58 @@ export function BuilderListPage() {
           </div>
           {importError && (
             <p className="w-full text-[12px] text-red-400 mt-2">{importError}</p>
+          )}
+
+          {/* Bulk-render banner — live progress while running, summary when done. */}
+          {(renderProgress || renderSummary) && (
+            <div className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 mt-2">
+              {renderProgress && (
+                <div>
+                  <p className="text-[12px] font-semibold text-[#f5f3ee]">
+                    Rendering {renderProgress.index + 1} of {renderProgress.total} —{' '}
+                    <span className="text-slate-mid">{renderProgress.scenarioTitle}</span>{' '}
+                    <span className="text-white/30 font-mono">/{renderProgress.nodeId}</span>
+                  </p>
+                  <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green transition-all duration-300"
+                      style={{ width: `${(renderProgress.index / renderProgress.total) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              {renderSummary && !renderProgress && (
+                <div>
+                  <p className="text-[12px] text-[#f5f3ee]">
+                    <span className="font-semibold text-green-light">✓ Done.</span>{' '}
+                    Rendered <strong>{renderSummary.rendered}</strong>, already current{' '}
+                    <strong>{renderSummary.alreadyCurrent}</strong>
+                    {renderSummary.skippedNoPersona > 0 && (
+                      <>, skipped <strong>{renderSummary.skippedNoPersona}</strong> (no persona)</>
+                    )}
+                    {renderSummary.failed > 0 && (
+                      <>, <span className="text-red-400">failed <strong>{renderSummary.failed}</strong></span></>
+                    )}
+                    .{' '}
+                    <button
+                      onClick={() => setRenderSummary(null)}
+                      className="ml-2 text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                    >
+                      Dismiss
+                    </button>
+                  </p>
+                  {renderSummary.failures.length > 0 && (
+                    <ul className="mt-2 space-y-0.5">
+                      {renderSummary.failures.map((f) => (
+                        <li key={`${f.scenarioId}/${f.nodeId}`} className="text-[11px] text-red-400/80">
+                          <span className="font-mono">{f.scenarioId}/{f.nodeId}</span>: {f.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
 

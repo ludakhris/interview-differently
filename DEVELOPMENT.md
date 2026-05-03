@@ -53,6 +53,18 @@ cd apps/api && npm run db:reset
 
 This wipes all data and re-seeds from the static YAML files in `apps/web/src/lib/scenarios/`. The YAML files are the source of truth for built-in scenarios.
 
+> **After a wipe: re-render avatar media.** The reset drops the `ScenarioMediaAsset` rows so every immersive scenario node will need its D-ID clip re-rendered before students can play it. Two ways:
+>
+> ```bash
+> # CLI — re-render every node of every published immersive scenario, idempotent
+> cd apps/api && npm run backfill:media
+>
+> # Against a non-local target:
+> BACKFILL_API_URL=https://api.interviewdifferently.com npm run backfill:media
+> ```
+>
+> Or click the **"Re-render all media"** button at the top of `/builder` (admin only) — same behaviour with live progress in the browser.
+
 ### Demo data — fake institution, cohort, students, simulations
 
 `apps/api/scripts/seed-fake-cohort.ts` is a CLI for spinning up (and tearing down) a complete demo institution so the analytics views (`/admin/institutions/:id/analytics`) have real numbers to render. It creates **real Clerk users** with verified emails so they could in theory sign in too.
