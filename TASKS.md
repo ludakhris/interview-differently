@@ -100,7 +100,7 @@ The goal is a second simulation mode alongside the existing text-based one. The 
 
 - [x] **TTS narration** — `useNarration` hook wraps Web Speech API client-side; `play(text)`, `stop()`, `isPlaying`, `isMuted`, `toggleMute`; upgrade path to ElevenLabs/Polly with no API change
 - [x] **D-ID avatar integration (optional)** — user chooses "Voice Only" or "AI Avatar" on a pre-simulation mode-select screen. Avatar mode uses D-ID Streaming API (WebRTC) with a randomly selected stock presenter; backend proxies all D-ID API calls (`/api/did/*`) keeping `DID_API_KEY` server-side. Falls back gracefully if D-ID is unavailable. **Note:** WebRTC streaming is being repurposed (see 7f) — kept for builder live-edit preview and as the basis for a future premium "live avatar" tier; no longer the runtime path for published scenarios.
-- [ ] **Media storage** — skipped for pilot; audio blobs are transcribed immediately via Whisper and discarded. Add R2 storage post-pilot if playback/audit trail is needed.
+- [x] **Media storage** — candidate response audio/video blobs persist to a separate **private** R2 bucket (`interview-differently-responses`, no public access, no custom domain). Stored at `responses/{sessionId}/{responseId}.webm`. Played back via auth-checked signed URLs (15min TTL) on the feedback page. First server-side Clerk JWT verification — owner OR admin role required to view a recording. Whisper transcription continues to run in parallel.
 - [x] **Transcription service** — `apps/api/src/transcription/transcription.service.ts`; calls OpenAI Whisper API (`whisper-1`). Runs async in background so response submission returns immediately. Falls back to null on failure so the session is never blocked.
 - [x] **Prisma schema additions** — `ImmersiveSession` + `ImmersiveResponse` models added and migrated (`20260412004936_add_immersive_sessions`)
 
@@ -177,8 +177,8 @@ Goal: replace per-session D-ID WebRTC streaming with pre-rendered MP4 clips gene
 - [x] Provision R2 bucket (`interview-differently-media`) with custom domain `media.interviewdifferently.com`; env vars set in `apps/api/.env`
 - [x] Implement `R2MediaStorage` using `@aws-sdk/client-s3` against R2's S3-compatible endpoint; selected at boot when `R2_BUCKET` is set
 - [x] End-to-end smoke test: rendered first node of `ops-001-immersive` (D-ID render → R2 upload → public URL → inline playback) — 24s wall time, 3.1 MB MP4
-- [ ] Add the same R2_* env vars to Railway for production
-- [ ] One-time backfill script: render every node of every currently-published immersive scenario
+- [x] Add the same R2_* env vars to Railway for production
+- [x] Backfill script + one-time prod run: `apps/api/scripts/backfill-scenario-media.ts` renders every node of every currently-published immersive scenario; verified against prod (3 nodes already current, 0 new D-ID renders needed)
 
 **Follow-ups uncovered during 7f**
 - [x] D-ID's curated presenter library shrunk — refreshed `CURATED_PRESENTER_NAMES` in `did.service.ts` to just `Amber` + `William` (only survivors from the original 8). Added stable id-sorted suffix labelling so the picker shows `Amber 1` through `Amber 13` and `William 1` through `William 3` — distinguishable but persona ids stay stable.

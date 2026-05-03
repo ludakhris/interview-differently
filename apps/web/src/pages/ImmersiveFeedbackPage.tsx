@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
-import { fetchImmersiveSession, fetchImmersiveSummary, fetchImmersiveResponse } from '@/services/immersiveService'
+import {
+  fetchImmersiveSession,
+  fetchImmersiveSummary,
+  fetchImmersiveResponse,
+  fetchResponseMediaUrl,
+} from '@/services/immersiveService'
 import { useScenario } from '@/hooks/useScenarios'
 import type { ImmersiveSummary, ImmersiveResponse } from '@id/types'
 
@@ -19,15 +25,22 @@ const recommendationColor: Record<string, string> = {
   no: 'text-red-400 border-red-500/30 bg-red-500/10',
 }
 
+type MediaState =
+  | { status: 'loading' }
+  | { status: 'ready'; url: string }
+  | { status: 'error'; message: string }
+
 export function ImmersiveFeedbackPage() {
   const { scenarioId, sessionId } = useParams<{ scenarioId: string; sessionId: string }>()
   const navigate = useNavigate()
+  const { getToken } = useAuth()
   const { scenario } = useScenario(scenarioId)
 
   const [summary, setSummary] = useState<ImmersiveSummary | null>(null)
   const [responses, setResponses] = useState<ImmersiveResponse[]>([])
   const [summaryStatus, setSummaryStatus] = useState<'loading' | 'ready' | 'failed'>('loading')
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [mediaByResponse, setMediaByResponse] = useState<Record<string, MediaState>>({})
 
   useEffect(() => {
     if (!sessionId) { navigate('/dashboard'); return }
@@ -55,6 +68,21 @@ export function ImmersiveFeedbackPage() {
               return exists ? prev.map(x => x.id === r.id ? r : x) : [...prev, r]
             }))
             .catch(() => {/* graceful — accordion content will show loading state */})
+        }
+        // Fetch a signed playback URL for this response if it has audio. Skip
+        // if we've already loaded it (state cached) or if there's no media key.
+        if (sessionId && existing?.mediaUrl && !mediaByResponse[id]) {
+          setMediaByResponse(prev => ({ ...prev, [id]: { status: 'loading' } }))
+          getToken()
+            .then(token => {
+              if (!token) throw new Error('Not signed in')
+              return fetchResponseMediaUrl(sessionId, id, token)
+            })
+            .then(({ url }) => setMediaByResponse(prev => ({ ...prev, [id]: { status: 'ready', url } })))
+            .catch(err => setMediaByResponse(prev => ({
+              ...prev,
+              [id]: { status: 'error', message: err instanceof Error ? err.message : 'Playback unavailable' },
+            })))
         }
       }
       return next
@@ -177,6 +205,38 @@ export function ImmersiveFeedbackPage() {
 
                   {isOpen && (
                     <div className="px-5 pb-5 space-y-3 border-t border-white/10 pt-4 animate-fade-in">
+                      {/* Recording playback (private — signed URL fetched on expand) */}
+                      {resp.mediaUrl && (() => {
+                        const m = mediaByResponse[resp.id]
+                        if (!m || m.status === 'loading') {
+                          return (
+                            <div className="rounded-lg bg-white/5 border border-white/10 px-3 py-2.5">
+                              <p className="text-[11px] text-slate-mid">Loading recording…</p>
+                            </div>
+                          )
+                        }
+                        if (m.status === 'error') {
+                          return (
+                            <div className="rounded-lg bg-red-500/5 border border-red-500/20 px-3 py-2.5">
+                              <p className="text-[11px] text-red-400">{m.message}</p>
+                            </div>
+                          )
+                        }
+                        return (
+                          <div>
+                            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+                              Your Recording
+                            </p>
+                            <video
+                              src={m.url}
+                              controls
+                              playsInline
+                              className="w-full rounded-lg bg-black/50 max-h-72"
+                            />
+                          </div>
+                        )
+                      })()}
+
                       {/* Transcript */}
                       {resp.transcript && (
                         <details className="group">

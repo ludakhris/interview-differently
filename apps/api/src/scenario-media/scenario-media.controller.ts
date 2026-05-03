@@ -12,14 +12,15 @@ import {
 } from '@nestjs/common'
 import type { Response } from 'express'
 import { ScenarioMediaService } from './scenario-media.service'
-import { LocalDiskMediaStorage } from './storage/local-disk-storage'
+import { LocalDiskPublicStorage } from '../storage/local-disk-storage'
 
 @Controller('scenario-media')
 export class ScenarioMediaController {
   constructor(
     private readonly service: ScenarioMediaService,
-    // Optional — only present when local-disk storage is in use; serves the file route below.
-    private readonly localStorage: LocalDiskMediaStorage,
+    // Used by the dev-only /files/* route below; never hit in prod (R2 serves
+    // the MP4s directly via the custom domain).
+    private readonly localStorage: LocalDiskPublicStorage,
   ) {}
 
   @Get(':scenarioId')
@@ -52,7 +53,7 @@ export class ScenarioMediaController {
   }
 
   /**
-   * Serves files written by LocalDiskMediaStorage. Only used in dev — in production
+   * Serves files written by LocalDiskPublicStorage. Only used in dev — in production
    * R2 hosts the MP4s directly and this route is unused.
    * Wildcard splat: /files/scenarios/abc/node1-abcdef.mp4 → key = "scenarios/abc/node1-abcdef.mp4".
    */

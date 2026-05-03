@@ -7,11 +7,15 @@ import { PlatformConfigModule } from './platform-config/platform-config.module'
 import { ImmersiveSessionsModule } from './immersive-sessions/immersive-sessions.module'
 import { DidModule } from './did/did.module'
 import { ScenarioMediaModule } from './scenario-media/scenario-media.module'
+import { StorageModule } from './storage/storage.module'
+import { AuthModule } from './auth/auth.module'
 
 @Module({
   imports: [
     PrismaModule,
     HealthModule,
+    AuthModule,
+    StorageModule,
     ScenariosModule,
     ResultsModule,
     PlatformConfigModule,

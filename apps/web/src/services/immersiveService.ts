@@ -84,3 +84,31 @@ export async function fetchImmersiveSessionsForUser(
   if (!res.ok) throw new Error(`Failed to fetch immersive sessions: ${res.status}`)
   return res.json() as Promise<ImmersiveSessionSummary[]>
 }
+
+export interface SignedMediaUrl {
+  url: string
+  expiresAt: string
+}
+
+/**
+ * Fetch a time-limited signed URL for a candidate's recorded response.
+ * Requires a Clerk session token (see useAuth().getToken()) — the backend
+ * verifies it and only returns a URL if the requester owns the session
+ * or is an admin.
+ */
+export async function fetchResponseMediaUrl(
+  sessionId: string,
+  responseId: string,
+  token: string,
+): Promise<SignedMediaUrl> {
+  const res = await fetch(
+    `${API_URL}/api/immersive-sessions/${sessionId}/responses/${responseId}/media-url`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  )
+  if (!res.ok) {
+    if (res.status === 404) throw new Error('Recording not yet uploaded')
+    if (res.status === 401 || res.status === 403) throw new Error('Not authorised to play this recording')
+    throw new Error(`Failed to load recording: ${res.status}`)
+  }
+  return res.json() as Promise<SignedMediaUrl>
+}
