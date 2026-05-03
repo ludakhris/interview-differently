@@ -129,10 +129,23 @@ function AnalyticsSections({ analytics }: { analytics: InstitutionAnalytics }) {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatCard label="Students" value={analytics.totalStudents} />
         <StatCard label="Active (30d)" value={analytics.activeStudentsLast30Days} />
         <StatCard label="Completed sims" value={analytics.completedSimulations} />
+        <StatCard
+          label="Completion rate"
+          value={
+            analytics.completionRate !== null
+              ? `${analytics.completionRate}%`
+              : '—'
+          }
+          sublabel={
+            analytics.startedSimulations > 0
+              ? `${analytics.startedSimulations} started`
+              : undefined
+          }
+        />
         <StatCard
           label="Avg score"
           value={analytics.avgOverallScore !== null ? analytics.avgOverallScore : '—'}
@@ -168,10 +181,12 @@ function StatCard({
   label,
   value,
   accent,
+  sublabel,
 }: {
   label: string
   value: string | number
   accent?: string
+  sublabel?: string
 }) {
   return (
     <div className="bg-[#111111] rounded-xl border border-white/10 p-4">
@@ -179,6 +194,7 @@ function StatCard({
       <p className="font-display font-extrabold text-[28px]" style={{ color: accent ?? '#f5f3ee' }}>
         {value}
       </p>
+      {sublabel && <p className="text-[11px] text-slate-mid mt-1">{sublabel}</p>}
     </div>
   )
 }

@@ -32,6 +32,29 @@ export async function saveResult(result: ScenarioResult & { scenarioTitle: strin
   }
 }
 
+/**
+ * Records the start of a traditional simulation. Powers the completion-rate
+ * metric on institution analytics — denominator is count(SimulationAttempt),
+ * numerator is count(SimulationResult). Failures are non-fatal: the user's
+ * play experience must not depend on this recording.
+ */
+export async function recordSimulationAttempt(payload: {
+  userId: string
+  scenarioId: string
+  track: string
+}): Promise<void> {
+  try {
+    const res = await fetch(`${API_URL}/api/results/attempts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) console.warn('Failed to record simulation attempt:', res.status)
+  } catch (err) {
+    console.warn('Simulation attempt request failed:', err)
+  }
+}
+
 export async function fetchResult(resultId: string): Promise<ScenarioResult> {
   const res = await fetch(`${API_URL}/api/results/${resultId}`)
   if (!res.ok) throw new Error(`Result fetch failed: ${res.status}`)

@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "ts-node -r tsconfig-paths/register prisma/seed.ts",
     "db:reset": "prisma migrate reset --force && npm run db:seed",
-    "backfill:media": "ts-node -r tsconfig-paths/register scripts/backfill-scenario-media.ts"
+    "backfill:media": "ts-node -r tsconfig-paths/register scripts/backfill-scenario-media.ts",
+    "seed:fake": "ts-node -r tsconfig-paths/register scripts/seed-fake-cohort.ts"
   },
   "prisma": {
     "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts"

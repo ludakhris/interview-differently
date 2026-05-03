@@ -17,6 +17,9 @@ export interface InstitutionAnalytics {
   totalStudents: number
   activeStudentsLast30Days: number
   completedSimulations: number
+  startedSimulations: number
+  /** Percent (0–100). Null when nobody has started yet. */
+  completionRate: number | null
   avgOverallScore: number | null
   byTrack: Array<{ key: string; count: number; avg: number }>
   byDimension: Array<{ key: string; count: number; avg: number }>

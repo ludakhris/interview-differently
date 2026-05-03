@@ -12,6 +12,18 @@ export class ResultsController {
     return this.resultsService.create(dto)
   }
 
+  /**
+   * Records the start of a traditional simulation play. Analytics counts
+   * these as the denominator for completion rate. No auth — keeps parity
+   * with `POST /results` which is also unauthenticated; tightening both
+   * is on the auth-retrofit list.
+   */
+  @Post('attempts')
+  @HttpCode(201)
+  createAttempt(@Body() body: { userId: string; scenarioId: string; track: string }) {
+    return this.resultsService.createAttempt(body)
+  }
+
   @Get('profile/:userId')
   getProfile(@Param('userId') userId: string) {
     return this.resultsService.getProfile(userId)

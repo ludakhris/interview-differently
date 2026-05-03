@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
@@ -7,7 +7,7 @@ import { ContextPanel } from '@/components/ContextPanel'
 import { MetricChart } from '@/components/MetricChart'
 import { ScenarioSidebar } from '@/components/ScenarioSidebar'
 import { PreviewGate } from '@/components/PreviewGate'
-import { saveResult } from '@/services/resultsService'
+import { saveResult, recordSimulationAttempt } from '@/services/resultsService'
 import { useSimulation } from '@/hooks/useSimulation'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import type { Scenario } from '@id/types'
@@ -79,7 +79,19 @@ function SimulationContent({
   const navigate = useNavigate()
   const meta = trackMeta[scenario.track]
 
-  const { isSignedIn, isLoaded } = useAuth()
+  const { isSignedIn, isLoaded, userId } = useAuth()
+
+  // Record one attempt per page mount, regardless of how many times React
+  // re-runs the effect (StrictMode double-mount in dev would otherwise
+  // create two attempts and skew completion rate).
+  const attemptRecorded = useRef(false)
+  useEffect(() => {
+    if (isPreview) return
+    if (!isLoaded || !isSignedIn || !userId || !scenarioId) return
+    if (attemptRecorded.current) return
+    attemptRecorded.current = true
+    void recordSimulationAttempt({ userId, scenarioId, track: scenario.track })
+  }, [isLoaded, isSignedIn, userId, scenarioId, scenario.track, isPreview])
 
   const {
     currentNode,

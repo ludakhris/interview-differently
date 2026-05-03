@@ -15,6 +15,26 @@ model Scenario {
   updatedAt  DateTime @updatedAt
 }
 
+// Written when a user mounts the play page for a traditional simulation
+// (immersive sims have their own ImmersiveSession with status tracking).
+// Lets analytics compute completion rate as
+//   count(SimulationResult in scope) / count(SimulationAttempt in scope)
+// without needing a status column on SimulationResult.
+//
+// One row per page mount. React StrictMode double-mounts are deduped on the
+// frontend via a ref, not here — keeping the table dumb is intentional.
+model SimulationAttempt {
+  id         String   @id @default(uuid())
+  userId     String
+  scenarioId String
+  track      String                          // denormalised for fast per-track stats
+  startedAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([scenarioId])
+  @@index([userId, scenarioId])
+}
+
 model SimulationResult {
   id              String           @id
   userId          String

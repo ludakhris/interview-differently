@@ -53,6 +53,43 @@ cd apps/api && npm run db:reset
 
 This wipes all data and re-seeds from the static YAML files in `apps/web/src/lib/scenarios/`. The YAML files are the source of truth for built-in scenarios.
 
+### Demo data — fake institution, cohort, students, simulations
+
+`apps/api/scripts/seed-fake-cohort.ts` is a CLI for spinning up (and tearing down) a complete demo institution so the analytics views (`/admin/institutions/:id/analytics`) have real numbers to render. It creates **real Clerk users** with verified emails so they could in theory sign in too.
+
+> **⚠️ Production caveat.** The `remove` command nukes whatever institution name you pass — including any real users in it and their simulation history. Pick demo institution names that are obviously fake (e.g. *"Demo U"*, *"QA Test School"*) so you don't accidentally type a live one.
+
+Requires `CLERK_SECRET_KEY` and `DATABASE_URL` in `apps/api/.env`. Defaults to whichever Clerk instance + Postgres your env points at.
+
+**Add a 10-student cohort** (creates institution if missing, cohort if missing, 10 fresh Clerk users with `@demo-u.test` emails, 1–6 attempts per user with random scores spread over 60 days):
+
+```bash
+cd apps/api
+npm run seed:fake -- add \
+  --institution "Demo U" \
+  --domain demo-u.test \
+  --cohort "Spring 2026" \
+  --users 10 \
+  --join-key spring2026-demo
+```
+
+**List existing institutions** (sanity-check before nuking):
+
+```bash
+npm run seed:fake -- list
+```
+
+**Remove an institution and ALL its data** (cohorts, memberships, Clerk users, SimulationResult, SimulationAttempt). Prompts for confirmation unless `--yes`:
+
+```bash
+npm run seed:fake -- remove --institution "Demo U" --yes
+```
+
+**Tips:**
+- Use a `.test` domain so the fake users never collide with anything routable.
+- The `--join-key` is optional — without it students would have to be admin-added or matched by email domain.
+- Re-running `add` against the same institution name reuses the institution + cohort and just adds more users.
+
 ### Production database (Railway)
 
 On every deploy, Railway automatically runs:

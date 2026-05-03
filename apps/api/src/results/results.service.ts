@@ -10,6 +10,23 @@ export class ResultsService {
     private aiFeedbackSvc: AiFeedbackService,
   ) {}
 
+  /**
+   * Records that a user has begun a traditional simulation. One row per
+   * play-page mount — analytics divides count(SimulationResult) by
+   * count(SimulationAttempt) within the same scope to compute completion
+   * rate. React StrictMode dedupe lives on the frontend (a useRef gate
+   * in SimulationPage); the table itself is intentionally append-only.
+   */
+  async createAttempt(input: { userId: string; scenarioId: string; track: string }) {
+    return this.prisma.simulationAttempt.create({
+      data: {
+        userId: input.userId,
+        scenarioId: input.scenarioId,
+        track: input.track,
+      },
+    })
+  }
+
   async create(dto: CreateResultDto) {
     const existing = await this.prisma.simulationResult.findUnique({ where: { id: dto.id } })
     if (existing) return existing

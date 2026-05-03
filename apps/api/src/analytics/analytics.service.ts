@@ -58,6 +58,8 @@ export class AnalyticsService {
         totalStudents: 0,
         activeStudentsLast30Days: 0,
         completedSimulations: 0,
+        startedSimulations: 0,
+        completionRate: null,
         avgOverallScore: null,
         byTrack: [],
         byDimension: [],
@@ -65,21 +67,45 @@ export class AnalyticsService {
       }
     }
 
-    // 2. SimulationResult rows for those users
-    const results = await this.prisma.simulationResult.findMany({
-      where: { userId: { in: userIds } },
-      select: {
-        id: true,
-        userId: true,
-        track: true,
-        overallScore: true,
-        completedAt: true,
-        dimensionScores: { select: { dimension: true, score: true } },
-      },
-    })
+    // 2. SimulationResult + SimulationAttempt + ImmersiveSession rows for those users
+    const [results, traditionalAttempts, immersiveSessions] = await Promise.all([
+      this.prisma.simulationResult.findMany({
+        where: { userId: { in: userIds } },
+        select: {
+          id: true,
+          userId: true,
+          track: true,
+          overallScore: true,
+          completedAt: true,
+          dimensionScores: { select: { dimension: true, score: true } },
+        },
+      }),
+      this.prisma.simulationAttempt.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, scenarioId: true, startedAt: true },
+      }),
+      this.prisma.immersiveSession.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, status: true, createdAt: true },
+      }),
+    ])
 
     const completedSimulations = results.length
     const avgOverallScore = avg(results.map((r) => r.overallScore))
+
+    // Completion rate combines traditional + immersive starts/finishes.
+    // Traditional: SimulationAttempt = start, SimulationResult = finish.
+    // Immersive: ImmersiveSession (any status) = start, status='completed' = finish.
+    // We do NOT pair a specific attempt to a specific result — cardinality is
+    // counts only, which is what an org-level rate cares about.
+    const traditionalStarts = traditionalAttempts.length
+    const immersiveStarts = immersiveSessions.length
+    const immersiveCompleted = immersiveSessions.filter((s) => s.status === 'completed').length
+    const startedSimulations = traditionalStarts + immersiveStarts
+    const completionRate =
+      startedSimulations === 0
+        ? null
+        : Math.round(((completedSimulations + immersiveCompleted) / startedSimulations) * 1000) / 10
 
     // 3. Active in last 30 days = distinct userIds with at least one completion in window
     const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
@@ -105,6 +131,8 @@ export class AnalyticsService {
       totalStudents,
       activeStudentsLast30Days,
       completedSimulations,
+      startedSimulations,
+      completionRate,
       avgOverallScore,
       byTrack,
       byDimension,
