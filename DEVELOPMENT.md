@@ -58,6 +58,8 @@ This wipes all data and re-seeds from the static YAML files in `apps/web/src/lib
 `apps/api/scripts/seed-fake-cohort.ts` is a CLI for spinning up (and tearing down) a complete demo institution so the analytics views (`/admin/institutions/:id/analytics`) have real numbers to render. It creates **real Clerk users** with verified emails so they could in theory sign in too.
 
 > **⚠️ Production caveat.** The `remove` command nukes whatever institution name you pass — including any real users in it and their simulation history. Pick demo institution names that are obviously fake (e.g. *"Demo U"*, *"QA Test School"*) so you don't accidentally type a live one.
+>
+> **Domain caveat.** Clerk rejects reserved TLDs (`.test`, `.local`, `.invalid`) as invalid email format. Use a real-looking TLD like `.com`, `.dev`, or `.io` even if the domain isn't registered — Clerk doesn't verify deliverability on admin createUser, just the format.
 
 Requires `CLERK_SECRET_KEY` and `DATABASE_URL` in `apps/api/.env`. Defaults to whichever Clerk instance + Postgres your env points at.
 
@@ -67,7 +69,7 @@ Requires `CLERK_SECRET_KEY` and `DATABASE_URL` in `apps/api/.env`. Defaults to w
 cd apps/api
 npm run seed:fake -- add \
   --institution "Demo U" \
-  --domain demo-u.test \
+  --domain demo-u.com \
   --cohort "Spring 2026" \
   --users 10 \
   --join-key spring2026-demo
@@ -86,7 +88,7 @@ npm run seed:fake -- remove --institution "Demo U" --yes
 ```
 
 **Tips:**
-- Use a `.test` domain so the fake users never collide with anything routable.
+- Pick a domain you don't actually own (e.g. `demouniversity.com`). Clerk only validates format, not deliverability — but never use a domain you'd later want real users to sign up under.
 - The `--join-key` is optional — without it students would have to be admin-added or matched by email domain.
 - Re-running `add` against the same institution name reuses the institution + cohort and just adds more users.
 

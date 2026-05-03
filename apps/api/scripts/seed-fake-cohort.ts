@@ -7,11 +7,16 @@
  * up. The remove command nukes whatever institution name you pass —
  * including any real users in it — so use with care, especially in prod.
  *
+ * NOTE: Clerk validates the email domain against real-world TLDs and
+ * rejects reserved ones (.test, .local, .invalid). Use a real-looking
+ * TLD like .com / .dev / .io even if the domain isn't registered —
+ * Clerk doesn't verify deliverability on admin createUser, just format.
+ *
  * Usage:
  *   # Add — creates institution "Demo U" with a 10-student cohort
  *   npm run seed:fake -- add \
  *     --institution "Demo U" \
- *     --domain demo-u.test \
+ *     --domain demo-u.com \
  *     --cohort "Spring 2026" \
  *     --users 10 \
  *     --join-key spring2026-demo
@@ -179,8 +184,10 @@ async function add(args: Args, prisma: PrismaClient, clerk: ClerkClient): Promis
       clerkUserId = clerkUser.id
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
+      // Clerk surfaces detailed reasons under .errors — log them so users can fix
+      // whatever's blocking (often "email address can't be used" for reserved TLDs).
+      const detail = (err as { errors?: Array<{ message?: string; longMessage?: string; code?: string }> }).errors
       if (msg.includes('already exists') || msg.includes('taken')) {
-        // Find the existing user by email
         const list = await clerk.users.getUserList({ emailAddress: [email] })
         if (list.data.length === 0) {
           console.warn(`  ! couldn't create or find ${email} — skipping`)
@@ -190,7 +197,8 @@ async function add(args: Args, prisma: PrismaClient, clerk: ClerkClient): Promis
         clerkUserId = list.data[0].id
         console.log(`  • clerk user already existed: ${email} (${clerkUserId})`)
       } else {
-        console.warn(`  ! clerk createUser failed for ${email}: ${msg}`)
+        const reasons = detail?.map((e) => `${e.code ?? '?'}: ${e.longMessage ?? e.message ?? ''}`).join('; ')
+        console.warn(`  ! clerk createUser failed for ${email}: ${msg}${reasons ? ` — ${reasons}` : ''}`)
         skipped++
         continue
       }
