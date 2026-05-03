@@ -103,7 +103,10 @@ export function AdminInstitutionHeatmapPage() {
 
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">Analytics</p>
+            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+              <span className="print:hidden">Analytics</span>
+              <span className="hidden print:inline">Competency heatmap</span>
+            </p>
             <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
               {detail?.name ?? 'Institution analytics'}
             </h1>
@@ -112,6 +115,10 @@ export function AdminInstitutionHeatmapPage() {
                 Cohort: <span className="text-[#f5f3ee]">{data.cohort.name}</span>
               </p>
             )}
+            {/* Print-only provenance line — hidden on screen, visible in PDF */}
+            <p className="hidden print:block text-[11px] text-slate-mid mt-1">
+              Generated {new Date().toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' })}
+            </p>
           </div>
 
           {detail && detail.cohorts.length > 0 && (

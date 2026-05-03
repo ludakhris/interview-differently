@@ -80,3 +80,63 @@
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #b0bec5; border-radius: 3px; }
+
+/* ── Print styles ──────────────────────────────────────────────────────────
+ * Optimised for the heatmap PDF use case (#20). Forces a light background,
+ * hides app chrome (Nav, sidebars, anything tagged .no-print), and asks
+ * browsers to honour explicit `background-color` on heatmap cells so the
+ * colour bands actually appear in the printed PDF.
+ *
+ * Anything in the page tagged with `print:hidden` (Tailwind) is also hidden;
+ * this block adds the global Nav + scrollbar suppression and forces colour
+ * preservation, which Tailwind alone can't do.
+ * ────────────────────────────────────────────────────────────────────────── */
+@media print {
+  /* Light page so it doesn't burn ink. */
+  html, body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  /* Global app chrome — hide Nav and any element opted out of print via
+   * either the standard `.no-print` class or Tailwind's `print:hidden`
+   * (already handled by Tailwind, but listed here for clarity). */
+  nav, .no-print {
+    display: none !important;
+  }
+
+  /* Force backgrounds + colours to print. Without this Chrome strips
+   * cell backgrounds and the heatmap loses its colour banding. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Sticky positioning gets confused on print and creates layout artefacts
+   * (cells overlapping, ghost columns). Reset it during print. */
+  .sticky {
+    position: static !important;
+  }
+
+  /* Tables: keep rows together when possible, no orphan cohort labels. */
+  thead { display: table-header-group; }
+  tr, td, th { page-break-inside: avoid; }
+
+  /* Heatmap cell text is set via inline `style={{ color: ... }}` for the
+   * dark UI, which is too light to read on the lightened-by-alpha print
+   * backgrounds. Force readable dark text in print. */
+  table td, table th {
+    color: #111111 !important;
+  }
+  /* But keep the score-band colours visible on the leading "name" + "Avg"
+   * cells — those need their accent colour to convey the score band. The
+   * heatmap-cell backgrounds are sufficient to communicate the band, so
+   * a uniform dark text is fine for cells; this overrides only the
+   * default. */
+
+  /* Page setup — landscape works best for wide heatmaps. Page size is
+   * the user's choice in the print dialog; we just set sensible margins. */
+  @page {
+    margin: 0.5in;
+  }
+}
