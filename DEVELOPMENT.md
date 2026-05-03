@@ -6,7 +6,7 @@
 
 ```bash
 # 1. Clone
-git clone https://github.com/YOUR_ORG/interview-differently.git
+git clone https://github.com/ludakhris/interview-differently.git
 cd interview-differently
 
 # 2. Install
