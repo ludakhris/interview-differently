@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
+import { AnalyticsTabs } from '@/components/AnalyticsTabs'
 import { fetchInstitutionAnalytics, type InstitutionAnalytics } from '@/services/analyticsService'
 import { getInstitution, type InstitutionDetail } from '@/services/institutionsService'
 import { downloadCsv, filenameSlug } from '@/lib/csv'
@@ -99,6 +100,12 @@ export function AdminInstitutionAnalyticsPage() {
             </div>
           )}
         </div>
+
+        <AnalyticsTabs
+          institutionId={institutionId}
+          active="overview"
+          available={['overview', 'engagement']}
+        />
 
         {error && (
           <div className="rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 mb-6">

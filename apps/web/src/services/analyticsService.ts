@@ -68,3 +68,35 @@ export async function fetchInstitutionAnalytics(
   const res = await authedFetch(getToken, `/admin/institutions/${institutionId}/analytics${qs}`)
   return res.json() as Promise<InstitutionAnalytics>
 }
+
+// ── Engagement ─────────────────────────────────────────────────────────────
+
+export interface ScenarioEngagementRow {
+  scenarioId: string
+  scenarioTitle: string
+  starts: number
+  completions: number
+  /** Percent (0–100). Null when nobody started yet. */
+  completionRate: number | null
+  drops: number
+  retriedUsers: number
+  /** Mean overallScore from completions; null when none. Immersive sessions excluded. */
+  avgScore: number | null
+  mode: 'traditional' | 'immersive' | 'mixed'
+}
+
+export interface ScenarioEngagementResponse {
+  institution: { id: string; name: string }
+  cohort: { id: string; name: string } | null
+  scenarios: ScenarioEngagementRow[]
+}
+
+export async function fetchScenarioEngagement(
+  getToken: GetToken,
+  institutionId: string,
+  cohortId?: string,
+): Promise<ScenarioEngagementResponse> {
+  const qs = cohortId ? `?cohortId=${encodeURIComponent(cohortId)}` : ''
+  const res = await authedFetch(getToken, `/admin/institutions/${institutionId}/engagement${qs}`)
+  return res.json() as Promise<ScenarioEngagementResponse>
+}

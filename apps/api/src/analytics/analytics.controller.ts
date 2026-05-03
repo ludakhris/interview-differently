@@ -20,4 +20,19 @@ export class AnalyticsController {
   ) {
     return this.service.getInstitutionAnalytics(institutionId, cohortId || undefined)
   }
+
+  /**
+   * Per-scenario engagement: starts, completions, drops, retried users, avg
+   * score. Combines traditional (SimulationAttempt + SimulationResult) and
+   * immersive (ImmersiveSession) data per scenarioId. Same scope filter as
+   * the overview endpoint.
+   */
+  @Get('institutions/:institutionId/engagement')
+  @InstitutionAdminAllowed()
+  getScenarioEngagement(
+    @Param('institutionId') institutionId: string,
+    @Query('cohortId') cohortId?: string,
+  ) {
+    return this.service.getScenarioEngagement(institutionId, cohortId || undefined)
+  }
 }

@@ -14,6 +14,7 @@ import { SettingsPage } from '@/pages/SettingsPage'
 import { WelcomePage } from '@/pages/WelcomePage'
 import { AdminInstitutionsPage } from '@/pages/AdminInstitutionsPage'
 import { AdminInstitutionAnalyticsPage } from '@/pages/AdminInstitutionAnalyticsPage'
+import { AdminInstitutionEngagementPage } from '@/pages/AdminInstitutionEngagementPage'
 import { RequestScenarioPage } from '@/pages/RequestScenarioPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
@@ -71,6 +72,7 @@ export default function App() {
       <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />
       <Route path="/admin/institutions" element={<AdminRoute><AdminInstitutionsPage /></AdminRoute>} />
       <Route path="/admin/institutions/:institutionId/analytics" element={<AdminRoute><AdminInstitutionAnalyticsPage /></AdminRoute>} />
+      <Route path="/admin/institutions/:institutionId/engagement" element={<AdminRoute><AdminInstitutionEngagementPage /></AdminRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
