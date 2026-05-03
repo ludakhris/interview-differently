@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import {
@@ -264,12 +265,13 @@ function InstitutionDetailView({
   onChange: () => Promise<void>
   onDeleted: () => Promise<void>
 }) {
+  const navigate = useNavigate()
   const [showNewCohort, setShowNewCohort] = useState(false)
   const [expandedCohort, setExpandedCohort] = useState<string | null>(null)
 
   return (
     <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-6 gap-4">
         <div>
           <h2 className="font-display font-bold text-[18px] text-[#f5f3ee]">{detail.name}</h2>
           <p className="text-[12px] text-slate-mid">
@@ -277,20 +279,28 @@ function InstitutionDetailView({
             {detail.memberCount} member{detail.memberCount !== 1 ? 's' : ''} total
           </p>
         </div>
-        <button
-          onClick={async () => {
-            if (!confirm(`Delete "${detail.name}" and all its cohorts? This cannot be undone.`)) return
-            try {
-              await deleteInstitution(getToken, detail.id)
-              await onDeleted()
-            } catch (e) {
-              alert(e instanceof Error ? e.message : 'Failed to delete')
-            }
-          }}
-          className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors"
-        >
-          Delete institution
-        </button>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <button
+            onClick={() => navigate(`/admin/institutions/${detail.id}/analytics`)}
+            className="text-[12px] font-semibold text-green-light hover:text-green transition-colors"
+          >
+            View analytics →
+          </button>
+          <button
+            onClick={async () => {
+              if (!confirm(`Delete "${detail.name}" and all its cohorts? This cannot be undone.`)) return
+              try {
+                await deleteInstitution(getToken, detail.id)
+                await onDeleted()
+              } catch (e) {
+                alert(e instanceof Error ? e.message : 'Failed to delete')
+              }
+            }}
+            className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between mb-3">

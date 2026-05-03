@@ -13,6 +13,7 @@ import { BuilderCanvasPage } from '@/pages/BuilderCanvasPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { WelcomePage } from '@/pages/WelcomePage'
 import { AdminInstitutionsPage } from '@/pages/AdminInstitutionsPage'
+import { AdminInstitutionAnalyticsPage } from '@/pages/AdminInstitutionAnalyticsPage'
 import { RequestScenarioPage } from '@/pages/RequestScenarioPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
@@ -69,6 +70,7 @@ export default function App() {
       {/* Legacy alias — old admin-only path now goes to the unified settings page */}
       <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />
       <Route path="/admin/institutions" element={<AdminRoute><AdminInstitutionsPage /></AdminRoute>} />
+      <Route path="/admin/institutions/:institutionId/analytics" element={<AdminRoute><AdminInstitutionAnalyticsPage /></AdminRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

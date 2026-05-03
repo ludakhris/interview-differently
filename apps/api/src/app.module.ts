@@ -13,6 +13,7 @@ import { AuthModule } from './auth/auth.module'
 import { InstitutionsModule } from './institutions/institutions.module'
 import { CohortsModule } from './cohorts/cohorts.module'
 import { MeModule } from './me/me.module'
+import { AnalyticsModule } from './analytics/analytics.module'
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { MeModule } from './me/me.module'
     InstitutionsModule,
     CohortsModule,
     MeModule,
+    AnalyticsModule,
   ],
 })
 export class AppModule {}
