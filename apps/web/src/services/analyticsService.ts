@@ -152,3 +152,37 @@ export async function fetchStudentDetail(
   )
   return res.json() as Promise<StudentDetailResponse>
 }
+
+// ── Heatmap ────────────────────────────────────────────────────────────────
+
+export interface HeatmapStudent {
+  userId: string
+  /** "Student 01"-style fallback identity for the anonymised view. */
+  anonymousLabel: string
+  displayName: string | null
+  email: string | null
+  /** Approx number of completions (averaged over dimensions; integer in practice). */
+  completedCount: number
+  lastActivityAt: string | null
+  avgScore: number | null
+  /** Map dimension → averaged score (or null if the student hasn't been scored on it). */
+  scoresByDimension: Record<string, number | null>
+}
+
+export interface HeatmapResponse {
+  institution: { id: string; name: string }
+  cohort: { id: string; name: string } | null
+  /** Stable column order. */
+  dimensions: string[]
+  students: HeatmapStudent[]
+}
+
+export async function fetchHeatmap(
+  getToken: GetToken,
+  institutionId: string,
+  cohortId?: string,
+): Promise<HeatmapResponse> {
+  const qs = cohortId ? `?cohortId=${encodeURIComponent(cohortId)}` : ''
+  const res = await authedFetch(getToken, `/admin/institutions/${institutionId}/heatmap${qs}`)
+  return res.json() as Promise<HeatmapResponse>
+}

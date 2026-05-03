@@ -291,6 +291,123 @@ export class AnalyticsService {
   }
 
   /**
+   * Competency heatmap data: one row per student in scope, with the
+   * average score per dimension across all completions. Backend always
+   * computes the raw values; the frontend handles colour banding and
+   * the optional name/anonymous-id toggle.
+   *
+   * Students with zero completions are still returned so the heatmap
+   * shows them with empty cells — useful for "who hasn't started yet"
+   * questions.
+   */
+  async getCompetencyHeatmap(institutionId: string, cohortId?: string) {
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { id: true, name: true },
+    })
+    if (!institution) throw new NotFoundException(`Institution ${institutionId} not found`)
+
+    let cohort: { id: string; name: string } | null = null
+    if (cohortId) {
+      const c = await this.prisma.cohort.findUnique({
+        where: { id: cohortId },
+        select: { id: true, name: true, institutionId: true },
+      })
+      if (!c || c.institutionId !== institutionId) {
+        throw new NotFoundException(`Cohort ${cohortId} not found in institution ${institutionId}`)
+      }
+      cohort = { id: c.id, name: c.name }
+    }
+
+    const memberships = await this.prisma.membership.findMany({
+      where: { institutionId, ...(cohortId ? { cohortId } : {}) },
+      include: {
+        user: { select: { id: true, email: true, displayName: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    })
+    const userIds = [...new Set(memberships.map((m) => m.userId))]
+    if (userIds.length === 0) {
+      return { institution, cohort, dimensions: [], students: [] }
+    }
+
+    // Per-user dimension averages.
+    const results = await this.prisma.simulationResult.findMany({
+      where: { userId: { in: userIds } },
+      select: {
+        userId: true,
+        completedAt: true,
+        dimensionScores: { select: { dimension: true, score: true } },
+      },
+    })
+
+    // Bucket scores per (userId, dimension); also track when this user
+    // last completed anything (for sortable column on the frontend).
+    const scoresByUserDim = new Map<string, Map<string, number[]>>()
+    const lastActivity = new Map<string, Date>()
+    for (const r of results) {
+      const cur = lastActivity.get(r.userId)
+      if (!cur || r.completedAt > cur) lastActivity.set(r.userId, r.completedAt)
+      let userDims = scoresByUserDim.get(r.userId)
+      if (!userDims) {
+        userDims = new Map()
+        scoresByUserDim.set(r.userId, userDims)
+      }
+      for (const d of r.dimensionScores) {
+        const arr = userDims.get(d.dimension) ?? []
+        arr.push(d.score)
+        userDims.set(d.dimension, arr)
+      }
+    }
+
+    // Stable dimension columns: union across all results, sorted alphabetically.
+    const dimensionSet = new Set<string>()
+    for (const userDims of scoresByUserDim.values()) {
+      for (const dim of userDims.keys()) dimensionSet.add(dim)
+    }
+    const dimensions = [...dimensionSet].sort()
+
+    // Dedupe to one row per user (a student in two cohorts shows once).
+    // Order matches first-seen membership order.
+    const seenUsers = new Set<string>()
+    const orderedUsers = memberships
+      .filter((m) => {
+        if (seenUsers.has(m.userId)) return false
+        seenUsers.add(m.userId)
+        return true
+      })
+      .map((m) => m.user)
+
+    const students = orderedUsers.map((u, index) => {
+      const userDims = scoresByUserDim.get(u.id)
+      const scoresByDimension: Record<string, number | null> = {}
+      let total = 0
+      let count = 0
+      for (const dim of dimensions) {
+        const arr = userDims?.get(dim) ?? []
+        const a = arr.length === 0 ? null : Math.round((arr.reduce((s, n) => s + n, 0) / arr.length) * 10) / 10
+        scoresByDimension[dim] = a
+        if (a !== null) {
+          total += a
+          count++
+        }
+      }
+      return {
+        userId: u.id,
+        anonymousLabel: `Student ${String(index + 1).padStart(2, '0')}`,
+        displayName: u.displayName,
+        email: u.email,
+        completedCount: userDims ? [...userDims.values()].reduce((s, arr) => s + arr.length, 0) / Math.max(1, dimensions.length) : 0,
+        lastActivityAt: lastActivity.get(u.id)?.toISOString() ?? null,
+        avgScore: count === 0 ? null : Math.round((total / count) * 10) / 10,
+        scoresByDimension,
+      }
+    })
+
+    return { institution, cohort, dimensions, students }
+  }
+
+  /**
    * Drill-down view for a single student inside an institution.
    *
    * Returns the student's profile, all their completions, and a per-dimension

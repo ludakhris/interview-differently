@@ -48,4 +48,19 @@ export class AnalyticsController {
   ) {
     return this.service.getStudentDetail(institutionId, userId)
   }
+
+  /**
+   * Competency heatmap data — students × dimensions grid with per-cell
+   * averages. Anonymisation is a frontend toggle; the API always returns
+   * both the anonymous label (Student NN) and the real name/email so the
+   * UI can swap without a refetch.
+   */
+  @Get('institutions/:institutionId/heatmap')
+  @InstitutionAdminAllowed()
+  getCompetencyHeatmap(
+    @Param('institutionId') institutionId: string,
+    @Query('cohortId') cohortId?: string,
+  ) {
+    return this.service.getCompetencyHeatmap(institutionId, cohortId || undefined)
+  }
 }
