@@ -6,7 +6,7 @@ import { ContextPanel } from '@/components/ContextPanel'
 import { MetricChart } from '@/components/MetricChart'
 import { ScenarioSidebar } from '@/components/ScenarioSidebar'
 import { NarrationPlayer } from '@/components/immersive/NarrationPlayer'
-import { AvatarPlayer } from '@/components/immersive/AvatarPlayer'
+import { PrerenderedAvatarPlayer } from '@/components/immersive/PrerenderedAvatarPlayer'
 import { ResponseRecorder, type RecordingResult } from '@/components/immersive/ResponseRecorder'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import { useNarration } from '@/hooks/useNarration'
@@ -14,7 +14,8 @@ import {
   createImmersiveSession,
   submitImmersiveResponse,
 } from '@/services/immersiveService'
-import type { ScenarioNode } from '@id/types'
+import { listScenarioMedia } from '@/services/scenarioMediaService'
+import type { ScenarioMediaAsset, ScenarioNode } from '@id/types'
 
 type NarrationMode = 'voice' | 'avatar'
 type PageState = 'loading' | 'narrating' | 'responding' | 'submitting' | 'complete'
@@ -34,17 +35,14 @@ export function ImmersiveSimulationPage() {
   const { trackMeta } = useScenarios()
   const narration = useNarration()
 
-  const [narrationMode, setNarrationMode] = useState<NarrationMode>(
+  const [narrationMode] = useState<NarrationMode>(
     searchParams.get('mode') === 'avatar' ? 'avatar' : 'voice',
   )
 
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [nodeIndex, setNodeIndex] = useState(0)
   const [pageState, setPageState] = useState<PageState>('loading')
-  const [avatarSpeaking, setAvatarSpeaking] = useState(false)
-  const [avatarError, setAvatarError] = useState<string | null>(null)
-  const [showErrorDetails, setShowErrorDetails] = useState(false)
-  const avatarSpeakRef = useRef<((text: string) => Promise<void>) | null>(null)
+  const [mediaAssets, setMediaAssets] = useState<ScenarioMediaAsset[] | null>(null)
   const sessionCreatedRef = useRef(false)
 
   const decisionNodes: ScenarioNode[] = (scenario?.nodes ?? []).filter(
@@ -55,8 +53,13 @@ export function ImmersiveSimulationPage() {
   const totalNodes = decisionNodes.length
   const isLastNode = nodeIndex === totalNodes - 1
 
+  const currentAsset = currentNode && mediaAssets
+    ? mediaAssets.find(a => a.nodeId === currentNode.nodeId) ?? null
+    : null
+  const currentMediaUrl = currentAsset?.status === 'ready' ? currentAsset.mediaUrl : null
+
   // Unified "is currently playing narration" across both modes
-  const isNarrating = narrationMode === 'voice' ? narration.isPlaying : avatarSpeaking
+  const isNarrating = narrationMode === 'voice' ? narration.isPlaying : pageState === 'narrating'
 
   // Redirect non-immersive scenarios back to normal play
   useEffect(() => {
@@ -64,6 +67,14 @@ export function ImmersiveSimulationPage() {
       navigate(`/scenario/${scenarioId}/play`, { replace: true })
     }
   }, [isLoading, scenario, scenarioId, navigate])
+
+  // Hydrate pre-rendered avatar clips for this scenario (avatar mode only).
+  useEffect(() => {
+    if (!scenarioId || narrationMode !== 'avatar') return
+    listScenarioMedia(scenarioId)
+      .then(setMediaAssets)
+      .catch(() => setMediaAssets([]))
+  }, [scenarioId, narrationMode])
 
   // Create the session once auth is loaded, then show mode selection
   useEffect(() => {
@@ -79,27 +90,16 @@ export function ImmersiveSimulationPage() {
       .catch(() => setPageState('narrating')) // gracefully continue without session
   }, [isLoaded, isSignedIn, userId, scenarioId])
 
-  // Auto-play narration when we enter 'narrating' state for a new node
+  // Auto-play narration when we enter 'narrating' state for a new node.
+  // Avatar mode plays a pre-rendered MP4; voice mode falls through to TTS.
   useEffect(() => {
     if (pageState !== 'narrating' || !currentNode) return
-    const script = currentNode.audioScript ?? currentNode.narrative
     if (narrationMode === 'voice') {
-      narration.play(script)
-    } else if (avatarSpeakRef.current) {
-      setAvatarSpeaking(true)
-      void avatarSpeakRef.current(script)
-    }
-  }, [pageState, nodeIndex]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // D-ID fallback: if avatar fails at any point, switch to voice and play immediately
-  const handleAvatarError = useCallback((message: string) => {
-    setAvatarError(message)
-    setNarrationMode('voice')
-    setAvatarSpeaking(false)
-    if (pageState === 'narrating' && currentNode) {
       narration.play(currentNode.audioScript ?? currentNode.narrative)
     }
-  }, [pageState, currentNode, narration])
+    // For avatar mode, the PrerenderedAvatarPlayer auto-plays on mediaUrl change —
+    // its onDone callback advances pageState below.
+  }, [pageState, nodeIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Voice mode: transition from narrating → responding when speech ends
   useEffect(() => {
@@ -109,30 +109,10 @@ export function ImmersiveSimulationPage() {
     }
   }, [narration.isPlaying, pageState, narrationMode])
 
-  // Avatar mode: called by AvatarPlayer when the avatar finishes speaking
+  // Avatar mode: called by PrerenderedAvatarPlayer when the clip finishes
   const handleAvatarDone = useCallback(() => {
-    setAvatarSpeaking(false)
     setPageState(prev => (prev === 'narrating' ? 'responding' : prev))
   }, [])
-
-  // Avatar mode: called by AvatarPlayer once WebRTC is connected and ready
-  const handleAvatarReady = useCallback((speak: (text: string) => Promise<void>) => {
-    const safeSpeak = async (text: string) => {
-      try {
-        await speak(text)
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Talk request failed'
-        handleAvatarError(msg)
-      }
-    }
-    avatarSpeakRef.current = safeSpeak
-    // If we're already in narrating state (e.g. connection was slow), start speaking now
-    if (pageState === 'narrating' && currentNode) {
-      const script = currentNode.audioScript ?? currentNode.narrative
-      setAvatarSpeaking(true)
-      void safeSpeak(script)
-    }
-  }, [pageState, currentNode, handleAvatarError])
 
   const handleResponseSubmit = useCallback(
     async (result: RecordingResult) => {
@@ -269,44 +249,27 @@ export function ImmersiveSimulationPage() {
               </div>
             )}
 
-            {/* Avatar fallback notice — sits directly above the narration player */}
-            {avatarError && (
-              <div className="bg-amber/5 border border-amber/20 rounded-xl px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[13px] text-amber">
-                    Avatar unavailable — switched to voice narration.
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setShowErrorDetails(v => !v)}
-                      className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors underline underline-offset-2"
-                    >
-                      {showErrorDetails ? 'Hide details' : 'Technical details'}
-                    </button>
-                    <button
-                      onClick={() => setAvatarError(null)}
-                      className="text-slate-mid hover:text-[#f5f3ee] transition-colors text-[16px] leading-none"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-                {showErrorDetails && (
-                  <pre className="mt-2 text-[11px] text-red-400/80 whitespace-pre-wrap break-all font-mono">
-                    {avatarError}
-                  </pre>
-                )}
-              </div>
-            )}
-
-            {/* Narration — voice or avatar */}
+            {/* Narration — voice or avatar (avatar plays a pre-rendered MP4 per node) */}
             {narrationMode === 'avatar' ? (
-              <AvatarPlayer
-                onReady={handleAvatarReady}
-                onDone={handleAvatarDone}
-                onError={handleAvatarError}
-                className="w-full aspect-video"
-              />
+              currentMediaUrl ? (
+                <PrerenderedAvatarPlayer
+                  mediaUrl={currentMediaUrl}
+                  isPlaying={pageState === 'narrating'}
+                  onDone={handleAvatarDone}
+                  className="w-full aspect-video"
+                />
+              ) : mediaAssets === null ? (
+                <div className="w-full aspect-video rounded-2xl bg-[#0d0d0d] flex items-center justify-center">
+                  <p className="text-[12px] text-slate-mid">Loading interviewer…</p>
+                </div>
+              ) : (
+                <div className="w-full aspect-video rounded-2xl bg-[#0d0d0d] border border-red-400/30 flex flex-col items-center justify-center gap-2 p-6 text-center">
+                  <p className="text-[13px] text-red-400 font-semibold">Interviewer clip unavailable</p>
+                  <p className="text-[11px] text-slate-mid leading-relaxed max-w-md">
+                    This question's avatar clip wasn't pre-rendered. Ask an admin to render this scenario in the builder before retrying.
+                  </p>
+                </div>
+              )
             ) : (
               <NarrationPlayer
                 isPlaying={narration.isPlaying}

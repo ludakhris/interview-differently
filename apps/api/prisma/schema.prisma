@@ -78,3 +78,22 @@ model ImmersiveResponse {
 
   @@index([sessionId])
 }
+
+model ScenarioMediaAsset {
+  id           String   @id @default(uuid())
+  scenarioId   String
+  nodeId       String
+  scriptHash   String   // sha256 of audioScript at render time; mismatch ⇒ stale ⇒ re-render
+  presenterId  String   // D-ID presenter id baked into the clip
+  voiceId      String   // Azure voice id baked into the clip
+  status       String   // queued | rendering | ready | failed
+  mediaUrl     String?  // R2 public URL once status='ready'
+  durationMs   Int?
+  errorMessage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([scenarioId, nodeId])
+  @@index([scenarioId])
+  @@index([status])
+}

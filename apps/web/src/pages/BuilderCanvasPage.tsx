@@ -21,7 +21,8 @@ import { FeedbackNode } from '@/components/builder/nodes/FeedbackNode'
 import { useBuilderCanvas } from '@/hooks/useBuilderCanvas'
 import { validateScenario } from '@/hooks/useScenarioValidation'
 import { getScenario, updateScenario, publishScenario } from '@/services/builderService'
-import type { Scenario, ScenarioNode, RubricDimension } from '@id/types'
+import { listScenarioMedia } from '@/services/scenarioMediaService'
+import type { Scenario, ScenarioMediaAsset, ScenarioNode, RubricDimension } from '@id/types'
 
 const nodeTypes = {
   startNode: StartNode,
@@ -44,6 +45,7 @@ export function BuilderCanvasPage() {
   const [rubricOpen, setRubricOpen] = useState(false)
   const [validationErrors, setValidationErrors] = useState<ReturnType<typeof validateScenario> | null>(null)
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null)
+  const [mediaAssets, setMediaAssets] = useState<ScenarioMediaAsset[]>([])
   const saveStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Load scenario asynchronously on mount
@@ -57,6 +59,19 @@ export function BuilderCanvasPage() {
       setIsLoading(false)
     })
   }, [scenarioId])
+
+  // Hydrate media assets for this scenario; missing/empty is not an error.
+  useEffect(() => {
+    if (!scenarioId) return
+    listScenarioMedia(scenarioId).then(setMediaAssets).catch(() => {/* ignore */})
+  }, [scenarioId])
+
+  function handleAssetUpdated(next: ScenarioMediaAsset) {
+    setMediaAssets(prev => {
+      const filtered = prev.filter(a => a.nodeId !== next.nodeId)
+      return [...filtered, next]
+    })
+  }
 
   const handleSave = useCallback(
     (updated: Scenario) => {
@@ -180,7 +195,7 @@ export function BuilderCanvasPage() {
     setSaveStatus('unsaved')
   }
 
-  function handleBriefingUpdate(updates: Pick<Scenario, 'briefing' | 'estimatedMinutes' | 'display'>) {
+  function handleBriefingUpdate(updates: Pick<Scenario, 'briefing' | 'estimatedMinutes' | 'display' | 'mode' | 'interviewer'>) {
     const updatedScenario: Scenario = { ...currentScenario, ...updates }
     setScenario(updatedScenario)
     handleSave(updatedScenario)
@@ -210,7 +225,7 @@ export function BuilderCanvasPage() {
   }
 
   function handlePublish() {
-    const errors = validateScenario(currentScenario)
+    const errors = validateScenario(currentScenario, mediaAssets)
     setValidationErrors(errors)
   }
 
@@ -281,8 +296,12 @@ export function BuilderCanvasPage() {
           selectedNode={selectedNode}
           rubricDimensions={currentScenario.rubric.dimensions}
           allNodes={currentScenario.nodes}
+          scenarioId={currentScenario.scenarioId}
+          scenarioMode={currentScenario.mode ?? 'text'}
+          mediaAsset={selectedNode ? mediaAssets.find(a => a.nodeId === selectedNode.nodeId) ?? null : null}
           onUpdate={handleNodeUpdate}
           onDelete={handleNodeDelete}
+          onAssetRendered={handleAssetUpdated}
         />
       </div>
 

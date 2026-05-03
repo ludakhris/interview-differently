@@ -99,8 +99,7 @@ The goal is a second simulation mode alongside the existing text-based one. The 
 ### 7a — Infrastructure
 
 - [x] **TTS narration** — `useNarration` hook wraps Web Speech API client-side; `play(text)`, `stop()`, `isPlaying`, `isMuted`, `toggleMute`; upgrade path to ElevenLabs/Polly with no API change
-- [x] **D-ID avatar integration (optional)** — user chooses "Voice Only" or "AI Avatar" on a pre-simulation mode-select screen. Avatar mode uses D-ID Streaming API (WebRTC) with a randomly selected stock presenter; backend proxies all D-ID API calls (`/api/did/*`) keeping `DID_API_KEY` server-side. Falls back gracefully if D-ID is unavailable.
-- [ ] **Post-pilot: cache generated avatar video clips** — `audioScript` content is static per node; store generated video in R2 keyed by `{scenarioId}/{nodeId}` so each clip is only generated once regardless of candidate volume.
+- [x] **D-ID avatar integration (optional)** — user chooses "Voice Only" or "AI Avatar" on a pre-simulation mode-select screen. Avatar mode uses D-ID Streaming API (WebRTC) with a randomly selected stock presenter; backend proxies all D-ID API calls (`/api/did/*`) keeping `DID_API_KEY` server-side. Falls back gracefully if D-ID is unavailable. **Note:** WebRTC streaming is being repurposed (see 7f) — kept for builder live-edit preview and as the basis for a future premium "live avatar" tier; no longer the runtime path for published scenarios.
 - [ ] **Media storage** — skipped for pilot; audio blobs are transcribed immediately via Whisper and discarded. Add R2 storage post-pilot if playback/audit trail is needed.
 - [x] **Transcription service** — `apps/api/src/transcription/transcription.service.ts`; calls OpenAI Whisper API (`whisper-1`). Runs async in background so response submission returns immediately. Falls back to null on failure so the session is never blocked.
 - [x] **Prisma schema additions** — `ImmersiveSession` + `ImmersiveResponse` models added and migrated (`20260412004936_add_immersive_sessions`)
@@ -111,8 +110,8 @@ The goal is a second simulation mode alongside the existing text-based one. The 
 - [x] Add `audioScript?: string` to `ScenarioNode` type — the exact words the AI narrator reads for that node; falls back to node text if absent
 - [x] Add `responsePrompt?: string` to `ScenarioNode` — the open-ended question the candidate must answer verbally (only used in `immersive` mode)
 - [x] Update YAML parser (`yamlScenario.ts`) to read new fields
-- [ ] Builder: add "Immersive mode" toggle in BriefingEditor (sets `mode`)
-- [ ] Builder: NodeEditorPanel shows `audioScript` and `responsePrompt` text areas when scenario mode is `immersive`
+- [x] Builder: add "Immersive mode" toggle in BriefingEditor (sets `mode`)
+- [x] Builder: NodeEditorPanel shows `audioScript` and `responsePrompt` text areas when scenario mode is `immersive`
 
 ### 7c — Backend API
 
@@ -139,6 +138,50 @@ The goal is a second simulation mode alongside the existing text-based one. The 
 
 - [x] Create an immersive variant of `ops-001` as a new scenario (`ops-001-immersive`) — same situation and data context, rewritten as open-ended verbal response nodes with `audioScript` and `responsePrompt` per node; the original `ops-001` text scenario is left unchanged
 - [ ] Create one net-new immersive-only scenario purpose-built for the format (open-ended situational questions with data context)
+
+### 7f — Pre-rendered avatar clips
+
+Goal: replace per-session D-ID WebRTC streaming with pre-rendered MP4 clips generated at scenario-author time and served from R2. WebRTC streaming is retained only for (a) builder live-edit preview and (b) a future premium "live avatar" tier — it is no longer the runtime path for published scenarios.
+
+**Decisions locked in:**
+- One presenter + one voice per scenario (chosen by author in BriefingEditor, stored on `Scenario`).
+- Author-driven render flow — no background worker, no `setInterval`, no `status='rendering'` rows picked up later. Author triggers render in builder, request blocks until D-ID returns the MP4, author can preview immediately.
+- D-ID polling happens *inside* the synchronous request handler (long-poll until `done` or 180s timeout). This is the cheapest correct option: no orphaned jobs, no retry state machine, errors surface instantly to the author. Trade-off: one long-lived HTTP request per render. If renders start exceeding 180s in practice, upgrade to D-ID webhooks + SSE-to-builder (same author UX, no poll loop) — explicitly deferred until that becomes a real failure mode.
+- Storage: Cloudflare R2 (zero egress; ~$0.10/mo at pilot scale vs ~$22/mo on S3).
+- Stale detection via sha256 of `audioScript`; mismatch ⇒ "Stale" badge and re-render required before publish.
+- WebRTC streaming kept as builder-only preview for unsaved/in-progress scripts.
+
+**Schema**
+- [x] Prisma: add `ScenarioMediaAsset` (unique on `(scenarioId, nodeId)`); migration applied (`20260503031255_add_scenario_media_asset`)
+- [x] Types: add `interviewer?: { presenterId: string; voiceId: string }` to `Scenario` in `packages/types/src/index.ts`; also exports `ScenarioMediaAsset` type
+
+**Backend (`apps/api/src/scenario-media/`)**
+- [x] Storage abstraction: `MediaStorage` interface; `LocalDiskMediaStorage` (used in dev — writes to `apps/api/storage/scenario-media/`, served via `GET /api/scenario-media/files/*`); `R2MediaStorage` stub (throws on use until `@aws-sdk/client-s3` is added and credentials provisioned)
+- [x] `scenario-media.service.ts` — `renderNode(scenarioId, nodeId)` synchronous: validates scenario is immersive + has persona, hashes script for idempotency, posts to D-ID `/talks`, long-polls inside the handler until `done` (180s timeout), downloads MP4, uploads via storage, writes asset row
+- [x] `POST /api/scenario-media/render/:scenarioId/:nodeId`
+- [x] `GET /api/scenario-media/:scenarioId`
+- [x] `DELETE /api/scenario-media/:scenarioId/:nodeId`
+
+**Builder UX**
+- [x] BriefingEditor: persona picker (presenter grid sourced from `/api/did/presenters`, voice dropdown filtered by gender), saves to `scenario.interviewer`. Cleared automatically when mode is set back to text.
+- [x] NodeEditorPanel: per-node render-status badge (`RENDERED` / `STALE` / `RENDERING` / `FAILED` / `NOT RENDERED`) plus a `RENDER` / `RE-RENDER` button. Stale detection via sha256 hash of the current `audioScript` vs the hash stored on the asset (computed client-side via `crypto.subtle`). On success, the rendered MP4 plays inline below the badge.
+- [x] Builder live preview: existing WebRTC `AvatarPlayer` retained for in-builder preview of unsaved script edits (and as basis for a future premium "live avatar" tier — see 7a note).
+- [x] Publish flow: `validateScenario(scenario, mediaAssets)` blocks publish if `mode === 'immersive'` and any decision node lacks a `ready` asset, or if no interviewer persona is set.
+
+**Frontend play-page**
+- [x] `ImmersiveSimulationPage` fetches `GET /api/scenario-media/:scenarioId` when in avatar mode
+- [x] New `PrerenderedAvatarPlayer` component — `<video src={asset.mediaUrl}>`; auto-plays on URL change, `onEnded` fires `handleAvatarDone()`. No WebRTC.
+- [x] Removed the runtime fallback to WebRTC streaming on the play page. If a published scenario lacks a ready asset, candidate sees a hard "interviewer clip unavailable" error rather than silently degrading.
+
+**Ops**
+- [x] Provision R2 bucket (`interview-differently-media`) with custom domain `media.interviewdifferently.com`; env vars set in `apps/api/.env`
+- [x] Implement `R2MediaStorage` using `@aws-sdk/client-s3` against R2's S3-compatible endpoint; selected at boot when `R2_BUCKET` is set
+- [x] End-to-end smoke test: rendered first node of `ops-001-immersive` (D-ID render → R2 upload → public URL → inline playback) — 24s wall time, 3.1 MB MP4
+- [ ] Add the same R2_* env vars to Railway for production
+- [ ] One-time backfill script: render every node of every currently-published immersive scenario
+
+**Follow-ups uncovered during 7f**
+- [x] D-ID's curated presenter library shrunk — refreshed `CURATED_PRESENTER_NAMES` in `did.service.ts` to just `Amber` + `William` (only survivors from the original 8). Added stable id-sorted suffix labelling so the picker shows `Amber 1` through `Amber 13` and `William 1` through `William 3` — distinguishable but persona ids stay stable.
 
 ---
 

@@ -11,13 +11,15 @@
     "test": "jest --passWithNoTests",
     "db:migrate": "prisma migrate dev",
     "db:seed": "ts-node -r tsconfig-paths/register prisma/seed.ts",
-    "db:reset": "prisma migrate reset --force && npm run db:seed"
+    "db:reset": "prisma migrate reset --force && npm run db:seed",
+    "backfill:media": "ts-node -r tsconfig-paths/register scripts/backfill-scenario-media.ts"
   },
   "prisma": {
     "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.86.1",
+    "@aws-sdk/client-s3": "^3.1041.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",

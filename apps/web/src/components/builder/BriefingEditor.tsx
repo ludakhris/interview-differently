@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import type { Scenario, ScenarioDisplay, SidebarSection, SidebarItem } from '@id/types'
+import type { Scenario, ScenarioDisplay, ScenarioInterviewer, SidebarSection, SidebarItem } from '@id/types'
+import { PersonaPicker } from './PersonaPicker'
 
 interface BriefingEditorProps {
   scenario: Scenario
-  onUpdate: (updates: Pick<Scenario, 'briefing' | 'estimatedMinutes' | 'display'>) => void
+  onUpdate: (updates: Pick<Scenario, 'briefing' | 'estimatedMinutes' | 'display' | 'mode' | 'interviewer'>) => void
   onClose: () => void
 }
 
@@ -23,6 +24,8 @@ export function BriefingEditor({ scenario, onUpdate, onClose }: BriefingEditorPr
   const [reportsTo, setReportsTo] = useState(scenario.briefing.reportsTo)
   const [timeInRole, setTimeInRole] = useState(scenario.briefing.timeInRole)
   const [estimatedMinutes, setEstimatedMinutes] = useState(scenario.estimatedMinutes)
+  const [mode, setMode] = useState<'text' | 'immersive'>(scenario.mode ?? 'text')
+  const [interviewer, setInterviewer] = useState<ScenarioInterviewer | undefined>(scenario.interviewer)
 
   // ── Display config ────────────────────────────────────────────────────────────
   const initial = scenario.display
@@ -78,6 +81,10 @@ export function BriefingEditor({ scenario, onUpdate, onClose }: BriefingEditorPr
       briefing: { situation, role, organisation, reportsTo, timeInRole },
       estimatedMinutes,
       display,
+      mode,
+      // Only persist interviewer when scenario is immersive — clearing it on text mode
+      // prevents stale persona data from interfering if the author toggles back later.
+      interviewer: mode === 'immersive' ? interviewer : undefined,
     })
     onClose()
   }
@@ -148,6 +155,52 @@ export function BriefingEditor({ scenario, onUpdate, onClose }: BriefingEditorPr
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-4">Briefing</p>
 
             <div className="space-y-5">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+                  Scenario Mode
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      { value: 'text',      label: 'Text',      description: 'Multiple-choice decisions; written feedback' },
+                      { value: 'immersive', label: 'Immersive', description: 'AI interviewer asks questions; verbal responses' },
+                    ] as const
+                  ).map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setMode(opt.value)}
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        mode === opt.value
+                          ? 'border-[#2d9e5f]/50 bg-[#2d9e5f]/10'
+                          : 'border-white/10 bg-[#111111] hover:border-white/20'
+                      }`}
+                    >
+                      <p className={`text-[12px] font-semibold mb-1 ${mode === opt.value ? 'text-[#2d9e5f]' : 'text-[#f5f3ee]'}`}>
+                        {opt.label}
+                      </p>
+                      <p className="text-[10px] text-white/30 leading-relaxed">{opt.description}</p>
+                    </button>
+                  ))}
+                </div>
+                {mode === 'immersive' && (
+                  <p className="text-[11px] text-white/40 mt-2 leading-relaxed">
+                    Each decision node also needs an audio script and a response prompt — edit those on the node itself.
+                  </p>
+                )}
+              </div>
+
+              {mode === 'immersive' && (
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-2">
+                    Interviewer Persona
+                  </label>
+                  <p className="text-[11px] text-white/25 mb-3 leading-relaxed">
+                    The presenter and voice are baked into every rendered clip. Changing them after publishing requires re-rendering all nodes.
+                  </p>
+                  <PersonaPicker value={interviewer} onChange={setInterviewer} />
+                </div>
+              )}
+
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-2">
                   The Situation

@@ -2,11 +2,13 @@ import { Injectable, Logger } from '@nestjs/common'
 
 const DID_BASE_URL = 'https://api.d-id.com'
 
-// Curated presenters — names that render well with D-ID's streaming model.
-// Any presenter not in this list is excluded from random selection.
+// Curated presenters — names that render well with D-ID's clips model.
+// As of 2026-05, D-ID's library has shrunk significantly: of the original 8 names
+// (Amy, Noelle, Amber, Natasha, William, Ryan, Davis, Marcus), only Amber and
+// William remain available. Update this set when D-ID adds presenters back.
 const CURATED_PRESENTER_NAMES = new Set([
-  'Amy', 'Noelle', 'Amber', 'Natasha',   // female
-  'William', 'Ryan', 'Davis', 'Marcus',   // male
+  'Amber',     // female (12 variants currently)
+  'William',   // male (4 variants currently)
 ])
 
 interface DIdPresenter {
@@ -30,6 +32,7 @@ export interface CuratedPresenter {
 export class DidService {
   private readonly logger = new Logger(DidService.name)
   private readonly authHeader: string
+  private presenterCache: CuratedPresenter[] | null = null
 
   constructor() {
     const apiKey = process.env.DID_API_KEY
@@ -56,9 +59,10 @@ export class DidService {
 
   /** Returns curated stock presenters from D-ID's clips library, filtered to known-good names. */
   async getPresenters(): Promise<CuratedPresenter[]> {
+    if (this.presenterCache) return this.presenterCache
     const data = await this.request<{ presenters?: DIdPresenter[] }>('/clips/presenters')
     const all: DIdPresenter[] = data.presenters ?? []
-    return all
+    const curated = all
       .filter(p => CURATED_PRESENTER_NAMES.has(p.name))
       .filter(p => !(p.presenter_id ?? p.id ?? '').includes('GreenScreen'))
       .map(p => ({
@@ -68,6 +72,59 @@ export class DidService {
         image_url: p.image_url ?? p.preview_url ?? p.thumbnail_url ?? '',
       }))
       .filter(p => p.image_url !== '')
+
+    // Multiple variants share the same `name` (e.g. 12 "Amber"s). Sort by id for
+    // deterministic ordering, then suffix duplicates as "Amber 1", "Amber 2"… so
+    // builder authors can tell them apart in the picker UI.
+    curated.sort((a, b) => a.id.localeCompare(b.id))
+    const counts = new Map<string, number>()
+    for (const p of curated) counts.set(p.name, (counts.get(p.name) ?? 0) + 1)
+    const seen = new Map<string, number>()
+    for (const p of curated) {
+      if ((counts.get(p.name) ?? 0) > 1) {
+        const idx = (seen.get(p.name) ?? 0) + 1
+        seen.set(p.name, idx)
+        p.name = `${p.name} ${idx}`
+      }
+    }
+
+    this.presenterCache = curated
+    return curated
+  }
+
+  /** Look up a curated presenter by id; used by the pre-render pipeline to resolve source_url. */
+  async getPresenterById(presenterId: string): Promise<CuratedPresenter | null> {
+    const all = await this.getPresenters()
+    return all.find(p => p.id === presenterId) ?? null
+  }
+
+  /**
+   * Create an async clip-render job. Returns the talk id used to poll for completion.
+   * This is the /talks (non-streaming) endpoint — produces an MP4 we can download and store.
+   */
+  async createTalk(sourceUrl: string, text: string, voiceId: string): Promise<{ id: string }> {
+    return this.request('/talks', {
+      method: 'POST',
+      body: JSON.stringify({
+        source_url: sourceUrl,
+        script: {
+          type: 'text',
+          input: text,
+          provider: { type: 'microsoft', voice_id: voiceId },
+        },
+        config: { stitch: true, fluent: true },
+      }),
+    })
+  }
+
+  /** Poll a clip-render job. `status` is 'created' | 'started' | 'done' | 'error' | 'rejected'. */
+  async getTalk(talkId: string): Promise<{
+    status: string
+    result_url?: string
+    duration?: number
+    error?: { description?: string } | string
+  }> {
+    return this.request(`/talks/${talkId}`)
   }
 
   /** Create a new WebRTC streaming session using D-ID's lively (v4) animation driver. */

@@ -1,15 +1,30 @@
 import { useState } from 'react'
-import type { ScenarioNode, RubricDimension, Choice, ScoreQuality, ContextPanel } from '@id/types'
+import type { ScenarioNode, RubricDimension, Choice, ScoreQuality, ContextPanel, ScenarioMediaAsset } from '@id/types'
+import { NodeRenderStatus } from './NodeRenderStatus'
 
 interface NodeEditorPanelProps {
   selectedNode: ScenarioNode | null
   rubricDimensions: RubricDimension[]
   allNodes: ScenarioNode[]
+  scenarioId: string
+  scenarioMode: 'text' | 'immersive'
+  mediaAsset: ScenarioMediaAsset | null
   onUpdate: (node: ScenarioNode) => void
   onDelete: (nodeId: string) => void
+  onAssetRendered: (asset: ScenarioMediaAsset) => void
 }
 
-export function NodeEditorPanel({ selectedNode, rubricDimensions, allNodes, onUpdate, onDelete }: NodeEditorPanelProps) {
+export function NodeEditorPanel({
+  selectedNode,
+  rubricDimensions,
+  allNodes,
+  scenarioId,
+  scenarioMode,
+  mediaAsset,
+  onUpdate,
+  onDelete,
+  onAssetRendered,
+}: NodeEditorPanelProps) {
   if (!selectedNode) {
     return (
       <div className="w-80 flex-shrink-0 border-l border-white/10 bg-[#0d0d0d] flex items-center justify-center p-6">
@@ -44,7 +59,11 @@ export function NodeEditorPanel({ selectedNode, rubricDimensions, allNodes, onUp
           node={selectedNode}
           rubricDimensions={rubricDimensions}
           allNodes={allNodes}
+          scenarioId={scenarioId}
+          scenarioMode={scenarioMode}
+          mediaAsset={mediaAsset}
           onUpdate={onUpdate}
+          onAssetRendered={onAssetRendered}
         />
       )}
       {selectedNode.type === 'transition' && (
@@ -79,17 +98,33 @@ const CHOICE_IDS: Array<'A' | 'B' | 'C' | 'D'> = ['A', 'B', 'C', 'D']
 function DecisionNodeEditor({
   node,
   rubricDimensions,
+  scenarioId,
+  scenarioMode,
+  mediaAsset,
   onUpdate,
+  onAssetRendered,
 }: {
   node: ScenarioNode
   rubricDimensions: RubricDimension[]
   allNodes: ScenarioNode[]
+  scenarioId: string
+  scenarioMode: 'text' | 'immersive'
+  mediaAsset: ScenarioMediaAsset | null
   onUpdate: (node: ScenarioNode) => void
+  onAssetRendered: (asset: ScenarioMediaAsset) => void
 }) {
   const [expanded, setExpanded] = useState<string | null>('A')
 
   function updateNarrative(narrative: string) {
     onUpdate({ ...node, narrative })
+  }
+
+  function updateAudioScript(audioScript: string) {
+    onUpdate({ ...node, audioScript })
+  }
+
+  function updateResponsePrompt(responsePrompt: string) {
+    onUpdate({ ...node, responsePrompt })
   }
 
   function getChoice(id: 'A' | 'B' | 'C' | 'D'): Choice {
@@ -126,6 +161,55 @@ function DecisionNodeEditor({
 
   return (
     <div className="p-4 space-y-5">
+      {/* Immersive: audio script + response prompt */}
+      {scenarioMode === 'immersive' && (
+        <>
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2">
+              Audio Script
+            </label>
+            <p className="text-[10px] text-white/30 mb-2 leading-relaxed">
+              Exact words the AI interviewer reads aloud. Falls back to the narrative if blank.
+            </p>
+            <textarea
+              value={node.audioScript ?? ''}
+              onChange={e => updateAudioScript(e.target.value.slice(0, 1200))}
+              placeholder="e.g. Walk me through how you'd approach this. What's the first thing you'd check?"
+              className="w-full bg-[#111111] border border-white/10 rounded-lg p-3 text-[13px] text-[#f5f3ee] placeholder:text-white/20 resize-none focus:outline-none focus:border-white/30 leading-relaxed"
+              rows={4}
+            />
+            <p className="text-[10px] text-white/20 mt-1 text-right">{(node.audioScript ?? '').length}/1200</p>
+
+            <div className="mt-3">
+              <NodeRenderStatus
+                scenarioId={scenarioId}
+                nodeId={node.nodeId}
+                audioScript={node.audioScript ?? ''}
+                asset={mediaAsset}
+                onRendered={onAssetRendered}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2">
+              Response Prompt
+            </label>
+            <p className="text-[10px] text-white/30 mb-2 leading-relaxed">
+              Open-ended question the candidate answers verbally. Shown on screen alongside the data context.
+            </p>
+            <textarea
+              value={node.responsePrompt ?? ''}
+              onChange={e => updateResponsePrompt(e.target.value.slice(0, 400))}
+              placeholder="e.g. How would you triage this incident in the first 10 minutes?"
+              className="w-full bg-[#111111] border border-white/10 rounded-lg p-3 text-[13px] text-[#f5f3ee] placeholder:text-white/20 resize-none focus:outline-none focus:border-white/30 leading-relaxed"
+              rows={3}
+            />
+            <p className="text-[10px] text-white/20 mt-1 text-right">{(node.responsePrompt ?? '').length}/400</p>
+          </div>
+        </>
+      )}
+
       {/* Narrative */}
       <div>
         <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2">

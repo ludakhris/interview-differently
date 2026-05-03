@@ -153,12 +153,18 @@ export interface BuilderMeta {
   positions: Record<string, BuilderNodePosition> // nodeId → canvas position
 }
 
+export interface ScenarioInterviewer {
+  presenterId: string                  // D-ID presenter id (e.g. 'amy-Aq6OmGZnMt')
+  voiceId: string                      // Microsoft Azure voice id (e.g. 'en-GB-SoniaNeural')
+}
+
 export interface Scenario {
   scenarioId: string
   title: string
   track: TrackType
   estimatedMinutes: number
   mode?: 'text' | 'immersive'          // defaults to 'text' when absent
+  interviewer?: ScenarioInterviewer    // required when mode === 'immersive' (locks persona for pre-rendering)
   briefing: ScenarioBriefing
   display?: ScenarioDisplay
   createdBy?: string // institution id for custom scenarios
@@ -168,6 +174,25 @@ export interface Scenario {
     dimensions: RubricDimension[]
   }
   builderMeta?: BuilderMeta
+}
+
+// ── Pre-rendered avatar media ─────────────────────────────────────────────────
+
+export type ScenarioMediaAssetStatus = 'queued' | 'rendering' | 'ready' | 'failed'
+
+export interface ScenarioMediaAsset {
+  id: string
+  scenarioId: string
+  nodeId: string
+  scriptHash: string                   // sha256 of the audioScript that produced this clip
+  presenterId: string
+  voiceId: string
+  status: ScenarioMediaAssetStatus
+  mediaUrl: string | null              // public URL (R2) once status === 'ready'
+  durationMs: number | null
+  errorMessage: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 // ── Session ──────────────────────────────────────────────────────────────────
