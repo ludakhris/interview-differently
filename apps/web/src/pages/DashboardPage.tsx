@@ -14,6 +14,7 @@ export function DashboardPage() {
   const location = useLocation()
   const { isSignedIn, userId } = useAuth()
   const { user } = useUser()
+  const isAdmin = user?.publicMetadata?.role === 'admin'
   const { scenarios, trackMeta, isLoading, error } = useScenarios()
   const refreshKey = (location.state as { refreshedAt?: number } | null)?.refreshedAt
   const { profile, isLoading: profileLoading } = useProfile(isSignedIn ? userId : null, refreshKey)
@@ -268,7 +269,7 @@ export function DashboardPage() {
           </div>
         )}
 
-        {isSignedIn && (
+        {isSignedIn && isAdmin && (
           <div className="flex justify-end">
             <button
               onClick={() => navigate('/builder')}

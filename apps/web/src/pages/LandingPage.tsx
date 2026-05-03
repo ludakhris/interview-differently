@@ -1,39 +1,12 @@
 import { useNavigate } from 'react-router-dom'
-import { useAuth, UserButton } from '@clerk/clerk-react'
+import { Nav } from '@/components/Nav'
 
 export function LandingPage() {
   const navigate = useNavigate()
-  const { isSignedIn, isLoaded } = useAuth()
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
-      <nav className="flex items-center justify-between px-8 py-5">
-        <span className="font-display font-extrabold text-[17px] text-[#f5f3ee] tracking-tight">
-          Interview<span className="text-green-light">Differently</span>
-        </span>
-        <div className="flex items-center gap-5">
-          {isLoaded && isSignedIn && (
-            <button
-              onClick={() => navigate('/builder')}
-              className="text-[13px] font-medium text-white/30 hover:text-white/60 transition-colors"
-            >
-              Admin
-            </button>
-          )}
-          {isLoaded && (
-            isSignedIn
-              ? <UserButton afterSignOutUrl="/" />
-              : (
-                <button
-                  onClick={() => navigate('/sign-in')}
-                  className="text-[13px] font-medium text-slate-light hover:text-white transition-colors"
-                >
-                  Sign in
-                </button>
-              )
-          )}
-        </div>
-      </nav>
+      <Nav />
 
       <main className="flex-1 flex flex-col items-center justify-center px-6 text-center relative overflow-hidden">
         <div
