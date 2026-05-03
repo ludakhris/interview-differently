@@ -42,14 +42,42 @@ export class ClerkService {
 
   /** True if the user's Clerk publicMetadata.role === 'admin'. Same flag the builder uses. */
   async isAdmin(userId: string): Promise<boolean> {
-    if (!this.client) return false
+    return (await this.getRole(userId)) === 'admin'
+  }
+
+  /**
+   * Returns the user's `publicMetadata.role`, or null if not set.
+   * Known roles today: 'admin' (full platform admin), 'institution-admin'
+   * (manages a single institution's cohorts and analytics).
+   */
+  async getRole(userId: string): Promise<string | null> {
+    if (!this.client) return null
     try {
       const user = await this.client.users.getUser(userId)
       const role = (user.publicMetadata as { role?: string } | null)?.role
-      return role === 'admin'
+      return role ?? null
     } catch (err) {
       this.logger.warn(`Failed to fetch Clerk user ${userId}: ${err instanceof Error ? err.message : 'unknown'}`)
-      return false
+      return null
+    }
+  }
+
+  /**
+   * Fetches the primary email + display name for a user from Clerk.
+   * Used by the User mirror table to cache contact info for analytics.
+   */
+  async getUserProfile(userId: string): Promise<{ email: string | null; displayName: string | null } | null> {
+    if (!this.client) return null
+    try {
+      const user = await this.client.users.getUser(userId)
+      const primary = user.primaryEmailAddressId
+        ? user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)
+        : user.emailAddresses[0]
+      const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || null
+      return { email: primary?.emailAddress ?? null, displayName }
+    } catch (err) {
+      this.logger.warn(`Failed to fetch Clerk profile ${userId}: ${err instanceof Error ? err.message : 'unknown'}`)
+      return null
     }
   }
 }

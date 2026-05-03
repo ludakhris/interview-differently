@@ -115,6 +115,71 @@ model ScenarioRequest {
   @@index([createdAt])
 }
 
+// ── Institution analytics (Phase 6) ────────────────────────────────────────
+//
+// Institutions group cohorts; cohorts group students. Both are pure grouping
+// mechanisms — a single user can belong to multiple cohorts (and therefore
+// multiple institutions), so Membership is many-to-many.
+//
+// User is a thin local mirror of the Clerk user, populated lazily on first
+// interaction with institution endpoints. We cache email/name so analytics
+// queries don't have to round-trip to Clerk for every name lookup.
+
+model User {
+  id          String       @id              // Clerk userId — no separate uuid
+  email       String?      @unique          // cached from Clerk; nullable until first sync
+  displayName String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  memberships Membership[]
+
+  @@index([email])
+}
+
+model Institution {
+  id          String       @id @default(uuid())
+  name        String
+  // Optional. When set, students whose Clerk email matches this domain
+  // can be auto-suggested into the institution at signup (Phase 6b).
+  // When null, the only way in is the cohort joinKey or admin-add.
+  // Postgres unique-constraint treats each NULL as distinct, so multiple
+  // institutions can share the "no domain" state.
+  emailDomain String?      @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  cohorts     Cohort[]
+  memberships Membership[]
+}
+
+model Cohort {
+  id            String       @id @default(uuid())
+  institutionId String
+  name          String
+  joinKey       String?      @unique         // optional — students enter this at signup to auto-join
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  institution   Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  memberships   Membership[]
+
+  @@index([institutionId])
+}
+
+model Membership {
+  id            String      @id @default(uuid())
+  userId        String                          // Clerk userId — FK to User.id
+  institutionId String
+  cohortId      String?                          // null = institution member but no cohort yet
+  createdAt     DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  cohort        Cohort?     @relation(fields: [cohortId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, institutionId, cohortId])  // a user can only be in a given (institution, cohort) once
+  @@index([userId])
+  @@index([institutionId])
+  @@index([cohortId])
+}
+
 model ScenarioMediaAsset {
   id           String   @id @default(uuid())
   scenarioId   String

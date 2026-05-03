@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
 import { fetchConfig, patchAdminConfig } from '@/services/configService'
 
@@ -36,6 +37,7 @@ function ToggleRow({ label, description, checked, saving, onChange }: ToggleRowP
 }
 
 export function AdminSettingsPage() {
+  const navigate = useNavigate()
   const [aiFeedbackEnabled, setAiFeedbackEnabled] = useState(true)
   const [saving, setSaving] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -89,6 +91,26 @@ export function AdminSettingsPage() {
               onChange={(val) => handleToggle('ai_feedback_enabled', val)}
             />
           )}
+        </div>
+
+        <div className="bg-[#111111] rounded-xl border border-white/10 px-6 mt-4">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid pt-5 pb-3">Organisation</p>
+          <button
+            onClick={() => navigate('/admin/institutions')}
+            className="w-full flex items-center justify-between py-5 border-b border-white/10 last:border-0 group text-left"
+          >
+            <div>
+              <p className="text-[14px] font-semibold text-[#f5f3ee] group-hover:text-white transition-colors">
+                Institutions &amp; cohorts
+              </p>
+              <p className="text-[12px] text-slate-mid mt-0.5">
+                Manage institutions, cohorts, and student membership.
+              </p>
+            </div>
+            <span className="text-[13px] font-semibold text-green-light group-hover:translate-x-1 transition-transform">
+              Manage →
+            </span>
+          </button>
         </div>
       </div>
     </div>

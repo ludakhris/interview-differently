@@ -10,6 +10,9 @@ import { ScenarioMediaModule } from './scenario-media/scenario-media.module'
 import { ScenarioRequestsModule } from './scenario-requests/scenario-requests.module'
 import { StorageModule } from './storage/storage.module'
 import { AuthModule } from './auth/auth.module'
+import { InstitutionsModule } from './institutions/institutions.module'
+import { CohortsModule } from './cohorts/cohorts.module'
+import { MeModule } from './me/me.module'
 
 @Module({
   imports: [
@@ -24,6 +27,9 @@ import { AuthModule } from './auth/auth.module'
     DidModule,
     ScenarioMediaModule,
     ScenarioRequestsModule,
+    InstitutionsModule,
+    CohortsModule,
+    MeModule,
   ],
 })
 export class AppModule {}

@@ -11,9 +11,11 @@ import { BuilderListPage } from '@/pages/BuilderListPage'
 import { BuilderSetupPage } from '@/pages/BuilderSetupPage'
 import { BuilderCanvasPage } from '@/pages/BuilderCanvasPage'
 import { AdminSettingsPage } from '@/pages/AdminSettingsPage'
+import { AdminInstitutionsPage } from '@/pages/AdminInstitutionsPage'
 import { RequestScenarioPage } from '@/pages/RequestScenarioPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
+import { useUserSync } from '@/hooks/useUserSync'
 
 function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const [searchParams] = useSearchParams()
@@ -31,6 +33,7 @@ function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
 }
 
 export default function App() {
+  useUserSync()
   return (
     <Routes>
       {/* Public */}
@@ -53,6 +56,7 @@ export default function App() {
       <Route path="/builder/new" element={<AdminRoute><BuilderSetupPage /></AdminRoute>} />
       <Route path="/builder/:scenarioId" element={<AdminRoute><BuilderCanvasPage /></AdminRoute>} />
       <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
+      <Route path="/admin/institutions" element={<AdminRoute><AdminInstitutionsPage /></AdminRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
