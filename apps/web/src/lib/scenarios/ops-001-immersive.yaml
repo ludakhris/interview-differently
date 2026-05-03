@@ -81,8 +81,8 @@ nodes:
       It's just gone 2:47 on a Tuesday afternoon. You're three months into your
       role as a junior operations analyst when your pager fires. You're looking
       at your monitoring dashboard right now — payment API errors have climbed to
-      14 percent in the last four minutes. Auth service latency is up 340
-      milliseconds. And your database connection pool is sitting at 94 percent
+      14 percent in the last four minutes. Auth service latency is up by 340
+      milli-seconds. And your database connection pool is sitting at 94 percent
       utilisation. Your SLA breach window is 13 minutes away.
       Take a moment to look at the data on screen. When you're ready, tell me:
       what's your immediate read on this situation, and what's your first move?
