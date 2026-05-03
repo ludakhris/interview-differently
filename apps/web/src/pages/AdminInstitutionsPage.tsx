@@ -384,6 +384,9 @@ function NewCohortForm({
         placeholder="Join key (optional, for student self-join)"
         className="w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-[#f5f3ee] placeholder:text-white/25 focus:outline-none focus:border-white/30"
       />
+      <p className="text-[11px] text-white/40 leading-relaxed px-1">
+        Per-institution — other institutions can use the same key without colliding.
+      </p>
       {err && <p className="text-[12px] text-red-400">{err}</p>}
       <div className="flex items-center justify-end gap-2 pt-1">
         <button type="button" onClick={onCancel} className="text-[12px] text-slate-mid hover:text-[#f5f3ee]">

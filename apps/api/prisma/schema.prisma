@@ -140,28 +140,37 @@ model Institution {
   id          String       @id @default(uuid())
   name        String
   // Optional. When set, students whose Clerk email matches this domain
-  // can be auto-suggested into the institution at signup (Phase 6b).
-  // When null, the only way in is the cohort joinKey or admin-add.
-  // Postgres unique-constraint treats each NULL as distinct, so multiple
-  // institutions can share the "no domain" state.
-  emailDomain String?      @unique
+  // (or any subdomain of it) can be auto-suggested into the institution
+  // at signup. When null, the only way in is the cohort joinKey or
+  // admin-add. Indexed (not unique) — multiple institutions can legitimately
+  // share a parent domain (e.g. both "harvard.edu" and "law.harvard.edu"
+  // could exist, with longest-match-wins on the suggestion side).
+  emailDomain String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   cohorts     Cohort[]
   memberships Membership[]
+
+  @@index([emailDomain])
 }
 
 model Cohort {
   id            String       @id @default(uuid())
   institutionId String
   name          String
-  joinKey       String?      @unique         // optional — students enter this at signup to auto-join
+  // Optional — students enter this at signup to auto-join. Per-institution
+  // unique (not globally), so two schools can both have a cohort keyed
+  // "fall2026" without colliding. The /welcome flow disambiguates ties
+  // by preferring the user's email-domain-matched institution.
+  joinKey       String?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   institution   Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   memberships   Membership[]
 
+  @@unique([institutionId, joinKey])
   @@index([institutionId])
+  @@index([joinKey])
 }
 
 model Membership {

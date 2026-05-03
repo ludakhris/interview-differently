@@ -13,6 +13,11 @@ import { ClerkService } from '../auth/clerk.service'
  * Self-join (Phase 6b) endpoints let a freshly-signed-up student look up
  * their institution by email domain and create a Membership for themselves
  * — either via that suggestion or by entering a cohort joinKey.
+ *
+ * Domain matching is suffix-based (#14): an institution registered for
+ * "harvard.edu" matches both "me@harvard.edu" and "me@cs.harvard.edu",
+ * with longest match winning. Cohort joinKeys are unique per-institution,
+ * so two schools can both have a "fall2026" cohort.
  */
 @Injectable()
 export class MeService {
@@ -43,8 +48,12 @@ export class MeService {
   }
 
   /**
-   * Returns the Institution whose emailDomain matches the caller's Clerk
-   * email, or null if there's no match (or no email on record).
+   * Returns the Institution that best matches the caller's email domain,
+   * or null. Match rules:
+   *   - "Best" = longest emailDomain that is a suffix of the caller's
+   *     domain (so "law.harvard.edu" beats "harvard.edu" for that user)
+   *   - Tie-break: most recently created institution wins
+   *   - We never match the bare TLD ("edu" alone is excluded)
    *
    * We fetch the email straight from Clerk rather than relying on the User
    * mirror — the welcome page may run before /me/sync completes on first
@@ -54,11 +63,20 @@ export class MeService {
     const profile = await this.clerk.getUserProfile(userId)
     const domain = extractDomain(profile?.email)
     if (!domain) return { institution: null, email: profile?.email ?? null }
-    const institution = await this.prisma.institution.findUnique({
-      where: { emailDomain: domain },
-      select: { id: true, name: true, emailDomain: true },
+
+    const candidates = candidateDomains(domain)
+    if (candidates.length === 0) return { institution: null, email: profile?.email ?? null }
+
+    const matches = await this.prisma.institution.findMany({
+      where: { emailDomain: { in: candidates } },
+      select: { id: true, name: true, emailDomain: true, createdAt: true },
     })
-    return { institution, email: profile?.email ?? null }
+
+    const best = pickBestDomainMatch(matches)
+    return {
+      institution: best ? { id: best.id, name: best.name, emailDomain: best.emailDomain } : null,
+      email: profile?.email ?? null,
+    }
   }
 
   /**
@@ -91,6 +109,11 @@ export class MeService {
    *
    * Always upserts the User mirror first so the FK is satisfied — the user
    * may not have hit /me/sync yet on a brand-new signup.
+   *
+   * joinKey is per-institution unique now (#14), so a key may match cohorts
+   * in multiple institutions. We disambiguate by preferring the cohort whose
+   * institution matches the caller's email domain. If still ambiguous, we
+   * 409 with the candidate institution names so the UI can ask the user.
    */
   async join(userId: string, input: { joinKey?: string; institutionId?: string }) {
     await this.sync(userId)
@@ -99,15 +122,17 @@ export class MeService {
     let cohortId: string | null = null
 
     if (input.joinKey?.trim()) {
-      const cohort = await this.prisma.cohort.findUnique({
-        where: { joinKey: input.joinKey.trim() },
-        select: { id: true, institutionId: true },
+      const key = input.joinKey.trim()
+      const matches = await this.prisma.cohort.findMany({
+        where: { joinKey: key },
+        include: { institution: { select: { id: true, name: true, emailDomain: true } } },
       })
-      if (!cohort) {
-        throw new NotFoundException(`No cohort found for join key "${input.joinKey.trim()}"`)
+      if (matches.length === 0) {
+        throw new NotFoundException(`No cohort found for join key "${key}"`)
       }
-      institutionId = cohort.institutionId
-      cohortId = cohort.id
+      const chosen = matches.length === 1 ? matches[0] : await this.disambiguateCohorts(userId, matches)
+      institutionId = chosen.institutionId
+      cohortId = chosen.id
     } else if (input.institutionId) {
       const inst = await this.prisma.institution.findUnique({
         where: { id: input.institutionId },
@@ -144,11 +169,82 @@ export class MeService {
     }
     await this.prisma.membership.delete({ where: { id: membershipId } })
   }
+
+  // ── helpers ─────────────────────────────────────────────────────────────
+
+  /**
+   * Picks one cohort from a set of joinKey-collisions: prefers the cohort
+   * whose institution matches the caller's email domain. If no domain match
+   * exists (or the user has no email on record), we 409 with the candidate
+   * institution names so the UI can ask the user to specify.
+   */
+  private async disambiguateCohorts(
+    userId: string,
+    matches: Array<{
+      id: string
+      institutionId: string
+      institution: { id: string; name: string; emailDomain: string | null }
+    }>,
+  ) {
+    const profile = await this.clerk.getUserProfile(userId)
+    const domain = extractDomain(profile?.email)
+    if (domain) {
+      const candidates = candidateDomains(domain)
+      const domainMatch = matches.find(
+        (c) => c.institution.emailDomain && candidates.includes(c.institution.emailDomain),
+      )
+      if (domainMatch) return domainMatch
+    }
+    const names = matches.map((c) => c.institution.name).join(', ')
+    throw new ConflictException(
+      `That join key is used by multiple institutions (${names}). Ask your admin which to join.`,
+    )
+  }
 }
+
+// ── domain helpers ────────────────────────────────────────────────────────
 
 function extractDomain(email: string | null | undefined): string | null {
   if (!email) return null
   const at = email.indexOf('@')
   if (at < 0 || at === email.length - 1) return null
   return email.slice(at + 1).trim().toLowerCase()
+}
+
+/**
+ * Returns all candidate domain strings to look up for a given email domain,
+ * ordered longest (most specific) first. Stops at 2 segments to avoid the
+ * bare-TLD case (we'd never want a "edu" institution to match every .edu
+ * student).
+ *
+ *   "cs.law.harvard.edu" → ["cs.law.harvard.edu", "law.harvard.edu", "harvard.edu"]
+ *   "harvard.edu"        → ["harvard.edu"]
+ *   "edu"                → []
+ *   "localhost"          → []
+ */
+function candidateDomains(domain: string): string[] {
+  const parts = domain.split('.').filter(Boolean)
+  if (parts.length < 2) return []
+  const result: string[] = []
+  for (let i = 0; i <= parts.length - 2; i++) {
+    result.push(parts.slice(i).join('.'))
+  }
+  return result
+}
+
+/**
+ * Picks the best institution match from a candidate set:
+ *   1. Longest emailDomain wins (most specific)
+ *   2. Among ties on length: most recently created
+ */
+function pickBestDomainMatch<T extends { emailDomain: string | null; createdAt: Date }>(
+  matches: T[],
+): T | null {
+  if (matches.length === 0) return null
+  return [...matches].sort((a, b) => {
+    const lenA = a.emailDomain?.length ?? 0
+    const lenB = b.emailDomain?.length ?? 0
+    if (lenA !== lenB) return lenB - lenA
+    return b.createdAt.getTime() - a.createdAt.getTime()
+  })[0]
 }
