@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { fetchInstitutionAnalytics, type InstitutionAnalytics } from '@/services/analyticsService'
 import { getInstitution, type InstitutionDetail } from '@/services/institutionsService'
+import { downloadCsv, filenameSlug } from '@/lib/csv'
 
 /**
  * Institution + cohort overview analytics. URL: /admin/institutions/:id/analytics.
@@ -119,6 +120,8 @@ export function AdminInstitutionAnalyticsPage() {
 
 function AnalyticsSections({ analytics }: { analytics: InstitutionAnalytics }) {
   const isFiltered = analytics.cohort !== null
+  // Filename slug used to name CSVs — institution + (optional) cohort.
+  const slug = filenameSlug(analytics.institution.name, analytics.cohort?.name ?? null)
 
   return (
     <div className="space-y-6">
@@ -129,28 +132,62 @@ function AnalyticsSections({ analytics }: { analytics: InstitutionAnalytics }) {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <StatCard label="Students" value={analytics.totalStudents} />
-        <StatCard label="Active (30d)" value={analytics.activeStudentsLast30Days} />
-        <StatCard label="Completed sims" value={analytics.completedSimulations} />
-        <StatCard
-          label="Completion rate"
-          value={
-            analytics.completionRate !== null
-              ? `${analytics.completionRate}%`
-              : '—'
-          }
-          sublabel={
-            analytics.startedSimulations > 0
-              ? `${analytics.startedSimulations} started`
-              : undefined
-          }
-        />
-        <StatCard
-          label="Avg score"
-          value={analytics.avgOverallScore !== null ? analytics.avgOverallScore : '—'}
-          accent={scoreColor(analytics.avgOverallScore)}
-        />
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Overview</h2>
+          <CsvButton
+            onClick={() =>
+              downloadCsv({
+                filename: `${slug}-overview`,
+                headers: [
+                  'institution',
+                  'cohort',
+                  'total_students',
+                  'active_last_30_days',
+                  'completed_simulations',
+                  'started_simulations',
+                  'completion_rate_pct',
+                  'avg_overall_score',
+                ],
+                rows: [
+                  [
+                    analytics.institution.name,
+                    analytics.cohort?.name ?? '(all cohorts)',
+                    analytics.totalStudents,
+                    analytics.activeStudentsLast30Days,
+                    analytics.completedSimulations,
+                    analytics.startedSimulations,
+                    analytics.completionRate,
+                    analytics.avgOverallScore,
+                  ],
+                ],
+              })
+            }
+          />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <StatCard label="Students" value={analytics.totalStudents} />
+          <StatCard label="Active (30d)" value={analytics.activeStudentsLast30Days} />
+          <StatCard label="Completed sims" value={analytics.completedSimulations} />
+          <StatCard
+            label="Completion rate"
+            value={
+              analytics.completionRate !== null
+                ? `${analytics.completionRate}%`
+                : '—'
+            }
+            sublabel={
+              analytics.startedSimulations > 0
+                ? `${analytics.startedSimulations} started`
+                : undefined
+            }
+          />
+          <StatCard
+            label="Avg score"
+            value={analytics.avgOverallScore !== null ? analytics.avgOverallScore : '—'}
+            accent={scoreColor(analytics.avgOverallScore)}
+          />
+        </div>
       </div>
 
       {/* Per-track */}
@@ -159,6 +196,13 @@ function AnalyticsSections({ analytics }: { analytics: InstitutionAnalytics }) {
         rows={analytics.byTrack}
         rowKey="Track"
         emptyHint="No completed simulations yet."
+        onExport={() =>
+          downloadCsv({
+            filename: `${slug}-by-track`,
+            headers: ['track', 'completions', 'avg_score'],
+            rows: analytics.byTrack.map((r) => [r.key, r.count, r.avg]),
+          })
+        }
       />
 
       {/* Per-dimension */}
@@ -167,13 +211,46 @@ function AnalyticsSections({ analytics }: { analytics: InstitutionAnalytics }) {
         rows={analytics.byDimension}
         rowKey="Dimension"
         emptyHint="No dimension scores yet."
+        onExport={() =>
+          downloadCsv({
+            filename: `${slug}-by-dimension`,
+            headers: ['dimension', 'scored_count', 'avg_score'],
+            rows: analytics.byDimension.map((r) => [r.key, r.count, r.avg]),
+          })
+        }
       />
 
       {/* Per-cohort (only shown when not filtered) */}
       {!isFiltered && analytics.byCohort && (
-        <CohortBreakdownTable rows={analytics.byCohort} />
+        <CohortBreakdownTable
+          rows={analytics.byCohort}
+          onExport={() =>
+            downloadCsv({
+              filename: `${slug}-by-cohort`,
+              headers: ['cohort', 'students', 'completed_simulations', 'avg_overall_score'],
+              rows: (analytics.byCohort ?? []).map((r) => [
+                r.name,
+                r.totalStudents,
+                r.completedSimulations,
+                r.avgOverallScore,
+              ]),
+            })
+          }
+        />
       )}
     </div>
+  )
+}
+
+function CsvButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="text-[11px] font-semibold text-slate-mid hover:text-[#f5f3ee] transition-colors"
+      title="Download as CSV"
+    >
+      ↓ CSV
+    </button>
   )
 }
 
@@ -204,15 +281,20 @@ function BreakdownTable({
   rows,
   rowKey,
   emptyHint,
+  onExport,
 }: {
   title: string
   rows: Array<{ key: string; count: number; avg: number }>
   rowKey: string
   emptyHint: string
+  onExport?: () => void
 }) {
   return (
     <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
-      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">{title}</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">{title}</h2>
+        {onExport && rows.length > 0 && <CsvButton onClick={onExport} />}
+      </div>
       {rows.length === 0 ? (
         <p className="text-[13px] text-slate-mid">{emptyHint}</p>
       ) : (
@@ -243,6 +325,7 @@ function BreakdownTable({
 
 function CohortBreakdownTable({
   rows,
+  onExport,
 }: {
   rows: Array<{
     cohortId: string | null
@@ -251,6 +334,7 @@ function CohortBreakdownTable({
     completedSimulations: number
     avgOverallScore: number | null
   }>
+  onExport?: () => void
 }) {
   const sorted = useMemo(
     () =>
@@ -265,7 +349,10 @@ function CohortBreakdownTable({
 
   return (
     <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
-      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">By cohort</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">By cohort</h2>
+        {onExport && sorted.length > 0 && <CsvButton onClick={onExport} />}
+      </div>
       {sorted.length === 0 ? (
         <p className="text-[13px] text-slate-mid">No memberships yet.</p>
       ) : (
