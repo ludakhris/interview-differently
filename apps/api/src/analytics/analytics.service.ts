@@ -291,6 +291,108 @@ export class AnalyticsService {
   }
 
   /**
+   * Drill-down view for a single student inside an institution.
+   *
+   * Returns the student's profile, all their completions, and a per-dimension
+   * time series (chronological) for trend charting. Authorisation: caller
+   * must have access to this institution (handled by AdminGuard +
+   * @InstitutionAdminAllowed); we additionally verify the student actually
+   * belongs to this institution so a full admin can't pluck arbitrary user
+   * IDs out of the URL.
+   */
+  async getStudentDetail(institutionId: string, userId: string) {
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { id: true, name: true },
+    })
+    if (!institution) throw new NotFoundException(`Institution ${institutionId} not found`)
+
+    const memberships = await this.prisma.membership.findMany({
+      where: { userId, institutionId },
+      include: { cohort: { select: { id: true, name: true } } },
+    })
+    if (memberships.length === 0) {
+      throw new NotFoundException(`Student ${userId} is not a member of institution ${institutionId}`)
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, displayName: true, createdAt: true },
+    })
+
+    const [results, immersiveSessions] = await Promise.all([
+      this.prisma.simulationResult.findMany({
+        where: { userId },
+        orderBy: { completedAt: 'asc' },
+        include: { dimensionScores: { select: { dimension: true, score: true, quality: true } } },
+      }),
+      this.prisma.immersiveSession.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          scenarioId: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: { select: { responses: true } },
+        },
+      }),
+    ])
+
+    // Per-dimension chronological series — one entry per (dimension, completedAt)
+    // pair, keyed for the chart. Skipping dimensions a student has never
+    // received a score for keeps the chart legend honest.
+    const series: Record<string, Array<{ completedAt: string; score: number }>> = {}
+    for (const r of results) {
+      for (const d of r.dimensionScores) {
+        if (!series[d.dimension]) series[d.dimension] = []
+        series[d.dimension].push({
+          completedAt: r.completedAt.toISOString(),
+          score: d.score,
+        })
+      }
+    }
+
+    return {
+      institution,
+      memberships: memberships.map((m) => ({
+        membershipId: m.id,
+        cohort: m.cohort,
+        joinedAt: m.createdAt,
+      })),
+      user: {
+        id: userId,
+        email: user?.email ?? null,
+        displayName: user?.displayName ?? null,
+        createdAt: user?.createdAt ?? null,
+      },
+      completions: results.map((r) => ({
+        id: r.id,
+        scenarioId: r.scenarioId,
+        scenarioTitle: r.scenarioTitle,
+        track: r.track,
+        completedAt: r.completedAt.toISOString(),
+        overallScore: r.overallScore,
+        dimensionScores: r.dimensionScores.map((d) => ({
+          dimension: d.dimension,
+          score: d.score,
+          quality: d.quality,
+        })),
+      })),
+      immersiveSessions: immersiveSessions.map((s) => ({
+        id: s.id,
+        scenarioId: s.scenarioId,
+        status: s.status,
+        startedAt: s.createdAt.toISOString(),
+        updatedAt: s.updatedAt.toISOString(),
+        responseCount: s._count.responses,
+      })),
+      dimensionSeries: series,
+    }
+  }
+
+  /**
    * Per-cohort breakdown for an institution. Returns one row per cohort plus
    * an "(no cohort)" row for institution-only memberships, so the totals
    * always reconcile with the institution overview.

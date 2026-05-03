@@ -35,4 +35,17 @@ export class AnalyticsController {
   ) {
     return this.service.getScenarioEngagement(institutionId, cohortId || undefined)
   }
+
+  /**
+   * Per-student detail view: profile, all completions, dimension trend series.
+   * Verifies the student is actually a member of the institution before returning.
+   */
+  @Get('institutions/:institutionId/students/:userId')
+  @InstitutionAdminAllowed()
+  getStudentDetail(
+    @Param('institutionId') institutionId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.service.getStudentDetail(institutionId, userId)
+  }
 }

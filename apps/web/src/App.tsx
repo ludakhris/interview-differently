@@ -15,6 +15,7 @@ import { WelcomePage } from '@/pages/WelcomePage'
 import { AdminInstitutionsPage } from '@/pages/AdminInstitutionsPage'
 import { AdminInstitutionAnalyticsPage } from '@/pages/AdminInstitutionAnalyticsPage'
 import { AdminInstitutionEngagementPage } from '@/pages/AdminInstitutionEngagementPage'
+import { AdminStudentDetailPage } from '@/pages/AdminStudentDetailPage'
 import { RequestScenarioPage } from '@/pages/RequestScenarioPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
@@ -73,6 +74,7 @@ export default function App() {
       <Route path="/admin/institutions" element={<AdminRoute><AdminInstitutionsPage /></AdminRoute>} />
       <Route path="/admin/institutions/:institutionId/analytics" element={<AdminRoute><AdminInstitutionAnalyticsPage /></AdminRoute>} />
       <Route path="/admin/institutions/:institutionId/engagement" element={<AdminRoute><AdminInstitutionEngagementPage /></AdminRoute>} />
+      <Route path="/admin/institutions/:institutionId/students/:userId" element={<AdminRoute><AdminStudentDetailPage /></AdminRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

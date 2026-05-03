@@ -333,6 +333,7 @@ function InstitutionDetailView({
             <li key={c.id}>
               <CohortRow
                 cohort={c}
+                institutionId={detail.id}
                 expanded={expandedCohort === c.id}
                 onToggle={() => setExpandedCohort(expandedCohort === c.id ? null : c.id)}
                 getToken={getToken}
@@ -416,17 +417,20 @@ function NewCohortForm({
 
 function CohortRow({
   cohort,
+  institutionId,
   expanded,
   onToggle,
   getToken,
   onChange,
 }: {
   cohort: Cohort
+  institutionId: string
   expanded: boolean
   onToggle: () => void
   getToken: () => Promise<string | null>
   onChange: () => Promise<void>
 }) {
+  const navigate = useNavigate()
   const [members, setMembers] = useState<CohortMember[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -492,21 +496,31 @@ function CohortRow({
                     <p className="text-[13px] text-[#f5f3ee]">{m.displayName ?? m.email ?? m.userId}</p>
                     {m.email && m.displayName && <p className="text-[11px] text-slate-mid">{m.email}</p>}
                   </div>
-                  <button
-                    onClick={async () => {
-                      if (!confirm('Remove this member from the cohort?')) return
-                      try {
-                        await removeCohortMember(getToken, cohort.id, m.membershipId)
-                        await refreshMembers()
-                        await onChange()
-                      } catch (e) {
-                        alert(e instanceof Error ? e.message : 'Failed to remove')
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() =>
+                        navigate(`/admin/institutions/${institutionId}/students/${encodeURIComponent(m.userId)}`)
                       }
-                    }}
-                    className="text-[11px] text-slate-mid hover:text-red-400 transition-colors"
-                  >
-                    Remove
-                  </button>
+                      className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                    >
+                      View detail →
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm('Remove this member from the cohort?')) return
+                        try {
+                          await removeCohortMember(getToken, cohort.id, m.membershipId)
+                          await refreshMembers()
+                          await onChange()
+                        } catch (e) {
+                          alert(e instanceof Error ? e.message : 'Failed to remove')
+                        }
+                      }}
+                      className="text-[11px] text-slate-mid hover:text-red-400 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

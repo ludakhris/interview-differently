@@ -100,3 +100,55 @@ export async function fetchScenarioEngagement(
   const res = await authedFetch(getToken, `/admin/institutions/${institutionId}/engagement${qs}`)
   return res.json() as Promise<ScenarioEngagementResponse>
 }
+
+// ── Student detail ─────────────────────────────────────────────────────────
+
+export interface StudentCompletion {
+  id: string
+  scenarioId: string
+  scenarioTitle: string
+  track: string
+  completedAt: string
+  overallScore: number
+  dimensionScores: Array<{ dimension: string; score: number; quality: string }>
+}
+
+export interface StudentImmersiveSession {
+  id: string
+  scenarioId: string
+  status: string
+  startedAt: string
+  updatedAt: string
+  responseCount: number
+}
+
+export interface StudentDetailResponse {
+  institution: { id: string; name: string }
+  memberships: Array<{
+    membershipId: string
+    cohort: { id: string; name: string } | null
+    joinedAt: string
+  }>
+  user: {
+    id: string
+    email: string | null
+    displayName: string | null
+    createdAt: string | null
+  }
+  completions: StudentCompletion[]
+  immersiveSessions: StudentImmersiveSession[]
+  /** Map dimension → chronological [{ completedAt, score }] points for the trend chart. */
+  dimensionSeries: Record<string, Array<{ completedAt: string; score: number }>>
+}
+
+export async function fetchStudentDetail(
+  getToken: GetToken,
+  institutionId: string,
+  userId: string,
+): Promise<StudentDetailResponse> {
+  const res = await authedFetch(
+    getToken,
+    `/admin/institutions/${institutionId}/students/${encodeURIComponent(userId)}`,
+  )
+  return res.json() as Promise<StudentDetailResponse>
+}
