@@ -4,8 +4,16 @@ import { Nav } from '@/components/Nav'
 import { MobileWarning } from '@/components/builder/MobileWarning'
 import { createScenario } from '@/services/builderService'
 import { RUBRIC_TEMPLATES, TRACK_LABELS } from '@/lib/builderTemplates'
+import { BUSINESS_CASE_SUBCATEGORIES, BUSINESS_CASE_SUBCATEGORY_LABELS } from '@id/types'
 
 const TRACK_OPTIONS = [
+  {
+    value: 'business case',
+    label: 'Business Cases',
+    subtitle: 'Strategy consulting style',
+    color: '#0f5b89',
+    icon: '💼',
+  },
   {
     value: 'operations',
     label: 'Operations',
@@ -54,10 +62,12 @@ export function BuilderSetupPage() {
   const navigate = useNavigate()
   const [title, setTitle] = useState('')
   const [track, setTrack] = useState<string>('')
+  const [subcategory, setSubcategory] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
 
   const selectedTrackOption = TRACK_OPTIONS.find(t => t.value === track)
   const previewDimensions = track ? (RUBRIC_TEMPLATES[track] ?? []) : []
+  const showSubcategory = track === 'business case'
 
   async function handleCreate() {
     if (!title.trim()) {
@@ -68,7 +78,15 @@ export function BuilderSetupPage() {
       setError('Please select a track.')
       return
     }
-    const scenario = await createScenario(title.trim(), track)
+    if (showSubcategory && !subcategory) {
+      setError('Please select a business case subcategory.')
+      return
+    }
+    const scenario = await createScenario(
+      title.trim(),
+      track,
+      showSubcategory ? subcategory : undefined,
+    )
     navigate(`/builder/${scenario.scenarioId}`)
   }
 
@@ -116,6 +134,7 @@ export function BuilderSetupPage() {
                   key={option.value}
                   onClick={() => {
                     setTrack(option.value)
+                    if (option.value !== 'business case') setSubcategory('')
                     setError(null)
                   }}
                   className="relative text-left rounded-xl p-4 border transition-all"
@@ -138,6 +157,37 @@ export function BuilderSetupPage() {
             })}
           </div>
         </div>
+
+        {/* Business case subcategory */}
+        {showSubcategory && (
+          <div className="mb-8">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+              Subcategory
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {BUSINESS_CASE_SUBCATEGORIES.map((slug) => {
+                const isSelected = subcategory === slug
+                return (
+                  <button
+                    key={slug}
+                    onClick={() => {
+                      setSubcategory(slug)
+                      setError(null)
+                    }}
+                    className="text-left rounded-lg px-3 py-2 border transition-all text-[12px]"
+                    style={{
+                      background: isSelected ? '#0f5b8915' : '#111111',
+                      borderColor: isSelected ? '#0f5b89' : 'rgba(255,255,255,0.1)',
+                      color: isSelected ? '#0f5b89' : '#f5f3ee',
+                    }}
+                  >
+                    {BUSINESS_CASE_SUBCATEGORY_LABELS[slug]}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Rubric preview */}
         {track && previewDimensions.length > 0 && (

@@ -12,3 +12,6 @@ coverage
 *.tsbuildinfo
 .vercel
 .env*.local
+
+# Proprietary research notes — never commit
+docs/business-cases-research.md

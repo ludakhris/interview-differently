@@ -1,0 +1,122 @@
+id: biz-case-001
+title: 'Rural Financial Inclusion: Aurelia Retail Network'
+track: business case
+subcategory: growth-strategy
+estimatedMinutes: 35
+
+briefing:
+  situation: >
+    The Northstar Foundation, a global philanthropic organisation focused on reducing
+    extreme poverty, has hired your consulting firm to evaluate a new initiative. The
+    Republic of Aurelia operates a network of 22,000 government-owned rural general
+    stores — the "Aurelia Retail Network" — that supplies food and essentials to its
+    rural population. The Foundation wants to know whether that network could also be
+    used to deliver basic financial services (benefit payments, savings accounts, bill
+    pay, microloans) to the country's unbanked rural communities. Today most rural
+    Aurelians must travel hours to distant state-owned bank branches to collect
+    government benefits, costing time, money, and exposing them to crime. Your job:
+    structure the diagnostic, size the savings opportunity, interpret regional survey
+    data, and recommend whether and how to roll the programme out.
+  role: Strategy Analyst
+  organisation: Global strategy consulting firm (Northstar Foundation engagement)
+  reportsTo: Engagement Manager
+  timeInRole: 6 months
+
+display:
+  contextStyle: table
+  sidebar:
+    - title: Your Role
+      style: text
+      items:
+        - label: Title
+          value: Strategy Analyst
+        - label: Engagement
+          value: Northstar / Aurelia Retail
+        - label: Reports to
+          value: Engagement Manager
+    - title: Key Facts
+      style: list
+      items:
+        - label: Aurelia Retail stores
+          value: 22,000
+        - label: Aurelia population
+          value: 140M
+        - label: Rural share
+          value: 20%
+        - label: Receiving benefits
+          value: 50% of rural
+        - label: Monthly cost to collect
+          value: 50 AUR / family
+
+rubric:
+  - name: Framework Structuring
+    description: Does the candidate establish a logical framework (issue tree, MECE buckets) before diving in?
+  - name: Quantitative Accuracy
+    description: Are calculations correct, with assumptions stated, and reasonable accepted ranges?
+  - name: Data Interpretation
+    description: Does the candidate draw the right insights from exhibits — and notice what is missing?
+  - name: Synthesis & Recommendation
+    description: Does the candidate translate analysis into a defended recommendation with risks and next steps?
+
+nodes:
+  - id: biz-case-001-n1
+    type: decision
+    narrative: >
+      Your engagement manager hands you the brief and asks for your initial framework.
+      Before any data, before any exhibits — how do you propose the team should structure
+      the investigation? She wants to see how you'd organize the question into MECE buckets
+      so the team can divide up the workstreams.
+    contextPanels:
+      - label: Network store count
+        value: 22,000
+        type: info
+      - label: Rural pop
+        value: 28M
+        type: info
+      - label: Receiving state benefits
+        value: 14M
+        type: metric
+      - label: Days to first read-out
+        value: 5
+        type: alert
+    choices:
+      - id: A
+        text: Start with three buckets — benefits to the rural population, benefits to the government / state bank / Aurelia Retail, and risks of the venture.
+        next: biz-case-001-n2a
+        signals:
+          Framework Structuring: strong
+          Synthesis & Recommendation: strong
+      - id: B
+        text: Jump straight into sizing the savings opportunity — the financials will tell us whether the programme is worth pursuing.
+        next: biz-case-001-n2b
+        signals:
+          Framework Structuring: developing
+          Quantitative Accuracy: proficient
+      - id: C
+        text: Start with risk analysis — fraud, crime, and operational capacity are the dealbreakers.
+        next: biz-case-001-n2c
+        signals:
+          Framework Structuring: proficient
+          Synthesis & Recommendation: proficient
+      - id: D
+        text: Survey rural Aurelians first to understand demand. Without proven uptake, the rest of the analysis is theoretical.
+        next: biz-case-001-n2d
+        signals:
+          Framework Structuring: proficient
+          Data Interpretation: strong
+
+  - id: biz-case-001-n2a
+    type: feedback
+    narrative: strong-framework
+
+  - id: biz-case-001-n2b
+    type: feedback
+    narrative: jumped-to-math
+
+  - id: biz-case-001-n2c
+    type: feedback
+    narrative: risk-only
+
+  - id: biz-case-001-n2d
+    type: feedback
+    narrative: demand-first

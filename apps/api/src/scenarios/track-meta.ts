@@ -11,10 +11,16 @@ export const TRACK_META: Record<string, {
     icon: 'AlertTriangle',
   },
   business: {
-    label: 'Business Case',
+    label: 'Business Decisions',
     description: 'You\'re evaluating whether to launch a new print magazine. Each decision unlocks a new constraint — distribution costs, content overhead, a marketing spend that eliminates your margin entirely. Getting the numbers right is the floor. Questioning your own conclusion is the ceiling.',
     color: '#d4830a',
     icon: 'BarChart3',
+  },
+  'business case': {
+    label: 'Business Cases',
+    description: 'Real consulting-style case interviews. A client walks in with a profitability drop, a market-entry question, an acquisition target, or a pricing puzzle — and a stack of exhibits. Read the data, structure your hypotheses, run the math, and defend a recommendation. Modeled on top-tier strategy consulting interview patterns.',
+    color: '#0f5b89',
+    icon: 'Briefcase',
   },
   risk: {
     label: 'Risk & Compliance',

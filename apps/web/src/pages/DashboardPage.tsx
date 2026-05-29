@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth, useUser } from '@clerk/clerk-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Nav } from '@/components/Nav'
 import { Footer } from '@/components/Footer'
 import { TrackIcon } from '@/components/TrackIcon'
@@ -8,6 +8,73 @@ import { useScenarios } from '@/hooks/useScenarios'
 import { useProfile } from '@/hooks/useProfile'
 import { fetchImmersiveSessionsForUser, type ImmersiveSessionSummary } from '@/services/immersiveService'
 import type { ResultSummary } from '@/services/resultsService'
+import type { Scenario } from '@id/types'
+import { BUSINESS_CASE_SUBCATEGORY_LABELS } from '@id/types'
+
+// Track order on the dashboard. Tracks not listed here fall to the end alphabetically.
+const TRACK_ORDER: string[] = ['business case', 'operations', 'business', 'risk', 'customer-success', 'general']
+
+// Sub-category order within the "business case" track. Anything else trails alphabetically.
+const SUBCATEGORY_ORDER: string[] = [
+  'market-sizing',
+  'profitability',
+  'm-and-a',
+  'market-entry',
+  'pricing',
+  'operations-improvement',
+  'growth-strategy',
+  'competitive-response',
+  'diagnostics',
+  'valuation',
+  'product-launch',
+  'customer-segmentation',
+]
+
+function compareWithOrder(a: string, b: string, order: string[]): number {
+  const ai = order.indexOf(a)
+  const bi = order.indexOf(b)
+  if (ai === -1 && bi === -1) return a.localeCompare(b)
+  if (ai === -1) return 1
+  if (bi === -1) return -1
+  return ai - bi
+}
+
+// Group scenarios by track, then (for the "business case" track) by subcategory.
+function groupScenarios(scenarios: Scenario[]) {
+  const byTrack = new Map<string, Scenario[]>()
+  for (const scenario of scenarios) {
+    const list = byTrack.get(scenario.track) ?? []
+    list.push(scenario)
+    byTrack.set(scenario.track, list)
+  }
+  const tracks = Array.from(byTrack.keys()).sort((a, b) => compareWithOrder(a, b, TRACK_ORDER))
+  return tracks.map((track) => {
+    const trackScenarios = byTrack.get(track) ?? []
+    if (track === 'business case') {
+      const bySub = new Map<string, Scenario[]>()
+      for (const s of trackScenarios) {
+        const key = s.subcategory ?? 'uncategorized'
+        const list = bySub.get(key) ?? []
+        list.push(s)
+        bySub.set(key, list)
+      }
+      const subs = Array.from(bySub.keys()).sort((a, b) => compareWithOrder(a, b, SUBCATEGORY_ORDER))
+      return {
+        track,
+        subgroups: subs.map((subcategory) => ({
+          subcategory,
+          scenarios: bySub.get(subcategory) ?? [],
+        })),
+      }
+    }
+    return { track, subgroups: [{ subcategory: null as string | null, scenarios: trackScenarios }] }
+  })
+}
+
+function subcategoryLabel(key: string): string {
+  if (key === 'uncategorized') return 'Other'
+  return (BUSINESS_CASE_SUBCATEGORY_LABELS as Record<string, string>)[key] ?? key
+}
 
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -16,6 +83,7 @@ export function DashboardPage() {
   const { user } = useUser()
   const isAdmin = user?.publicMetadata?.role === 'admin'
   const { scenarios, trackMeta, isLoading, error } = useScenarios()
+  const groupedScenarios = useMemo(() => groupScenarios(scenarios), [scenarios])
   const refreshKey = (location.state as { refreshedAt?: number } | null)?.refreshedAt
   const { profile, isLoading: profileLoading } = useProfile(isSignedIn ? userId : null, refreshKey)
   const [immersiveSessions, setImmersiveSessions] = useState<ImmersiveSessionSummary[]>([])
@@ -60,53 +128,75 @@ export function DashboardPage() {
         </div>
 
         {/* ── Simulation Tracks ── */}
-        <div className="mb-6">
-          <h3 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid mb-5">
+        <div className="mb-6 space-y-12">
+          <h3 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid">
             Simulation Tracks
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {scenarios.map((scenario) => {
-              const meta = trackMeta[scenario.track]
-              if (!meta) return null
-              return (
-                <div
-                  key={scenario.scenarioId}
-                  className="bg-[#111111] rounded-2xl border border-white/10 hover:border-white/20 transition-all hover:-translate-y-0.5 overflow-hidden cursor-pointer group"
-                  onClick={() => navigate(`/scenario/${scenario.scenarioId}/briefing`)}
-                >
-                  <div className="h-2 w-full" style={{ backgroundColor: meta.color }} />
-                  <div className="p-6">
-                    <div className="mb-4">
-                      <TrackIcon name={meta.icon} size={28} color={meta.color} />
-                    </div>
-                    <div
-                      className="text-[10px] font-bold uppercase tracking-widest mb-2"
+          {groupedScenarios.map(({ track, subgroups }) => {
+            const meta = trackMeta[track]
+            if (!meta) return null
+            return (
+              <section key={track}>
+                {/* Track header */}
+                <div className="flex items-start gap-3 mb-5">
+                  <div className="mt-0.5">
+                    <TrackIcon name={meta.icon} size={22} color={meta.color} />
+                  </div>
+                  <div className="flex-1">
+                    <h4
+                      className="font-display font-extrabold text-[20px] text-[#f5f3ee] leading-tight"
                       style={{ color: meta.color }}
                     >
                       {meta.label}
-                    </div>
-                    <h4 className="font-display font-bold text-[16px] text-[#f5f3ee] leading-snug mb-3">
-                      {scenario.title}
                     </h4>
-                    <p className="text-[13px] text-slate-mid leading-relaxed mb-5">
+                    <p className="text-[13px] text-slate-mid leading-relaxed mt-1 max-w-3xl">
                       {meta.description}
                     </p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[12px] text-slate-light">
-                        ~{scenario.estimatedMinutes} min
-                      </span>
-                      <span
-                        className="text-[12px] font-semibold group-hover:translate-x-1 transition-transform inline-block"
-                        style={{ color: meta.color }}
-                      >
-                        Start →
-                      </span>
-                    </div>
                   </div>
                 </div>
-              )
-            })}
-          </div>
+
+                {/* Subgroups */}
+                <div className="space-y-8">
+                  {subgroups.map(({ subcategory, scenarios: groupScenarios }) => (
+                    <div key={subcategory ?? '__none'}>
+                      {subcategory && (
+                        <h5 className="font-display font-bold text-[11px] uppercase tracking-widest text-slate-mid mb-3">
+                          {subcategoryLabel(subcategory)}
+                        </h5>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        {groupScenarios.map((scenario) => (
+                          <div
+                            key={scenario.scenarioId}
+                            className="bg-[#111111] rounded-2xl border border-white/10 hover:border-white/20 transition-all hover:-translate-y-0.5 overflow-hidden cursor-pointer group"
+                            onClick={() => navigate(`/scenario/${scenario.scenarioId}/briefing`)}
+                          >
+                            <div className="h-2 w-full" style={{ backgroundColor: meta.color }} />
+                            <div className="p-6">
+                              <h4 className="font-display font-bold text-[16px] text-[#f5f3ee] leading-snug mb-3">
+                                {scenario.title}
+                              </h4>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[12px] text-slate-light">
+                                  ~{scenario.estimatedMinutes} min
+                                </span>
+                                <span
+                                  className="text-[12px] font-semibold group-hover:translate-x-1 transition-transform inline-block"
+                                  style={{ color: meta.color }}
+                                >
+                                  Start →
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )
+          })}
         </div>
 
         {/* ── Custom-scenario CTA ── */}

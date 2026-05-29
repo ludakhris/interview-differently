@@ -29,13 +29,18 @@ export async function getScenario(id: string): Promise<Scenario | null> {
   }
 }
 
-export async function createScenario(title: string, track: string): Promise<Scenario> {
+export async function createScenario(
+  title: string,
+  track: string,
+  subcategory?: string,
+): Promise<Scenario> {
   const id = crypto.randomUUID()
   const startNodeId = crypto.randomUUID()
   const scenario: Scenario = {
     scenarioId: id,
     title,
     track: track as Scenario['track'],
+    ...(subcategory ? { subcategory } : {}),
     estimatedMinutes: 20,
     briefing: { situation: '', role: '', organisation: '', reportsTo: '', timeInRole: '' },
     nodes: [{ nodeId: startNodeId, type: 'decision', narrative: '' }],

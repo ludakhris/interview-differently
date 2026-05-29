@@ -11,6 +11,12 @@ export const RUBRIC_TEMPLATES: Record<string, { name: string; description: strin
     { name: 'Challenging Assumptions', description: 'Does the candidate identify and question baked-in assumptions?' },
     { name: 'Communication Clarity', description: 'Does the candidate communicate findings clearly to non-technical stakeholders?' },
   ],
+  'business case': [
+    { name: 'Framework Structuring', description: 'Does the candidate establish a logical framework (profit tree, issue tree, MECE buckets) before diving in?' },
+    { name: 'Quantitative Accuracy', description: 'Are the calculations correct, with clearly stated assumptions and reasonable ranges?' },
+    { name: 'Data Interpretation', description: 'Does the candidate draw the right insights from exhibits — and notice what is missing?' },
+    { name: 'Synthesis & Recommendation', description: 'Does the candidate translate analysis into a defended recommendation with risks and next steps?' },
+  ],
   risk: [
     { name: 'Escalation Path', description: 'Does the candidate notify the right stakeholders in the right order?' },
     { name: 'Risk Calibration', description: 'Does the candidate accurately assess severity?' },
@@ -35,6 +41,7 @@ export const RUBRIC_TEMPLATES: Record<string, { name: string; description: strin
 export const TRACK_LABELS: Record<string, string> = {
   operations: 'Operations / Incident Response',
   business: 'Business / Strategy',
+  'business case': 'Business Cases (Consulting)',
   risk: 'Risk & Compliance',
   'customer-success': 'Customer Success',
   general: 'General Judgment',

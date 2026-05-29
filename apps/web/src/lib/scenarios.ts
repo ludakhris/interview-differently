@@ -3,6 +3,7 @@ import { yamlToScenario } from './yamlScenario'
 import ops001Yaml from './scenarios/ops-001.yaml?raw'
 import ops001ImmersiveYaml from './scenarios/ops-001-immersive.yaml?raw'
 import biz001Yaml from './scenarios/biz-001.yaml?raw'
+import bizCase001Yaml from './scenarios/biz-case-001.yaml?raw'
 import risk001Yaml from './scenarios/risk-001.yaml?raw'
 import ops002Yaml from './scenarios/ops-002.yaml?raw'
 
@@ -10,6 +11,7 @@ export const scenarios = [
   yamlToScenario(ops001Yaml),
   yamlToScenario(ops001ImmersiveYaml),
   yamlToScenario(biz001Yaml),
+  yamlToScenario(bizCase001Yaml),
   yamlToScenario(risk001Yaml),
   yamlToScenario(ops002Yaml),
 ]
@@ -36,10 +38,19 @@ export const trackMeta: Record<
       [
         'business',
         {
-          label: 'Business Case',
+          label: 'Business Decisions',
           description:
             "You're evaluating whether to launch a new print magazine. Each decision unlocks a new constraint — distribution costs, content overhead, a marketing spend that eliminates your margin entirely. Getting the numbers right is the floor. Questioning your own conclusion is the ceiling.",
           icon: 'BarChart3',
+        },
+      ],
+      [
+        'business case',
+        {
+          label: 'Business Cases',
+          description:
+            "Real consulting-style case interviews. A client walks in with a profitability drop, a market-entry question, an acquisition target, or a pricing puzzle — and a stack of exhibits. Read the data, structure your hypotheses, run the math, and defend a recommendation. Modeled on top-tier strategy consulting interview patterns.",
+          icon: 'Briefcase',
         },
       ],
       [

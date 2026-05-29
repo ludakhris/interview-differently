@@ -43,10 +43,46 @@ export type NodeType = 'decision' | 'transition' | 'feedback'
 export type TrackType =
   | 'operations'
   | 'business'
+  | 'business case'
   | 'risk'
   | 'customer-success'
   | 'general'
   | 'custom'
+
+// Subcategories applicable when track === 'business case'.
+// Derived from real-world case-interview taxonomy (see docs/business-cases-research.md).
+export const BUSINESS_CASE_SUBCATEGORIES = [
+  'market-sizing',
+  'profitability',
+  'm-and-a',
+  'market-entry',
+  'pricing',
+  'operations-improvement',
+  'growth-strategy',
+  'competitive-response',
+  'diagnostics',
+  'valuation',
+  'product-launch',
+  'customer-segmentation',
+] as const
+
+export type BusinessCaseSubcategory = (typeof BUSINESS_CASE_SUBCATEGORIES)[number]
+
+// Human-readable labels for each subcategory — used in UI dropdowns + dashboard headers.
+export const BUSINESS_CASE_SUBCATEGORY_LABELS: Record<BusinessCaseSubcategory, string> = {
+  'market-sizing': 'Market Sizing',
+  profitability: 'Profitability',
+  'm-and-a': 'M&A',
+  'market-entry': 'Market Entry',
+  pricing: 'Pricing',
+  'operations-improvement': 'Operations Improvement',
+  'growth-strategy': 'Growth Strategy',
+  'competitive-response': 'Competitive Response',
+  diagnostics: 'Diagnostics',
+  valuation: 'Valuation',
+  'product-launch': 'Product Launch',
+  'customer-segmentation': 'Customer Segmentation',
+}
 
 export interface ContextPanel {
   label: string
@@ -162,6 +198,9 @@ export interface Scenario {
   scenarioId: string
   title: string
   track: TrackType
+  // Optional sub-grouping within a track. Currently only used when track === 'business case',
+  // where it must be one of BUSINESS_CASE_SUBCATEGORIES. Reserved for other tracks to use later.
+  subcategory?: BusinessCaseSubcategory | string
   estimatedMinutes: number
   mode?: 'text' | 'immersive'          // defaults to 'text' when absent
   interviewer?: ScenarioInterviewer    // required when mode === 'immersive' (locks persona for pre-rendering)
