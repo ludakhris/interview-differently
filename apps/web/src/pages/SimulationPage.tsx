@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
@@ -7,9 +7,13 @@ import { ContextPanel } from '@/components/ContextPanel'
 import { MetricChart } from '@/components/MetricChart'
 import { ScenarioSidebar } from '@/components/ScenarioSidebar'
 import { PreviewGate } from '@/components/PreviewGate'
+import { PhaseStepper } from '@/components/PhaseStepper'
+import { ExhibitsColumn } from '@/components/ExhibitsColumn'
+import { KeyDataPanel, isKeyDataLayout } from '@/components/keydata/KeyDataPanel'
 import { saveResult, recordSimulationAttempt } from '@/services/resultsService'
 import { useSimulation } from '@/hooks/useSimulation'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
+import { buildPhaseViews, getPhaseForNode } from '@/lib/phases'
 import type { Scenario } from '@id/types'
 import type { TrackMeta } from '@/hooks/useScenarios'
 
@@ -63,6 +67,10 @@ const contextSectionLabel: Record<string, string> = {
   monitor: 'Live Metrics',
   table: 'Key Data',
   finding: 'Security Finding',
+  'tile-grid': 'Key Data',
+  'hero-list': 'Key Data',
+  'context-cards': 'Key Data',
+  'briefing-sections': 'Briefing',
 }
 
 function SimulationContent({
@@ -145,6 +153,25 @@ function SimulationContent({
   const ctxStyle = display?.contextStyle ?? 'monitor'
   const ctxLabel = contextSectionLabel[ctxStyle] ?? 'Live Metrics'
 
+  // ── Phase + exhibits plumbing ─────────────────────────────────────────────
+  const answeredNodeIds = useMemo(() => new Set(Object.keys(choicesMade)), [choicesMade])
+  const phaseViews = useMemo(
+    () => buildPhaseViews(scenario, currentNode.nodeId, answeredNodeIds),
+    [scenario, currentNode.nodeId, answeredNodeIds],
+  )
+  const currentPhase = useMemo(
+    () => getPhaseForNode(scenario, currentNode.nodeId),
+    [scenario, currentNode.nodeId],
+  )
+  // Show the exhibits rail only when the *current* phase actually has
+  // exhibits pinned to it. Empty rails read as broken UI; case authors who
+  // want an exhibit-free phase (e.g. an early Structure step) shouldn't have
+  // to look at an empty column. Mobile trigger follows the same rule.
+  const hasPhases = Boolean(scenario.phases?.length)
+  const showExhibitsRail =
+    hasPhases && (currentPhase?.exhibitIds?.length ?? 0) > 0
+  const [mobileExhibitsOpen, setMobileExhibitsOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
       {isPreview && (
@@ -164,6 +191,10 @@ function SimulationContent({
       )}
       <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
 
+      {hasPhases && (
+        <PhaseStepper phases={phaseViews} accentColor={meta?.color} />
+      )}
+
       <div className="flex flex-1">
         {/* Sidebar — only on lg+ screens */}
         {display && (
@@ -176,6 +207,25 @@ function SimulationContent({
 
         {/* Main scrollable content */}
         <div className={`relative flex-1 min-w-0 overflow-y-auto ${isPreview ? 'pb-14' : ''}`}>
+
+          {/* Mobile exhibits toggle — only shown when current phase has exhibits */}
+          {showExhibitsRail && (
+            <div className="lg:hidden px-4 pt-4">
+              <button
+                type="button"
+                onClick={() => setMobileExhibitsOpen(true)}
+                className="w-full flex items-center justify-between rounded-lg border border-white/10 bg-[#111111] px-4 py-2.5 text-[12px] font-semibold text-[#f5f3ee]"
+              >
+                <span>
+                  Exhibits
+                  {currentPhase && (
+                    <span className="ml-2 text-white/40 font-normal">· {currentPhase.label}</span>
+                  )}
+                </span>
+                <span className="text-white/40">↗</span>
+              </button>
+            </div>
+          )}
 
           {/* Content blurred when gated */}
           <div className={isGated ? 'blur-[2px] pointer-events-none select-none' : ''}>
@@ -235,11 +285,19 @@ function SimulationContent({
                   {currentNode.chart && (
                     <MetricChart config={currentNode.chart} />
                   )}
-                  <ContextPanel
-                    panels={currentNode.contextPanels}
-                    contextStyle={ctxStyle}
-                    incidentMeta={display?.incidentMeta}
-                  />
+                  {isKeyDataLayout(ctxStyle) ? (
+                    <KeyDataPanel
+                      layout={ctxStyle}
+                      panels={currentNode.contextPanels}
+                      accentColor={meta?.color}
+                    />
+                  ) : (
+                    <ContextPanel
+                      panels={currentNode.contextPanels}
+                      contextStyle={ctxStyle}
+                      incidentMeta={display?.incidentMeta}
+                    />
+                  )}
                 </div>
               )}
 
@@ -299,7 +357,48 @@ function SimulationContent({
           {isGated && <PreviewGate scenarioId={scenarioId} />}
 
         </div>
+
+        {/* Right exhibits rail — lg+ only, only when current phase has exhibits */}
+        {showExhibitsRail && (
+          <div className="hidden lg:flex w-[340px] xl:w-[380px] flex-shrink-0">
+            <ExhibitsColumn phase={currentPhase} accentColor={meta?.color} />
+          </div>
+        )}
       </div>
+
+      {/* Mobile exhibits drawer */}
+      {showExhibitsRail && mobileExhibitsOpen && (
+        <div
+          className="fixed inset-0 z-40 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Exhibits"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60"
+            aria-label="Close exhibits"
+            onClick={() => setMobileExhibitsOpen(false)}
+          />
+          <div className="absolute right-0 top-0 bottom-0 w-[88%] max-w-[420px] flex flex-col bg-[#0d0d0d] border-l border-white/10 shadow-2xl">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/50">
+                Exhibits
+              </p>
+              <button
+                type="button"
+                onClick={() => setMobileExhibitsOpen(false)}
+                className="text-[12px] text-white/60 hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <ExhibitsColumn phase={currentPhase} accentColor={meta?.color} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

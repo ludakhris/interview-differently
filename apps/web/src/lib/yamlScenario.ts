@@ -1,5 +1,5 @@
 import jsYaml from 'js-yaml'
-import type { Scenario, ScenarioNode, Choice, ScoreQuality } from '@id/types'
+import type { Scenario, ScenarioNode, ScenarioPhase, Choice, ScoreQuality } from '@id/types'
 
 // ── YAML schema types ─────────────────────────────────────────────────────────
 
@@ -22,6 +22,15 @@ interface YamlNode {
   responsePrompt?: string
 }
 
+interface YamlPhase {
+  id: string
+  label: string
+  description?: string
+  nodeIds: string[]
+  exhibitIds?: string[]
+  rubricDimensions?: string[]
+}
+
 interface YamlScenario {
   id: string
   title: string
@@ -38,6 +47,7 @@ interface YamlScenario {
   }
   display?: Scenario['display']
   rubric: { name: string; description: string }[]
+  phases?: YamlPhase[]
   nodes: YamlNode[]
 }
 
@@ -69,6 +79,15 @@ export function yamlToScenario(yamlStr: string): Scenario {
     }
   })
 
+  const phases: ScenarioPhase[] | undefined = raw.phases?.map(p => ({
+    id: p.id,
+    label: p.label,
+    ...(p.description ? { description: p.description } : {}),
+    nodeIds: p.nodeIds ?? [],
+    ...(p.exhibitIds?.length ? { exhibitIds: p.exhibitIds } : {}),
+    ...(p.rubricDimensions?.length ? { rubricDimensions: p.rubricDimensions } : {}),
+  }))
+
   return {
     scenarioId: raw.id,
     title: raw.title,
@@ -87,6 +106,7 @@ export function yamlToScenario(yamlStr: string): Scenario {
     rubric: {
       dimensions: raw.rubric.map(d => ({ name: d.name, description: d.description })),
     },
+    ...(phases?.length ? { phases } : {}),
     nodes,
   }
 }
@@ -104,6 +124,18 @@ export function scenarioToYaml(scenario: Scenario): string {
     briefing: scenario.briefing,
     ...(scenario.display ? { display: scenario.display } : {}),
     rubric: scenario.rubric.dimensions,
+    ...(scenario.phases?.length
+      ? {
+          phases: scenario.phases.map(p => ({
+            id: p.id,
+            label: p.label,
+            ...(p.description ? { description: p.description } : {}),
+            nodeIds: p.nodeIds,
+            ...(p.exhibitIds?.length ? { exhibitIds: p.exhibitIds } : {}),
+            ...(p.rubricDimensions?.length ? { rubricDimensions: p.rubricDimensions } : {}),
+          })),
+        }
+      : {}),
     nodes: scenario.nodes.map(n => {
       const choices = n.choices?.map(c => ({
         id: c.id,

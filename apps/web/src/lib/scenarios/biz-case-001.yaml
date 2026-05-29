@@ -23,7 +23,7 @@ briefing:
   timeInRole: 6 months
 
 display:
-  contextStyle: table
+  contextStyle: context-cards
   sidebar:
     - title: Your Role
       style: text
@@ -58,6 +58,33 @@ rubric:
   - name: Synthesis & Recommendation
     description: Does the candidate translate analysis into a defended recommendation with risks and next steps?
 
+# Phase 2 scaffold — case currently has a single Structure node but is wired
+# for a 4-phase consulting walkthrough. The next scenario (biz-case-002) will
+# exercise sizing + exhibit phases end-to-end.
+phases:
+  - id: structure
+    label: Structure
+    description: Lay out the MECE framework before any data.
+    nodeIds: [biz-case-001-n1]
+    rubricDimensions: [Framework Structuring]
+  - id: sizing
+    label: Sizing
+    description: Quantify the savings opportunity for rural Aurelians.
+    nodeIds: []
+    exhibitIds: [rural-population-table, benefits-collection-cost]
+    rubricDimensions: [Quantitative Accuracy]
+  - id: exhibits
+    label: Read Exhibits
+    description: Interpret regional survey data.
+    nodeIds: []
+    exhibitIds: [regional-uptake-survey]
+    rubricDimensions: [Data Interpretation]
+  - id: recommendation
+    label: Recommendation
+    description: Defend a phased rollout with risks and next steps.
+    nodeIds: []
+    rubricDimensions: [Synthesis & Recommendation]
+
 nodes:
   - id: biz-case-001-n1
     type: decision
@@ -67,18 +94,29 @@ nodes:
       the investigation? She wants to see how you'd organize the question into MECE buckets
       so the team can divide up the workstreams.
     contextPanels:
-      - label: Network store count
+      - label: Network reach
         value: 22,000
+        unit: stores
         type: info
-      - label: Rural pop
+        caption: ~1 store per 1,300 rural residents
+      - label: Rural population
         value: 28M
+        unit: people
         type: info
-      - label: Receiving state benefits
+        share: 20
+        caption: 20% of 140M total
+      - label: On state benefits
         value: 14M
+        unit: '50%'
         type: metric
-      - label: Days to first read-out
-        value: 5
+        tone: accent
+        share: 50
+        caption: share of rural pop.
+      - label: Days to read-out
+        value: '5'
         type: alert
+        tone: danger
+        caption: EM expects framework by Friday
     choices:
       - id: A
         text: Start with three buckets — benefits to the rural population, benefits to the government / state bank / Aurelia Retail, and risks of the venture.

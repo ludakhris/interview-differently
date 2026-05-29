@@ -32,6 +32,15 @@ interface YamlNode {
   responsePrompt?: string
 }
 
+interface YamlPhase {
+  id: string
+  label: string
+  description?: string
+  nodeIds: string[]
+  exhibitIds?: string[]
+  rubricDimensions?: string[]
+}
+
 interface YamlScenario {
   id: string
   title: string
@@ -48,6 +57,7 @@ interface YamlScenario {
   }
   display?: unknown
   rubric: Array<{ name: string; description: string }>
+  phases?: YamlPhase[]
   nodes: YamlNode[]
 }
 
@@ -113,6 +123,17 @@ function yamlToScenario(yamlStr: string): Scenario {
     scenario.display = raw.display as Scenario['display']
   }
 
+  if (raw.phases?.length) {
+    scenario.phases = raw.phases.map((p) => ({
+      id: p.id,
+      label: p.label,
+      ...(p.description ? { description: p.description } : {}),
+      nodeIds: p.nodeIds ?? [],
+      ...(p.exhibitIds?.length ? { exhibitIds: p.exhibitIds } : {}),
+      ...(p.rubricDimensions?.length ? { rubricDimensions: p.rubricDimensions } : {}),
+    }))
+  }
+
   return scenario
 }
 
@@ -138,7 +159,14 @@ async function main() {
 
     const existing = await prisma.scenario.findUnique({ where: { scenarioId: scenario.scenarioId } })
     if (existing) {
-      console.log(`  — ${scenario.scenarioId} already exists, skipping.`)
+      // Refresh the JSON blob so newly-added top-level fields (e.g. phases,
+      // subcategory) on the yaml propagate to the DB without a hand-written
+      // migration. We deliberately don't change `status` here.
+      await prisma.scenario.update({
+        where: { scenarioId: scenario.scenarioId },
+        data: { data: scenario as object },
+      })
+      console.log(`  ↻ ${scenario.scenarioId} refreshed (existing row updated).`)
       continue
     }
 

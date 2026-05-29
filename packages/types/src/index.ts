@@ -88,11 +88,32 @@ export interface ContextPanel {
   label: string
   value: string
   type: 'metric' | 'alert' | 'info'
+  // ── KeyData layout extensions ───────────────────────────────────────────────
+  // These fields are consumed by the case-style KeyData layouts (tile-grid,
+  // hero-list, context-cards, briefing-sections). They are optional and
+  // ignored by the legacy ops/risk styles (monitor / table / finding).
+  caption?: string                     // small supporting line beneath the value
+  unit?: string                        // suffix shown after the value, e.g. 'stores', 'people'
+  share?: number                       // 0-100, drives the mini-bar in context-cards
+  tone?: 'accent' | 'danger' | 'neutral' // emphasis colour for the value
+  hero?: boolean                       // marks the framing stat for hero-list
+  group?: string                       // section name for briefing-sections (e.g. 'Market', 'Customer', 'Constraint')
 }
 
 // ── Scenario Display ──────────────────────────────────────────────────────────
 
-export type ContextDisplayStyle = 'monitor' | 'table' | 'finding'
+// Legacy ops/risk styles + new case-style layouts. Each new layout below is
+// implemented as a standalone renderer in apps/web/src/components/keydata and
+// can be reused across scenarios by setting `display.contextStyle` to the
+// matching key.
+export type ContextDisplayStyle =
+  | 'monitor'
+  | 'table'
+  | 'finding'
+  | 'tile-grid'
+  | 'hero-list'
+  | 'context-cards'
+  | 'briefing-sections'
 
 export interface SidebarItem {
   label: string
@@ -194,6 +215,25 @@ export interface ScenarioInterviewer {
   voiceId: string                      // Microsoft Azure voice id (e.g. 'en-GB-SoniaNeural')
 }
 
+// ── Phases ────────────────────────────────────────────────────────────────────
+//
+// A Scenario can optionally be broken into ordered phases (e.g. for consulting
+// case interviews: "Structure → Sizing → Exhibit Read → Recommendation"). Each
+// phase pins a set of nodes and exhibits that belong to it; the simulation UI
+// renders a phase stepper at the top and keeps phase-pinned exhibits visible
+// across every node in that phase.
+//
+// Scenarios without `phases` render as a single implicit phase (back-compat).
+
+export interface ScenarioPhase {
+  id: string                           // stable phase id, e.g. 'structure'
+  label: string                        // short display label, e.g. 'Structure'
+  description?: string                 // 1-line description shown on hover / mobile drawer
+  nodeIds: string[]                    // node ids that belong to this phase, in order
+  exhibitIds?: string[]                // exhibit ids pinned to this phase (Phase 3 — exhibits)
+  rubricDimensions?: string[]          // dimension names scored within this phase (subset of scenario.rubric.dimensions)
+}
+
 export interface Scenario {
   scenarioId: string
   title: string
@@ -209,6 +249,11 @@ export interface Scenario {
   createdBy?: string // institution id for custom scenarios
   publishedTo?: string[] // cohort ids
   nodes: ScenarioNode[]
+  // Optional ordered phases — used by case-style scenarios where the candidate
+  // moves through distinct stages (Structure → Sizing → Read Exhibit → Recommend).
+  // When absent, the simulation renders as a single implicit phase containing
+  // all decision nodes.
+  phases?: ScenarioPhase[]
   rubric: {
     dimensions: RubricDimension[]
   }

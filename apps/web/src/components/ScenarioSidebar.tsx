@@ -12,10 +12,14 @@ const emphasisColor = {
   success: 'text-emerald-400',
 }
 
-const accentLine = {
+const accentLine: Record<ContextDisplayStyle, string> = {
   monitor: 'bg-amber-500',
   table: 'bg-blue-500',
   finding: 'bg-red-500',
+  'tile-grid': 'bg-[#0f5b89]',
+  'hero-list': 'bg-[#0f5b89]',
+  'context-cards': 'bg-[#0f5b89]',
+  'briefing-sections': 'bg-[#0f5b89]',
 }
 
 // ── Section renderers ─────────────────────────────────────────────────────────
