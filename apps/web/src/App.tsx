@@ -18,6 +18,7 @@ import { AdminInstitutionEngagementPage } from '@/pages/AdminInstitutionEngageme
 import { AdminInstitutionHeatmapPage } from '@/pages/AdminInstitutionHeatmapPage'
 import { AdminStudentDetailPage } from '@/pages/AdminStudentDetailPage'
 import { RequestScenarioPage } from '@/pages/RequestScenarioPage'
+import { ExhibitGalleryPage } from '@/pages/dev/ExhibitGalleryPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
 import { useUserSync } from '@/hooks/useUserSync'
@@ -54,6 +55,9 @@ export default function App() {
       <Route path="/scenario/:scenarioId/briefing" element={<BriefingPage />} />
       <Route path="/scenario/:scenarioId/play" element={<SimulationPage />} />
       <Route path="/request-scenario" element={<RequestScenarioPage />} />
+
+      {/* Internal showcase pages — visual reference for authors. */}
+      <Route path="/dev/exhibits" element={<ExhibitGalleryPage />} />
 
       {/* Auth pages — /* catches Clerk's internal sub-routes */}
       <Route path="/sign-in/*" element={<AuthPage mode="sign-in" />} />

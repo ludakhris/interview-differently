@@ -163,13 +163,18 @@ function SimulationContent({
     () => getPhaseForNode(scenario, currentNode.nodeId),
     [scenario, currentNode.nodeId],
   )
-  // Show the exhibits rail only when the *current* phase actually has
-  // exhibits pinned to it. Empty rails read as broken UI; case authors who
-  // want an exhibit-free phase (e.g. an early Structure step) shouldn't have
-  // to look at an empty column. Mobile trigger follows the same rule.
+  // Show the exhibits rail only when the *current* phase actually has at
+  // least one exhibit that resolves against scenario.exhibits. Empty rails
+  // read as broken UI; case authors who want an exhibit-free phase (e.g. an
+  // early Structure step) shouldn't have to look at an empty column. Mobile
+  // trigger follows the same rule.
   const hasPhases = Boolean(scenario.phases?.length)
+  const exhibitCatalog = scenario.exhibits ?? []
   const showExhibitsRail =
-    hasPhases && (currentPhase?.exhibitIds?.length ?? 0) > 0
+    hasPhases &&
+    (currentPhase?.exhibitIds ?? []).some(id =>
+      exhibitCatalog.some(e => e.id === id),
+    )
   const [mobileExhibitsOpen, setMobileExhibitsOpen] = useState(false)
 
   return (
@@ -361,7 +366,11 @@ function SimulationContent({
         {/* Right exhibits rail — lg+ only, only when current phase has exhibits */}
         {showExhibitsRail && (
           <div className="hidden lg:flex w-[340px] xl:w-[380px] flex-shrink-0">
-            <ExhibitsColumn phase={currentPhase} accentColor={meta?.color} />
+            <ExhibitsColumn
+              phase={currentPhase}
+              exhibits={exhibitCatalog}
+              accentColor={meta?.color}
+            />
           </div>
         )}
       </div>
@@ -394,7 +403,11 @@ function SimulationContent({
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <ExhibitsColumn phase={currentPhase} accentColor={meta?.color} />
+              <ExhibitsColumn
+              phase={currentPhase}
+              exhibits={exhibitCatalog}
+              accentColor={meta?.color}
+            />
             </div>
           </div>
         </div>

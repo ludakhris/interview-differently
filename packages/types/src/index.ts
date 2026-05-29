@@ -230,9 +230,127 @@ export interface ScenarioPhase {
   label: string                        // short display label, e.g. 'Structure'
   description?: string                 // 1-line description shown on hover / mobile drawer
   nodeIds: string[]                    // node ids that belong to this phase, in order
-  exhibitIds?: string[]                // exhibit ids pinned to this phase (Phase 3 — exhibits)
+  exhibitIds?: string[]                // ids of exhibits pinned to this phase (looked up in scenario.exhibits)
   rubricDimensions?: string[]          // dimension names scored within this phase (subset of scenario.rubric.dimensions)
 }
+
+// ── Exhibits ──────────────────────────────────────────────────────────────────
+//
+// An exhibit is a structured piece of supporting evidence shown alongside the
+// case question — data tables, profit trees, segmentation matrices, charts,
+// text passages. Exhibits live in a top-level `scenario.exhibits` catalog and
+// are referenced from phases via `exhibitIds`, so the same exhibit can be
+// reused across phases without duplication.
+
+export type ExhibitKind =
+  | 'data-table'
+  | 'profit-tree'
+  | 'segmentation-matrix'
+  | 'chart'
+  | 'text-exhibit'
+
+interface ExhibitBase {
+  id: string                           // stable exhibit id, e.g. 'rural-population-table'
+  kind: ExhibitKind
+  title: string                        // visible header, e.g. 'Rural population by region'
+  caption?: string                     // 1-2 line context shown below the title
+  footnote?: string                    // source / method note shown beneath the body
+}
+
+// data-table — rows × columns. Optional per-cell tone for highlighting.
+export interface DataTableColumn {
+  key: string                          // column id, matches keys in row data
+  label: string
+  align?: 'left' | 'right' | 'center'  // default right for numeric
+  format?: 'number' | 'currency' | 'percent' | 'text'  // hint for renderer
+  sortable?: boolean
+}
+
+export interface DataTableCell {
+  value: string | number
+  tone?: 'accent' | 'danger' | 'neutral'
+  emphasis?: boolean                   // bold-weight cell
+}
+
+export interface DataTableRow {
+  // keyed by column.key. Cells may be raw values (string|number) or rich {value, tone, emphasis}.
+  [columnKey: string]: string | number | DataTableCell
+}
+
+export interface DataTableExhibit extends ExhibitBase {
+  kind: 'data-table'
+  columns: DataTableColumn[]
+  rows: DataTableRow[]
+  totalRow?: DataTableRow              // optional sticky bottom row
+}
+
+// profit-tree — hierarchical issue tree, e.g. Profit → Revenue/Cost → ...
+// Each node carries a label + optional value/formula. Children make the tree
+// drillable: collapse/expand levels.
+export interface ProfitTreeNode {
+  id: string
+  label: string
+  value?: string                       // displayed value, e.g. '$22M' or '50%'
+  formula?: string                     // optional formula explanation
+  tone?: 'accent' | 'danger' | 'neutral'
+  children?: ProfitTreeNode[]
+}
+
+export interface ProfitTreeExhibit extends ExhibitBase {
+  kind: 'profit-tree'
+  root: ProfitTreeNode
+}
+
+// segmentation-matrix — 2×2 grid. Each quadrant has a label + list of items.
+export interface SegmentationMatrixItem {
+  label: string
+  caption?: string
+}
+
+export interface SegmentationMatrixExhibit extends ExhibitBase {
+  kind: 'segmentation-matrix'
+  xAxis: { label: string; lowLabel: string; highLabel: string }
+  yAxis: { label: string; lowLabel: string; highLabel: string }
+  quadrants: {
+    topLeft: SegmentationMatrixItem[]
+    topRight: SegmentationMatrixItem[]
+    bottomLeft: SegmentationMatrixItem[]
+    bottomRight: SegmentationMatrixItem[]
+  }
+  // optional per-quadrant header tone (e.g. highlight the 'star' quadrant)
+  quadrantLabels?: {
+    topLeft?: string
+    topRight?: string
+    bottomLeft?: string
+    bottomRight?: string
+  }
+}
+
+// chart — reuses the existing ChartConfig used by ops monitor nodes.
+export interface ChartExhibit extends ExhibitBase {
+  kind: 'chart'
+  chart: ChartConfig
+}
+
+// text-exhibit — rich text passage (paragraphs + bullet lists).
+export interface TextExhibitBlock {
+  kind: 'paragraph' | 'bullets' | 'quote'
+  text?: string                        // for paragraph / quote
+  items?: string[]                     // for bullets
+  attribution?: string                 // for quote
+}
+
+export interface TextExhibit extends ExhibitBase {
+  kind: 'text-exhibit'
+  blocks: TextExhibitBlock[]
+}
+
+export type Exhibit =
+  | DataTableExhibit
+  | ProfitTreeExhibit
+  | SegmentationMatrixExhibit
+  | ChartExhibit
+  | TextExhibit
 
 export interface Scenario {
   scenarioId: string
@@ -254,6 +372,11 @@ export interface Scenario {
   // When absent, the simulation renders as a single implicit phase containing
   // all decision nodes.
   phases?: ScenarioPhase[]
+  // Top-level catalog of exhibits. Phases reference these by id via
+  // `exhibitIds`. Keeping exhibits at the scenario level (rather than nested
+  // under phases) lets one exhibit be shared across phases — e.g. a key data
+  // table that's introduced in Sizing and still visible during Recommendation.
+  exhibits?: Exhibit[]
   rubric: {
     dimensions: RubricDimension[]
   }

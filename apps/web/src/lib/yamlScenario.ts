@@ -1,5 +1,5 @@
 import jsYaml from 'js-yaml'
-import type { Scenario, ScenarioNode, ScenarioPhase, Choice, ScoreQuality } from '@id/types'
+import type { Scenario, ScenarioNode, ScenarioPhase, Exhibit, Choice, ScoreQuality } from '@id/types'
 
 // ── YAML schema types ─────────────────────────────────────────────────────────
 
@@ -48,6 +48,10 @@ interface YamlScenario {
   display?: Scenario['display']
   rubric: { name: string; description: string }[]
   phases?: YamlPhase[]
+  // Exhibits are heterogeneous discriminated unions; the TS layer (Exhibit
+  // type) enforces shape, so the YAML schema just accepts whatever js-yaml
+  // parses for each entry.
+  exhibits?: Exhibit[]
   nodes: YamlNode[]
 }
 
@@ -107,6 +111,7 @@ export function yamlToScenario(yamlStr: string): Scenario {
       dimensions: raw.rubric.map(d => ({ name: d.name, description: d.description })),
     },
     ...(phases?.length ? { phases } : {}),
+    ...(raw.exhibits?.length ? { exhibits: raw.exhibits } : {}),
     nodes,
   }
 }
@@ -136,6 +141,7 @@ export function scenarioToYaml(scenario: Scenario): string {
           })),
         }
       : {}),
+    ...(scenario.exhibits?.length ? { exhibits: scenario.exhibits } : {}),
     nodes: scenario.nodes.map(n => {
       const choices = n.choices?.map(c => ({
         id: c.id,

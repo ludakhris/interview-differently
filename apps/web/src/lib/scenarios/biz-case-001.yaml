@@ -66,12 +66,13 @@ phases:
     label: Structure
     description: Lay out the MECE framework before any data.
     nodeIds: [biz-case-001-n1]
+    exhibitIds: [em-memo]
     rubricDimensions: [Framework Structuring]
   - id: sizing
     label: Sizing
     description: Quantify the savings opportunity for rural Aurelians.
     nodeIds: []
-    exhibitIds: [rural-population-table, benefits-collection-cost]
+    exhibitIds: [rural-population-table, savings-profit-tree]
     rubricDimensions: [Quantitative Accuracy]
   - id: exhibits
     label: Read Exhibits
@@ -83,7 +84,139 @@ phases:
     label: Recommendation
     description: Defend a phased rollout with risks and next steps.
     nodeIds: []
+    exhibitIds: [rollout-matrix]
     rubricDimensions: [Synthesis & Recommendation]
+
+# ── Exhibit catalog ─────────────────────────────────────────────────────────
+# Each phase pulls from this list by id. One exhibit can appear in multiple
+# phases (e.g. a foundational data table introduced in Sizing and re-used in
+# Recommendation).
+exhibits:
+  # 1 — text-exhibit (Structure): EM's voicemail-style framing memo.
+  - id: em-memo
+    kind: text-exhibit
+    title: Memo from Engagement Manager
+    caption: 'Received 8:47 AM — frame your thinking before the brief'
+    footnote: 'Internal, do not forward'
+    blocks:
+      - kind: paragraph
+        text: >
+          Northstar wants a clean answer to "should we use the Aurelia Retail
+          Network to deliver financial services to the rural unbanked?" — not
+          a survey of options, not a McKinsey 7S. A defensible yes/no with
+          the sizing to back it.
+      - kind: bullets
+        items:
+          - The Foundation already believes this could help millions; our job is to test that belief, not validate it.
+          - 'Three weeks of fieldwork get us regional survey data — design your framework so we know what data is decisive.'
+          - 'Watch for the easy trap: assuming uptake. We have signal, not proof.'
+      - kind: quote
+        text: 'If the answer doesn''t change the Foundation''s capital allocation, it''s not the answer they hired us for.'
+        attribution: Engagement Manager
+
+  # 2 — data-table (Sizing): rural population breakdown by region. Sortable.
+  - id: rural-population-table
+    kind: data-table
+    title: Rural population by region
+    caption: 'Source: Aurelia National Statistics Bureau, 2024 release'
+    footnote: 'Region totals exclude transient seasonal workers (≈2% national).'
+    columns:
+      - { key: region, label: Region, align: left, format: text, sortable: true }
+      - { key: pop, label: Rural pop, format: number, sortable: true }
+      - { key: benefits, label: On benefits, format: number, sortable: true }
+      - { key: share, label: Share, format: percent, sortable: true }
+      - { key: stores, label: Network stores, format: number, sortable: true }
+    rows:
+      - { region: Northern Highlands, pop: 4200000, benefits: { value: 2300000, tone: accent }, share: 55, stores: 3100 }
+      - { region: Central Plains, pop: 8900000, benefits: 4100000, share: 46, stores: 7200 }
+      - { region: Eastern Coast, pop: 5600000, benefits: 2800000, share: 50, stores: 4500 }
+      - { region: Western Delta, pop: 6100000, benefits: { value: 3400000, tone: accent, emphasis: true }, share: 56, stores: 4800 }
+      - { region: Southern Range, pop: 3200000, benefits: 1400000, share: 44, stores: 2400 }
+    totalRow:
+      { region: { value: Total, emphasis: true }, pop: 28000000, benefits: 14000000, share: 50, stores: 22000 }
+
+  # 3 — profit-tree (Sizing): savings opportunity decomposition.
+  - id: savings-profit-tree
+    kind: profit-tree
+    title: Annual savings opportunity — issue tree
+    caption: 'Each branch surfaces an assumption worth testing.'
+    root:
+      id: root
+      label: Annual savings to rural population
+      value: '$2.1B'
+      formula: families × monthly cost × 12 months
+      tone: accent
+      children:
+        - id: families
+          label: Rural families receiving benefits
+          value: 3.5M
+          formula: 14M people ÷ 4 per family
+          children:
+            - { id: people, label: People on benefits, value: 14M }
+            - { id: avgfam, label: Avg household size, value: 4.0 }
+        - id: cost
+          label: Cost per collection trip
+          value: 50 AUR
+          formula: travel + lost wages + risk premium
+          tone: danger
+          children:
+            - { id: travel, label: Bus / fuel cost, value: 18 AUR }
+            - { id: wages, label: Lost wages (½ day), value: 25 AUR }
+            - { id: risk, label: 'Theft / risk reserve', value: 7 AUR }
+        - id: freq
+          label: Trips per year
+          value: 12
+          formula: monthly benefit cycle
+          children:
+            - { id: cycle, label: Benefit disbursement, value: monthly }
+            - { id: alt, label: Alt schedule (quarterly)?, value: '— not adopted' }
+
+  # 4 — chart (Read Exhibits): regional pilot uptake over 6 months.
+  - id: regional-uptake-survey
+    kind: chart
+    title: Western Delta pilot — service uptake (Months 0-6)
+    caption: 'Households opening at least one financial account, % of eligible.'
+    footnote: 'Survey n=4,200 households, Western Delta pilot, 2024.'
+    chart:
+      title: Cumulative uptake
+      unit: '%'
+      color: green
+      baseline: 25
+      annotation:
+        tIndex: 3
+        label: '↑ SMS reminder rollout'
+      series:
+        - { t: M0, v: 4 }
+        - { t: M1, v: 9 }
+        - { t: M2, v: 17 }
+        - { t: M3, v: 26 }
+        - { t: M4, v: 38 }
+        - { t: M5, v: 47 }
+        - { t: M6, v: 53 }
+
+  # 5 — segmentation-matrix (Recommendation): rollout prioritisation 2×2.
+  - id: rollout-matrix
+    kind: segmentation-matrix
+    title: Regional rollout prioritisation
+    caption: 'Plot each region by demand signal × infrastructure readiness.'
+    footnote: 'Demand: % on benefits × uptake trend. Readiness: network density + agent training.'
+    xAxis: { label: Infrastructure readiness, lowLabel: Low, highLabel: High }
+    yAxis: { label: Demand signal, lowLabel: Low, highLabel: High }
+    quadrantLabels:
+      topLeft: Invest to enable
+      topRight: Phase 1 — launch
+      bottomLeft: Defer
+      bottomRight: Adjacent expansion
+    quadrants:
+      topLeft:
+        - { label: Northern Highlands, caption: 'High need, sparse network' }
+      topRight:
+        - { label: Western Delta, caption: 'Pilot region — proven uptake' }
+        - { label: Central Plains, caption: 'Largest pop, mature network' }
+      bottomLeft:
+        - { label: Southern Range, caption: 'Lowest benefit share' }
+      bottomRight:
+        - { label: Eastern Coast, caption: 'Urban migration risk' }
 
 nodes:
   - id: biz-case-001-n1

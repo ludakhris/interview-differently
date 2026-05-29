@@ -58,6 +58,7 @@ interface YamlScenario {
   display?: unknown
   rubric: Array<{ name: string; description: string }>
   phases?: YamlPhase[]
+  exhibits?: unknown[]                 // heterogeneous; shape enforced by web-side TS layer
   nodes: YamlNode[]
 }
 
@@ -132,6 +133,10 @@ function yamlToScenario(yamlStr: string): Scenario {
       ...(p.exhibitIds?.length ? { exhibitIds: p.exhibitIds } : {}),
       ...(p.rubricDimensions?.length ? { rubricDimensions: p.rubricDimensions } : {}),
     }))
+  }
+
+  if (raw.exhibits?.length) {
+    scenario.exhibits = raw.exhibits
   }
 
   return scenario
