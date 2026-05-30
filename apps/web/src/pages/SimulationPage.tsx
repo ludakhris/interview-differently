@@ -119,22 +119,28 @@ function SimulationContent({
     quantAnswers,
   } = useSimulation(scenario)
 
-  // Show the preview gate after the first decision is submitted, for unauthenticated visitors
-  const isGated = isLoaded && !isSignedIn && !isPreview && Object.keys(choicesMade).length >= 1
+  // Gate the entire simulation for unauthenticated visitors — case content
+  // (data tables, exhibits, decisions, quant prompts) is the product, and
+  // the briefing page already gives marketing visitors a no-spoiler preview.
+  // Builder preview mode + signed-in users see the simulation as normal.
+  const isGated = isLoaded && !isSignedIn && !isPreview
 
   useEffect(() => {
-    if (isComplete) {
-      if (isPreview) {
-        // Preview mode: skip writing results; return to builder canvas
-        setTimeout(() => navigate(`/builder/${scenarioId}`), 600)
-      } else {
-        const result = computeResult()
-        sessionStorage.setItem(`result-${scenarioId}`, JSON.stringify(result))
-        if (isSignedIn) void saveResult({ ...result, scenarioTitle: scenario.title })
-        setTimeout(() => navigate(`/scenario/${scenarioId}/feedback`), 600)
-      }
+    if (!isComplete) return
+    // Gate covers the page — don't auto-navigate to /feedback for guests; the
+    // sign-up overlay should prompt them first, then re-render the simulation
+    // once authenticated. Preview mode + signed-in users continue as before.
+    if (isGated) return
+    if (isPreview) {
+      // Preview mode: skip writing results; return to builder canvas
+      setTimeout(() => navigate(`/builder/${scenarioId}`), 600)
+    } else {
+      const result = computeResult()
+      sessionStorage.setItem(`result-${scenarioId}`, JSON.stringify(result))
+      if (isSignedIn) void saveResult({ ...result, scenarioTitle: scenario.title })
+      setTimeout(() => navigate(`/scenario/${scenarioId}/feedback`), 600)
     }
-  }, [isComplete, isPreview, scenarioId, navigate, computeResult, isSignedIn, scenario.title])
+  }, [isComplete, isGated, isPreview, scenarioId, navigate, computeResult, isSignedIn, scenario.title])
 
   // ── Phase + exhibits plumbing ─────────────────────────────────────────────
   // Hooks must run on every render (rules-of-hooks), so they're declared
@@ -155,6 +161,26 @@ function SimulationContent({
     [scenario, currentNode.nodeId],
   )
   const [mobileExhibitsOpen, setMobileExhibitsOpen] = useState(false)
+
+  // Hard gate — when an unauthenticated visitor lands on /play we render only
+  // the nav and the sign-up overlay. The simulation content (narrative,
+  // panels, exhibits, choices, quant prompts) never enters the DOM, so the
+  // case body can't be scraped by viewing source. The marketing/briefing
+  // page upstream gives a no-spoiler preview for prospects.
+  //
+  // NOTE: the GET /api/scenarios endpoint is still public, so a determined
+  // visitor can fetch the JSON directly. Closing that hole means requiring
+  // auth on the API layer, which is tracked separately.
+  if (isGated) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+        <Nav trackLabel={meta?.label} />
+        <div className="relative flex-1 flex items-center justify-center">
+          <PreviewGate scenarioId={scenarioId} />
+        </div>
+      </div>
+    )
+  }
 
   if (isComplete) {
     return (
@@ -246,8 +272,10 @@ function SimulationContent({
             </div>
           )}
 
-          {/* Content blurred when gated */}
-          <div className={isGated ? 'blur-[2px] pointer-events-none select-none' : ''}>
+          {/* Main render — only reached for signed-in / preview-mode visitors;
+              gated guests are short-circuited at the top with the sign-up
+              overlay so simulation content never enters the DOM here. */}
+          <div>
 
           {/* ── Transition node ── */}
           {currentNode.type === 'transition' && (
@@ -396,10 +424,7 @@ function SimulationContent({
             </div>
           )}
 
-          </div>{/* end blur wrapper */}
-
-          {/* Preview gate overlay — floats above blurred content */}
-          {isGated && <PreviewGate scenarioId={scenarioId} />}
+          </div>{/* end main render wrapper */}
 
         </div>
 
