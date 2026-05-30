@@ -193,6 +193,18 @@ nodes:
         Use 14.8M cumulative new BEV homes Y1-Y5, 70% home-charger attach,
         64% single-family filter, and a 10% achievable share for the
         installer. Round to the nearest 100k units.
+      hint: |
+        TAM (total market)     = new_BEV_homes × charger_attach_rate
+        SAM (addressable)      = TAM × structurally_addressable_share
+        SOM (obtainable)       = SAM × achievable_capture_rate
+      hintFootnote: |
+        TAM = Total Addressable Market — the full unit pool if every BEV
+        household installed L2 at home
+        SAM = Serviceable Addressable Market — the subset structurally able
+        to install (single-family homes vs apartments)
+        SOM = Serviceable Obtainable Market — what one installer realistically
+        wins given competition + capacity
+        BEV = battery-electric vehicle; L2 = Level 2 home charger
       formula:
         display: 'TAM = new BEV homes × 70% attach;  SAM = TAM × 64% single-fam;  SOM = SAM × 10% share'
         expression: '{newhomes} * {attach}'

@@ -24,6 +24,10 @@ interface SimulationState {
   // Quality signals emitted from quant submissions; merged with choice
   // signals at compute time.
   quantSignals: QualitySignal[]
+  // Node ids where the candidate revealed the author-supplied hint before
+  // submitting. Used to dock the quant signal (cap at proficient) and to
+  // flag the submission on the results page.
+  hintsUsed: string[]
   startedAt: string
 }
 
@@ -82,6 +86,7 @@ export function useSimulation(scenario: Scenario) {
     quantAnswers: {},
     quantResults: {},
     quantSignals: [],
+    hintsUsed: [],
     startedAt: new Date().toISOString(),
   })
 
@@ -158,6 +163,16 @@ export function useSimulation(scenario: Scenario) {
     }, 300)
   }, [currentNode])
 
+  // Idempotent — second call for the same node is a no-op so toggling the
+  // hint open/closed doesn't double-flag the candidate.
+  const markHintUsed = useCallback((nodeId: string) => {
+    setState((prev) =>
+      prev.hintsUsed.includes(nodeId)
+        ? prev
+        : { ...prev, hintsUsed: [...prev.hintsUsed, nodeId] },
+    )
+  }, [])
+
   // Build the carry-forward map for a node: for each formula variable that
   // declares a `source`, look up the prior quant answer and surface it.
   const buildCarryForward = useCallback(
@@ -212,13 +227,17 @@ export function useSimulation(scenario: Scenario) {
     // Quant signals are pushed by submitQuant on the same nodeId the band
     // result was computed for. The hook tracks them alongside quantResults
     // so we can pair the signal back to its source node here.
+    const hintsUsedSet = new Set(state.hintsUsed)
     for (const [nodeId, results] of Object.entries(state.quantResults)) {
       const node = scenario.nodes.find((n) => n.nodeId === nodeId)
       if (!node) continue
       const dims = node.quantSignalDimensions ?? ['Quantitative Accuracy']
       const worst = worstBand(results.map((r) => r.band))
-      const quality: ScoreQuality =
+      let quality: ScoreQuality =
         worst === 'ideal' ? 'strong' : worst === 'accepted' ? 'proficient' : 'developing'
+      // Hint dock — candidates who needed help can't earn a Strong rating on
+      // the dimension; cap at proficient. Developing stays developing.
+      if (hintsUsedSet.has(nodeId) && quality === 'strong') quality = 'proficient'
       for (const dim of dims) pushSignal(nodeId, { dimension: dim, quality })
     }
 
@@ -248,6 +267,7 @@ export function useSimulation(scenario: Scenario) {
           band: r.band,
         })),
         ...(variables ? { variables } : {}),
+        ...(hintsUsedSet.has(nodeId) ? { hintUsed: true } : {}),
       })
     }
 
@@ -302,7 +322,7 @@ export function useSimulation(scenario: Scenario) {
       ...(phaseScores ? { phaseScores } : {}),
       ...(quantResults.length ? { quantResults } : {}),
     }
-  }, [scenario, state.choicesMade, state.quantResults, state.quantAnswers, userId])
+  }, [scenario, state.choicesMade, state.quantResults, state.quantAnswers, state.hintsUsed, userId])
 
   const isComplete = currentNode?.type === 'feedback'
   // Step counter counts decision *and* quant submissions — both are
@@ -331,7 +351,9 @@ export function useSimulation(scenario: Scenario) {
     submitQuant,
     advanceQuant,
     buildCarryForward,
+    markHintUsed,
     quantAnswers: state.quantAnswers,
     quantResults: state.quantResults,
+    hintsUsed: state.hintsUsed,
   }
 }

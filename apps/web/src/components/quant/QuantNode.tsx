@@ -28,9 +28,13 @@ interface Props {
     results: QuantFieldResult[]
     signals: QualitySignal[]
   }) => void
+  // Called the first time the candidate reveals the hint for this node.
+  // SimulationPage wires this to useSimulation.markHintUsed so the
+  // submission is flagged + signal capped at proficient.
+  onHintUsed?: (nodeId: string) => void
 }
 
-export function QuantNode({ node, carryForward, onSubmit }: Props) {
+export function QuantNode({ node, carryForward, onSubmit, onHintUsed }: Props) {
   const spec = node.quant
   if (!spec) {
     return (
@@ -42,9 +46,130 @@ export function QuantNode({ node, carryForward, onSubmit }: Props) {
   }
 
   return spec.variant === 'numeric-range' ? (
-    <NumericRangeView node={node} spec={spec} carryForward={carryForward} onSubmit={onSubmit} />
+    <NumericRangeView node={node} spec={spec} carryForward={carryForward} onSubmit={onSubmit} onHintUsed={onHintUsed} />
   ) : (
-    <StructuredView node={node} spec={spec} carryForward={carryForward} onSubmit={onSubmit} />
+    <StructuredView node={node} spec={spec} carryForward={carryForward} onSubmit={onSubmit} onHintUsed={onHintUsed} />
+  )
+}
+
+// ── Hint UI ──────────────────────────────────────────────────────────────────
+
+function HintControls({
+  hint,
+  footnote,
+  nodeId,
+  onHintUsed,
+}: {
+  hint: string
+  footnote?: string
+  nodeId: string
+  onHintUsed?: (nodeId: string) => void
+}) {
+  // 'idle' = nothing showing. 'confirming' = impact dialog before reveal so
+  // the candidate sees the score cap before committing. 'shown' = formula
+  // revealed (and `onHintUsed` was called).
+  const [stage, setStage] = useState<'idle' | 'confirming' | 'shown'>('idle')
+
+  function confirmReveal() {
+    setStage('shown')
+    onHintUsed?.(nodeId)
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setStage(stage === 'shown' ? 'shown' : 'confirming')}
+        className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+          stage === 'shown'
+            ? 'border-amber-500/35 bg-amber-500/10 text-amber-300'
+            : 'border-white/15 bg-white/5 text-white/65 hover:border-white/25 hover:text-[#f5f3ee]'
+        }`}
+        aria-haspopup="dialog"
+      >
+        <span aria-hidden>💡</span>
+        {stage === 'shown' ? 'Hint shown' : 'Need a hint?'}
+      </button>
+
+      {stage === 'confirming' && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Confirm hint">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60"
+            aria-label="Cancel"
+            onClick={() => setStage('idle')}
+          />
+          <div className="relative bg-[#111111] border border-white/15 rounded-2xl p-6 max-w-md w-[88%] mx-4 shadow-2xl animate-fade-in">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">Confirm</p>
+            <h3 className="mt-1 text-[16px] font-display font-bold text-[#f5f3ee]">
+              Show the formula for this question?
+            </h3>
+            <p className="mt-3 text-[14px] text-white/80 leading-relaxed">
+              If you use the hint, your highest possible score on this question
+              drops from <span className="text-emerald-300 font-semibold">Strong</span> to{' '}
+              <span className="text-amber-300 font-semibold">Proficient</span>. It will also
+              show on your results page.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setStage('idle')}
+                className="px-4 py-2 rounded-lg text-[13px] font-semibold text-white/70 hover:text-[#f5f3ee] border border-white/15 hover:border-white/30 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmReveal}
+                className="px-4 py-2 rounded-lg text-[13px] font-display font-semibold bg-amber-500/20 border border-amber-500/40 text-amber-200 hover:bg-amber-500/30 transition-colors"
+              >
+                Show hint
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {stage === 'shown' && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Formula hint">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60"
+            aria-label="Close"
+            onClick={() => { /* dismiss only — already marked used */ }}
+          />
+          <div className="relative bg-[#111111] border border-white/15 rounded-2xl p-6 max-w-md w-[88%] mx-4 shadow-2xl animate-fade-in">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">Formula</p>
+              <button
+                type="button"
+                onClick={() => setStage('idle')}
+                className="text-white/50 hover:text-white text-[18px] leading-none"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-[15px] font-mono text-[#f5f3ee] leading-relaxed whitespace-pre-wrap">{hint}</p>
+            {footnote && (
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1.5">Glossary</p>
+                <p className="text-[12px] text-white/65 leading-relaxed whitespace-pre-wrap">{footnote}</p>
+              </div>
+            )}
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setStage('idle')}
+                className="bg-green hover:bg-green-light text-white font-display font-semibold text-[13px] px-5 py-2 rounded-lg transition-colors"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -55,11 +180,13 @@ function NumericRangeView({
   spec,
   carryForward,
   onSubmit,
+  onHintUsed,
 }: {
   node: ScenarioNode
   spec: Extract<QuantSpec, { variant: 'numeric-range' }>
   carryForward: Record<string, { value: number; from: string }>
   onSubmit: Props['onSubmit']
+  onHintUsed?: (nodeId: string) => void
 }) {
   // formula variable state (when present)
   const [vars, setVars] = useState<Record<string, number | ''>>(() =>
@@ -118,7 +245,12 @@ function NumericRangeView({
 
   return (
     <div className="space-y-5">
-      <QuestionHeader prompt={spec.prompt} context={spec.context} field={spec.field} />
+      <QuestionHeader
+        prompt={spec.prompt}
+        context={spec.context}
+        field={spec.field}
+        hint={spec.hint ? <HintControls hint={spec.hint} footnote={spec.hintFootnote} nodeId={node.nodeId} onHintUsed={onHintUsed} /> : null}
+      />
 
       {spec.formula ? (
         <FormulaPanel
@@ -154,21 +286,26 @@ function NumericRangeView({
         />
       )}
 
-      <div className="flex items-center justify-end">
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={!ready || submitted !== null}
-          className={`
-            font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
-            ${ready && !submitted
-              ? 'bg-green hover:bg-green-light text-white cursor-pointer'
-              : 'bg-white/10 text-slate-light cursor-not-allowed'}
-          `}
-        >
-          {submitted ? 'Submitted' : 'Submit answer'}
-        </button>
-      </div>
+      {/* Hide the Submit button entirely after submission — SimulationPage
+          renders a Continue button below the band feedback, and showing a
+          disabled "Submitted" alongside it reads as two competing CTAs. */}
+      {!submitted && (
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!ready}
+            className={`
+              font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
+              ${ready
+                ? 'bg-green hover:bg-green-light text-white cursor-pointer'
+                : 'bg-white/10 text-slate-light cursor-not-allowed'}
+            `}
+          >
+            Submit answer
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -180,11 +317,13 @@ function StructuredView({
   spec,
   carryForward,
   onSubmit,
+  onHintUsed,
 }: {
   node: ScenarioNode
   spec: Extract<QuantSpec, { variant: 'structured-quant' }>
   carryForward: Record<string, { value: number; from: string }>
   onSubmit: Props['onSubmit']
+  onHintUsed?: (nodeId: string) => void
 }) {
   const [vars, setVars] = useState<Record<string, number | ''>>(() =>
     seedVariables(spec.formula?.variables ?? [], carryForward),
@@ -219,7 +358,11 @@ function StructuredView({
 
   return (
     <div className="space-y-5">
-      <QuestionHeader prompt={spec.prompt} context={spec.context} />
+      <QuestionHeader
+        prompt={spec.prompt}
+        context={spec.context}
+        hint={spec.hint ? <HintControls hint={spec.hint} footnote={spec.hintFootnote} nodeId={node.nodeId} onHintUsed={onHintUsed} /> : null}
+      />
 
       {spec.formula && (
         <FormulaPanel
@@ -258,21 +401,23 @@ function StructuredView({
         </div>
       )}
 
-      <div className="flex items-center justify-end">
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={!ready || submitted !== null}
-          className={`
-            font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
-            ${ready && !submitted
-              ? 'bg-green hover:bg-green-light text-white cursor-pointer'
-              : 'bg-white/10 text-slate-light cursor-not-allowed'}
-          `}
-        >
-          {submitted ? 'Submitted' : 'Submit answers'}
-        </button>
-      </div>
+      {!submitted && (
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!ready}
+            className={`
+              font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
+              ${ready
+                ? 'bg-green hover:bg-green-light text-white cursor-pointer'
+                : 'bg-white/10 text-slate-light cursor-not-allowed'}
+            `}
+          >
+            Submit answers
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -283,16 +428,21 @@ function QuestionHeader({
   prompt,
   context,
   field,
+  hint,
 }: {
   prompt: string
   context?: string
   field?: QuantFieldSpec
+  hint?: React.ReactNode
 }) {
   return (
     <div className="bg-[#111111] border border-white/10 rounded-2xl p-5">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
-        Quant
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
+          Quant
+        </p>
+        {hint}
+      </div>
       <p className="mt-1 text-[16px] font-display font-semibold text-[#f5f3ee] leading-snug">
         {prompt}
       </p>

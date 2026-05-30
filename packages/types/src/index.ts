@@ -36,6 +36,8 @@ export interface QuantNodeResultSummary {
   results: QuantFieldResultRef[]
   // Snapshot of formula variables the candidate filled in (post overrides).
   variables?: Record<string, number>
+  // True when the candidate revealed the author-supplied hint before submitting.
+  hintUsed?: boolean
 }
 
 // Local alias — re-declared as a separate name to avoid a forward reference
@@ -463,6 +465,15 @@ interface QuantNodeBase {
   prompt: string                       // the question, e.g. "How many rural families receive benefits?"
   context?: string                     // optional extra framing (1-2 sentences)
   formula?: QuantFormula               // when present, variables drive the computed answer
+  // Optional hint text — author-controlled. Reveals the formula / approach
+  // when the candidate clicks "Need a hint?". Using the hint docks the
+  // submission to at most "proficient" so candidates who needed help don't
+  // earn a Strong band rating for the field.
+  hint?: string
+  // Optional footnote rendered beneath the formula in the hint modal — used
+  // to expand jargon (TAM, SAM, SOM, HHI, etc.) so candidates aren't expected
+  // to remember every acronym mid-case.
+  hintFootnote?: string
 }
 
 export interface NumericRangeQuant extends QuantNodeBase {

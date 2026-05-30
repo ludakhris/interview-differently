@@ -19,7 +19,17 @@ export function QuantComparePanel({ result }: Props) {
   return (
     <div className="bg-[#0d0d0d] border border-white/10 rounded-xl overflow-hidden">
       <div className="px-4 py-3 border-b border-white/8 bg-white/3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Quant submission</p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Quant submission</p>
+          {result.hintUsed && (
+            <span
+              className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border border-amber-500/35 bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded-full"
+              title="Candidate revealed the hint; signal capped at Proficient."
+            >
+              💡 Hint used
+            </span>
+          )}
+        </div>
         <p className="mt-0.5 text-[13px] font-medium text-[#f5f3ee] leading-snug">{result.prompt}</p>
       </div>
       <div className="divide-y divide-white/8">

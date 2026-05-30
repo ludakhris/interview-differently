@@ -273,6 +273,15 @@ nodes:
         holding fellow count flat at 4,200/cohort. Estimate cumulative
         fellows graduating in a strong first job over years 1-5 — incremental
         vs the 67% baseline.
+      hint: |
+        incremental_placements = cohort × years × lift_rate
+        cost_per_placement     = budget ÷ incremental_placements
+      hintFootnote: |
+        cohort = fellows starting per year (4,200)
+        years = funding horizon (5)
+        lift_rate = improvement in placement rate, as a fraction (10 pts → 0.10)
+        budget = total growth funding ($20M)
+        placement = a fellow landing in a strong first job
       formula:
         display: 'cohort × 5 cohorts × placement lift (pts) ÷ 100'
         expression: '{cohort} * 5 * {lift} / 100'

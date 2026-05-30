@@ -241,6 +241,12 @@ nodes:
         Assume ValuMart captures 8% of low-income discount spend in its
         catchment, the city has 92k low-income households, and discount
         spend per household is $3,300/year.
+      hint: 'revenue = households × spend_per_household × capture_rate'
+      hintFootnote: |
+        households = number of target households in the catchment (low-income)
+        spend_per_household = average annual discount spend per household
+        capture_rate = share of local discount spend this store captures (8%)
+        catchment = the geographic area a store realistically serves
       formula:
         display: low-income HH × spend / HH × capture rate
         expression: '{hh} * {spend} * {capture}'

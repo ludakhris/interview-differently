@@ -326,6 +326,7 @@ nodes:
         Aurelia National Statistics Bureau reports 14M rural people on state
         benefits, with an average rural household of 4.0 people. Estimate the
         number of families receiving benefits.
+      hint: 'families = population ÷ household_size'
       field:
         id: families
         label: Rural families on benefits
@@ -355,6 +356,7 @@ nodes:
         Each collection trip costs a family ~50 AUR (bus + lost wages + risk).
         Benefits disburse monthly, so families travel once per month. Build
         the savings figure from your earlier population estimate.
+      hint: 'savings = families × cost_per_trip × trips_per_year'
       formula:
         display: families × monthly cost × 12 months
         expression: '{families} * {cost} * 12'

@@ -257,6 +257,12 @@ nodes:
       context: >
         Delivery fleet cost is currently 180 bps of $1.4B revenue. Assume the
         25% reduction applies to the entire delivery cost base.
+      hint: 'savings = revenue × cost_share × reduction_pct'
+      hintFootnote: |
+        revenue = total annual revenue
+        cost_share = delivery cost as a fraction of revenue (180 bps = 1.8%)
+        reduction_pct = % of delivery cost the 3PL cuts (25%)
+        bps = basis points (1 bp = 0.01%)
       formula:
         display: revenue × delivery cost (bps) × reduction
         expression: '{revenue} * {bps} / 10000 * {reduction}'

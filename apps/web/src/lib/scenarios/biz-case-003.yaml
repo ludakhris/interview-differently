@@ -248,6 +248,12 @@ nodes:
         Use the current shares from the substitute prices table. HHI is the
         sum of the squares of each player's percentage share. DOJ
         unconcentrated < 1500, moderate 1500-2500, concentrated > 2500.
+      hint: 'HHI = sum of (share × share) for each competitor'
+      hintFootnote: |
+        HHI = Herfindahl-Hirschman Index, a measure of market concentration
+        used by antitrust regulators
+        share = each competitor's market share in percentage points (e.g. 35)
+        DOJ thresholds: < 1500 unconcentrated, 1500-2500 moderate, > 2500 concentrated
       formula:
         display: 'sum of share² across all competitors'
         expression: '{geno}*{geno} + {teva}*{teva} + {mylan}*{mylan} + {sandoz}*{sandoz} + {apotex}*{apotex}'

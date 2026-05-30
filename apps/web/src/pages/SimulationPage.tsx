@@ -136,6 +136,7 @@ function SimulationContent({
     submitQuant,
     advanceQuant,
     buildCarryForward,
+    markHintUsed,
     quantAnswers,
   } = useSimulation(scenario)
 
@@ -323,6 +324,7 @@ function SimulationContent({
                 node={currentNode}
                 carryForward={buildCarryForward(currentNode.nodeId)}
                 onSubmit={submitQuant}
+                onHintUsed={markHintUsed}
               />
               {quantAnswers[currentNode.nodeId] && currentNode.nextNodeId && (
                 <div className="mt-6 flex justify-end">
