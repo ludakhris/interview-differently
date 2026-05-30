@@ -2,6 +2,7 @@ id: biz-case-004
 title: 'Regional Expansion: ValuMart Discount Stores'
 track: business case
 subcategory: market-entry
+icon: Store
 estimatedMinutes: 30
 
 briefing:
@@ -17,7 +18,7 @@ briefing:
   timeInRole: 10 months
 
 display:
-  contextStyle: context-cards
+  contextStyle: tile-grid
   sidebar:
     - title: Your Role
       style: text
@@ -138,10 +139,10 @@ nodes:
       Before reading the city table — how do you structure the ranking
       criteria?
     contextPanels:
-      - { label: Pre-screened, value: '6', type: info, unit: cities, caption: real-estate has whittled the list }
-      - { label: Pick, value: '3', type: info, unit: launch in year 1 }
-      - { label: Capital / city, value: '$8', type: info, unit: 'M', caption: includes build-out + 6-month opex }
-      - { label: Decision, value: '2', type: alert, unit: weeks, tone: danger, caption: partner meeting Friday after next }
+      - { label: Pre-screened, value: '6', type: info, unit: cities }
+      - { label: Pick first, value: '3', type: info, unit: cities, tone: accent }
+      - { label: Capital / city, value: '$8', type: info, unit: M }
+      - { label: Decision in, value: '2', type: alert, unit: weeks, tone: danger }
     choices:
       - id: A
         text: Rank cities on a demand × readiness 2x2 — demand from income/spend, readiness from rent + competitor density.
@@ -167,14 +168,24 @@ nodes:
       matrix and pulled fundamentals. Read both and pick the three.
     next: biz-case-004-n3
   - id: biz-case-004-n2b
-    type: feedback
-    narrative: population-only
+    type: transition
+    narrative: >
+      Picking on population alone ignores rent + competitor density. Your EM
+      redirects: use a demand × readiness 2x2 so you don't burn capex on
+      crowded markets.
+    next: biz-case-004-n3
   - id: biz-case-004-n2c
-    type: feedback
-    narrative: survey-too-slow
+    type: transition
+    narrative: >
+      Six-city surveys take three months. Your EM redirects: use the
+      pre-screen fundamentals + the 2x2 already on file, decide this week.
+    next: biz-case-004-n3
   - id: biz-case-004-n2d
-    type: feedback
-    narrative: regression-overfit
+    type: transition
+    narrative: >
+      Regression on Midwest data won't generalise cleanly to the southeast.
+      Your EM redirects: the demand × readiness 2x2 is the defensible cut.
+    next: biz-case-004-n3
 
   - id: biz-case-004-n3
     type: decision
@@ -200,14 +211,24 @@ nodes:
         signals: { Data Interpretation: developing }
 
   - id: biz-case-004-n3-fb-b
-    type: feedback
-    narrative: ignored-readiness
+    type: transition
+    narrative: >
+      Picking on demand alone puts Lakeland in the launch set, but it's
+      crowded + expensive. Your EM redirects: stick with the top-right
+      quadrant — strong demand AND easy launch.
+    next: biz-case-004-n4
   - id: biz-case-004-n3-fb-c
-    type: feedback
-    narrative: cost-only
+    type: transition
+    narrative: >
+      Cheapest rent picks Macon, but Macon has the weakest demand. Your EM
+      redirects: pick the top-right quadrant — best blended demand × readiness.
+    next: biz-case-004-n4
   - id: biz-case-004-n3-fb-d
-    type: feedback
-    narrative: diversify-too-early
+    type: transition
+    narrative: >
+      Diversifying brand portability before proving the model is risky. Your
+      EM redirects: cluster the launch in the top-right quadrant.
+    next: biz-case-004-n4
 
   - id: biz-case-004-n4
     type: quant

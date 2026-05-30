@@ -2,6 +2,7 @@ id: biz-case-005
 title: 'Market Sizing: Residential EV Chargers (US, 5-year)'
 track: business case
 subcategory: market-sizing
+icon: Plug
 estimatedMinutes: 25
 
 briefing:
@@ -17,7 +18,7 @@ briefing:
   timeInRole: 7 months
 
 display:
-  contextStyle: context-cards
+  contextStyle: hero-list
   sidebar:
     - title: Your Role
       style: text
@@ -127,10 +128,16 @@ nodes:
     narrative: >
       How do you structure the TAM/SAM/SOM model before touching the data?
     contextPanels:
-      - { label: US passenger vehicles, value: '145', type: info, unit: 'M', caption: registered today }
+      - label: US passenger vehicle parc
+        value: '145'
+        unit: 'M'
+        type: info
+        hero: true
+        caption: BEVs go from 8% of new sales today to ~40% by Y5. Home chargers are the picks-and-shovels play.
       - { label: BEV share Y0, value: '8', type: info, unit: '%' }
-      - { label: BEV share Y5, value: '40', type: info, unit: '%', tone: accent, caption: consensus forecast }
-      - { label: Single-fam HH, value: '64', type: info, unit: '%', caption: SAM filter — structurally chargeable }
+      - { label: BEV share Y5, value: '40', type: info, unit: '%', tone: accent }
+      - { label: Home charger attach, value: '70', type: info, unit: '%' }
+      - { label: Single-fam HH, value: '64', type: info, unit: '%' }
     choices:
       - id: A
         text: Bottom-up — new BEV homes per year × home-charger attach rate gives TAM in units; multiply by structural filter for SAM; pick a defensible share for SOM.
@@ -156,14 +163,24 @@ nodes:
       SOM at an investable share.
     next: biz-case-005-n3
   - id: biz-case-005-n2b
-    type: feedback
-    narrative: top-down-only
+    type: transition
+    narrative: >
+      Top-down works, but you'd compound assumptions on top of household
+      counts. The fund redirects: go bottom-up from new-BEV-homes — fewer
+      degrees of freedom, cleaner sensitivity.
+    next: biz-case-005-n3
   - id: biz-case-005-n2c
-    type: feedback
-    narrative: secondary-only
+    type: transition
+    narrative: >
+      No web research, remember? The fund redirects: derive TAM / SAM / SOM
+      from the exhibits and reasoned assumptions.
+    next: biz-case-005-n3
   - id: biz-case-005-n2d
-    type: feedback
-    narrative: regression-no-data
+    type: transition
+    narrative: >
+      You don't have historical install data — there's no series to regress
+      on. The fund redirects: bottom-up build from new BEV homes.
+    next: biz-case-005-n3
 
   - id: biz-case-005-n3
     type: quant

@@ -2,6 +2,7 @@ id: biz-case-006
 title: 'Growth Capstone: BridgeFutures First-Gen Fellowship'
 track: business case
 subcategory: growth-strategy
+icon: GraduationCap
 estimatedMinutes: 40
 
 briefing:
@@ -20,7 +21,7 @@ briefing:
   timeInRole: 6 months
 
 display:
-  contextStyle: context-cards
+  contextStyle: briefing-sections
   sidebar:
     - title: Your Role
       style: text
@@ -163,10 +164,13 @@ nodes:
     narrative: >
       Before reading the data — how do you score the four growth paths?
     contextPanels:
-      - { label: Cohort, value: '4,200', type: info, unit: fellows, caption: across 6 cities }
-      - { label: Placement, value: '67', type: info, unit: '%', tone: accent, caption: strong first job, network-wide }
-      - { label: Cost / fellow, value: '$7.8', type: info, unit: 'k', caption: budget-weighted avg }
-      - { label: Growth $, value: '$20', type: alert, unit: 'M', tone: danger, caption: unrestricted, one-shot }
+      - { label: Network cities, value: '6', type: info, group: Mission }
+      - { label: Annual budget, value: '$32', unit: 'M', type: info, group: Mission }
+      - { label: Fellows / cohort, value: '4,200', type: info, group: Cohort }
+      - { label: Strong placement, value: '67', unit: '%', type: info, tone: accent, group: Cohort }
+      - { label: Cost / fellow, value: '$7.8', unit: k, type: info, group: Cohort }
+      - { label: Growth $, value: '$20', unit: 'M', type: alert, tone: danger, group: Constraint }
+      - { label: Board read-out, value: '3', unit: weeks, type: alert, tone: danger, group: Constraint }
     choices:
       - id: A
         text: Score the four paths on (reach × depth × mission fit), then size the top two before deciding.
@@ -193,14 +197,25 @@ nodes:
       size.
     next: biz-case-006-n3
   - id: biz-case-006-n2b
-    type: feedback
-    narrative: reach-only
+    type: transition
+    narrative: >
+      Reach without depth dilutes the mission — half-served fellows underperform
+      non-fellows. The board chair redirects: score paths on reach × depth ×
+      mission fit before picking.
+    next: biz-case-006-n3
   - id: biz-case-006-n2c
-    type: feedback
-    narrative: survey-fellows
+    type: transition
+    narrative: >
+      Fellow surveys take weeks and you'll get four paths back. The board chair
+      redirects: score the four paths against reach × depth × mission fit
+      yourself, then ground-truth the top two with cohort outcomes.
+    next: biz-case-006-n3
   - id: biz-case-006-n2d
-    type: feedback
-    narrative: defer-to-ceo
+    type: transition
+    narrative: >
+      The CEO got you on this engagement to sharpen the choice, not rubber-stamp
+      it. The board chair redirects: build the scoring frame, then we'll choose.
+    next: biz-case-006-n3
 
   - id: biz-case-006-n3
     type: decision
@@ -225,14 +240,25 @@ nodes:
         signals: { Data Interpretation: developing }
 
   - id: biz-case-006-n3-fb-b
-    type: feedback
-    narrative: reach-not-depth
+    type: transition
+    narrative: >
+      Licensing + brand both maximise reach, but neither moves placement rate.
+      The board chair redirects: deepen-current-cities is the highest-depth path
+      — size that against expansion.
+    next: biz-case-006-n4
   - id: biz-case-006-n3-fb-c
-    type: feedback
-    narrative: federal-too-slow
+    type: transition
+    narrative: >
+      Federal grants are 18-24 months of pursuit on the same depth path. The
+      board chair redirects: size deepen-current-cities directly, fund it now.
+    next: biz-case-006-n4
   - id: biz-case-006-n3-fb-d
-    type: feedback
-    narrative: licensing-shallow
+    type: transition
+    narrative: >
+      Licensing reaches more students per dollar but the depth gap is the
+      problem. The board chair redirects: size the deepen-current-cities path
+      — that's where placement rate actually moves.
+    next: biz-case-006-n4
 
   - id: biz-case-006-n4
     type: quant

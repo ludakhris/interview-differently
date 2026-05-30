@@ -18,11 +18,11 @@ export function ContextCards({ panels }: { panels: ContextPanel[] }) {
         return (
           <div key={i} className={`${panelBase} ${toneBorder[tone]}`}>
             <div className="flex items-baseline justify-between gap-2">
-              <p className={`text-[26px] font-display font-extrabold leading-none ${toneText[tone]}`}>
+              <p className={`text-[28px] font-display font-extrabold leading-none ${toneText[tone]}`}>
                 {p.value}
               </p>
               {p.unit && (
-                <span className="text-[11px] text-white/50 whitespace-nowrap">
+                <span className="text-[12px] text-white/55 whitespace-nowrap">
                   {p.unit}
                 </span>
               )}
@@ -42,7 +42,7 @@ export function ContextCards({ panels }: { panels: ContextPanel[] }) {
             )}
 
             {p.caption && (
-              <p className="mt-2 text-[11px] leading-snug text-white/45">
+              <p className="mt-2 text-[13px] leading-snug text-white/55">
                 {p.caption}
               </p>
             )}

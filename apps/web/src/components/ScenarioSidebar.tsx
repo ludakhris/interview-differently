@@ -26,15 +26,15 @@ const accentLine: Record<ContextDisplayStyle, string> = {
 
 function TextSection({ items }: { items: SidebarItem[] }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {items.map((item, i) => (
         <div key={i} className="flex justify-between gap-3">
           {item.label && (
-            <span className="text-[11px] text-white/35 flex-shrink-0 pt-0.5">{item.label}</span>
+            <span className="text-[12px] text-white/40 flex-shrink-0 pt-0.5">{item.label}</span>
           )}
           <span
-            className={`text-[12px] leading-snug ${
-              item.emphasis ? emphasisColor[item.emphasis] : 'text-[#f5f3ee]/80'
+            className={`text-[13px] leading-snug ${
+              item.emphasis ? emphasisColor[item.emphasis] : 'text-[#f5f3ee]/85'
             } ${item.label ? 'text-right' : ''}`}
           >
             {item.value}
@@ -51,12 +51,12 @@ function ListSection({ items }: { items: SidebarItem[] }) {
       {items.map((item, i) => (
         <div
           key={i}
-          className="flex justify-between items-center py-1.5 border-b border-white/5 last:border-0"
+          className="flex justify-between items-center py-2 border-b border-white/5 last:border-0"
         >
-          <span className="text-[11px] text-white/40 pr-2">{item.label}</span>
+          <span className="text-[12px] text-white/45 pr-2">{item.label}</span>
           <span
-            className={`text-[11px] font-semibold text-right ${
-              item.emphasis ? emphasisColor[item.emphasis] : 'text-[#f5f3ee]/70'
+            className={`text-[13px] font-semibold text-right ${
+              item.emphasis ? emphasisColor[item.emphasis] : 'text-[#f5f3ee]/80'
             }`}
           >
             {item.value}
@@ -100,7 +100,7 @@ function SidebarSectionBlock({
 }) {
   return (
     <div>
-      <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-white/25 mb-2">
+      <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/40 mb-2">
         {section.title}
       </div>
       {section.style === 'list' && <ListSection items={section.items} />}
@@ -123,7 +123,7 @@ export function ScenarioSidebar({ sections, contextStyle, accentColor }: Props) 
 
       <div className="px-5 py-5 space-y-5 overflow-y-auto flex-1">
         <p
-          className="text-[9px] font-bold uppercase tracking-[0.18em] mb-1"
+          className="text-[11px] font-bold uppercase tracking-[0.18em] mb-1"
           style={{ color: accentColor ?? '#b0bec5' }}
         >
           Your Context

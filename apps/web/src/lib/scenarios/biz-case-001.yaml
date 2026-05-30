@@ -2,6 +2,7 @@ id: biz-case-001
 title: 'Rural Financial Inclusion: Aurelia Retail Network'
 track: business case
 subcategory: growth-strategy
+icon: Landmark
 estimatedMinutes: 35
 
 briefing:
@@ -77,13 +78,13 @@ phases:
   - id: exhibits
     label: Read Exhibits
     description: Interpret regional survey data.
-    nodeIds: []
+    nodeIds: [biz-case-001-n5]
     exhibitIds: [regional-uptake-survey]
     rubricDimensions: [Data Interpretation]
   - id: recommendation
     label: Recommendation
     description: Defend a phased rollout with risks and next steps.
-    nodeIds: []
+    nodeIds: [biz-case-001-n6]
     exhibitIds: [rollout-matrix]
     rubricDimensions: [Synthesis & Recommendation]
 
@@ -286,18 +287,31 @@ nodes:
       then we'll build the savings number."
     next: biz-case-001-n3
 
-  # Choices B/C/D end the case in their respective feedback nodes.
+  # Choices B/C/D get a short corrective redirect from the EM and rejoin
+  # the case at the Sizing phase — better learning than ending after one move.
   - id: biz-case-001-n2b
-    type: feedback
-    narrative: jumped-to-math
+    type: transition
+    narrative: >
+      Sizing first leaves you defending numbers without a frame. Your EM steers
+      you back: structure the three buckets first, then we'll attack the savings
+      math together.
+    next: biz-case-001-n3
 
   - id: biz-case-001-n2c
-    type: feedback
-    narrative: risk-only
+    type: transition
+    narrative: >
+      Risk-first is a real bucket, but it isn't the whole frame. Your EM nods
+      at the instinct and redirects you to the full three-bucket structure,
+      then on to sizing.
+    next: biz-case-001-n3
 
   - id: biz-case-001-n2d
-    type: feedback
-    narrative: demand-first
+    type: transition
+    narrative: >
+      Demand surveys take weeks we don't have. Your EM agrees demand matters,
+      but pushes you to start with the three-bucket frame and rely on the
+      existing Western Delta pilot data instead.
+    next: biz-case-001-n3
 
   # ── Sizing phase ────────────────────────────────────────────────────────────
   # Step 1: estimate families on benefits from rural population on benefits.
@@ -372,6 +386,93 @@ nodes:
           annual savings. Accepted band covers ±15% on the input assumptions.
     next: biz-case-001-n5
 
+  # ── Read Exhibits phase ─────────────────────────────────────────────────────
+  # n5: candidate reads the Western Delta uptake survey and the regional
+  # population table together. The right answer is the substitution +
+  # affordability read; B/C/D tempt cheaper traps.
   - id: biz-case-001-n5
+    type: decision
+    narrative: >
+      The Western Delta pilot uptake chart shows 53% adoption by month 6 against
+      a 25% baseline target. The regional population table tells you Western Delta
+      has the *highest* benefit share (56%) in the country. Which read is the
+      strongest signal for national rollout?
+    choices:
+      - id: A
+        text: 'Western Delta proves the model works where demand is genuine: high benefit share + an SMS reminder is enough to double baseline uptake. Translate the playbook to similar regions before scaling everywhere.'
+        next: biz-case-001-n6
+        signals: { Data Interpretation: strong, Synthesis & Recommendation: strong }
+      - id: B
+        text: 'Western Delta is special — coastal, denser, more literate. Treat 53% uptake as a ceiling, not a base case, and assume half of that nationally.'
+        next: biz-case-001-n5-fb-b
+        signals: { Data Interpretation: proficient }
+      - id: C
+        text: '53% by month 6 means the curve still hasn''t plateaued — launch nationally now to capture the same trajectory everywhere.'
+        next: biz-case-001-n5-fb-c
+        signals: { Data Interpretation: developing, Synthesis & Recommendation: developing }
+      - id: D
+        text: 'Uptake is uptake; what matters is cost-to-serve. We need the unit economics before we read demand.'
+        next: biz-case-001-n5-fb-d
+        signals: { Data Interpretation: developing }
+
+  - id: biz-case-001-n5-fb-b
+    type: transition
+    narrative: >
+      The "ceiling" framing is too conservative — Western Delta is the *floor*
+      for high-benefit-share regions, not the ceiling. Your EM redirects: take
+      the lessons forward into the recommendation.
+    next: biz-case-001-n6
+  - id: biz-case-001-n5-fb-c
+    type: transition
+    narrative: >
+      53% uptake by month 6 isn't yet a national base case — the other regions
+      have different demographics. Your EM redirects: factor that into the
+      recommendation.
+    next: biz-case-001-n6
+  - id: biz-case-001-n5-fb-d
+    type: transition
+    narrative: >
+      Unit economics matter, but you already sized the savings ($2.1B/yr) —
+      that's the cost-to-serve answer at scale. Your EM redirects you to the
+      recommendation.
+    next: biz-case-001-n6
+
+  # ── Recommendation phase ───────────────────────────────────────────────────
+  - id: biz-case-001-n6
+    type: decision
+    narrative: >
+      You have the structure, the savings sized at ~2.1B AUR/year, the pilot
+      uptake at 53%, and the rollout matrix sorted by demand × readiness. Three
+      weeks to the read-out. What do you recommend to the Northstar Foundation?
+    choices:
+      - id: A
+        text: 'Phased rollout, starting with Western Delta + Central Plains in Year 1 (proven uptake, mature network). Use Aurelia Retail as the agent network; pre-build training pipeline for Northern Highlands before Year 2 expansion.'
+        next: biz-case-001-end-a
+        signals:
+          Synthesis & Recommendation: strong
+          Framework Structuring: strong
+      - id: B
+        text: 'National launch across all five regions simultaneously — Foundation has the capital and the data supports demand everywhere.'
+        next: biz-case-001-end-b
+        signals: { Synthesis & Recommendation: developing }
+      - id: C
+        text: 'Pilot one more region before any rollout — Western Delta alone is not enough proof for a national programme.'
+        next: biz-case-001-end-c
+        signals: { Synthesis & Recommendation: proficient }
+      - id: D
+        text: 'Recommend the Foundation NOT proceed. Aurelia Retail is government-owned; the political risk is too high.'
+        next: biz-case-001-end-d
+        signals: { Synthesis & Recommendation: developing }
+
+  - id: biz-case-001-end-a
     type: feedback
-    narrative: sizing-complete
+    narrative: strong-phased-rollout
+  - id: biz-case-001-end-b
+    type: feedback
+    narrative: national-too-fast
+  - id: biz-case-001-end-c
+    type: feedback
+    narrative: pilot-again
+  - id: biz-case-001-end-d
+    type: feedback
+    narrative: walk-away

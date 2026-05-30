@@ -153,39 +153,52 @@ export function DashboardPage() {
                     Pre-sorted by SUBCATEGORY_ORDER in groupScenarios so similar
                     cards still cluster visually without per-section headers. */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {trackScenarios.map((scenario) => (
-                    <div
-                      key={scenario.scenarioId}
-                      className="bg-[#111111] rounded-2xl border border-white/10 hover:border-white/20 transition-all hover:-translate-y-0.5 overflow-hidden cursor-pointer group"
-                      onClick={() => navigate(`/scenario/${scenario.scenarioId}/briefing`)}
-                    >
-                      <div className="h-1.5 w-full" style={{ backgroundColor: meta.color }} />
-                      <div className="p-5">
-                        {scenario.subcategory && (
-                          <p
-                            className="text-[10px] font-bold uppercase tracking-[0.18em] mb-2"
-                            style={{ color: meta.color }}
-                          >
-                            {subcategoryLabel(scenario.subcategory)}
-                          </p>
-                        )}
-                        <h4 className="font-display font-bold text-[15px] text-[#f5f3ee] leading-snug mb-3">
-                          {scenario.title}
-                        </h4>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] text-slate-light">
-                            ~{scenario.estimatedMinutes} min
-                          </span>
-                          <span
-                            className="text-[11px] font-semibold group-hover:translate-x-1 transition-transform inline-block"
-                            style={{ color: meta.color }}
-                          >
-                            Start →
-                          </span>
+                  {trackScenarios.map((scenario) => {
+                    const iconName = scenario.icon ?? meta.icon
+                    return (
+                      <div
+                        key={scenario.scenarioId}
+                        className="bg-[#111111] rounded-2xl border border-white/10 hover:border-white/20 transition-all hover:-translate-y-0.5 overflow-hidden cursor-pointer group"
+                        onClick={() => navigate(`/scenario/${scenario.scenarioId}/briefing`)}
+                      >
+                        <div className="h-1.5 w-full" style={{ backgroundColor: meta.color }} />
+                        <div className="p-5">
+                          <div className="flex items-start gap-3 mb-2">
+                            <div
+                              className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
+                              style={{ backgroundColor: `${meta.color}22`, color: meta.color }}
+                            >
+                              <TrackIcon name={iconName} size={20} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              {scenario.subcategory && (
+                                <p
+                                  className="text-[10px] font-bold uppercase tracking-[0.18em]"
+                                  style={{ color: meta.color }}
+                                >
+                                  {subcategoryLabel(scenario.subcategory)}
+                                </p>
+                              )}
+                              <h4 className="mt-0.5 font-display font-bold text-[15px] text-[#f5f3ee] leading-snug">
+                                {scenario.title}
+                              </h4>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] text-slate-light">
+                              ~{scenario.estimatedMinutes} min
+                            </span>
+                            <span
+                              className="text-[11px] font-semibold group-hover:translate-x-1 transition-transform inline-block"
+                              style={{ color: meta.color }}
+                            >
+                              Start →
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </section>
             )

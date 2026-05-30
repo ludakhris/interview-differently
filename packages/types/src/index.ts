@@ -505,6 +505,10 @@ export interface Scenario {
   // Optional sub-grouping within a track. Currently only used when track === 'business case',
   // where it must be one of BUSINESS_CASE_SUBCATEGORIES. Reserved for other tracks to use later.
   subcategory?: BusinessCaseSubcategory | string
+  // Optional per-scenario lucide icon name (e.g. 'Truck', 'Pill', 'Plug').
+  // Used by the dashboard card to give each scenario a visual identity beyond
+  // the shared track icon. Falls back to the track icon when absent.
+  icon?: string
   estimatedMinutes: number
   mode?: 'text' | 'immersive'          // defaults to 'text' when absent
   interviewer?: ScenarioInterviewer    // required when mode === 'immersive' (locks persona for pre-rendering)

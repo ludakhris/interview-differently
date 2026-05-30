@@ -51,9 +51,12 @@ function PhaseChip({ view, accentColor }: { view: PhaseView; accentColor: string
       <span
         className={baseClasses}
         style={{
-          backgroundColor: `${accentColor}22`,
+          // Brighter pill — solid tinted fill + accent ring instead of a
+          // washed-out 13% alpha that disappears on dark backgrounds.
+          backgroundColor: `${accentColor}33`,
           color: '#f5f3ee',
-          border: `1px solid ${accentColor}66`,
+          border: `1px solid ${accentColor}`,
+          boxShadow: `0 0 0 3px ${accentColor}22`,
         }}
         aria-current="step"
         title={phase.description}
@@ -72,10 +75,10 @@ function PhaseChip({ view, accentColor }: { view: PhaseView; accentColor: string
   if (status === 'complete') {
     return (
       <span
-        className={`${baseClasses} bg-white/5 text-slate-mid border border-white/10`}
+        className={`${baseClasses} bg-green/10 text-[#f5f3ee] border border-green/40`}
         title={phase.description}
       >
-        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green/70 text-white text-[10px] font-bold">
+        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green text-white text-[10px] font-bold">
           ✓
         </span>
         <span className="whitespace-nowrap">{phase.label}</span>
@@ -83,13 +86,14 @@ function PhaseChip({ view, accentColor }: { view: PhaseView; accentColor: string
     )
   }
 
-  // locked
+  // locked — slightly more presence so the row reads as a real progression,
+  // not a faint placeholder.
   return (
     <span
-      className={`${baseClasses} bg-transparent text-white/30 border border-white/8`}
+      className={`${baseClasses} bg-white/3 text-white/55 border border-white/12`}
       title={phase.description}
     >
-      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/5 text-white/40 text-[10px] font-bold">
+      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/8 text-white/50 text-[10px] font-bold">
         {index + 1}
       </span>
       <span className="whitespace-nowrap">{phase.label}</span>

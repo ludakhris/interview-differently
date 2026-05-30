@@ -31,16 +31,16 @@ export function HeroList({ panels, accentColor = '#0f5b89' }: Props) {
         style={{ backgroundImage: `linear-gradient(135deg, ${accentColor}22 0%, #0d0d0d 70%)` }}
       >
         <p className={eyebrow}>{hero.label}</p>
-        <p className={`mt-2 text-[44px] font-display font-extrabold leading-none ${toneText[heroTone]}`}>
+        <p className={`mt-2 text-[36px] font-display font-extrabold leading-none ${toneText[heroTone]}`}>
           {hero.value}
           {hero.unit && (
-            <span className="ml-2 text-[18px] font-normal text-white/60 align-baseline">
+            <span className="ml-2 text-[16px] font-normal text-white/65 align-baseline">
               {hero.unit}
             </span>
           )}
         </p>
         {hero.caption && (
-          <p className="mt-3 text-[13px] text-white/70 leading-relaxed max-w-md">
+          <p className="mt-3 text-[15px] text-white/75 leading-relaxed max-w-md">
             {hero.caption}
           </p>
         )}
@@ -54,12 +54,12 @@ export function HeroList({ panels, accentColor = '#0f5b89' }: Props) {
             return (
               <div
                 key={i}
-                className="flex items-baseline justify-between border-b border-white/8 pb-2 last:border-0 last:pb-0"
+                className="flex items-baseline justify-between border-b border-white/8 pb-2.5 last:border-0 last:pb-0"
               >
-                <dt className="text-[13px] text-white/60">{p.label}</dt>
-                <dd className={`text-[14px] font-semibold ${toneText[tone]}`}>
+                <dt className="text-[14px] text-white/65">{p.label}</dt>
+                <dd className={`text-[15px] font-semibold ${toneText[tone]}`}>
                   {p.value}
-                  {p.unit && <span className="ml-1 text-[12px] font-normal text-white/50">{p.unit}</span>}
+                  {p.unit && <span className="ml-1 text-[13px] font-normal text-white/55">{p.unit}</span>}
                 </dd>
               </div>
             )

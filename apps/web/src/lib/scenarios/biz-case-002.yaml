@@ -2,6 +2,7 @@ id: biz-case-002
 title: 'Profit Collapse: Coastal Wholesale Co.'
 track: business case
 subcategory: profitability
+icon: Truck
 estimatedMinutes: 30
 
 briefing:
@@ -19,7 +20,7 @@ briefing:
   timeInRole: 8 months
 
 display:
-  contextStyle: context-cards
+  contextStyle: hero-list
   sidebar:
     - title: Your Role
       style: text
@@ -145,10 +146,17 @@ nodes:
       The CFO hands you the file and walks out. Before any deep analysis,
       how do you propose to structure the profit collapse?
     contextPanels:
-      - { label: Revenue, value: '$1.4B', type: info, unit: annual, caption: roughly flat vs 2 yrs ago }
-      - { label: Margin delta, value: '-400', type: alert, unit: bps, tone: danger, caption: 8% → 4% in 24 months }
-      - { label: Customers, value: 2,800, type: info, unit: grocers, caption: independent, eastern seaboard }
-      - { label: Read-out, value: '3', type: alert, unit: weeks, tone: danger, caption: board waiting on one action }
+      - label: Operating margin collapse
+        value: '-400'
+        unit: bps
+        type: alert
+        tone: danger
+        hero: true
+        caption: 8% → 4% in 24 months on flat revenue. Board wants one action, not five.
+      - { label: Revenue, value: '$1.4B', type: info, unit: annual }
+      - { label: Customers, value: '2,800', type: info, unit: grocers }
+      - { label: Margin 2 yr ago, value: '8', type: info, unit: '%' }
+      - { label: Read-out, value: '3', type: alert, unit: weeks, tone: danger }
     choices:
       - id: A
         text: Decompose operating profit into gross margin and operating cost branches, then split each into volume / price / cost / mix.
@@ -176,14 +184,24 @@ nodes:
     next: biz-case-002-n3
 
   - id: biz-case-002-n2b
-    type: feedback
-    narrative: interview-first
+    type: transition
+    narrative: >
+      Interviews are useful eventually, but you need a hypothesis first or
+      you'll just collect opinions. The CFO redirects: decompose the P&L on
+      paper before talking to anyone, then we'll diagnose.
+    next: biz-case-002-n3
   - id: biz-case-002-n2c
-    type: feedback
-    narrative: benchmark-only
+    type: transition
+    narrative: >
+      Peer benchmarking shows a gap, not a cause. The CFO redirects: build the
+      issue tree first, then we can use benchmarks to corroborate the leak.
+    next: biz-case-002-n3
   - id: biz-case-002-n2d
-    type: feedback
-    narrative: customer-survey
+    type: transition
+    narrative: >
+      Customer surveys are a Q3 project. The CFO redirects: 24 months of P&L
+      data already tells you where the margin went — start there, then diagnose.
+    next: biz-case-002-n3
 
   - id: biz-case-002-n3
     type: decision
@@ -209,14 +227,25 @@ nodes:
         signals: { Data Interpretation: developing }
 
   - id: biz-case-002-n3-fb-a
-    type: feedback
-    narrative: missed-opex
+    type: transition
+    narrative: >
+      COGS inflation matters, but the tree shows operating cost expansion
+      (-310 bps) dwarfs gross margin compression (-90 bps). The CFO redirects
+      you to size the fleet leak — that's the largest single line.
+    next: biz-case-002-n4
   - id: biz-case-002-n3-fb-c
-    type: feedback
-    narrative: category-not-driver
+    type: transition
+    narrative: >
+      Perimeter fresh has the worst category-level margin drop, but its revenue
+      share is small. Total $ impact comes from the fleet line. The CFO
+      redirects you to size that opportunity.
+    next: biz-case-002-n4
   - id: biz-case-002-n3-fb-d
-    type: feedback
-    narrative: mix-only
+    type: transition
+    narrative: >
+      Customer mix is real but only -40 bps of the -400 total. The CFO
+      redirects you to the fleet line — biggest absolute leak, easiest to size.
+    next: biz-case-002-n4
 
   - id: biz-case-002-n4
     type: quant

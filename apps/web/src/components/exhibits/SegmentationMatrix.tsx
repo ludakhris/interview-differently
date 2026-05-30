@@ -94,9 +94,9 @@ function Quadrant({
       <ul className="space-y-1.5">
         {items.map((it, i) => (
           <li key={i}>
-            <p className="text-[12px] font-medium text-[#f5f3ee] leading-snug">{it.label}</p>
+            <p className="text-[14px] font-medium text-[#f5f3ee] leading-snug">{it.label}</p>
             {it.caption && (
-              <p className="text-[10px] text-white/45 leading-snug">{it.caption}</p>
+              <p className="text-[12px] text-white/55 leading-snug">{it.caption}</p>
             )}
           </li>
         ))}

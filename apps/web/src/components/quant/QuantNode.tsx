@@ -297,7 +297,7 @@ function QuestionHeader({
         {prompt}
       </p>
       {context && (
-        <p className="mt-2 text-[13px] text-white/65 leading-relaxed">{context}</p>
+        <p className="mt-2 text-[14px] text-white/70 leading-relaxed">{context}</p>
       )}
       {field?.unit && (
         <p className="mt-3 text-[11px] text-white/40">

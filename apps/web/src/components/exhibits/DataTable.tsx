@@ -46,7 +46,7 @@ export function DataTable({ exhibit }: Props) {
       badge="Table"
       bodyClassName="overflow-x-auto"
     >
-      <table className="w-full text-[12px]">
+      <table className="w-full text-[14px]">
         <thead>
           <tr className="border-b border-white/10 bg-white/5">
             {exhibit.columns.map(col => (

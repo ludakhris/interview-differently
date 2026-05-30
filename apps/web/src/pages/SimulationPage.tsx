@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
@@ -8,7 +8,7 @@ import { MetricChart } from '@/components/MetricChart'
 import { ScenarioSidebar } from '@/components/ScenarioSidebar'
 import { PreviewGate } from '@/components/PreviewGate'
 import { PhaseStepper } from '@/components/PhaseStepper'
-import { ExhibitsColumn } from '@/components/ExhibitsColumn'
+import { InlineExhibits } from '@/components/InlineExhibits'
 import { KeyDataPanel, isKeyDataLayout } from '@/components/keydata/KeyDataPanel'
 import { QuantNode } from '@/components/quant/QuantNode'
 import { saveResult, recordSimulationAttempt } from '@/services/resultsService'
@@ -180,7 +180,6 @@ function SimulationContent({
     () => getPhaseForNode(scenario, currentNode.nodeId),
     [scenario, currentNode.nodeId],
   )
-  const [mobileExhibitsOpen, setMobileExhibitsOpen] = useState(false)
 
   // Hard gate — when an unauthenticated visitor lands on /play we render only
   // the nav and the sign-up overlay. The simulation content (narrative,
@@ -224,18 +223,17 @@ function SimulationContent({
   const ctxStyle = display?.contextStyle ?? 'monitor'
   const ctxLabel = contextSectionLabel[ctxStyle] ?? 'Live Metrics'
 
-  // Show the exhibits rail only when the *current* phase actually has at
-  // least one exhibit that resolves against scenario.exhibits. Empty rails
-  // read as broken UI; case authors who want an exhibit-free phase (e.g. an
-  // early Structure step) shouldn't have to look at an empty column. Mobile
-  // trigger follows the same rule.
+  // Exhibits render inline (above KeyData on the first phase, after KeyData
+  // on subsequent phases) rather than in a right-rail. The first-phase
+  // exhibits read as scenario intro; later-phase exhibits read as new
+  // evidence introduced for that stage.
   const hasPhases = Boolean(scenario.phases?.length)
   const exhibitCatalog = scenario.exhibits ?? []
-  const showExhibitsRail =
-    hasPhases &&
-    (currentPhase?.exhibitIds ?? []).some(id =>
-      exhibitCatalog.some(e => e.id === id),
-    )
+  const phaseIndex = currentPhase && scenario.phases
+    ? scenario.phases.findIndex(p => p.id === currentPhase.id)
+    : -1
+  const isFirstPhase = phaseIndex === 0
+  const exhibitsLabel = isFirstPhase ? 'Brief' : 'Exhibits'
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
@@ -273,25 +271,6 @@ function SimulationContent({
         {/* Main scrollable content */}
         <div className={`relative flex-1 min-w-0 overflow-y-auto ${isPreview ? 'pb-14' : ''}`}>
 
-          {/* Mobile exhibits toggle — only shown when current phase has exhibits */}
-          {showExhibitsRail && (
-            <div className="lg:hidden px-4 pt-4">
-              <button
-                type="button"
-                onClick={() => setMobileExhibitsOpen(true)}
-                className="w-full flex items-center justify-between rounded-lg border border-white/10 bg-[#111111] px-4 py-2.5 text-[12px] font-semibold text-[#f5f3ee]"
-              >
-                <span>
-                  Exhibits
-                  {currentPhase && (
-                    <span className="ml-2 text-white/40 font-normal">· {currentPhase.label}</span>
-                  )}
-                </span>
-                <span className="text-white/40">↗</span>
-              </button>
-            </div>
-          )}
-
           {/* Main render — only reached for signed-in / preview-mode visitors;
               gated guests are short-circuited at the top with the sign-up
               overlay so simulation content never enters the DOM here. */}
@@ -307,7 +286,7 @@ function SimulationContent({
                 >
                   What happened next
                 </div>
-                <p className="text-[16px] text-[#f5f3ee] leading-relaxed font-light">
+                <p className="text-[15px] text-[#f5f3ee] leading-relaxed font-light">
                   {currentNode.narrative}
                 </p>
               </div>
@@ -325,6 +304,16 @@ function SimulationContent({
           {/* ── Quant node ── */}
           {currentNode.type === 'quant' && (
             <div className="max-w-3xl mx-auto px-6 py-8 animate-slide-up">
+              {hasPhases && (
+                <div className="mb-6">
+                  <InlineExhibits
+                    phase={currentPhase}
+                    catalog={exhibitCatalog}
+                    accentColor={meta?.color}
+                    label={exhibitsLabel}
+                  />
+                </div>
+              )}
               {/* key on nodeId — React would otherwise reuse the same QuantNode
                   instance across consecutive quant nodes (because their position
                   in the render tree is identical), carrying `submitted` and the
@@ -352,6 +341,20 @@ function SimulationContent({
           {currentNode.type === 'decision' && (
             <div className="max-w-4xl mx-auto px-6 py-8 animate-slide-up">
 
+              {/* Phase 1 exhibits read as scenario intro — render above the
+                  KeyData block so the candidate frames the case before any
+                  numbers. Phase 2+ exhibits render below KeyData. */}
+              {hasPhases && isFirstPhase && (
+                <div className="mb-6">
+                  <InlineExhibits
+                    phase={currentPhase}
+                    catalog={exhibitCatalog}
+                    accentColor={meta?.color}
+                    label={exhibitsLabel}
+                  />
+                </div>
+              )}
+
               {/* Alert banner (ops P1 alert, shown on first step) */}
               {display?.alertBanner && stepNumber === 1 && (
                 <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 mb-5">
@@ -372,7 +375,7 @@ function SimulationContent({
               {/* Context display — full width above narrative */}
               {currentNode.contextPanels && currentNode.contextPanels.length > 0 && (
                 <div className="mb-6">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-3">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
                     {ctxLabel}
                   </p>
                   {currentNode.chart && (
@@ -394,50 +397,61 @@ function SimulationContent({
                 </div>
               )}
 
-              {/* Narrative + choices grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-                <div>
-                  <div className="bg-[#111111] rounded-2xl border border-white/10 p-6">
-                    <p className="text-[15px] text-[#f5f3ee] leading-[1.75] font-light">
-                      {currentNode.narrative}
-                    </p>
-                  </div>
+              {/* Phase 2+ exhibits render between KeyData and the question —
+                  they're new evidence introduced for this stage rather than
+                  framing context for the whole case. */}
+              {hasPhases && !isFirstPhase && (
+                <div className="mb-6">
+                  <InlineExhibits
+                    phase={currentPhase}
+                    catalog={exhibitCatalog}
+                    accentColor={meta?.color}
+                    label={exhibitsLabel}
+                  />
+                </div>
+              )}
+
+              {/* Narrative + choices — stacked. Choices read as the answer
+                  to the narrative above, not as a parallel column. */}
+              <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
+                <p className="text-[15px] text-[#f5f3ee] leading-[1.7] font-light">
+                  {currentNode.narrative}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-3">
+                  What do you do?
+                </p>
+                <div className="space-y-3">
+                  {currentNode.choices?.map((choice) => (
+                    <ChoiceCard
+                      key={choice.id}
+                      id={choice.id}
+                      text={choice.text}
+                      selected={selectedChoice === choice.id}
+                      onSelect={setSelectedChoice}
+                    />
+                  ))}
                 </div>
 
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3">
-                    What do you do?
-                  </p>
-                  <div className="space-y-3">
-                    {currentNode.choices?.map((choice) => (
-                      <ChoiceCard
-                        key={choice.id}
-                        id={choice.id}
-                        text={choice.text}
-                        selected={selectedChoice === choice.id}
-                        onSelect={setSelectedChoice}
-                      />
-                    ))}
-                  </div>
-
-                  <div className="mt-5 flex items-center justify-between">
-                    <span className="text-[12px] text-slate-light">
-                      {selectedChoice ? 'Ready to submit' : 'Select an action'}
-                    </span>
-                    <button
-                      onClick={() => selectedChoice && submitChoice(selectedChoice)}
-                      disabled={!selectedChoice}
-                      className={`
-                        font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
-                        ${selectedChoice
-                          ? 'bg-green hover:bg-green-light text-white cursor-pointer'
-                          : 'bg-white/10 text-slate-light cursor-not-allowed'
-                        }
-                      `}
-                    >
-                      Submit
-                    </button>
-                  </div>
+                <div className="mt-5 flex items-center justify-between">
+                  <span className="text-[13px] text-slate-light">
+                    {selectedChoice ? 'Ready to submit' : 'Select an action'}
+                  </span>
+                  <button
+                    onClick={() => selectedChoice && submitChoice(selectedChoice)}
+                    disabled={!selectedChoice}
+                    className={`
+                      font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
+                      ${selectedChoice
+                        ? 'bg-green hover:bg-green-light text-white cursor-pointer'
+                        : 'bg-white/10 text-slate-light cursor-not-allowed'
+                      }
+                    `}
+                  >
+                    Submit
+                  </button>
                 </div>
               </div>
 
@@ -447,56 +461,7 @@ function SimulationContent({
           </div>{/* end main render wrapper */}
 
         </div>
-
-        {/* Right exhibits rail — lg+ only, only when current phase has exhibits */}
-        {showExhibitsRail && (
-          <div className="hidden lg:flex w-[340px] xl:w-[380px] flex-shrink-0">
-            <ExhibitsColumn
-              phase={currentPhase}
-              exhibits={exhibitCatalog}
-              accentColor={meta?.color}
-            />
-          </div>
-        )}
       </div>
-
-      {/* Mobile exhibits drawer */}
-      {showExhibitsRail && mobileExhibitsOpen && (
-        <div
-          className="fixed inset-0 z-40 lg:hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Exhibits"
-        >
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/60"
-            aria-label="Close exhibits"
-            onClick={() => setMobileExhibitsOpen(false)}
-          />
-          <div className="absolute right-0 top-0 bottom-0 w-[88%] max-w-[420px] flex flex-col bg-[#0d0d0d] border-l border-white/10 shadow-2xl">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-white/50">
-                Exhibits
-              </p>
-              <button
-                type="button"
-                onClick={() => setMobileExhibitsOpen(false)}
-                className="text-[12px] text-white/60 hover:text-white"
-              >
-                Close
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <ExhibitsColumn
-              phase={currentPhase}
-              exhibits={exhibitCatalog}
-              accentColor={meta?.color}
-            />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -48,6 +48,7 @@ interface YamlScenario {
   title: string
   track: string
   subcategory?: string
+  icon?: string
   estimatedMinutes: number
   mode?: 'text' | 'immersive'
   briefing: {
@@ -109,6 +110,7 @@ function yamlToScenario(yamlStr: string): Scenario {
     title: raw.title,
     track: raw.track as Scenario['track'],
     ...(raw.subcategory ? { subcategory: raw.subcategory } : {}),
+    ...(raw.icon ? { icon: raw.icon } : {}),
     estimatedMinutes: raw.estimatedMinutes,
     ...(raw.mode ? { mode: raw.mode } : {}),
     briefing: {

@@ -2,6 +2,7 @@ id: biz-case-003
 title: 'Antitrust Defense: GenoMed Generics Pricing'
 track: business case
 subcategory: competitive-response
+icon: Pill
 estimatedMinutes: 35
 
 briefing:
@@ -20,7 +21,7 @@ briefing:
   timeInRole: 1 year
 
 display:
-  contextStyle: context-cards
+  contextStyle: briefing-sections
   sidebar:
     - title: Your Role
       style: text
@@ -141,10 +142,12 @@ nodes:
       Before any HHI or elasticity work — how do you define the relevant
       product market for this case?
     contextPanels:
-      - { label: Price increase, value: '+400', type: alert, unit: '%', tone: danger, caption: $4.20 → $21.00 / 30d }
-      - { label: Volume share, value: '35', type: info, unit: '%', tone: accent, caption: down from 60% pre-acquisition }
-      - { label: Substitutes, value: '4', type: info, unit: molecules, caption: same indication, lower-priced }
-      - { label: Hearing, value: '6', type: alert, unit: weeks, tone: danger, caption: preliminary economic brief due }
+      - { label: Price increase, value: '+400', unit: '%', type: alert, tone: danger, group: Allegation }
+      - { label: Patients affected, value: '1.4', unit: 'M', type: info, group: Allegation }
+      - { label: Volume share now, value: '35', unit: '%', type: info, tone: accent, group: Defense signal }
+      - { label: Share pre-acquisition, value: '60', unit: '%', type: info, group: Defense signal }
+      - { label: Substitute molecules, value: '4', type: info, group: Defense signal }
+      - { label: Hearing in, value: '6', unit: weeks, type: alert, tone: danger, group: Constraint }
     choices:
       - id: A
         text: Relevant market = Levostatin only. The AG's framing is the safest economic baseline.
@@ -164,8 +167,12 @@ nodes:
         signals: { Framework Structuring: developing, Synthesis & Recommendation: developing }
 
   - id: biz-case-003-n2a
-    type: feedback
-    narrative: narrow-market
+    type: transition
+    narrative: >
+      Accepting the AG's "Levostatin only" frame concedes the case before you
+      start. GC redirects: argue the broader cardiac-generics market is the
+      relevant antitrust market — substitution evidence is your defense.
+    next: biz-case-003-n3
   - id: biz-case-003-n2b
     type: transition
     narrative: >
@@ -173,11 +180,19 @@ nodes:
       trajectory — what do they tell you about competition in this market?
     next: biz-case-003-n3
   - id: biz-case-003-n2c
-    type: feedback
-    narrative: too-broad
+    type: transition
+    narrative: >
+      "All cholesterol therapies" is too broad — courts won't accept brand
+      drugs at 10x the price as substitutes. GC redirects: scope to cardiac
+      generics, the realistic substitute set.
+    next: biz-case-003-n3
   - id: biz-case-003-n2d
-    type: feedback
-    narrative: no-market-defn
+    type: transition
+    narrative: >
+      Cost-recovery without a market definition leaves you arguing in a vacuum.
+      GC redirects: define the cardiac-generics market first, then bring in
+      substitution evidence.
+    next: biz-case-003-n3
 
   - id: biz-case-003-n3
     type: decision
@@ -203,14 +218,24 @@ nodes:
         signals: { Data Interpretation: proficient }
 
   - id: biz-case-003-n3-fb-b
-    type: feedback
-    narrative: missed-substitution
+    type: transition
+    narrative: >
+      A 35% share post-price-increase is high but it dropped from 60% — that's
+      substitution. GC redirects: emphasise the drop and move to the HHI.
+    next: biz-case-003-n4
   - id: biz-case-003-n3-fb-c
-    type: feedback
-    narrative: wrong-signal
+    type: transition
+    narrative: >
+      Stable substitute prices + a 25-point share loss for Levostatin is the
+      *opposite* of "no alternative." GC redirects: lead with substitution and
+      run the HHI.
+    next: biz-case-003-n4
   - id: biz-case-003-n3-fb-d
-    type: feedback
-    narrative: too-cautious
+    type: transition
+    narrative: >
+      24 months is plenty post-acquisition. GC redirects: trust the share data
+      and compute the market HHI.
+    next: biz-case-003-n4
 
   - id: biz-case-003-n4
     type: quant

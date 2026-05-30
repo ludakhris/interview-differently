@@ -131,6 +131,7 @@ function toSummary(full: Scenario): Scenario {
     title: full.title,
     track: full.track,
     ...(full.subcategory ? { subcategory: full.subcategory } : {}),
+    ...(full.icon ? { icon: full.icon } : {}),
     estimatedMinutes: full.estimatedMinutes,
     ...(full.mode ? { mode: full.mode } : {}),
     ...(full.briefing ? { briefing: full.briefing } : {}),

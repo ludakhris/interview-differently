@@ -30,16 +30,16 @@ export function BriefingSections({ panels }: { panels: ContextPanel[] }) {
           return (
             <div key={groupName}>
               <p className={`${eyebrow} ${headColor}`}>{groupName}</p>
-              <dl className="mt-3 space-y-2">
+              <dl className="mt-3 space-y-2.5">
                 {items.map((p, i) => {
                   const tone = panelTone(p)
                   return (
                     <div key={i} className="flex items-baseline justify-between">
-                      <dt className="text-[13px] text-white/60">{p.label}</dt>
-                      <dd className={`text-[13px] font-semibold ${toneText[tone]}`}>
+                      <dt className="text-[15px] text-white/65">{p.label}</dt>
+                      <dd className={`text-[15px] font-semibold ${toneText[tone]}`}>
                         {p.value}
                         {p.unit && (
-                          <span className="ml-1 text-[11px] font-normal text-white/50">
+                          <span className="ml-1 text-[13px] font-normal text-white/55">
                             {p.unit}
                           </span>
                         )}

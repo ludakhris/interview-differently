@@ -48,17 +48,17 @@ function TreeNode({ node, depth }: TreeNodeProps) {
         ) : (
           <span className="w-3 flex-shrink-0 text-white/20 text-[10px]">·</span>
         )}
-        <span className={`text-[12px] font-medium ${toneText[tone]} flex-1`}>
+        <span className={`text-[14px] font-medium ${toneText[tone]} flex-1`}>
           {node.label}
         </span>
         {node.value && (
-          <span className={`text-[13px] font-display font-bold ${toneText[tone]}`}>
+          <span className={`text-[15px] font-display font-bold ${toneText[tone]}`}>
             {node.value}
           </span>
         )}
       </button>
       {node.formula && open && (
-        <p className="ml-5 text-[11px] text-white/40 font-mono leading-snug py-0.5">
+        <p className="ml-5 text-[12px] text-white/45 font-mono leading-snug py-0.5">
           {node.formula}
         </p>
       )}
