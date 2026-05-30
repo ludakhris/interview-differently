@@ -1,0 +1,290 @@
+id: biz-case-002
+title: 'Profit Collapse: Coastal Wholesale Co.'
+track: business case
+subcategory: profitability
+estimatedMinutes: 30
+
+briefing:
+  situation: >
+    Coastal Wholesale Co. is a mid-sized grocery distributor serving 2,800
+    independent grocers across the eastern seaboard. Their operating margin
+    has collapsed from 8% to 4% in just two years, even though revenue is
+    roughly flat. The new CFO has retained your firm to diagnose the cause,
+    quantify the biggest leak, and recommend a corrective action. The board
+    meets in three weeks. Your engagement manager wants a sharp profit-tree
+    cut, a defensible savings number, and one action — not a list.
+  role: Strategy Analyst
+  organisation: Global strategy consulting firm (Coastal Wholesale engagement)
+  reportsTo: Engagement Manager
+  timeInRole: 8 months
+
+display:
+  contextStyle: context-cards
+  sidebar:
+    - title: Your Role
+      style: text
+      items:
+        - { label: Title, value: Strategy Analyst }
+        - { label: Engagement, value: Coastal Wholesale }
+        - { label: Reports to, value: Engagement Manager }
+    - title: Key Facts
+      style: list
+      items:
+        - { label: Customers, value: 2,800 grocers }
+        - { label: Revenue, value: '$1.4B' }
+        - { label: Margin 2 yr ago, value: 8% }
+        - { label: Margin today, value: 4% }
+        - { label: Board read-out, value: 3 weeks }
+
+rubric:
+  - name: Framework Structuring
+    description: Does the candidate decompose profit into a useful issue tree before guessing causes?
+  - name: Quantitative Accuracy
+    description: Are derived numbers within accepted bands with stated assumptions?
+  - name: Data Interpretation
+    description: Does the candidate spot the largest contributor from the exhibits?
+  - name: Synthesis & Recommendation
+    description: Does the recommendation flow from the analysis with a clear next step?
+
+phases:
+  - id: structure
+    label: Structure
+    description: Frame the profit collapse before guessing the cause.
+    nodeIds: [biz-case-002-n1]
+    exhibitIds: [cfo-memo]
+    rubricDimensions: [Framework Structuring]
+  - id: diagnose
+    label: Diagnose
+    description: Read the profit decomposition and pinpoint the biggest leak.
+    nodeIds: [biz-case-002-n3]
+    exhibitIds: [profit-decomp-tree, margin-by-category]
+    rubricDimensions: [Data Interpretation]
+  - id: sizing
+    label: Sizing
+    description: Quantify the savings opportunity for the recommended fix.
+    nodeIds: [biz-case-002-n4]
+    exhibitIds: [profit-decomp-tree, margin-by-category]
+    rubricDimensions: [Quantitative Accuracy]
+  - id: recommendation
+    label: Recommendation
+    description: Defend one action with risks and next steps.
+    nodeIds: [biz-case-002-n5]
+    rubricDimensions: [Synthesis & Recommendation]
+
+exhibits:
+  - id: cfo-memo
+    kind: text-exhibit
+    title: From the CFO
+    caption: 'Posted 7:12 AM — read before the framework meeting'
+    blocks:
+      - kind: paragraph
+        text: >
+          We've cut 4 points of operating margin in 24 months on flat revenue.
+          The board thinks it's COGS inflation. Our procurement team thinks it's
+          a delivery network problem. I'm not buying either explanation without
+          a clean tree and one big number. Make the tree, find the leak, size
+          it. One action, not five.
+      - kind: bullets
+        items:
+          - Don't tell me we should "improve everything" — pick one.
+          - Last consultant gave us a 50-page deck; we acted on nothing.
+          - Three weeks to a board recommendation. Make it defensible.
+
+  - id: profit-decomp-tree
+    kind: profit-tree
+    title: Operating profit decomposition (24-month delta)
+    caption: 'Each branch shows the change vs two years ago, in basis points of revenue.'
+    footnote: 'Decomposition source: internal P&L, rebased to 2024 revenue.'
+    root:
+      id: op
+      label: Operating margin (Δ vs 2 years ago)
+      value: '-400 bps'
+      tone: danger
+      children:
+        - id: gross
+          label: Gross margin compression
+          value: '-90 bps'
+          children:
+            - { id: cogs, label: COGS inflation (pass-through partial), value: '-110 bps', tone: danger }
+            - { id: mix, label: Customer mix shift (more discount), value: '-40 bps' }
+            - { id: pricing, label: Price increases (partial offset), value: '+60 bps', tone: accent }
+        - id: opex
+          label: Operating cost expansion
+          value: '-310 bps'
+          tone: danger
+          children:
+            - { id: fleet, label: Delivery fleet cost (fuel + drivers), value: '-180 bps', tone: danger }
+            - { id: warehouse, label: Warehouse labour, value: '-70 bps' }
+            - { id: tech, label: Tech / ERP rollover, value: '-40 bps' }
+            - { id: ga, label: G&A drift, value: '-20 bps' }
+
+  - id: margin-by-category
+    kind: data-table
+    title: Margin by product category
+    caption: 'Two-year change in category-level contribution margin.'
+    footnote: 'Categories rebased to 2024 mix; n=11 categories rolled up to 5.'
+    columns:
+      - { key: cat, label: Category, align: left, format: text, sortable: true }
+      - { key: rev, label: Revenue ($M), format: number, sortable: true }
+      - { key: marginNow, label: Margin now, format: percent, sortable: true }
+      - { key: marginThen, label: Margin 2y ago, format: percent, sortable: true }
+      - { key: delta, label: Δ (bps), format: number, sortable: true }
+    rows:
+      - { cat: Center store dry, rev: 520, marginNow: 5, marginThen: 9, delta: { value: -400, tone: danger } }
+      - { cat: Perimeter fresh, rev: 410, marginNow: 3, marginThen: 8, delta: { value: -500, tone: danger, emphasis: true } }
+      - { cat: Frozen, rev: 220, marginNow: 6, marginThen: 7, delta: -100 }
+      - { cat: HBC / GM, rev: 180, marginNow: 9, marginThen: 11, delta: -200 }
+      - { cat: Specialty / ethnic, rev: 70, marginNow: 12, marginThen: 12, delta: 0 }
+    totalRow:
+      { cat: { value: Total, emphasis: true }, rev: 1400, marginNow: 4, marginThen: 8, delta: -400 }
+
+nodes:
+  - id: biz-case-002-n1
+    type: decision
+    narrative: >
+      The CFO hands you the file and walks out. Before any deep analysis,
+      how do you propose to structure the profit collapse?
+    contextPanels:
+      - { label: Revenue, value: '$1.4B', type: info, unit: annual, caption: roughly flat vs 2 yrs ago }
+      - { label: Margin delta, value: '-400', type: alert, unit: bps, tone: danger, caption: 8% → 4% in 24 months }
+      - { label: Customers, value: 2,800, type: info, unit: grocers, caption: independent, eastern seaboard }
+      - { label: Read-out, value: '3', type: alert, unit: weeks, tone: danger, caption: board waiting on one action }
+    choices:
+      - id: A
+        text: Decompose operating profit into gross margin and operating cost branches, then split each into volume / price / cost / mix.
+        next: biz-case-002-n2a
+        signals: { Framework Structuring: strong }
+      - id: B
+        text: Start interviewing the delivery and procurement leaders to identify the bottlenecks.
+        next: biz-case-002-n2b
+        signals: { Framework Structuring: developing }
+      - id: C
+        text: Benchmark Coastal's margin against three named wholesale peers and use the gap as the diagnostic.
+        next: biz-case-002-n2c
+        signals: { Framework Structuring: proficient }
+      - id: D
+        text: Launch a customer satisfaction survey — losing margin usually means losing pricing power with grocers.
+        next: biz-case-002-n2d
+        signals: { Framework Structuring: developing, Synthesis & Recommendation: developing }
+
+  - id: biz-case-002-n2a
+    type: transition
+    narrative: >
+      Strong frame. The CFO sends over the 24-month profit decomposition and
+      the category margin table. Walk through them and tell us which leak we
+      should chase.
+    next: biz-case-002-n3
+
+  - id: biz-case-002-n2b
+    type: feedback
+    narrative: interview-first
+  - id: biz-case-002-n2c
+    type: feedback
+    narrative: benchmark-only
+  - id: biz-case-002-n2d
+    type: feedback
+    narrative: customer-survey
+
+  - id: biz-case-002-n3
+    type: decision
+    narrative: >
+      You read the profit tree and the category margin table. Which leak is
+      the biggest single contributor to the margin collapse?
+    choices:
+      - id: A
+        text: COGS inflation in dry grocery — center store dry lost the most absolute revenue × margin.
+        next: biz-case-002-n3-fb-a
+        signals: { Data Interpretation: developing, Quantitative Accuracy: developing }
+      - id: B
+        text: Delivery fleet cost — operating cost expansion is -310 bps vs -90 on gross margin, and fleet alone is -180 bps.
+        next: biz-case-002-n4
+        signals: { Data Interpretation: strong, Synthesis & Recommendation: strong }
+      - id: C
+        text: Perimeter fresh — that category's margin fell 500 bps, the worst in the table.
+        next: biz-case-002-n3-fb-c
+        signals: { Data Interpretation: proficient }
+      - id: D
+        text: Customer mix shift to discount grocers — perimeter fresh is impossible to fix.
+        next: biz-case-002-n3-fb-d
+        signals: { Data Interpretation: developing }
+
+  - id: biz-case-002-n3-fb-a
+    type: feedback
+    narrative: missed-opex
+  - id: biz-case-002-n3-fb-c
+    type: feedback
+    narrative: category-not-driver
+  - id: biz-case-002-n3-fb-d
+    type: feedback
+    narrative: mix-only
+
+  - id: biz-case-002-n4
+    type: quant
+    narrative: 'Size the delivery fleet savings.'
+    quantSignalDimensions: [Quantitative Accuracy]
+    quant:
+      variant: numeric-range
+      prompt: If a third-party logistics partner can cut delivery cost-per-stop by 25%, what is the annual savings?
+      context: >
+        Delivery fleet cost is currently 180 bps of $1.4B revenue. Assume the
+        25% reduction applies to the entire delivery cost base.
+      formula:
+        display: revenue × delivery cost (bps) × reduction
+        expression: '{revenue} * {bps} / 10000 * {reduction}'
+        variables:
+          - { name: revenue, label: Revenue, unit: '$', format: currency, defaultValue: 1400000000 }
+          - { name: bps, label: Delivery cost (bps), unit: bps, format: integer, defaultValue: 180 }
+          - { name: reduction, label: Reduction, unit: '%', format: percent, defaultValue: 0.25 }
+      field:
+        id: savings
+        label: Annual savings
+        unit: USD
+        format: currency
+        acceptedRange:
+          min: 5000000
+          max: 7000000
+          idealMin: 6100000
+          idealMax: 6400000
+        modelAnswer: 6300000
+        derivation: >
+          1.4B × 1.8% × 25% ≈ $6.3M. The accepted band absorbs ±10%
+          assumptions on the 1.8% base.
+    next: biz-case-002-n5
+
+  - id: biz-case-002-n5
+    type: decision
+    narrative: >
+      You have the leak, the size, and the data. What single recommendation
+      goes to the board?
+    choices:
+      - id: A
+        text: Outsource delivery to a 3PL on a per-stop contract — saves ~$6M and re-prices the variable cost.
+        next: biz-case-002-end-a
+        signals:
+          Synthesis & Recommendation: strong
+          Quantitative Accuracy: strong
+      - id: B
+        text: Raise prices another 2% to recover gross margin — the data shows price has been a positive offset.
+        next: biz-case-002-end-b
+        signals: { Synthesis & Recommendation: developing }
+      - id: C
+        text: Exit perimeter fresh — it's the worst margin category and the easiest to cut.
+        next: biz-case-002-end-c
+        signals: { Synthesis & Recommendation: developing }
+      - id: D
+        text: Hire a CRO and reorganise procurement, sales, and delivery in a turnaround.
+        next: biz-case-002-end-d
+        signals: { Synthesis & Recommendation: developing }
+
+  - id: biz-case-002-end-a
+    type: feedback
+    narrative: strong-3pl
+  - id: biz-case-002-end-b
+    type: feedback
+    narrative: price-only
+  - id: biz-case-002-end-c
+    type: feedback
+    narrative: cut-category
+  - id: biz-case-002-end-d
+    type: feedback
+    narrative: reorg-everything

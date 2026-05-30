@@ -4,6 +4,11 @@ import ops001Yaml from './scenarios/ops-001.yaml?raw'
 import ops001ImmersiveYaml from './scenarios/ops-001-immersive.yaml?raw'
 import biz001Yaml from './scenarios/biz-001.yaml?raw'
 import bizCase001Yaml from './scenarios/biz-case-001.yaml?raw'
+import bizCase002Yaml from './scenarios/biz-case-002.yaml?raw'
+import bizCase003Yaml from './scenarios/biz-case-003.yaml?raw'
+import bizCase004Yaml from './scenarios/biz-case-004.yaml?raw'
+import bizCase005Yaml from './scenarios/biz-case-005.yaml?raw'
+import bizCase006Yaml from './scenarios/biz-case-006.yaml?raw'
 import risk001Yaml from './scenarios/risk-001.yaml?raw'
 import ops002Yaml from './scenarios/ops-002.yaml?raw'
 
@@ -12,6 +17,11 @@ export const scenarios = [
   yamlToScenario(ops001ImmersiveYaml),
   yamlToScenario(biz001Yaml),
   yamlToScenario(bizCase001Yaml),
+  yamlToScenario(bizCase002Yaml),
+  yamlToScenario(bizCase003Yaml),
+  yamlToScenario(bizCase004Yaml),
+  yamlToScenario(bizCase005Yaml),
+  yamlToScenario(bizCase006Yaml),
   yamlToScenario(risk001Yaml),
   yamlToScenario(ops002Yaml),
 ]

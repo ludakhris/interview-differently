@@ -1,0 +1,281 @@
+id: biz-case-004
+title: 'Regional Expansion: ValuMart Discount Stores'
+track: business case
+subcategory: market-entry
+estimatedMinutes: 30
+
+briefing:
+  situation: >
+    ValuMart, a discount general-merchandise retailer with 320 stores in the
+    Midwest, is evaluating expansion into the southeastern US. The CEO wants
+    a recommendation on which three cities to enter first, with a sized
+    revenue and capex picture per city. Six cities have been pre-screened by
+    real-estate. You have two weeks to a partner meeting.
+  role: Strategy Analyst
+  organisation: Strategy firm (ValuMart engagement)
+  reportsTo: Engagement Manager
+  timeInRole: 10 months
+
+display:
+  contextStyle: context-cards
+  sidebar:
+    - title: Your Role
+      style: text
+      items:
+        - { label: Title, value: Strategy Analyst }
+        - { label: Engagement, value: ValuMart SE expansion }
+        - { label: Reports to, value: Engagement Manager }
+    - title: Key Facts
+      style: list
+      items:
+        - { label: Existing stores, value: '320' }
+        - { label: Region, value: Midwest US }
+        - { label: Cities pre-screened, value: '6' }
+        - { label: Cities to pick, value: '3' }
+        - { label: Decision in, value: 2 weeks }
+
+rubric:
+  - name: Framework Structuring
+    description: Does the candidate define the criteria for ranking cities before reading the data?
+  - name: Quantitative Accuracy
+    description: Are revenue per store, capex, and breakeven figures in accepted bands?
+  - name: Data Interpretation
+    description: Does the candidate use the matrix and city table together to make a defensible pick?
+  - name: Synthesis & Recommendation
+    description: Are the three cities justified by the analysis with risk callouts?
+
+phases:
+  - id: structure
+    label: Structure
+    description: Pick the criteria before reading the city data.
+    nodeIds: [biz-case-004-n1]
+    exhibitIds: [ceo-brief]
+    rubricDimensions: [Framework Structuring]
+  - id: evidence
+    label: Read evidence
+    description: Use the city table and the BCG-style matrix.
+    nodeIds: [biz-case-004-n3]
+    exhibitIds: [city-fundamentals, city-matrix]
+    rubricDimensions: [Data Interpretation]
+  - id: sizing
+    label: Sizing
+    description: Size the revenue + capex for the picked cities.
+    nodeIds: [biz-case-004-n4]
+    exhibitIds: [city-fundamentals]
+    rubricDimensions: [Quantitative Accuracy]
+  - id: recommendation
+    label: Recommendation
+    description: Defend the 3 cities + sequencing.
+    nodeIds: [biz-case-004-n5]
+    rubricDimensions: [Synthesis & Recommendation]
+
+exhibits:
+  - id: ceo-brief
+    kind: text-exhibit
+    title: From the CEO
+    caption: Two-paragraph brief
+    blocks:
+      - kind: paragraph
+        text: >
+          We have capital for three southeastern cities in year one and three
+          more in year two. I don't want the obvious answer (biggest
+          population). I want the cities where our model wins — low-income
+          density, weak discount competition, accessible real estate. Show
+          me the numbers and pick three.
+      - kind: bullets
+        items:
+          - 'Sequence matters: which 3 first, which 3 follow.'
+          - Beware of cities where Dollar General + Aldi already own the segment.
+          - Real-estate cost is the swing factor on capex.
+
+  - id: city-fundamentals
+    kind: data-table
+    title: Pre-screened cities — fundamentals
+    caption: 'Demand: low-income households + discount-spend per household. Readiness: real-estate cost + competitor density.'
+    footnote: 'Source: Esri demographics + ValuMart RE team.'
+    columns:
+      - { key: city, label: City, align: left, format: text, sortable: true }
+      - { key: low, label: Low-income HH (k), format: number, sortable: true }
+      - { key: spend, label: Discount spend / HH ($/yr), format: currency, sortable: true }
+      - { key: rent, label: Rent ($/sqft/yr), format: currency, sortable: true }
+      - { key: comp, label: Competitors / 10k HH, format: decimal, sortable: true }
+    rows:
+      - { city: Chattanooga TN, low: 78, spend: { value: 3100, tone: accent }, rent: 14, comp: 1.2 }
+      - { city: Augusta GA, low: 92, spend: { value: 3300, tone: accent, emphasis: true }, rent: 12, comp: 0.9 }
+      - { city: Mobile AL, low: 71, spend: 2900, rent: 11, comp: 1.4 }
+      - { city: Greenville SC, low: 65, spend: 2700, rent: 18, comp: 1.8 }
+      - { city: Lakeland FL, low: 88, spend: 2800, rent: 22, comp: 2.1 }
+      - { city: Macon GA, low: 54, spend: 2600, rent: 9, comp: 0.7 }
+
+  - id: city-matrix
+    kind: segmentation-matrix
+    title: Demand × readiness — pre-screen
+    caption: Plot cities by combined demand signal and store-launch readiness.
+    footnote: 'Demand: low-income HH × discount spend. Readiness: inverse rent × inverse competitor density.'
+    xAxis: { label: Store-launch readiness, lowLabel: Hard, highLabel: Easy }
+    yAxis: { label: Demand signal, lowLabel: Weak, highLabel: Strong }
+    quadrantLabels:
+      topLeft: Invest to enable
+      topRight: Year 1 — launch
+      bottomLeft: Skip
+      bottomRight: Year 2 / fill in
+    quadrants:
+      topLeft:
+        - { label: Lakeland FL, caption: high demand but expensive + crowded }
+      topRight:
+        - { label: Augusta GA, caption: highest spend, low rent, low competition }
+        - { label: Chattanooga TN, caption: strong demand, mid rent }
+        - { label: Mobile AL, caption: solid demand, low rent }
+      bottomLeft:
+        - { label: Greenville SC, caption: mid demand, high rent }
+      bottomRight:
+        - { label: Macon GA, caption: weak demand but easy launch }
+
+nodes:
+  - id: biz-case-004-n1
+    type: decision
+    narrative: >
+      Before reading the city table — how do you structure the ranking
+      criteria?
+    contextPanels:
+      - { label: Pre-screened, value: '6', type: info, unit: cities, caption: real-estate has whittled the list }
+      - { label: Pick, value: '3', type: info, unit: launch in year 1 }
+      - { label: Capital / city, value: '$8', type: info, unit: 'M', caption: includes build-out + 6-month opex }
+      - { label: Decision, value: '2', type: alert, unit: weeks, tone: danger, caption: partner meeting Friday after next }
+    choices:
+      - id: A
+        text: Rank cities on a demand × readiness 2x2 — demand from income/spend, readiness from rent + competitor density.
+        next: biz-case-004-n2a
+        signals: { Framework Structuring: strong }
+      - id: B
+        text: Pick the three cities with the largest low-income household counts.
+        next: biz-case-004-n2b
+        signals: { Framework Structuring: developing }
+      - id: C
+        text: Defer the ranking and run a customer survey in each city first.
+        next: biz-case-004-n2c
+        signals: { Framework Structuring: developing }
+      - id: D
+        text: Run a regression of historical Midwest store sales on each city's demographics.
+        next: biz-case-004-n2d
+        signals: { Framework Structuring: proficient }
+
+  - id: biz-case-004-n2a
+    type: transition
+    narrative: >
+      Solid. The team plotted the six pre-screen cities in a demand × readiness
+      matrix and pulled fundamentals. Read both and pick the three.
+    next: biz-case-004-n3
+  - id: biz-case-004-n2b
+    type: feedback
+    narrative: population-only
+  - id: biz-case-004-n2c
+    type: feedback
+    narrative: survey-too-slow
+  - id: biz-case-004-n2d
+    type: feedback
+    narrative: regression-overfit
+
+  - id: biz-case-004-n3
+    type: decision
+    narrative: >
+      Read the city table + the matrix. Which three cities do you choose for
+      year-1 launch?
+    choices:
+      - id: A
+        text: Augusta, Chattanooga, Mobile — the three top-right quadrant cities (strong demand, easy launch).
+        next: biz-case-004-n4
+        signals: { Data Interpretation: strong }
+      - id: B
+        text: Augusta, Chattanooga, Lakeland — top three on absolute demand (low-income HH × spend).
+        next: biz-case-004-n3-fb-b
+        signals: { Data Interpretation: developing }
+      - id: C
+        text: Macon, Mobile, Augusta — pick the lowest-rent cities to protect capex.
+        next: biz-case-004-n3-fb-c
+        signals: { Data Interpretation: developing }
+      - id: D
+        text: Greenville, Augusta, Chattanooga — diversify across South Carolina to test brand portability.
+        next: biz-case-004-n3-fb-d
+        signals: { Data Interpretation: developing }
+
+  - id: biz-case-004-n3-fb-b
+    type: feedback
+    narrative: ignored-readiness
+  - id: biz-case-004-n3-fb-c
+    type: feedback
+    narrative: cost-only
+  - id: biz-case-004-n3-fb-d
+    type: feedback
+    narrative: diversify-too-early
+
+  - id: biz-case-004-n4
+    type: quant
+    narrative: 'Size the year-1 revenue for Augusta.'
+    quantSignalDimensions: [Quantitative Accuracy]
+    quant:
+      variant: numeric-range
+      prompt: What is the year-1 revenue estimate for an Augusta GA store?
+      context: >
+        Assume ValuMart captures 8% of low-income discount spend in its
+        catchment, the city has 92k low-income households, and discount
+        spend per household is $3,300/year.
+      formula:
+        display: low-income HH × spend / HH × capture rate
+        expression: '{hh} * {spend} * {capture}'
+        variables:
+          - { name: hh, label: Low-income HH, unit: HH, format: integer, defaultValue: 92000 }
+          - { name: spend, label: Spend / HH, unit: $, format: currency, defaultValue: 3300 }
+          - { name: capture, label: Capture rate, unit: '%', format: percent, defaultValue: 0.08 }
+      field:
+        id: revenue
+        label: Year-1 revenue
+        unit: USD
+        format: currency
+        acceptedRange:
+          min: 21000000
+          max: 28000000
+          idealMin: 23500000
+          idealMax: 25000000
+        modelAnswer: 24288000
+        derivation: >
+          92k × $3,300 × 8% ≈ $24.3M. Accepted band reflects ±10% capture
+          uncertainty.
+    next: biz-case-004-n5
+
+  - id: biz-case-004-n5
+    type: decision
+    narrative: >
+      What's the year-1 launch recommendation for the partner meeting?
+    choices:
+      - id: A
+        text: Launch Augusta, Chattanooga, Mobile in year 1. Augusta first (sized at ~$24M revenue), Chattanooga and Mobile staggered by quarter. Year 2 fills with Macon + Lakeland once near-shoring confirms the model.
+        next: biz-case-004-end-a
+        signals:
+          Synthesis & Recommendation: strong
+          Quantitative Accuracy: strong
+      - id: B
+        text: Launch all three top-right cities simultaneously to maximise momentum.
+        next: biz-case-004-end-b
+        signals: { Synthesis & Recommendation: proficient }
+      - id: C
+        text: Launch Augusta only in year 1 to de-risk before committing to the other two.
+        next: biz-case-004-end-c
+        signals: { Synthesis & Recommendation: developing }
+      - id: D
+        text: Skip year 1, run a year of pilot stores in two cities, then decide.
+        next: biz-case-004-end-d
+        signals: { Synthesis & Recommendation: developing }
+
+  - id: biz-case-004-end-a
+    type: feedback
+    narrative: strong-stagger
+  - id: biz-case-004-end-b
+    type: feedback
+    narrative: too-fast
+  - id: biz-case-004-end-c
+    type: feedback
+    narrative: too-slow
+  - id: biz-case-004-end-d
+    type: feedback
+    narrative: missed-window

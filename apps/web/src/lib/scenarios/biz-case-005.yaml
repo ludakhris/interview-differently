@@ -1,0 +1,245 @@
+id: biz-case-005
+title: 'Market Sizing: Residential EV Chargers (US, 5-year)'
+track: business case
+subcategory: market-sizing
+estimatedMinutes: 25
+
+briefing:
+  situation: >
+    A growth-equity fund is considering an investment in a residential
+    EV-charger installer. They want a defensible 5-year US TAM, SAM, and
+    SOM in installed units and revenue. No web research — derive
+    everything from the exhibits and reasoned assumptions. The IC meets
+    in eight days.
+  role: Strategy Analyst
+  organisation: Growth-equity advisory practice
+  reportsTo: Engagement Manager
+  timeInRole: 7 months
+
+display:
+  contextStyle: context-cards
+  sidebar:
+    - title: Your Role
+      style: text
+      items:
+        - { label: Title, value: Strategy Analyst }
+        - { label: Engagement, value: EV charger TAM }
+        - { label: Reports to, value: Engagement Manager }
+    - title: Key Facts
+      style: list
+      items:
+        - { label: Geography, value: United States }
+        - { label: Horizon, value: 5 years }
+        - { label: Output, value: TAM / SAM / SOM }
+        - { label: IC, value: 8 days }
+
+rubric:
+  - name: Framework Structuring
+    description: Top-down vs bottom-up structured cleanly?
+  - name: Quantitative Accuracy
+    description: TAM/SAM/SOM within accepted bands with stated assumptions?
+  - name: Data Interpretation
+    description: Does the candidate read the EV adoption curve and SAM filters together?
+  - name: Synthesis & Recommendation
+    description: Is the investment recommendation grounded in the sizing?
+
+phases:
+  - id: structure
+    label: Structure
+    description: Pick a sizing approach before any number.
+    nodeIds: [biz-case-005-n1]
+    exhibitIds: [industry-context]
+    rubricDimensions: [Framework Structuring]
+  - id: model
+    label: Build the model
+    description: Compute TAM, then SAM, then SOM with carry-forward.
+    nodeIds: [biz-case-005-n3]
+    exhibitIds: [ev-adoption-table, ev-adoption-chart]
+    rubricDimensions: [Quantitative Accuracy]
+  - id: recommendation
+    label: Recommendation
+    description: Translate the sizing into an investment posture.
+    nodeIds: [biz-case-005-n4]
+    rubricDimensions: [Synthesis & Recommendation]
+
+exhibits:
+  - id: industry-context
+    kind: text-exhibit
+    title: Industry context
+    caption: Provided by the fund; assume these as ground truth.
+    blocks:
+      - kind: paragraph
+        text: >
+          The US currently has roughly 145M registered passenger vehicles.
+          Battery-electric vehicles (BEVs) make up about 8% of new sales today;
+          policy mandates and battery cost curves drive consensus forecasts to
+          ~40% of new sales by year 5.
+      - kind: bullets
+        items:
+          - 'BEV owners install a Level 2 home charger ~70% of the time; the remaining 30% rely on Level 1 wall outlets or public DCFC.'
+          - 'Installed equipment + labour averages $1,800 per home charger today, projected to $1,400 in year 5.'
+          - "About 64% of US households live in single-family homes where a Level 2 install is structurally feasible (SAM filter)."
+
+  - id: ev-adoption-table
+    kind: data-table
+    title: BEV new-sales share + cumulative parc, by year
+    caption: Forecast scenario used by the fund; no need to second-guess.
+    footnote: 'Source: fund-provided scenario. Vehicle replacement: 6% of parc/year.'
+    columns:
+      - { key: year, label: Year, align: left, format: text, sortable: true }
+      - { key: share, label: BEV % of new sales, format: percent, sortable: true }
+      - { key: parc, label: BEV parc (M), format: decimal, sortable: true }
+      - { key: newhomes, label: Net new BEV homes (M), format: decimal, sortable: true }
+    rows:
+      - { year: 'Y0', share: 8, parc: 4.0, newhomes: 0.7 }
+      - { year: 'Y1', share: 14, parc: 5.2, newhomes: 1.2 }
+      - { year: 'Y2', share: 22, parc: 7.4, newhomes: 2.0 }
+      - { year: 'Y3', share: 30, parc: 10.5, newhomes: 3.1 }
+      - { year: 'Y4', share: 36, parc: 14.5, newhomes: 4.0 }
+      - { year: 'Y5', share: { value: 40, tone: accent, emphasis: true }, parc: 19.0, newhomes: 4.5 }
+    totalRow:
+      { year: { value: 'Cumulative Y1-Y5', emphasis: true }, share: '', parc: '', newhomes: { value: 14.8, tone: accent } }
+
+  - id: ev-adoption-chart
+    kind: chart
+    title: BEV % of new vehicle sales (5-year)
+    caption: 'Adoption trajectory used by the fund.'
+    footnote: 'Source: fund scenario, baselined to current 8%.'
+    chart:
+      title: BEV new-sales share
+      unit: '%'
+      color: green
+      baseline: 8
+      annotation:
+        tIndex: 3
+        label: '↑ Cost curve crosses ICE parity'
+      series:
+        - { t: 'Y0', v: 8 }
+        - { t: 'Y1', v: 14 }
+        - { t: 'Y2', v: 22 }
+        - { t: 'Y3', v: 30 }
+        - { t: 'Y4', v: 36 }
+        - { t: 'Y5', v: 40 }
+
+nodes:
+  - id: biz-case-005-n1
+    type: decision
+    narrative: >
+      How do you structure the TAM/SAM/SOM model before touching the data?
+    contextPanels:
+      - { label: US passenger vehicles, value: '145', type: info, unit: 'M', caption: registered today }
+      - { label: BEV share Y0, value: '8', type: info, unit: '%' }
+      - { label: BEV share Y5, value: '40', type: info, unit: '%', tone: accent, caption: consensus forecast }
+      - { label: Single-fam HH, value: '64', type: info, unit: '%', caption: SAM filter — structurally chargeable }
+    choices:
+      - id: A
+        text: Bottom-up — new BEV homes per year × home-charger attach rate gives TAM in units; multiply by structural filter for SAM; pick a defensible share for SOM.
+        next: biz-case-005-n2a
+        signals: { Framework Structuring: strong }
+      - id: B
+        text: Top-down — start with US household count, apply EV penetration, apply attach rate.
+        next: biz-case-005-n2b
+        signals: { Framework Structuring: proficient }
+      - id: C
+        text: Estimate market revenue from published industry reports and skip the unit derivation.
+        next: biz-case-005-n2c
+        signals: { Framework Structuring: developing }
+      - id: D
+        text: Build a regression of historical home-charger installs on EV registrations.
+        next: biz-case-005-n2d
+        signals: { Framework Structuring: developing }
+
+  - id: biz-case-005-n2a
+    type: transition
+    narrative: >
+      Clean. Build the TAM in units (Y1-Y5 cumulative), then SAM, then size
+      SOM at an investable share.
+    next: biz-case-005-n3
+  - id: biz-case-005-n2b
+    type: feedback
+    narrative: top-down-only
+  - id: biz-case-005-n2c
+    type: feedback
+    narrative: secondary-only
+  - id: biz-case-005-n2d
+    type: feedback
+    narrative: regression-no-data
+
+  - id: biz-case-005-n3
+    type: quant
+    narrative: 'Build TAM, SAM, SOM in cumulative installed units (Y1-Y5).'
+    quantSignalDimensions: [Quantitative Accuracy]
+    quant:
+      variant: structured-quant
+      prompt: Size the residential L2 charger market in installed units over 5 years.
+      context: >
+        Use 14.8M cumulative new BEV homes Y1-Y5, 70% home-charger attach,
+        64% single-family filter, and a 10% achievable share for the
+        installer. Round to the nearest 100k units.
+      formula:
+        display: 'TAM = new BEV homes × 70% attach;  SAM = TAM × 64% single-fam;  SOM = SAM × 10% share'
+        expression: '{newhomes} * {attach}'
+        variables:
+          - { name: newhomes, label: Cumulative new BEV homes Y1-Y5, unit: M, format: decimal, defaultValue: 14.8 }
+          - { name: attach, label: Home charger attach rate, unit: '%', format: percent, defaultValue: 0.7 }
+      fields:
+        - id: tam
+          label: TAM (cumulative units)
+          unit: M units
+          format: decimal
+          acceptedRange: { min: 9.5, max: 11.5, idealMin: 10.2, idealMax: 10.5 }
+          modelAnswer: 10.4
+          derivation: '14.8M × 70% = 10.36M home chargers.'
+        - id: sam
+          label: SAM (single-family filter)
+          unit: M units
+          format: decimal
+          acceptedRange: { min: 6.0, max: 7.4, idealMin: 6.5, idealMax: 6.8 }
+          modelAnswer: 6.6
+          derivation: '10.4M × 64% = 6.66M serviceable.'
+        - id: som
+          label: SOM (10% achievable share)
+          unit: M units
+          format: decimal
+          acceptedRange: { min: 0.55, max: 0.80, idealMin: 0.65, idealMax: 0.70 }
+          modelAnswer: 0.66
+          derivation: '6.6M × 10% = 0.66M units; SOM revenue at $1,800/unit avg ≈ $1.2B.'
+    next: biz-case-005-n4
+
+  - id: biz-case-005-n4
+    type: decision
+    narrative: >
+      SOM lands at ~660k units over 5 years, ~$1.2B at average install pricing.
+      What investment recommendation goes to IC?
+    choices:
+      - id: A
+        text: Invest. SAM is large enough to absorb a 10% share, the cost curve favours scale, and the single-family filter naturally targets margin-positive jobs.
+        next: biz-case-005-end-a
+        signals:
+          Synthesis & Recommendation: strong
+          Quantitative Accuracy: strong
+      - id: B
+        text: Decline. SOM is < 1M units cumulative — too small for a growth-equity check.
+        next: biz-case-005-end-b
+        signals: { Synthesis & Recommendation: developing }
+      - id: C
+        text: Defer. Wait for Y2 to see whether BEV share trajectory holds.
+        next: biz-case-005-end-c
+        signals: { Synthesis & Recommendation: developing }
+      - id: D
+        text: Invest only if the company expands into multi-family / commercial — single-family TAM alone is too narrow.
+        next: biz-case-005-end-d
+        signals: { Synthesis & Recommendation: proficient }
+
+  - id: biz-case-005-end-a
+    type: feedback
+    narrative: invest-strong
+  - id: biz-case-005-end-b
+    type: feedback
+    narrative: too-conservative
+  - id: biz-case-005-end-c
+    type: feedback
+    narrative: wait-and-see
+  - id: biz-case-005-end-d
+    type: feedback
+    narrative: multifam-expand

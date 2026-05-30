@@ -1,0 +1,310 @@
+id: biz-case-006
+title: 'Growth Capstone: BridgeFutures First-Gen Fellowship'
+track: business case
+subcategory: growth-strategy
+estimatedMinutes: 40
+
+briefing:
+  situation: >
+    BridgeFutures is a mission-driven nonprofit serving first-generation
+    college students with a 4-year career-readiness fellowship. Today they
+    operate in 6 cities and serve 4,200 fellows per cohort with a $32M
+    annual budget. The CEO has secured $20M in unrestricted growth funding
+    and asked the board to choose one growth path: deepen current cities,
+    expand to new cities, productize content for at-cost licensing, or
+    build employer partnerships. You have to recommend one path, sized,
+    with a 5-year impact projection. The board reviews in three weeks.
+  role: Strategy Analyst
+  organisation: Pro-bono strategy advisory (BridgeFutures growth)
+  reportsTo: Engagement Manager
+  timeInRole: 6 months
+
+display:
+  contextStyle: context-cards
+  sidebar:
+    - title: Your Role
+      style: text
+      items:
+        - { label: Title, value: Strategy Analyst }
+        - { label: Engagement, value: BridgeFutures growth }
+        - { label: Reports to, value: Engagement Manager }
+    - title: Key Facts
+      style: list
+      items:
+        - { label: Mission, value: First-gen college success }
+        - { label: Cities, value: '6' }
+        - { label: Fellows / cohort, value: '4,200' }
+        - { label: Budget, value: '$32M' }
+        - { label: Growth funding, value: '$20M' }
+        - { label: Board, value: 3 weeks }
+
+rubric:
+  - name: Framework Structuring
+    description: Does the candidate score growth paths on reach × depth × mission fit before picking one?
+  - name: Quantitative Accuracy
+    description: Cost per fellow + 5-year projections within accepted bands?
+  - name: Data Interpretation
+    description: Does the candidate use cohort outcomes + program matrix together?
+  - name: Synthesis & Recommendation
+    description: Is the chosen path defended with mission fit + risks + sequencing?
+
+phases:
+  - id: structure
+    label: Structure
+    description: Score paths on reach × depth × mission fit.
+    nodeIds: [biz-case-006-n1]
+    exhibitIds: [mission-excerpt]
+    rubricDimensions: [Framework Structuring]
+  - id: evidence
+    label: Read evidence
+    description: Match the four paths to cohort outcomes + program matrix.
+    nodeIds: [biz-case-006-n3]
+    exhibitIds: [cohort-outcomes, program-matrix, cohort-chart]
+    rubricDimensions: [Data Interpretation]
+  - id: sizing
+    label: Sizing
+    description: Cost-per-fellow + 5-year impact projection.
+    nodeIds: [biz-case-006-n4]
+    exhibitIds: [cohort-outcomes]
+    rubricDimensions: [Quantitative Accuracy]
+  - id: recommendation
+    label: Recommendation
+    description: One path, defended.
+    nodeIds: [biz-case-006-n5]
+    rubricDimensions: [Synthesis & Recommendation]
+
+exhibits:
+  - id: mission-excerpt
+    kind: text-exhibit
+    title: BridgeFutures mission + theory of change
+    caption: 'From the public annual report.'
+    blocks:
+      - kind: paragraph
+        text: >
+          BridgeFutures exists to close the career-launch gap for
+          first-generation college students. We pair fellows with a 4-year
+          career-readiness curriculum, a cohort community, and direct
+          employer connections. We measure success at one number: the
+          percentage of fellows in a strong first job 12 months after
+          graduation.
+      - kind: bullets
+        items:
+          - Reach matters but depth matters more — a half-served fellow underperforms a non-fellow.
+          - 'Employer partnerships drive the highest single-input lift in placement rate (8-12 pts).'
+          - Geographic expansion has never lifted placement rate; it has lifted total fellows served.
+
+  - id: cohort-outcomes
+    kind: data-table
+    title: Cohort outcomes — current 6 cities
+    caption: 'Strong first job = role-aligned, salary > 25th percentile of role band, 12-month retention.'
+    footnote: 'Source: BridgeFutures alumni survey, last 3 graduating cohorts.'
+    columns:
+      - { key: city, label: City, align: left, format: text, sortable: true }
+      - { key: fellows, label: Fellows / cohort, format: number, sortable: true }
+      - { key: placement, label: Strong first job, format: percent, sortable: true }
+      - { key: cost, label: Cost / fellow ($), format: currency, sortable: true }
+      - { key: employer, label: Employer partners, format: number, sortable: true }
+    rows:
+      - { city: Chicago, fellows: 900, placement: { value: 72, tone: accent }, cost: 7800, employer: 28 }
+      - { city: Newark, fellows: 720, placement: 64, cost: 7600, employer: 18 }
+      - { city: San Antonio, fellows: 680, placement: 58, cost: 7400, employer: 14 }
+      - { city: Atlanta, fellows: 740, placement: 66, cost: 7500, employer: 22 }
+      - { city: Bay Area, fellows: 540, placement: { value: 74, tone: accent, emphasis: true }, cost: 8400, employer: 35 }
+      - { city: Boston, fellows: 620, placement: 68, cost: 8100, employer: 24 }
+    totalRow:
+      { city: { value: Network total, emphasis: true }, fellows: 4200, placement: 67, cost: 7800, employer: 141 }
+
+  - id: program-matrix
+    kind: segmentation-matrix
+    title: Growth paths — reach × depth
+    caption: Place each candidate path on reach (fellows touched) vs depth (placement-rate lift).
+    footnote: 'Depth = projected placement-rate lift per fellow served.'
+    xAxis: { label: Depth (placement lift), lowLabel: Shallow, highLabel: Deep }
+    yAxis: { label: Reach (incremental fellows), lowLabel: Few, highLabel: Many }
+    quadrantLabels:
+      topLeft: Watch
+      topRight: Year 1 — invest
+      bottomLeft: Pass
+      bottomRight: Adjacent
+    quadrants:
+      topLeft:
+        - { label: At-cost content licensing, caption: '20k+ fellows reached, but 0-2 pt lift' }
+      topRight:
+        - { label: Deepen current cities + employer expansion, caption: 'Same 4.2k fellows, +8-12 pt placement lift' }
+        - { label: Geographic expansion (2 new cities), caption: '+1.4k fellows, +0 pt placement lift' }
+      bottomLeft:
+        - { label: National brand campaign, caption: Awareness only, no programmatic touch }
+      bottomRight:
+        - { label: Federal grant pursuit, caption: 'Funds depth but slow + uncertain' }
+
+  - id: cohort-chart
+    kind: chart
+    title: Cohort placement rate — 5-year trend
+    caption: Network-wide placement rate has plateaued at 67%.
+    footnote: 'Source: alumni survey, network-weighted.'
+    chart:
+      title: Placement rate (%)
+      unit: '%'
+      color: amber
+      baseline: 67
+      annotation:
+        tIndex: 2
+        label: '↑ Employer-partner pilot in Bay Area'
+      series:
+        - { t: 'Y-4', v: 52 }
+        - { t: 'Y-3', v: 58 }
+        - { t: 'Y-2', v: 63 }
+        - { t: 'Y-1', v: 65 }
+        - { t: 'Y0', v: 67 }
+
+nodes:
+  - id: biz-case-006-n1
+    type: decision
+    narrative: >
+      Before reading the data — how do you score the four growth paths?
+    contextPanels:
+      - { label: Cohort, value: '4,200', type: info, unit: fellows, caption: across 6 cities }
+      - { label: Placement, value: '67', type: info, unit: '%', tone: accent, caption: strong first job, network-wide }
+      - { label: Cost / fellow, value: '$7.8', type: info, unit: 'k', caption: budget-weighted avg }
+      - { label: Growth $, value: '$20', type: alert, unit: 'M', tone: danger, caption: unrestricted, one-shot }
+    choices:
+      - id: A
+        text: Score the four paths on (reach × depth × mission fit), then size the top two before deciding.
+        next: biz-case-006-n2a
+        signals: { Framework Structuring: strong }
+      - id: B
+        text: Pick the path that maximises fellows served — reach is the headline metric for the board.
+        next: biz-case-006-n2b
+        signals: { Framework Structuring: developing }
+      - id: C
+        text: Survey current fellows about which path they want.
+        next: biz-case-006-n2c
+        signals: { Framework Structuring: developing }
+      - id: D
+        text: Defer to the CEO — fund discretionary, no analysis needed.
+        next: biz-case-006-n2d
+        signals: { Framework Structuring: developing, Synthesis & Recommendation: developing }
+
+  - id: biz-case-006-n2a
+    type: transition
+    narrative: >
+      The board chair sends over cohort outcomes, the program matrix, and
+      the 5-year placement chart. Read them and tell us which two paths to
+      size.
+    next: biz-case-006-n3
+  - id: biz-case-006-n2b
+    type: feedback
+    narrative: reach-only
+  - id: biz-case-006-n2c
+    type: feedback
+    narrative: survey-fellows
+  - id: biz-case-006-n2d
+    type: feedback
+    narrative: defer-to-ceo
+
+  - id: biz-case-006-n3
+    type: decision
+    narrative: >
+      Which two paths warrant sizing for the board?
+    choices:
+      - id: A
+        text: Deepen current cities (employer-partner expansion) and geographic expansion to 2 new cities — the matrix's two top-right candidates.
+        next: biz-case-006-n4
+        signals: { Data Interpretation: strong }
+      - id: B
+        text: Content licensing and brand campaign — both maximise reach.
+        next: biz-case-006-n3-fb-b
+        signals: { Data Interpretation: developing }
+      - id: C
+        text: Deepen current cities and federal grant pursuit — both deepen impact per fellow.
+        next: biz-case-006-n3-fb-c
+        signals: { Data Interpretation: proficient }
+      - id: D
+        text: Content licensing only — it touches the most students per dollar.
+        next: biz-case-006-n3-fb-d
+        signals: { Data Interpretation: developing }
+
+  - id: biz-case-006-n3-fb-b
+    type: feedback
+    narrative: reach-not-depth
+  - id: biz-case-006-n3-fb-c
+    type: feedback
+    narrative: federal-too-slow
+  - id: biz-case-006-n3-fb-d
+    type: feedback
+    narrative: licensing-shallow
+
+  - id: biz-case-006-n4
+    type: quant
+    narrative: 'Project 5-year fellows served + placement lift if BridgeFutures deepens current cities.'
+    quantSignalDimensions: [Quantitative Accuracy]
+    quant:
+      variant: structured-quant
+      prompt: Size the 5-year impact of the deepen-current-cities path.
+      context: >
+        Assume the $20M funds 50 incremental employer-partner FTEs across
+        the network, lifting placement rate by 10 points (67% → 77%) and
+        holding fellow count flat at 4,200/cohort. Estimate cumulative
+        fellows graduating in a strong first job over years 1-5 — incremental
+        vs the 67% baseline.
+      formula:
+        display: 'cohort × 5 cohorts × placement lift (pts) ÷ 100'
+        expression: '{cohort} * 5 * {lift} / 100'
+        variables:
+          - { name: cohort, label: Fellows / cohort, unit: fellows, format: integer, defaultValue: 4200 }
+          - { name: lift, label: Placement rate lift, unit: pts, format: integer, defaultValue: 10 }
+      fields:
+        - id: incremental
+          label: Incremental strong-first-job fellows (5y)
+          unit: fellows
+          format: integer
+          acceptedRange: { min: 1800, max: 2400, idealMin: 2050, idealMax: 2150 }
+          modelAnswer: 2100
+          derivation: '4,200 × 5 × 10% = 2,100 incremental placements.'
+        - id: cost
+          label: Cost per incremental placement
+          unit: '$'
+          format: currency
+          acceptedRange: { min: 8000, max: 11000, idealMin: 9200, idealMax: 9700 }
+          modelAnswer: 9524
+          derivation: '$20M ÷ 2,100 ≈ $9.5k per incremental placement — comparable to current $7.8k/fellow.'
+    next: biz-case-006-n5
+
+  - id: biz-case-006-n5
+    type: decision
+    narrative: >
+      Deepen-current-cities yields ~2,100 incremental placements at ~$9.5k
+      each. Geographic expansion would add ~1,400 fellows at flat placement
+      rate (no incremental lift). What's the board recommendation?
+    choices:
+      - id: A
+        text: Deepen current cities — $20M funds 50 employer-partner FTEs, lifting placement rate 10 pts and generating ~2,100 incremental strong-first-job placements over 5 years. Reach gains can come after the model is proven.
+        next: biz-case-006-end-a
+        signals:
+          Synthesis & Recommendation: strong
+          Quantitative Accuracy: strong
+      - id: B
+        text: Split — $10M to deepen, $10M to expand to 2 new cities.
+        next: biz-case-006-end-b
+        signals: { Synthesis & Recommendation: proficient }
+      - id: C
+        text: Geographic expansion — reach matters more to the board narrative than incremental placement.
+        next: biz-case-006-end-c
+        signals: { Synthesis & Recommendation: developing }
+      - id: D
+        text: Content licensing — touch 20k+ students per year even if depth is shallow.
+        next: biz-case-006-end-d
+        signals: { Synthesis & Recommendation: developing }
+
+  - id: biz-case-006-end-a
+    type: feedback
+    narrative: strong-deepen
+  - id: biz-case-006-end-b
+    type: feedback
+    narrative: split-too-small
+  - id: biz-case-006-end-c
+    type: feedback
+    narrative: expand-no-lift
+  - id: biz-case-006-end-d
+    type: feedback
+    narrative: licensing-shallow-pick

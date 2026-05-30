@@ -1,0 +1,289 @@
+id: biz-case-003
+title: 'Antitrust Defense: GenoMed Generics Pricing'
+track: business case
+subcategory: competitive-response
+estimatedMinutes: 35
+
+briefing:
+  situation: >
+    GenoMed Pharma acquired its largest competitor in the generic cardiac
+    drug Levostatin two years ago and subsequently raised the wholesale
+    price 400%. The Attorney General has filed an antitrust complaint
+    alleging monopolistic pricing. GenoMed's general counsel has retained
+    your firm to build the economic defense. You need to define the
+    relevant market, quantify market concentration, estimate demand
+    elasticity, and recommend a defense posture before the preliminary
+    hearing in six weeks.
+  role: Strategy Analyst
+  organisation: Economic consulting practice (GenoMed defense)
+  reportsTo: Engagement Manager
+  timeInRole: 1 year
+
+display:
+  contextStyle: context-cards
+  sidebar:
+    - title: Your Role
+      style: text
+      items:
+        - { label: Title, value: Strategy Analyst }
+        - { label: Engagement, value: GenoMed defense }
+        - { label: Reports to, value: Engagement Manager }
+    - title: Key Facts
+      style: list
+      items:
+        - { label: Drug, value: Levostatin generic }
+        - { label: Price action, value: '+400%' }
+        - { label: Patients affected, value: 1.4M }
+        - { label: Hearing in, value: 6 weeks }
+
+rubric:
+  - name: Framework Structuring
+    description: Does the candidate define the relevant market correctly before measuring concentration?
+  - name: Quantitative Accuracy
+    description: HHI, elasticity, and price-cost margin calculations within accepted bands?
+  - name: Data Interpretation
+    description: Does the candidate distinguish substitutes from complements and read the share data well?
+  - name: Synthesis & Recommendation
+    description: Is the defense recommendation grounded in the economic analysis with named risks?
+
+phases:
+  - id: structure
+    label: Define the market
+    description: Substitutes drive the market boundary — get this right before any number.
+    nodeIds: [biz-case-003-n1]
+    exhibitIds: [ag-complaint, substitute-prices]
+    rubricDimensions: [Framework Structuring]
+  - id: evidence
+    label: Read evidence
+    description: Read price trends + share movement before computing HHI.
+    nodeIds: [biz-case-003-n3]
+    exhibitIds: [substitute-prices, price-share-chart]
+    rubricDimensions: [Data Interpretation]
+  - id: sizing
+    label: Quant analysis
+    description: HHI calculation determines whether the market is concentrated.
+    nodeIds: [biz-case-003-n4]
+    exhibitIds: [substitute-prices]
+    rubricDimensions: [Quantitative Accuracy]
+  - id: recommendation
+    label: Recommendation
+    description: Pick a defense posture grounded in the analysis.
+    nodeIds: [biz-case-003-n5]
+    rubricDimensions: [Synthesis & Recommendation]
+
+exhibits:
+  - id: ag-complaint
+    kind: text-exhibit
+    title: AG complaint — excerpt
+    caption: 'Filed 14 weeks ago; public record.'
+    blocks:
+      - kind: paragraph
+        text: >
+          The complaint alleges that GenoMed Pharma, following its acquisition
+          of CardioFax in 2022, exercised monopoly power in the market for
+          generic Levostatin by raising the wholesale price from $4.20 to
+          $21.00 per 30-day supply, a 400% increase, without any change in
+          input costs, demand, or competition. The AG seeks injunctive
+          relief and treble damages.
+      - kind: quote
+        text: >
+          The relevant market is Levostatin specifically — there is no
+          therapeutically equivalent substitute.
+        attribution: Office of the Attorney General
+
+  - id: substitute-prices
+    kind: data-table
+    title: Cardiac generics — current prices + market share
+    caption: 'Cardiologists prescribe these molecules interchangeably for the same indication.'
+    footnote: 'Share = % of US Rx volume in the prior 12 months. Source: PharmaIQ.'
+    columns:
+      - { key: drug, label: Drug, align: left, format: text, sortable: true }
+      - { key: manufacturer, label: Manufacturer, align: left, format: text }
+      - { key: price, label: Price ($/30d), format: currency, sortable: true }
+      - { key: share, label: Share, format: percent, sortable: true }
+    rows:
+      - { drug: Levostatin generic, manufacturer: GenoMed, price: 21.00, share: { value: 35, tone: accent, emphasis: true } }
+      - { drug: Atorvastatin generic, manufacturer: TevaSpark, price: 6.50, share: 28 }
+      - { drug: Rosuvastatin generic, manufacturer: MylanCore, price: 8.20, share: 22 }
+      - { drug: Pravastatin generic, manufacturer: Sandoz USA, price: 5.10, share: 10 }
+      - { drug: Simvastatin generic, manufacturer: Apotex Sun, price: 4.40, share: 5 }
+    totalRow:
+      { drug: { value: Total, emphasis: true }, manufacturer: '', price: '', share: 100 }
+
+  - id: price-share-chart
+    kind: chart
+    title: Levostatin share trajectory post-acquisition
+    caption: 'Months indexed to the close of the CardioFax acquisition (M0).'
+    footnote: 'Share = % of US cardiac-generic Rx volume. Source: PharmaIQ.'
+    chart:
+      title: Levostatin volume share (%)
+      unit: '%'
+      color: amber
+      baseline: 60
+      annotation:
+        tIndex: 0
+        label: '↑ Acquisition close + price increase'
+      series:
+        - { t: M-6, v: 58 }
+        - { t: M-3, v: 60 }
+        - { t: M0, v: 60 }
+        - { t: M3, v: 52 }
+        - { t: M6, v: 46 }
+        - { t: M9, v: 41 }
+        - { t: M12, v: 37 }
+        - { t: M18, v: 35 }
+        - { t: M24, v: 35 }
+
+nodes:
+  - id: biz-case-003-n1
+    type: decision
+    narrative: >
+      Before any HHI or elasticity work — how do you define the relevant
+      product market for this case?
+    contextPanels:
+      - { label: Price increase, value: '+400', type: alert, unit: '%', tone: danger, caption: $4.20 → $21.00 / 30d }
+      - { label: Volume share, value: '35', type: info, unit: '%', tone: accent, caption: down from 60% pre-acquisition }
+      - { label: Substitutes, value: '4', type: info, unit: molecules, caption: same indication, lower-priced }
+      - { label: Hearing, value: '6', type: alert, unit: weeks, tone: danger, caption: preliminary economic brief due }
+    choices:
+      - id: A
+        text: Relevant market = Levostatin only. The AG's framing is the safest economic baseline.
+        next: biz-case-003-n2a
+        signals: { Framework Structuring: developing }
+      - id: B
+        text: Relevant market = generic statins indicated for the same cardiac diagnosis. Cardiologists treat them as substitutes and switch on price.
+        next: biz-case-003-n2b
+        signals: { Framework Structuring: strong, Data Interpretation: strong }
+      - id: C
+        text: Relevant market = all cholesterol-lowering therapies including brand-name drugs and lifestyle interventions.
+        next: biz-case-003-n2c
+        signals: { Framework Structuring: developing }
+      - id: D
+        text: Avoid defining a market — argue the price increase reflects rational cost recovery instead.
+        next: biz-case-003-n2d
+        signals: { Framework Structuring: developing, Synthesis & Recommendation: developing }
+
+  - id: biz-case-003-n2a
+    type: feedback
+    narrative: narrow-market
+  - id: biz-case-003-n2b
+    type: transition
+    narrative: >
+      Correct framing. Now read the substitute price table and the share
+      trajectory — what do they tell you about competition in this market?
+    next: biz-case-003-n3
+  - id: biz-case-003-n2c
+    type: feedback
+    narrative: too-broad
+  - id: biz-case-003-n2d
+    type: feedback
+    narrative: no-market-defn
+
+  - id: biz-case-003-n3
+    type: decision
+    narrative: >
+      You read the prices and the share chart. Which observation best
+      anchors the defense?
+    choices:
+      - id: A
+        text: Levostatin volume share dropped from 60% to 35% post-price increase, while substitute prices stayed in a tight band — strong evidence of substitution.
+        next: biz-case-003-n4
+        signals: { Data Interpretation: strong, Synthesis & Recommendation: strong }
+      - id: B
+        text: Levostatin is still the largest single drug at 35% share — concentration is high.
+        next: biz-case-003-n3-fb-b
+        signals: { Data Interpretation: developing }
+      - id: C
+        text: Substitute prices are stable, so consumers have no real alternative.
+        next: biz-case-003-n3-fb-c
+        signals: { Data Interpretation: developing }
+      - id: D
+        text: The 24-month chart is too short to draw conclusions about elasticity.
+        next: biz-case-003-n3-fb-d
+        signals: { Data Interpretation: proficient }
+
+  - id: biz-case-003-n3-fb-b
+    type: feedback
+    narrative: missed-substitution
+  - id: biz-case-003-n3-fb-c
+    type: feedback
+    narrative: wrong-signal
+  - id: biz-case-003-n3-fb-d
+    type: feedback
+    narrative: too-cautious
+
+  - id: biz-case-003-n4
+    type: quant
+    narrative: 'Compute the Herfindahl-Hirschman Index for the defined market.'
+    quantSignalDimensions: [Quantitative Accuracy]
+    quant:
+      variant: numeric-range
+      prompt: What is the post-acquisition HHI for the cardiac generics market?
+      context: >
+        Use the current shares from the substitute prices table. HHI is the
+        sum of the squares of each player's percentage share. DOJ
+        unconcentrated < 1500, moderate 1500-2500, concentrated > 2500.
+      formula:
+        display: 'sum of share² across all competitors'
+        expression: '{geno}*{geno} + {teva}*{teva} + {mylan}*{mylan} + {sandoz}*{sandoz} + {apotex}*{apotex}'
+        variables:
+          - { name: geno, label: GenoMed (Levostatin) share, unit: '%', format: integer, defaultValue: 35 }
+          - { name: teva, label: TevaSpark (Atorvastatin) share, unit: '%', format: integer, defaultValue: 28 }
+          - { name: mylan, label: MylanCore (Rosuvastatin) share, unit: '%', format: integer, defaultValue: 22 }
+          - { name: sandoz, label: Sandoz (Pravastatin) share, unit: '%', format: integer, defaultValue: 10 }
+          - { name: apotex, label: Apotex (Simvastatin) share, unit: '%', format: integer, defaultValue: 5 }
+      field:
+        id: hhi
+        label: HHI
+        format: integer
+        acceptedRange:
+          min: 2400
+          max: 2700
+          idealMin: 2540
+          idealMax: 2600
+        modelAnswer: 2578
+        derivation: >
+          35² + 28² + 22² + 10² + 5² = 1225 + 784 + 484 + 100 + 25 = 2618.
+          DOJ thresholds: 1500 unconcentrated, 1500-2500 moderate, 2500+
+          concentrated. The market sits just over the threshold —
+          arguable, not dispositive.
+    next: biz-case-003-n5
+
+  - id: biz-case-003-n5
+    type: decision
+    narrative: >
+      Substitution evidence is strong, HHI sits at the concentrated edge,
+      and the price increase clearly reduced GenoMed's share. What defense
+      do you take to the preliminary hearing?
+    choices:
+      - id: A
+        text: Argue that the post-price-increase 35% share + clear substitution evidence prove the relevant market is broader than Levostatin alone — HHI = 2.6k is borderline but consumers were not harmed because they switched.
+        next: biz-case-003-end-a
+        signals:
+          Synthesis & Recommendation: strong
+          Framework Structuring: strong
+      - id: B
+        text: Argue the price increase is justified by GenoMed's R&D and manufacturing reinvestment costs.
+        next: biz-case-003-end-b
+        signals: { Synthesis & Recommendation: developing }
+      - id: C
+        text: Offer a settlement — roll prices back 50% in exchange for AG dropping treble damages.
+        next: biz-case-003-end-c
+        signals: { Synthesis & Recommendation: proficient }
+      - id: D
+        text: Push back on the AG's standing — only individual patients can claim harm.
+        next: biz-case-003-end-d
+        signals: { Synthesis & Recommendation: developing }
+
+  - id: biz-case-003-end-a
+    type: feedback
+    narrative: strong-substitution-defense
+  - id: biz-case-003-end-b
+    type: feedback
+    narrative: cost-recovery-weak
+  - id: biz-case-003-end-c
+    type: feedback
+    narrative: settlement-too-early
+  - id: biz-case-003-end-d
+    type: feedback
+    narrative: standing-distraction

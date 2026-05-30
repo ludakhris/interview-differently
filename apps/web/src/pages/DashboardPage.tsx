@@ -39,7 +39,12 @@ function compareWithOrder(a: string, b: string, order: string[]): number {
   return ai - bi
 }
 
-// Group scenarios by track, then (for the "business case" track) by subcategory.
+// Group scenarios by track. For the "business case" track we no longer break
+// the cards into per-subcategory sections — instead we flatten them into a
+// single grid sorted by subcategory order, so cards with the same
+// subcategory cluster naturally without consuming a header row each. The
+// subcategory itself is surfaced as a small pill on each card. Other tracks
+// keep their flat list (no subcategories declared).
 function groupScenarios(scenarios: Scenario[]) {
   const byTrack = new Map<string, Scenario[]>()
   for (const scenario of scenarios) {
@@ -51,23 +56,12 @@ function groupScenarios(scenarios: Scenario[]) {
   return tracks.map((track) => {
     const trackScenarios = byTrack.get(track) ?? []
     if (track === 'business case') {
-      const bySub = new Map<string, Scenario[]>()
-      for (const s of trackScenarios) {
-        const key = s.subcategory ?? 'uncategorized'
-        const list = bySub.get(key) ?? []
-        list.push(s)
-        bySub.set(key, list)
-      }
-      const subs = Array.from(bySub.keys()).sort((a, b) => compareWithOrder(a, b, SUBCATEGORY_ORDER))
-      return {
-        track,
-        subgroups: subs.map((subcategory) => ({
-          subcategory,
-          scenarios: bySub.get(subcategory) ?? [],
-        })),
-      }
+      const sorted = [...trackScenarios].sort((a, b) =>
+        compareWithOrder(a.subcategory ?? 'uncategorized', b.subcategory ?? 'uncategorized', SUBCATEGORY_ORDER),
+      )
+      return { track, scenarios: sorted }
     }
-    return { track, subgroups: [{ subcategory: null as string | null, scenarios: trackScenarios }] }
+    return { track, scenarios: trackScenarios }
   })
 }
 
@@ -132,7 +126,7 @@ export function DashboardPage() {
           <h3 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid">
             Simulation Tracks
           </h3>
-          {groupedScenarios.map(({ track, subgroups }) => {
+          {groupedScenarios.map(({ track, scenarios: trackScenarios }) => {
             const meta = trackMeta[track]
             if (!meta) return null
             return (
@@ -155,41 +149,40 @@ export function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Subgroups */}
-                <div className="space-y-8">
-                  {subgroups.map(({ subcategory, scenarios: groupScenarios }) => (
-                    <div key={subcategory ?? '__none'}>
-                      {subcategory && (
-                        <h5 className="font-display font-bold text-[11px] uppercase tracking-widest text-slate-mid mb-3">
-                          {subcategoryLabel(subcategory)}
-                        </h5>
-                      )}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        {groupScenarios.map((scenario) => (
-                          <div
-                            key={scenario.scenarioId}
-                            className="bg-[#111111] rounded-2xl border border-white/10 hover:border-white/20 transition-all hover:-translate-y-0.5 overflow-hidden cursor-pointer group"
-                            onClick={() => navigate(`/scenario/${scenario.scenarioId}/briefing`)}
+                {/* Flat grid — subcategory surfaced as an eyebrow pill on each card.
+                    Pre-sorted by SUBCATEGORY_ORDER in groupScenarios so similar
+                    cards still cluster visually without per-section headers. */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {trackScenarios.map((scenario) => (
+                    <div
+                      key={scenario.scenarioId}
+                      className="bg-[#111111] rounded-2xl border border-white/10 hover:border-white/20 transition-all hover:-translate-y-0.5 overflow-hidden cursor-pointer group"
+                      onClick={() => navigate(`/scenario/${scenario.scenarioId}/briefing`)}
+                    >
+                      <div className="h-1.5 w-full" style={{ backgroundColor: meta.color }} />
+                      <div className="p-5">
+                        {scenario.subcategory && (
+                          <p
+                            className="text-[10px] font-bold uppercase tracking-[0.18em] mb-2"
+                            style={{ color: meta.color }}
                           >
-                            <div className="h-2 w-full" style={{ backgroundColor: meta.color }} />
-                            <div className="p-6">
-                              <h4 className="font-display font-bold text-[16px] text-[#f5f3ee] leading-snug mb-3">
-                                {scenario.title}
-                              </h4>
-                              <div className="flex items-center justify-between">
-                                <span className="text-[12px] text-slate-light">
-                                  ~{scenario.estimatedMinutes} min
-                                </span>
-                                <span
-                                  className="text-[12px] font-semibold group-hover:translate-x-1 transition-transform inline-block"
-                                  style={{ color: meta.color }}
-                                >
-                                  Start →
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                            {subcategoryLabel(scenario.subcategory)}
+                          </p>
+                        )}
+                        <h4 className="font-display font-bold text-[15px] text-[#f5f3ee] leading-snug mb-3">
+                          {scenario.title}
+                        </h4>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-slate-light">
+                            ~{scenario.estimatedMinutes} min
+                          </span>
+                          <span
+                            className="text-[11px] font-semibold group-hover:translate-x-1 transition-transform inline-block"
+                            style={{ color: meta.color }}
+                          >
+                            Start →
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
