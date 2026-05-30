@@ -38,7 +38,7 @@ export interface ScenarioResult {
 
 // ── Scenario ─────────────────────────────────────────────────────────────────
 
-export type NodeType = 'decision' | 'transition' | 'feedback'
+export type NodeType = 'decision' | 'transition' | 'feedback' | 'quant'
 
 export type TrackType =
   | 'operations'
@@ -184,6 +184,13 @@ export interface ScenarioNode {
   // immersive mode fields
   audioScript?: string                 // exact words for AI narrator; falls back to narrative if absent
   responsePrompt?: string              // open-ended question the candidate answers verbally
+  // quant nodes — required when type === 'quant', ignored otherwise
+  quant?: QuantSpec
+  // Per-rubric-dimension signals contributed when a quant answer lands
+  // entirely in the ideal / accepted / out-of-range bracket. Strong when all
+  // fields are ideal, proficient when all are at least accepted, developing
+  // otherwise. Override per-dimension here to tune the contribution.
+  quantSignalDimensions?: string[]
 }
 
 export interface RubricDimension {
@@ -351,6 +358,101 @@ export type Exhibit =
   | SegmentationMatrixExhibit
   | ChartExhibit
   | TextExhibit
+
+// ── Quantitative answers ──────────────────────────────────────────────────────
+//
+// Quant nodes ask the candidate to compute a specific number with an accepted
+// band. Two variants:
+//
+//   numeric-range     — single field with one accepted band.
+//   structured-quant  — multiple labelled fields, each with its own band
+//                       (e.g. compute population, then households, then cost).
+//
+// Each variant can carry an optional `formula` that exposes named variables
+// the candidate fills in; the expression evaluates to the answer they submit.
+// Variables can `source` from a prior node's answer, enabling carry-forward
+// (the prior answer pre-fills the variable but the candidate can override).
+
+export type QuantNumberFormat = 'integer' | 'decimal' | 'percent' | 'currency'
+
+export interface QuantBand {
+  min: number                          // accepted band minimum (inclusive)
+  max: number                          // accepted band maximum (inclusive)
+  idealMin?: number                    // optional inner band — "strong"
+  idealMax?: number
+}
+
+export interface QuantFieldSpec {
+  id: string                           // field id, used as key in answers + formula vars
+  label: string                        // visible label
+  prompt?: string                      // optional longer prompt below the label
+  unit?: string                        // display suffix, e.g. '%', 'M', '$'
+  format?: QuantNumberFormat
+  acceptedRange: QuantBand
+  modelAnswer: number                  // the exact derived number (centre of band)
+  derivation?: string                  // 1-2 sentence explanation shown on submit
+}
+
+// Variable referenced by a QuantFormula. May source from a prior quant node's
+// answer; if so the prior answer pre-fills the variable but stays editable.
+export interface QuantVariable {
+  name: string                         // matches token in expression, e.g. 'families'
+  label: string
+  unit?: string
+  format?: QuantNumberFormat
+  defaultValue?: number                // initial seed if no source
+  source?: {
+    nodeId: string                     // prior quant node id
+    fieldId?: string                   // for structured-quant, which field
+  }
+}
+
+export interface QuantFormula {
+  expression: string                   // e.g. '{families} * {cost} * 12'
+  variables: QuantVariable[]
+  // Optional human-readable form, e.g. 'families × monthly cost × 12 months'.
+  // Shown to the candidate above the variable inputs.
+  display?: string
+}
+
+interface QuantNodeBase {
+  prompt: string                       // the question, e.g. "How many rural families receive benefits?"
+  context?: string                     // optional extra framing (1-2 sentences)
+  formula?: QuantFormula               // when present, variables drive the computed answer
+}
+
+export interface NumericRangeQuant extends QuantNodeBase {
+  variant: 'numeric-range'
+  field: QuantFieldSpec                // single field
+}
+
+export interface StructuredQuant extends QuantNodeBase {
+  variant: 'structured-quant'
+  fields: QuantFieldSpec[]             // multiple fields, each with own band
+}
+
+export type QuantSpec = NumericRangeQuant | StructuredQuant
+
+// Answer submitted by the candidate. numeric-range answers carry a single
+// `value`; structured-quant answers carry one entry per field, keyed by fieldId.
+export interface QuantAnswer {
+  // numeric-range: single number
+  value?: number
+  // structured-quant: one entry per field id
+  fields?: Record<string, number>
+  // formula variables the candidate filled in (post carry-forward overrides)
+  variables?: Record<string, number>
+}
+
+// Per-field grading classification.
+export type QuantBandHit = 'ideal' | 'accepted' | 'low' | 'high'
+
+export interface QuantFieldResult {
+  fieldId: string
+  modelAnswer: number
+  userAnswer: number
+  band: QuantBandHit
+}
 
 export interface Scenario {
   scenarioId: string

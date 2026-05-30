@@ -1,10 +1,26 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '@clerk/clerk-react'
-import type { Scenario, ScenarioResult, DimensionScore, ScoreQuality } from '@id/types'
+import type {
+  Scenario,
+  ScenarioResult,
+  DimensionScore,
+  ScoreQuality,
+  QualitySignal,
+  QuantAnswer,
+  QuantFieldResult,
+} from '@id/types'
 
 interface SimulationState {
   currentNodeId: string
   choicesMade: Record<string, string>
+  // Numeric answers submitted at quant nodes. Keyed by nodeId.
+  quantAnswers: Record<string, QuantAnswer>
+  // Per-node grading classifications + the (model, user) numbers, used for
+  // results page derivation panels later.
+  quantResults: Record<string, QuantFieldResult[]>
+  // Quality signals emitted from quant submissions; merged with choice
+  // signals at compute time.
+  quantSignals: QualitySignal[]
   startedAt: string
 }
 
@@ -16,11 +32,18 @@ const qualityToScore: Record<ScoreQuality, number> = {
 
 export function useSimulation(scenario: Scenario) {
   const { userId } = useAuth()
-  const firstNode = scenario.nodes.find((n) => n.type === 'decision')!
+  // Start at the first decision *or* quant node — both are "interactive" node
+  // kinds the candidate can act on.
+  const firstNode =
+    scenario.nodes.find((n) => n.type === 'decision' || n.type === 'quant') ??
+    scenario.nodes[0]
 
   const [state, setState] = useState<SimulationState>({
     currentNodeId: firstNode.nodeId,
     choicesMade: {},
+    quantAnswers: {},
+    quantResults: {},
+    quantSignals: [],
     startedAt: new Date().toISOString(),
   })
 
@@ -57,6 +80,67 @@ export function useSimulation(scenario: Scenario) {
     }, 300)
   }, [currentNode])
 
+  // Quant submission. Records the answer, classification results, and the
+  // emitted quality signals, then advances to the node's `nextNodeId`. Quant
+  // nodes always have a single linear next pointer — there's no branching
+  // off a numeric answer (different bands resolve to the same downstream).
+  const submitQuant = useCallback(
+    (payload: {
+      answer: QuantAnswer
+      results: QuantFieldResult[]
+      signals: QualitySignal[]
+    }) => {
+      setState((prev) => ({
+        ...prev,
+        quantAnswers: { ...prev.quantAnswers, [currentNode.nodeId]: payload.answer },
+        quantResults: { ...prev.quantResults, [currentNode.nodeId]: payload.results },
+        quantSignals: [...prev.quantSignals, ...payload.signals],
+      }))
+    },
+    [currentNode],
+  )
+
+  // Advance off a quant node after the candidate has reviewed the band
+  // feedback. Separated from `submitQuant` so the feedback panel can render
+  // before transitioning.
+  const advanceQuant = useCallback(() => {
+    if (!currentNode.nextNodeId) return
+    setIsTransitioning(true)
+    setTimeout(() => {
+      setState((prev) => ({ ...prev, currentNodeId: currentNode.nextNodeId! }))
+      setIsTransitioning(false)
+    }, 300)
+  }, [currentNode])
+
+  // Build the carry-forward map for a node: for each formula variable that
+  // declares a `source`, look up the prior quant answer and surface it.
+  const buildCarryForward = useCallback(
+    (
+      nodeId: string,
+    ): Record<string, { value: number; from: string }> => {
+      const node = scenario.nodes.find((n) => n.nodeId === nodeId)
+      const formula = node?.quant?.formula
+      if (!formula) return {}
+      const out: Record<string, { value: number; from: string }> = {}
+      for (const v of formula.variables) {
+        if (!v.source) continue
+        const prior = state.quantAnswers[v.source.nodeId]
+        if (!prior) continue
+        let value: number | undefined
+        if (v.source.fieldId && prior.fields) value = prior.fields[v.source.fieldId]
+        else if (prior.value !== undefined) value = prior.value
+        if (typeof value !== 'number') continue
+        const sourceNode = scenario.nodes.find((n) => n.nodeId === v.source!.nodeId)
+        out[v.name] = {
+          value,
+          from: sourceNode?.quant?.prompt ?? v.source.nodeId,
+        }
+      }
+      return out
+    },
+    [scenario.nodes, state.quantAnswers],
+  )
+
   const computeResult = useCallback((): ScenarioResult => {
     const signalMap: Record<string, ScoreQuality[]> = {}
     for (const [nodeId, choiceId] of Object.entries(state.choicesMade)) {
@@ -68,6 +152,12 @@ export function useSimulation(scenario: Scenario) {
         if (!signalMap[signal.dimension]) signalMap[signal.dimension] = []
         signalMap[signal.dimension].push(signal.quality)
       }
+    }
+    // Fold in quant signals (emitted by submitQuant) — same dimension-quality
+    // contract as choice signals, just sourced from band classifications.
+    for (const signal of state.quantSignals) {
+      if (!signalMap[signal.dimension]) signalMap[signal.dimension] = []
+      signalMap[signal.dimension].push(signal.quality)
     }
 
     const dimensionScores: DimensionScore[] = scenario.rubric.dimensions.map((dim) => {
@@ -103,8 +193,15 @@ export function useSimulation(scenario: Scenario) {
   }, [scenario, state.choicesMade, userId])
 
   const isComplete = currentNode?.type === 'feedback'
-  const stepNumber = Object.keys(state.choicesMade).length + 1
-  const totalDecisionNodes = scenario.nodes.filter((n) => n.type === 'decision').length
+  // Step counter counts decision *and* quant submissions — both are
+  // candidate-driven advancements through the case.
+  const stepNumber =
+    Object.keys(state.choicesMade).length +
+    Object.keys(state.quantAnswers).length +
+    1
+  const totalInteractiveNodes = scenario.nodes.filter(
+    (n) => n.type === 'decision' || n.type === 'quant',
+  ).length
 
   return {
     currentNode,
@@ -115,8 +212,14 @@ export function useSimulation(scenario: Scenario) {
     isTransitioning,
     isComplete,
     stepNumber,
-    totalDecisionNodes,
+    totalDecisionNodes: totalInteractiveNodes,
     computeResult,
     choicesMade: state.choicesMade,
+    // Quant API
+    submitQuant,
+    advanceQuant,
+    buildCarryForward,
+    quantAnswers: state.quantAnswers,
+    quantResults: state.quantResults,
   }
 }

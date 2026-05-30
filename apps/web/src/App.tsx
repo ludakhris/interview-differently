@@ -19,6 +19,7 @@ import { AdminInstitutionHeatmapPage } from '@/pages/AdminInstitutionHeatmapPage
 import { AdminStudentDetailPage } from '@/pages/AdminStudentDetailPage'
 import { RequestScenarioPage } from '@/pages/RequestScenarioPage'
 import { ExhibitGalleryPage } from '@/pages/dev/ExhibitGalleryPage'
+import { QuantGalleryPage } from '@/pages/dev/QuantGalleryPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
 import { useUserSync } from '@/hooks/useUserSync'
@@ -57,6 +58,7 @@ export default function App() {
       <Route path="/request-scenario" element={<RequestScenarioPage />} />
 
       {/* Internal showcase pages — visual reference for authors. */}
+      <Route path="/dev/quant" element={<QuantGalleryPage />} />
       <Route path="/dev/exhibits" element={<ExhibitGalleryPage />} />
 
       {/* Auth pages — /* catches Clerk's internal sub-routes */}

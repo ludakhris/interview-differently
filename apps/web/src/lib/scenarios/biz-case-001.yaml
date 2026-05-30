@@ -71,7 +71,7 @@ phases:
   - id: sizing
     label: Sizing
     description: Quantify the savings opportunity for rural Aurelians.
-    nodeIds: []
+    nodeIds: [biz-case-001-n3, biz-case-001-n4]
     exhibitIds: [rural-population-table, savings-profit-tree]
     rubricDimensions: [Quantitative Accuracy]
   - id: exhibits
@@ -276,10 +276,17 @@ nodes:
           Framework Structuring: proficient
           Data Interpretation: strong
 
+  # Choice A — strong framework — leads into the Sizing phase via a transition.
   - id: biz-case-001-n2a
-    type: feedback
-    narrative: strong-framework
+    type: transition
+    narrative: >
+      Strong open. The EM nods at the three-bucket frame, hands you the rural
+      population exhibit, and tells you to size the savings opportunity for the
+      rural population first. "Start with how many families collect benefits —
+      then we'll build the savings number."
+    next: biz-case-001-n3
 
+  # Choices B/C/D end the case in their respective feedback nodes.
   - id: biz-case-001-n2b
     type: feedback
     narrative: jumped-to-math
@@ -291,3 +298,80 @@ nodes:
   - id: biz-case-001-n2d
     type: feedback
     narrative: demand-first
+
+  # ── Sizing phase ────────────────────────────────────────────────────────────
+  # Step 1: estimate families on benefits from rural population on benefits.
+  - id: biz-case-001-n3
+    type: quant
+    narrative: 'Step 1 — size the population.'
+    quantSignalDimensions: [Quantitative Accuracy]
+    quant:
+      variant: numeric-range
+      prompt: How many rural families receive state benefits today?
+      context: >
+        Aurelia National Statistics Bureau reports 14M rural people on state
+        benefits, with an average rural household of 4.0 people. Estimate the
+        number of families receiving benefits.
+      field:
+        id: families
+        label: Rural families on benefits
+        unit: families
+        format: integer
+        acceptedRange:
+          min: 3000000
+          max: 4000000
+          idealMin: 3400000
+          idealMax: 3600000
+        modelAnswer: 3500000
+        derivation: >
+          14M people ÷ 4 people per household ≈ 3.5M families. Acceptable band
+          allows ±15% to absorb assumptions on household size; ideal band
+          rewards landing within the model figure.
+    next: biz-case-001-n4
+
+  # Step 2: annual savings via formula carrying forward `families` from n3.
+  - id: biz-case-001-n4
+    type: quant
+    narrative: 'Step 2 — size the savings opportunity.'
+    quantSignalDimensions: [Quantitative Accuracy]
+    quant:
+      variant: numeric-range
+      prompt: What is the annual savings opportunity for rural families if benefits move to Aurelia Retail?
+      context: >
+        Each collection trip costs a family ~50 AUR (bus + lost wages + risk).
+        Benefits disburse monthly, so families travel once per month. Build
+        the savings figure from your earlier population estimate.
+      formula:
+        display: families × monthly cost × 12 months
+        expression: '{families} * {cost} * 12'
+        variables:
+          - name: families
+            label: Families on benefits
+            unit: families
+            format: integer
+            source:
+              nodeId: biz-case-001-n3
+          - name: cost
+            label: Cost per collection trip
+            unit: AUR
+            format: integer
+            defaultValue: 50
+      field:
+        id: savings
+        label: Annual savings
+        unit: AUR
+        format: currency
+        acceptedRange:
+          min: 1800000000
+          max: 2400000000
+          idealMin: 2050000000
+          idealMax: 2150000000
+        modelAnswer: 2100000000
+        derivation: >
+          3.5M families × 50 AUR per trip × 12 trips per year ≈ 2.1B AUR
+          annual savings. Accepted band covers ±15% on the input assumptions.
+    next: biz-case-001-n5
+
+  - id: biz-case-001-n5
+    type: feedback
+    narrative: sizing-complete

@@ -22,7 +22,7 @@ interface YamlChoice {
 
 interface YamlNode {
   id: string
-  type: 'decision' | 'transition' | 'feedback'
+  type: 'decision' | 'transition' | 'feedback' | 'quant'
   narrative: string
   choices?: YamlChoice[]
   next?: string
@@ -30,6 +30,8 @@ interface YamlNode {
   chart?: unknown
   audioScript?: string
   responsePrompt?: string
+  quant?: unknown                      // shape enforced by web-side TS layer
+  quantSignalDimensions?: string[]
 }
 
 interface YamlPhase {
@@ -76,6 +78,11 @@ function yamlToScenario(yamlStr: string): Scenario {
     if (n.chart) Object.assign(base, { chart: n.chart })
     if (n.audioScript) Object.assign(base, { audioScript: n.audioScript })
     if (n.responsePrompt) Object.assign(base, { responsePrompt: n.responsePrompt })
+    if (n.quant) Object.assign(base, { quant: n.quant })
+    if (n.quantSignalDimensions?.length) Object.assign(base, { quantSignalDimensions: n.quantSignalDimensions })
+    // Quant nodes carry their next pointer via `next` (same as transitions);
+    // map to nextNodeId in the runtime shape.
+    if (n.type === 'quant' && n.next) Object.assign(base, { nextNodeId: n.next })
 
     if (n.type === 'decision' && n.choices) {
       const choices: Choice[] = n.choices.map((c) => ({

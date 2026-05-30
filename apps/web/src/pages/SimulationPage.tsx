@@ -10,6 +10,7 @@ import { PreviewGate } from '@/components/PreviewGate'
 import { PhaseStepper } from '@/components/PhaseStepper'
 import { ExhibitsColumn } from '@/components/ExhibitsColumn'
 import { KeyDataPanel, isKeyDataLayout } from '@/components/keydata/KeyDataPanel'
+import { QuantNode } from '@/components/quant/QuantNode'
 import { saveResult, recordSimulationAttempt } from '@/services/resultsService'
 import { useSimulation } from '@/hooks/useSimulation'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
@@ -112,6 +113,10 @@ function SimulationContent({
     totalDecisionNodes,
     computeResult,
     choicesMade,
+    submitQuant,
+    advanceQuant,
+    buildCarryForward,
+    quantAnswers,
   } = useSimulation(scenario)
 
   // Show the preview gate after the first decision is submitted, for unauthenticated visitors
@@ -154,7 +159,12 @@ function SimulationContent({
   const ctxLabel = contextSectionLabel[ctxStyle] ?? 'Live Metrics'
 
   // ── Phase + exhibits plumbing ─────────────────────────────────────────────
-  const answeredNodeIds = useMemo(() => new Set(Object.keys(choicesMade)), [choicesMade])
+  // Treat both decision answers and quant submissions as "node answered" so
+  // the phase stepper marks them complete consistently.
+  const answeredNodeIds = useMemo(
+    () => new Set([...Object.keys(choicesMade), ...Object.keys(quantAnswers)]),
+    [choicesMade, quantAnswers],
+  )
   const phaseViews = useMemo(
     () => buildPhaseViews(scenario, currentNode.nodeId, answeredNodeIds),
     [scenario, currentNode.nodeId, answeredNodeIds],
@@ -257,6 +267,27 @@ function SimulationContent({
                   Continue
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* ── Quant node ── */}
+          {currentNode.type === 'quant' && (
+            <div className="max-w-3xl mx-auto px-6 py-8 animate-slide-up">
+              <QuantNode
+                node={currentNode}
+                carryForward={buildCarryForward(currentNode.nodeId)}
+                onSubmit={submitQuant}
+              />
+              {quantAnswers[currentNode.nodeId] && currentNode.nextNodeId && (
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={advanceQuant}
+                    className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                  >
+                    Continue
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

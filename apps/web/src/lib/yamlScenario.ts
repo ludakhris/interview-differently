@@ -1,5 +1,5 @@
 import jsYaml from 'js-yaml'
-import type { Scenario, ScenarioNode, ScenarioPhase, Exhibit, Choice, ScoreQuality } from '@id/types'
+import type { Scenario, ScenarioNode, ScenarioPhase, Exhibit, Choice, ScoreQuality, QuantSpec } from '@id/types'
 
 // ── YAML schema types ─────────────────────────────────────────────────────────
 
@@ -12,7 +12,7 @@ interface YamlChoice {
 
 interface YamlNode {
   id: string
-  type: 'decision' | 'transition' | 'feedback'
+  type: 'decision' | 'transition' | 'feedback' | 'quant'
   narrative: string
   contextPanels?: { label: string; value: string; type: 'alert' | 'info' | 'metric' }[]
   chart?: Scenario['nodes'][number]['chart']
@@ -20,6 +20,8 @@ interface YamlNode {
   next?: string
   audioScript?: string
   responsePrompt?: string
+  quant?: QuantSpec
+  quantSignalDimensions?: string[]
 }
 
 interface YamlPhase {
@@ -80,6 +82,10 @@ export function yamlToScenario(yamlStr: string): Scenario {
       ...(n.next ? { nextNodeId: n.next } : {}),
       ...(n.audioScript ? { audioScript: n.audioScript } : {}),
       ...(n.responsePrompt ? { responsePrompt: n.responsePrompt } : {}),
+      ...(n.quant ? { quant: n.quant } : {}),
+      ...(n.quantSignalDimensions?.length
+        ? { quantSignalDimensions: n.quantSignalDimensions }
+        : {}),
     }
   })
 
@@ -166,6 +172,10 @@ export function scenarioToYaml(scenario: Scenario): string {
         ...(n.nextNodeId ? { next: n.nextNodeId } : {}),
         ...(n.audioScript ? { audioScript: n.audioScript } : {}),
         ...(n.responsePrompt ? { responsePrompt: n.responsePrompt } : {}),
+        ...(n.quant ? { quant: n.quant } : {}),
+        ...(n.quantSignalDimensions?.length
+          ? { quantSignalDimensions: n.quantSignalDimensions }
+          : {}),
       }
     }),
   }
