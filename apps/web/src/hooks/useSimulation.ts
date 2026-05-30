@@ -8,7 +8,10 @@ import type {
   QualitySignal,
   QuantAnswer,
   QuantFieldResult,
+  QuantNodeResultSummary,
+  PhaseScore,
 } from '@id/types'
+import { getPhaseForNode } from '@/lib/phases'
 
 interface SimulationState {
   currentNodeId: string
@@ -28,6 +31,35 @@ const qualityToScore: Record<ScoreQuality, number> = {
   strong: 88,
   proficient: 68,
   developing: 42,
+}
+
+// Build a DimensionScore from a list of quality signals collected for the
+// dimension. Shared by overall + per-phase aggregations so both render with
+// the same feedback voice.
+function buildDimensionScore(name: string, signals: ScoreQuality[]): DimensionScore {
+  const avgScore =
+    signals.length > 0
+      ? Math.round(signals.reduce((sum, q) => sum + qualityToScore[q], 0) / signals.length)
+      : 55
+  const quality: ScoreQuality =
+    avgScore >= 80 ? 'strong' : avgScore >= 60 ? 'proficient' : 'developing'
+  const feedbackMap: Record<ScoreQuality, string> = {
+    strong: `You demonstrated strong ${name.toLowerCase()}. Your decisions reflected clear judgment and appropriate calibration to the situation.`,
+    proficient: `Your ${name.toLowerCase()} was solid. There were moments where a sharper prioritization would have strengthened your response.`,
+    developing: `${name} is an area to develop. Your decisions here suggest an opportunity to build more structured habits around this competency.`,
+  }
+  return { dimension: name, score: avgScore, quality, feedback: feedbackMap[quality] }
+}
+
+// Coarse "worst" classifier across a list of QuantBandHits. Mirrors the
+// classifyAnswer logic inside QuantNode: any out-of-band trumps accepted,
+// any accepted trumps ideal.
+function worstBand(bands: QuantFieldResult['band'][]): QuantFieldResult['band'] {
+  if (bands.some((b) => b === 'low' || b === 'high')) {
+    return bands.find((b) => b === 'low' || b === 'high')!
+  }
+  if (bands.some((b) => b === 'accepted')) return 'accepted'
+  return 'ideal'
 }
 
 export function useSimulation(scenario: Scenario) {
@@ -142,43 +174,107 @@ export function useSimulation(scenario: Scenario) {
   )
 
   const computeResult = useCallback((): ScenarioResult => {
+    // ── Per-node signal map (used for the overall rubric) ───────────────────
+    // signalMap aggregates every QualitySignal emitted across the run, keyed
+    // by dimension name. nodeSignals tracks which node each signal came from
+    // so the per-phase breakdown can sub-aggregate without re-walking the
+    // scenario graph.
     const signalMap: Record<string, ScoreQuality[]> = {}
+    const nodeSignals: Record<string, QualitySignal[]> = {}
+    function pushSignal(nodeId: string, sig: QualitySignal) {
+      if (!signalMap[sig.dimension]) signalMap[sig.dimension] = []
+      signalMap[sig.dimension].push(sig.quality)
+      if (!nodeSignals[nodeId]) nodeSignals[nodeId] = []
+      nodeSignals[nodeId].push(sig)
+    }
+
     for (const [nodeId, choiceId] of Object.entries(state.choicesMade)) {
       const node = scenario.nodes.find((n) => n.nodeId === nodeId)
       if (!node?.choices) continue
       const choice = node.choices.find((c) => c.id === choiceId)
       if (!choice) continue
-      for (const signal of choice.qualitySignals) {
-        if (!signalMap[signal.dimension]) signalMap[signal.dimension] = []
-        signalMap[signal.dimension].push(signal.quality)
-      }
+      for (const signal of choice.qualitySignals) pushSignal(nodeId, signal)
     }
-    // Fold in quant signals (emitted by submitQuant) — same dimension-quality
-    // contract as choice signals, just sourced from band classifications.
-    for (const signal of state.quantSignals) {
-      if (!signalMap[signal.dimension]) signalMap[signal.dimension] = []
-      signalMap[signal.dimension].push(signal.quality)
-    }
-
-    const dimensionScores: DimensionScore[] = scenario.rubric.dimensions.map((dim) => {
-      const signals = signalMap[dim.name] ?? []
-      const avgScore =
-        signals.length > 0
-          ? Math.round(signals.reduce((sum, q) => sum + qualityToScore[q], 0) / signals.length)
-          : 55
+    // Quant signals are pushed by submitQuant on the same nodeId the band
+    // result was computed for. The hook tracks them alongside quantResults
+    // so we can pair the signal back to its source node here.
+    for (const [nodeId, results] of Object.entries(state.quantResults)) {
+      const node = scenario.nodes.find((n) => n.nodeId === nodeId)
+      if (!node) continue
+      const dims = node.quantSignalDimensions ?? ['Quantitative Accuracy']
+      const worst = worstBand(results.map((r) => r.band))
       const quality: ScoreQuality =
-        avgScore >= 80 ? 'strong' : avgScore >= 60 ? 'proficient' : 'developing'
-      const feedbackMap: Record<ScoreQuality, string> = {
-        strong: `You demonstrated strong ${dim.name.toLowerCase()}. Your decisions reflected clear judgment and appropriate calibration to the situation.`,
-        proficient: `Your ${dim.name.toLowerCase()} was solid. There were moments where a sharper prioritization would have strengthened your response.`,
-        developing: `${dim.name} is an area to develop. Your decisions here suggest an opportunity to build more structured habits around this competency.`,
-      }
-      return { dimension: dim.name, score: avgScore, quality, feedback: feedbackMap[quality] }
-    })
+        worst === 'ideal' ? 'strong' : worst === 'accepted' ? 'proficient' : 'developing'
+      for (const dim of dims) pushSignal(nodeId, { dimension: dim, quality })
+    }
 
-    const overallScore = Math.round(
-      dimensionScores.reduce((sum, d) => sum + d.score, 0) / dimensionScores.length
+    // ── Overall dimension scores (existing behaviour) ───────────────────────
+    const dimensionScores: DimensionScore[] = scenario.rubric.dimensions.map((dim) =>
+      buildDimensionScore(dim.name, signalMap[dim.name] ?? []),
     )
+    const overallScore = Math.round(
+      dimensionScores.reduce((sum, d) => sum + d.score, 0) / dimensionScores.length,
+    )
+
+    // ── Quant results catalogue (top-level, for "what to work on") ──────────
+    const quantResults: QuantNodeResultSummary[] = []
+    for (const [nodeId, results] of Object.entries(state.quantResults)) {
+      const node = scenario.nodes.find((n) => n.nodeId === nodeId)
+      if (!node?.quant) continue
+      const phase = getPhaseForNode(scenario, nodeId)
+      const variables = state.quantAnswers[nodeId]?.variables
+      quantResults.push({
+        nodeId,
+        ...(phase ? { phaseId: phase.id } : {}),
+        prompt: node.quant.prompt,
+        results: results.map((r) => ({
+          fieldId: r.fieldId,
+          modelAnswer: r.modelAnswer,
+          userAnswer: r.userAnswer,
+          band: r.band,
+        })),
+        ...(variables ? { variables } : {}),
+      })
+    }
+
+    // ── Per-phase aggregation ──────────────────────────────────────────────
+    let phaseScores: PhaseScore[] | undefined
+    if (scenario.phases?.length) {
+      phaseScores = scenario.phases.map((phase) => {
+        // Per-phase signal map: only signals from nodes pinned to this phase.
+        const localSignals: Record<string, ScoreQuality[]> = {}
+        for (const nodeId of phase.nodeIds) {
+          for (const sig of nodeSignals[nodeId] ?? []) {
+            if (!localSignals[sig.dimension]) localSignals[sig.dimension] = []
+            localSignals[sig.dimension].push(sig.quality)
+          }
+        }
+        // Restrict to dimensions the phase declares (fall back to every
+        // dimension touched in this phase if none declared).
+        const dimensions = phase.rubricDimensions?.length
+          ? phase.rubricDimensions
+          : Object.keys(localSignals)
+        const phaseDimensionScores = dimensions.map((dimName) =>
+          buildDimensionScore(dimName, localSignals[dimName] ?? []),
+        )
+        const phaseOverall = phaseDimensionScores.length
+          ? Math.round(
+              phaseDimensionScores.reduce((sum, d) => sum + d.score, 0) /
+                phaseDimensionScores.length,
+            )
+          : 0
+        // Phase quant results (catalogue filtered by phase membership).
+        const phaseQuant = quantResults.filter((q) => q.phaseId === phase.id)
+        return {
+          phaseId: phase.id,
+          label: phase.label,
+          ...(phase.description ? { description: phase.description } : {}),
+          overallScore: phaseOverall,
+          dimensionScores: phaseDimensionScores,
+          quantResults: phaseQuant,
+        }
+      })
+    }
 
     return {
       id: crypto.randomUUID(),
@@ -189,8 +285,10 @@ export function useSimulation(scenario: Scenario) {
       overallScore,
       dimensionScores,
       choiceSequence: Object.values(state.choicesMade),
+      ...(phaseScores ? { phaseScores } : {}),
+      ...(quantResults.length ? { quantResults } : {}),
     }
-  }, [scenario, state.choicesMade, state.quantSignals, userId])
+  }, [scenario, state.choicesMade, state.quantResults, state.quantAnswers, userId])
 
   const isComplete = currentNode?.type === 'feedback'
   // Step counter counts decision *and* quant submissions — both are

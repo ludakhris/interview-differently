@@ -277,7 +277,12 @@ function SimulationContent({
           {/* ── Quant node ── */}
           {currentNode.type === 'quant' && (
             <div className="max-w-3xl mx-auto px-6 py-8 animate-slide-up">
+              {/* key on nodeId — React would otherwise reuse the same QuantNode
+                  instance across consecutive quant nodes (because their position
+                  in the render tree is identical), carrying `submitted` and the
+                  typed values from the previous node into the new one. */}
               <QuantNode
+                key={currentNode.nodeId}
                 node={currentNode}
                 carryForward={buildCarryForward(currentNode.nodeId)}
                 onSubmit={submitQuant}

@@ -25,6 +25,43 @@ export interface DimensionScore {
   feedback: string
 }
 
+// Quant submission preserved for the results page so the candidate can
+// see model-vs-user side-by-side after the simulation finishes.
+export interface QuantNodeResultSummary {
+  nodeId: string
+  phaseId?: string
+  prompt: string
+  // Per-field results (model + user + band classification). Reuses the same
+  // QuantFieldResult shape emitted by submitQuant during simulation.
+  results: QuantFieldResultRef[]
+  // Snapshot of formula variables the candidate filled in (post overrides).
+  variables?: Record<string, number>
+}
+
+// Local alias — re-declared as a separate name to avoid a forward reference
+// inside the same export block. Fields match QuantFieldResult.
+export interface QuantFieldResultRef {
+  fieldId: string
+  modelAnswer: number
+  userAnswer: number
+  band: 'ideal' | 'accepted' | 'low' | 'high'
+}
+
+export interface PhaseScore {
+  phaseId: string
+  label: string
+  description?: string
+  // Aggregate score across the dimensions tracked by this phase.
+  overallScore: number
+  // Per-dimension scores restricted to dimensions this phase grades. If the
+  // phase declares no rubricDimensions, this is empty and the phase only
+  // shows quant results (if any).
+  dimensionScores: DimensionScore[]
+  // Quant submissions made during this phase, in answered order. Empty when
+  // the phase has no quant nodes.
+  quantResults: QuantNodeResultSummary[]
+}
+
 export interface ScenarioResult {
   id: string
   userId: string
@@ -34,6 +71,13 @@ export interface ScenarioResult {
   overallScore: number
   dimensionScores: DimensionScore[]
   choiceSequence: string[] // e.g. ['A', 'C', 'B']
+  // Per-phase breakdown — only present when the scenario declares phases.
+  // Legacy unphased scenarios omit this field and the FeedbackPage renders
+  // its original single-section layout.
+  phaseScores?: PhaseScore[]
+  // Top-level catalog of every quant submission across the simulation, in
+  // answered order. Convenient for the "What to work on" panel.
+  quantResults?: QuantNodeResultSummary[]
 }
 
 // ── Scenario ─────────────────────────────────────────────────────────────────

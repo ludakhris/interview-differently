@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
 import { ScoreRing } from '@/components/ScoreRing'
+import { PhaseScoreCard } from '@/components/results/PhaseScoreCard'
 import { useScenarios } from '@/hooks/useScenarios'
 import { useConfig } from '@/hooks/useConfig'
 import { fetchAiFeedback, fetchResult } from '@/services/resultsService'
@@ -160,6 +161,22 @@ export function FeedbackPage() {
             ))}
           </div>
         </div>
+
+        {/* Per-phase scorecards — only for scenarios that declared phases.
+            Each card carries its own dimension breakdown + any quant
+            submissions made during the phase with model-vs-user comparison. */}
+        {result.phaseScores && result.phaseScores.length > 0 && (
+          <div className="mb-8">
+            <h2 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid mb-4">
+              Phase Breakdown
+            </h2>
+            <div className="space-y-4">
+              {result.phaseScores.map((p, i) => (
+                <PhaseScoreCard key={p.phaseId} phase={p} index={i} />
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="bg-[#111111] border border-white/10 rounded-2xl p-6 mb-8">
           <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-3">
