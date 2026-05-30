@@ -24,6 +24,7 @@ export function SimulationPage() {
   const [searchParams] = useSearchParams()
   const isPreview = searchParams.get('builderPreview') === 'true'
 
+  const { isLoaded, isSignedIn } = useAuth()
   const { scenario: liveScenario, isLoading } = useScenario(scenarioId)
   const { trackMeta } = useScenarios()
 
@@ -40,16 +41,35 @@ export function SimulationPage() {
 
   const scenario = isPreview ? previewScenario : liveScenario
 
+  // Hard gate at the wrapper level — unsigned visitors never instantiate
+  // SimulationContent and never call useSimulation, so the absence of
+  // `scenario.nodes` (the summary form returned by the API for guests)
+  // can't crash the hook. The summary still gives us scenario.track so
+  // the Nav shows the right track label.
+  const isGated = isLoaded && !isSignedIn && !isPreview
+
   useEffect(() => {
-    if (!isLoading && !scenario) {
+    if (!isLoading && !scenario && !isGated) {
       navigate('/dashboard')
     }
-  }, [isLoading, scenario, navigate])
+  }, [isLoading, scenario, navigate, isGated])
 
   if ((isLoading && !isPreview) || !scenario) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <p className="text-slate-mid text-[14px]">Loading simulation...</p>
+      </div>
+    )
+  }
+
+  if (isGated) {
+    const meta = trackMeta[scenario.track]
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+        <Nav trackLabel={meta?.label} />
+        <div className="relative flex-1 flex items-center justify-center">
+          <PreviewGate scenarioId={scenarioId!} />
+        </div>
       </div>
     )
   }

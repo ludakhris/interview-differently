@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import type {
   Scenario,
@@ -65,13 +65,19 @@ function worstBand(bands: QuantFieldResult['band'][]): QuantFieldResult['band'] 
 export function useSimulation(scenario: Scenario) {
   const { userId } = useAuth()
   // Start at the first decision *or* quant node — both are "interactive" node
-  // kinds the candidate can act on.
-  const firstNode =
-    scenario.nodes.find((n) => n.type === 'decision' || n.type === 'quant') ??
-    scenario.nodes[0]
+  // kinds the candidate can act on. The summary-form scenario returned to
+  // unauthenticated callers has no `nodes` array; fall through to a
+  // placeholder so the hook still runs (SimulationPage gates guests above
+  // this and never reaches the rendered content).
+  const nodes = useMemo(() => scenario.nodes ?? [], [scenario.nodes])
+  const firstNode = useMemo(
+    () =>
+      nodes.find((n) => n.type === 'decision' || n.type === 'quant') ?? nodes[0],
+    [nodes],
+  )
 
   const [state, setState] = useState<SimulationState>({
-    currentNodeId: firstNode.nodeId,
+    currentNodeId: firstNode?.nodeId ?? '',
     choicesMade: {},
     quantAnswers: {},
     quantResults: {},
@@ -82,7 +88,15 @@ export function useSimulation(scenario: Scenario) {
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null)
   const [isTransitioning, setIsTransitioning] = useState(false)
 
-  const currentNode = scenario.nodes.find((n) => n.nodeId === state.currentNodeId)!
+  // Memoise so the ?? fallback chain doesn't change identity every render
+  // and re-trigger every downstream useCallback dep array.
+  const currentNode = useMemo(
+    () =>
+      nodes.find((n) => n.nodeId === state.currentNodeId) ??
+      firstNode ??
+      ({ nodeId: '', type: 'decision', narrative: '' } as Scenario['nodes'][number]),
+    [nodes, state.currentNodeId, firstNode],
+  )
 
   const submitChoice = useCallback(
     (choiceId: string) => {
