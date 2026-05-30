@@ -136,6 +136,26 @@ function SimulationContent({
     }
   }, [isComplete, isPreview, scenarioId, navigate, computeResult, isSignedIn, scenario.title])
 
+  // ── Phase + exhibits plumbing ─────────────────────────────────────────────
+  // Hooks must run on every render (rules-of-hooks), so they're declared
+  // *before* the isComplete early return below — even though the values are
+  // only consumed in the main render path.
+  // Treat both decision answers and quant submissions as "node answered" so
+  // the phase stepper marks them complete consistently.
+  const answeredNodeIds = useMemo(
+    () => new Set([...Object.keys(choicesMade), ...Object.keys(quantAnswers)]),
+    [choicesMade, quantAnswers],
+  )
+  const phaseViews = useMemo(
+    () => buildPhaseViews(scenario, currentNode.nodeId, answeredNodeIds),
+    [scenario, currentNode.nodeId, answeredNodeIds],
+  )
+  const currentPhase = useMemo(
+    () => getPhaseForNode(scenario, currentNode.nodeId),
+    [scenario, currentNode.nodeId],
+  )
+  const [mobileExhibitsOpen, setMobileExhibitsOpen] = useState(false)
+
   if (isComplete) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -158,21 +178,6 @@ function SimulationContent({
   const ctxStyle = display?.contextStyle ?? 'monitor'
   const ctxLabel = contextSectionLabel[ctxStyle] ?? 'Live Metrics'
 
-  // ── Phase + exhibits plumbing ─────────────────────────────────────────────
-  // Treat both decision answers and quant submissions as "node answered" so
-  // the phase stepper marks them complete consistently.
-  const answeredNodeIds = useMemo(
-    () => new Set([...Object.keys(choicesMade), ...Object.keys(quantAnswers)]),
-    [choicesMade, quantAnswers],
-  )
-  const phaseViews = useMemo(
-    () => buildPhaseViews(scenario, currentNode.nodeId, answeredNodeIds),
-    [scenario, currentNode.nodeId, answeredNodeIds],
-  )
-  const currentPhase = useMemo(
-    () => getPhaseForNode(scenario, currentNode.nodeId),
-    [scenario, currentNode.nodeId],
-  )
   // Show the exhibits rail only when the *current* phase actually has at
   // least one exhibit that resolves against scenario.exhibits. Empty rails
   // read as broken UI; case authors who want an exhibit-free phase (e.g. an
@@ -185,7 +190,6 @@ function SimulationContent({
     (currentPhase?.exhibitIds ?? []).some(id =>
       exhibitCatalog.some(e => e.id === id),
     )
-  const [mobileExhibitsOpen, setMobileExhibitsOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col">

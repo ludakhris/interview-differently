@@ -190,7 +190,7 @@ export function useSimulation(scenario: Scenario) {
       dimensionScores,
       choiceSequence: Object.values(state.choicesMade),
     }
-  }, [scenario, state.choicesMade, userId])
+  }, [scenario, state.choicesMade, state.quantSignals, userId])
 
   const isComplete = currentNode?.type === 'feedback'
   // Step counter counts decision *and* quant submissions — both are
