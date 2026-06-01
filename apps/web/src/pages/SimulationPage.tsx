@@ -106,6 +106,10 @@ function SimulationContent({
   isPreview?: boolean
 }) {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const builderPath = searchParams.get('from') === 'v2'
+    ? `/builder/v2/${scenarioId}`
+    : `/builder/${scenarioId}`
   const meta = trackMeta[scenario.track]
 
   const { isSignedIn, isLoaded, userId } = useAuth()
@@ -246,7 +250,7 @@ function SimulationContent({
             <span className="text-[12px] text-white/30">— responses are not saved</span>
           </div>
           <button
-            onClick={() => navigate(`/builder/${scenarioId}`)}
+            onClick={() => navigate(builderPath)}
             className="text-[12px] font-medium text-white/40 hover:text-white/70 transition-colors"
           >
             ← Back to builder

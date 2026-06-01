@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useAuth } from '@clerk/clerk-react'
 import ReactFlow, {
   Background,
   Controls,
@@ -35,6 +36,7 @@ export function BuilderCanvasPage() {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { getToken } = useAuth()
   const isPreview = searchParams.get('preview') === 'true'
 
   const [scenario, setScenario] = useState<Scenario | null>(null)
@@ -54,11 +56,10 @@ export function BuilderCanvasPage() {
       setIsLoading(false)
       return
     }
-    getScenario(scenarioId).then((loaded) => {
-      setScenario(loaded)
-      setIsLoading(false)
-    })
-  }, [scenarioId])
+    getToken()
+      .then(token => getScenario(scenarioId, token ?? undefined))
+      .then(loaded => { setScenario(loaded); setIsLoading(false) })
+  }, [scenarioId, getToken])
 
   // Hydrate media assets for this scenario; missing/empty is not an error.
   useEffect(() => {

@@ -3,9 +3,12 @@ import { RUBRIC_TEMPLATES } from '@/lib/builderTemplates'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function apiFetch<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
   const res = await fetch(`${API_URL}/api${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     ...init,
   })
   if (!res.ok) {
@@ -21,9 +24,9 @@ export async function listScenarios(): Promise<Scenario[]> {
   return data.scenarios
 }
 
-export async function getScenario(id: string): Promise<Scenario | null> {
+export async function getScenario(id: string, token?: string): Promise<Scenario | null> {
   try {
-    return await apiFetch<Scenario>(`/scenarios/${id}`)
+    return await apiFetch<Scenario>(`/scenarios/${id}`, undefined, token)
   } catch {
     return null
   }

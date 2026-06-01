@@ -10,6 +10,7 @@ import { ImmersiveFeedbackPage } from '@/pages/ImmersiveFeedbackPage'
 import { BuilderListPage } from '@/pages/BuilderListPage'
 import { BuilderSetupPage } from '@/pages/BuilderSetupPage'
 import { BuilderCanvasPage } from '@/pages/BuilderCanvasPage'
+import { BuilderV2Page } from '@/pages/BuilderV2Page'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { WelcomePage } from '@/pages/WelcomePage'
 import { AdminInstitutionsPage } from '@/pages/AdminInstitutionsPage'
@@ -73,6 +74,9 @@ export default function App() {
       <Route path="/scenario/:scenarioId/immersive/:sessionId/feedback" element={<ProtectedRoute><ImmersiveFeedbackPage /></ProtectedRoute>} />
       <Route path="/builder" element={<AdminRoute><BuilderListPage /></AdminRoute>} />
       <Route path="/builder/new" element={<AdminRoute><BuilderSetupPage /></AdminRoute>} />
+      {/* v2 document editor — default authoring path */}
+      <Route path="/builder/v2/:scenarioId" element={<AdminRoute><BuilderV2Page /></AdminRoute>} />
+      {/* Legacy graph canvas — kept as "Advanced" mode */}
       <Route path="/builder/:scenarioId" element={<AdminRoute><BuilderCanvasPage /></AdminRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/welcome" element={<ProtectedRoute><WelcomePage /></ProtectedRoute>} />
