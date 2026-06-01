@@ -4,22 +4,31 @@
 //   - Phase header (type-to-rename, rubric chips)
 //   - Interleaved exhibit + node blocks in candidate-visible order
 //   - "+ insert block" affordances between blocks (Picker wired in Phase B)
-//
-// Phase A: read-only renders + insert placeholders (no click action yet).
 
-import { useRef } from 'react'
+import { useState, useRef } from 'react'
 import type { Scenario, ScenarioPhase, Exhibit, ScenarioNode } from '@id/types'
+import type { EntityKind } from './registry'
 import { ExhibitBlock, NodeBlock, BriefingBlock, SidebarBlock } from './DocBlock'
+import { BlockPicker } from './BlockPicker'
 
 interface Props {
   scenario: Scenario
+  onInsert: (phaseId: string, kind: EntityKind) => void
   onPhaseVisible?: (phaseId: string) => void
 }
 
-export function PhaseDocument({ scenario, onPhaseVisible }: Props) {
+export function PhaseDocument({ scenario, onInsert, onPhaseVisible }: Props) {
   const { phases = [], exhibits = [], nodes = [] } = scenario
   const exhibitMap = Object.fromEntries(exhibits.map(e => [e.id, e]))
   const nodeMap = Object.fromEntries(nodes.map(n => [n.nodeId, n]))
+
+  // Which phase currently has the picker open
+  const [pickerPhaseId, setPickerPhaseId] = useState<string | null>(null)
+
+  function handlePick(kind: EntityKind) {
+    if (pickerPhaseId) onInsert(pickerPhaseId, kind)
+    setPickerPhaseId(null)
+  }
 
   // If no phases declared, show all nodes sequentially as a single implicit phase
   if (phases.length === 0) {
@@ -36,28 +45,38 @@ export function PhaseDocument({ scenario, onPhaseVisible }: Props) {
   }
 
   return (
-    <div className="flex-1 overflow-auto px-10 py-8">
-      <div className="max-w-[820px] mx-auto flex flex-col gap-10">
-        {/* Scenario-level blocks — always visible regardless of phase */}
-        <div className="flex flex-col gap-3">
-          <BriefingBlock briefing={scenario.briefing} />
-          {scenario.display?.sidebar && scenario.display.sidebar.length > 0 && (
-            <SidebarBlock sidebar={scenario.display.sidebar} />
-          )}
-        </div>
+    <>
+      <div className="flex-1 overflow-auto px-10 py-8">
+        <div className="max-w-[820px] mx-auto flex flex-col gap-10">
+          {/* Scenario-level blocks — always visible regardless of phase */}
+          <div className="flex flex-col gap-3">
+            <BriefingBlock briefing={scenario.briefing} />
+            {scenario.display?.sidebar && scenario.display.sidebar.length > 0 && (
+              <SidebarBlock sidebar={scenario.display.sidebar} />
+            )}
+          </div>
 
-        {phases.map(phase => (
-          <PhaseSection
-            key={phase.id}
-            phase={phase}
-            exhibitMap={exhibitMap}
-            nodeMap={nodeMap}
-            allNodes={nodes}
-            onVisible={onPhaseVisible}
-          />
-        ))}
+          {phases.map(phase => (
+            <PhaseSection
+              key={phase.id}
+              phase={phase}
+              exhibitMap={exhibitMap}
+              nodeMap={nodeMap}
+              allNodes={nodes}
+              onInsertRequest={() => setPickerPhaseId(phase.id)}
+              onVisible={onPhaseVisible}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+
+      {pickerPhaseId && (
+        <BlockPicker
+          onPick={handlePick}
+          onClose={() => setPickerPhaseId(null)}
+        />
+      )}
+    </>
   )
 }
 
@@ -68,12 +87,13 @@ interface PhaseSectionProps {
   exhibitMap: Record<string, Exhibit>
   nodeMap: Record<string, ScenarioNode>
   allNodes: ScenarioNode[]
+  onInsertRequest: () => void
   onVisible?: (phaseId: string) => void
 }
 
-function PhaseSection({ phase, exhibitMap, nodeMap, allNodes, onVisible }: PhaseSectionProps) {
+function PhaseSection({ phase, exhibitMap, nodeMap, allNodes, onInsertRequest, onVisible }: PhaseSectionProps) {
   const headerRef = useRef<HTMLDivElement>(null)
-  void onVisible // wired in Phase B (intersection observer)
+  void onVisible // intersection observer wired in Phase D
 
   // Build the ordered block stream: interleave exhibits + nodes in the order
   // they appear in the arrays, preserving the author's intended candidate flow.
@@ -124,7 +144,7 @@ function PhaseSection({ phase, exhibitMap, nodeMap, allNodes, onVisible }: Phase
 
       {/* Block stream */}
       {blocks.length === 0 ? (
-        <EmptyPhase />
+        <EmptyPhase onClick={onInsertRequest} />
       ) : (
         <div className="flex flex-col gap-3">
           {blocks.map((block) => (
@@ -134,8 +154,7 @@ function PhaseSection({ phase, exhibitMap, nodeMap, allNodes, onVisible }: Phase
               ) : (
                 <NodeBlock node={block.node} allNodes={allNodes} />
               )}
-              {/* Insert affordance between every pair of blocks */}
-              <InsertAffordance />
+              <InsertAffordance onClick={onInsertRequest} />
             </div>
           ))}
         </div>
@@ -144,22 +163,28 @@ function PhaseSection({ phase, exhibitMap, nodeMap, allNodes, onVisible }: Phase
   )
 }
 
-function EmptyPhase() {
+function EmptyPhase({ onClick }: { onClick: () => void }) {
   return (
     <div className="border border-dashed border-white/10 rounded-[14px] py-12 flex flex-col items-center gap-3">
       <p className="text-[13px] text-white/30 font-medium">No blocks yet</p>
-      <button className="text-[12px] font-semibold text-emerald-400/80 hover:text-emerald-300 border border-emerald-400/30 hover:border-emerald-400/60 rounded-lg px-4 py-2 transition-all">
+      <button
+        onClick={onClick}
+        className="text-[12px] font-semibold text-emerald-400/80 hover:text-emerald-300 border border-emerald-400/30 hover:border-emerald-400/60 rounded-lg px-4 py-2 transition-all"
+      >
         ＋ Insert first block
       </button>
     </div>
   )
 }
 
-function InsertAffordance() {
+function InsertAffordance({ onClick }: { onClick: () => void }) {
   return (
     <div className="group flex items-center justify-center h-5 my-0.5 relative">
       <div className="absolute inset-x-0 top-1/2 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
-      <button className="relative opacity-0 group-hover:opacity-100 transition-opacity bg-[#111] border border-white/15 text-[11px] font-semibold text-white/40 hover:text-white/70 hover:border-white/25 rounded-full px-3 py-0.5">
+      <button
+        onClick={onClick}
+        className="relative opacity-0 group-hover:opacity-100 transition-opacity bg-[#111] border border-white/15 text-[11px] font-semibold text-white/40 hover:text-white/70 hover:border-white/25 rounded-full px-3 py-0.5"
+      >
         ＋ insert block
       </button>
     </div>

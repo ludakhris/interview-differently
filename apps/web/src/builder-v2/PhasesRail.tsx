@@ -10,13 +10,34 @@ interface Props {
   activePhaseId: string | null
   onSelect: (phaseId: string) => void
   onReorder: (from: number, to: number) => void
+  onRename: (phaseId: string, label: string) => void
   onAdd: () => void
 }
 
-export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onAdd }: Props) {
+export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRename, onAdd }: Props) {
   const [dragging, setDragging] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
   const itemsRef = useRef<(HTMLDivElement | null)[]>([])
+
+  function startEdit(phase: ScenarioPhase, e: React.MouseEvent) {
+    e.stopPropagation()
+    setEditingId(phase.id)
+    setEditValue(phase.label)
+    setTimeout(() => inputRef.current?.select(), 0)
+  }
+
+  function commitEdit() {
+    if (editingId && editValue.trim()) onRename(editingId, editValue.trim())
+    setEditingId(null)
+  }
+
+  function handleEditKey(e: React.KeyboardEvent) {
+    if (e.key === 'Enter') commitEdit()
+    if (e.key === 'Escape') setEditingId(null)
+  }
 
   function handleDragStart(idx: number) { setDragging(idx) }
   function handleDragEnter(idx: number) { setDragOver(idx) }
@@ -44,14 +65,14 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onAdd }
             <div
               key={phase.id}
               ref={el => { itemsRef.current[idx] = el }}
-              draggable
+              draggable={editingId !== phase.id}
               onDragStart={() => handleDragStart(idx)}
               onDragEnter={() => handleDragEnter(idx)}
               onDragEnd={handleDragEnd}
               onDragOver={e => e.preventDefault()}
               onClick={() => onSelect(phase.id)}
               className={[
-                'flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer select-none transition-all',
+                'group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer select-none transition-all',
                 isActive ? 'bg-emerald-400/10 border border-emerald-400/30' : 'border border-transparent hover:bg-white/[0.04]',
                 isDragging ? 'opacity-40' : '',
                 isDragOver ? 'border-t-2 border-t-emerald-400/60' : '',
@@ -64,15 +85,38 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onAdd }
                 'w-1.5 h-1.5 rounded-full flex-none',
                 hasContent(phase) ? 'bg-emerald-400' : 'bg-white/20',
               ].join(' ')} />
-              {/* label */}
-              <span className={[
-                'flex-1 text-[13px] font-semibold truncate',
-                isActive ? 'text-white' : 'text-white/65',
-              ].join(' ')}>
-                {phase.label}
-              </span>
+              {/* label or inline editor */}
+              {editingId === phase.id ? (
+                <input
+                  ref={inputRef}
+                  value={editValue}
+                  onChange={e => setEditValue(e.target.value)}
+                  onBlur={commitEdit}
+                  onKeyDown={handleEditKey}
+                  onClick={e => e.stopPropagation()}
+                  className="flex-1 text-[13px] font-semibold bg-transparent border-b border-emerald-400/60 text-white outline-none min-w-0"
+                  autoFocus
+                />
+              ) : (
+                <span className={[
+                  'flex-1 text-[13px] font-semibold truncate',
+                  isActive ? 'text-white' : 'text-white/65',
+                ].join(' ')}>
+                  {phase.label}
+                </span>
+              )}
+              {/* pencil — visible on hover when not editing */}
+              {editingId !== phase.id && (
+                <button
+                  onClick={e => startEdit(phase, e)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-white/35 hover:text-white/70 px-0.5 flex-none"
+                  title="Rename phase"
+                >
+                  ✎
+                </button>
+              )}
               {/* block count */}
-              <span className="text-[11px] text-white/25 font-medium tabular-nums">
+              <span className="text-[11px] text-white/25 font-medium tabular-nums flex-none">
                 {(phase.nodeIds?.length ?? 0) + (phase.exhibitIds?.length ?? 0)}
               </span>
             </div>

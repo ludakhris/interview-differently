@@ -15,6 +15,8 @@ import { useBuilderDoc } from '@/hooks/useBuilderDoc'
 import { V2Toolbar } from '@/builder-v2/V2Toolbar'
 import { PhasesRail } from '@/builder-v2/PhasesRail'
 import { PhaseDocument } from '@/builder-v2/PhaseDocument'
+import { descriptorFor, seedExhibit, seedNode } from '@/builder-v2/registry'
+import type { EntityKind } from '@/builder-v2/registry'
 import type { Scenario } from '@id/types'
 
 export function BuilderV2Page() {
@@ -34,7 +36,7 @@ export function BuilderV2Page() {
   }, [scenarioId, getToken])
 
   const doc = useBuilderDoc(initial)
-  const { scenario, saveStatus, setTitle, addPhase, reorderPhases, saveNow } = doc
+  const { scenario, saveStatus, setTitle, addPhase, updatePhase, reorderPhases, addExhibit, addNode, saveNow } = doc
 
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null)
 
@@ -74,6 +76,17 @@ export function BuilderV2Page() {
     navigate(`/scenario/${scenarioId}/play?builderPreview=true&from=v2`)
   }
 
+  function handleInsert(phaseId: string, kind: EntityKind) {
+    const id = `${kind}-${Date.now()}`
+    const desc = descriptorFor(kind)
+    if (desc.group === 'exhibit') {
+      addExhibit(phaseId, seedExhibit(kind, id))
+    } else {
+      // quant + node groups both map to ScenarioNode
+      addNode(phaseId, seedNode(kind, id))
+    }
+  }
+
   return (
     <div className="h-screen flex flex-col bg-[#0a0a0a] overflow-hidden">
       <V2Toolbar
@@ -91,11 +104,13 @@ export function BuilderV2Page() {
           activePhaseId={activePhaseId}
           onSelect={setActivePhaseId}
           onReorder={reorderPhases}
+          onRename={(id, label) => updatePhase(id, { label })}
           onAdd={addPhase}
         />
 
         <PhaseDocument
           scenario={scenario}
+          onInsert={handleInsert}
           onPhaseVisible={setActivePhaseId}
         />
       </div>

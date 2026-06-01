@@ -75,7 +75,7 @@ export const REGISTRY: EntityDescriptor[] = [
     emoji: '▦',
     blurb: '2×2 grid; items per quadrant, highlight the star quadrant.',
     example: 'e.g. Market attractiveness × competitive position',
-    screenshot: 'exhibits/04-segmentation-matrix.png',
+    screenshot: 'exhibits/05-segmentation-matrix.png',
   },
   {
     kind: 'chart',
@@ -84,7 +84,7 @@ export const REGISTRY: EntityDescriptor[] = [
     emoji: '📈',
     blurb: 'Trend line with a baseline value and an optional annotation.',
     example: 'e.g. BEV adoption curve, revenue growth',
-    screenshot: 'exhibits/05-chart.png',
+    screenshot: 'exhibits/04-chart.png',
   },
   // ── Quant ───────────────────────────────────────────────────────────────────
   {
@@ -103,7 +103,7 @@ export const REGISTRY: EntityDescriptor[] = [
     emoji: '🔢',
     blurb: 'Several linked numbers, each with its own band. Carry one answer into the next.',
     example: 'e.g. TAM → SAM → SOM',
-    screenshot: 'quant/02-structured-quant.png',
+    screenshot: 'quant/03-structured-quant.png',
   },
   // ── Nodes ───────────────────────────────────────────────────────────────────
   {
