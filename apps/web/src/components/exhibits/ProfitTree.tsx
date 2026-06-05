@@ -16,7 +16,9 @@ export function ProfitTree({ exhibit }: { exhibit: ProfitTreeExhibit }) {
       badge="Tree"
     >
       <div>
-        <TreeNode node={exhibit.root} depth={0} isLast />
+        {(exhibit.roots ?? [exhibit.root]).map((node, i, arr) => (
+          <TreeNode key={node.id} node={node} depth={0} isLast={i === arr.length - 1} />
+        ))}
       </div>
     </ExhibitShell>
   )

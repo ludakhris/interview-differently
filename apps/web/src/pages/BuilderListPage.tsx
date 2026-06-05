@@ -353,7 +353,7 @@ export function BuilderListPage() {
                               {scenario.title || 'Untitled Scenario'}
                             </p>
                             <p className="text-[11px] text-white/30">
-                              {scenario.nodes.length} node{scenario.nodes.length !== 1 ? 's' : ''}
+                              {(scenario.nodes ?? []).length} node{(scenario.nodes ?? []).length !== 1 ? 's' : ''}
                             </p>
                           </div>
                         </div>

@@ -351,7 +351,8 @@ export interface ProfitTreeNode {
 
 export interface ProfitTreeExhibit extends ExhibitBase {
   kind: 'profit-tree'
-  root: ProfitTreeNode
+  root: ProfitTreeNode       // single-root legacy; renderer uses roots ?? [root]
+  roots?: ProfitTreeNode[]   // multi-root: editor writes here
 }
 
 // segmentation-matrix — 2×2 grid. Each quadrant has a label + list of items.

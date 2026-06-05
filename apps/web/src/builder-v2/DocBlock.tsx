@@ -1,13 +1,23 @@
-// DocBlock — read-only inline render of a single entity (exhibit or node)
-// in the v2 document editor.
+// DocBlock — renders a single entity (exhibit or node) in the v2 document editor.
 //
-// Phase A: shows the production renderer wrapped in an editable chrome
-// (eyebrow kind label, drag handle, ⋮ menu placeholder).
-// Phase C: the chrome becomes interactive (click to edit in place).
+// Phase A: read-only renders wrapped in BlockShell chrome.
+// Phase C: ⋮ button triggers inline edit mode — block replaces with the
+//          appropriate editor. "✓ Done" commits and returns to read-only.
 
 import type { Exhibit, ScenarioNode, ScenarioBriefing, SidebarSection } from '@id/types'
 import { ExhibitRenderer } from '@/components/exhibits/ExhibitRenderer'
 import { descriptorFor } from './registry'
+
+// ── Phase C editors ───────────────────────────────────────────────────────────
+import { DecisionEditor } from './editors/DecisionEditor'
+import { TransitionEditor } from './editors/TransitionEditor'
+import { FeedbackEditor } from './editors/FeedbackEditor'
+import { QuantEditor } from './editors/QuantEditor'
+import { TextExhibitEditor } from './editors/TextExhibitEditor'
+import { DataTableEditor } from './editors/DataTableEditor'
+import { ProfitTreeEditor } from './editors/ProfitTreeEditor'
+import { SegMatrixEditor } from './editors/SegMatrixEditor'
+import { ChartEditor } from './editors/ChartEditor'
 
 // ── Quality signal badge colour ───────────────────────────────────────────────
 
@@ -19,12 +29,25 @@ const QUALITY_COLORS: Record<string, string> = {
 
 // ── Exhibit block ─────────────────────────────────────────────────────────────
 
-export function ExhibitBlock({ exhibit }: { exhibit: Exhibit }) {
+interface ExhibitBlockProps {
+  exhibit: Exhibit
+  isEditing: boolean
+  onEditRequest: () => void
+  onUpdate: (updated: Exhibit) => void
+}
+
+export function ExhibitBlock({ exhibit, isEditing, onEditRequest, onUpdate }: ExhibitBlockProps) {
   const desc = descriptorFor(exhibit.kind)
+
+  if (isEditing) {
+    return <ExhibitEditor exhibit={exhibit} onDone={onUpdate} />
+  }
+
   return (
     <BlockShell
       emoji={desc.emoji}
       kindLabel={desc.label}
+      onEditRequest={onEditRequest}
       actionSlot={
         <span className="text-[11px] font-semibold text-white/35 border border-white/10 rounded-full px-2.5 py-0.5">
           ↻ show again later
@@ -36,28 +59,89 @@ export function ExhibitBlock({ exhibit }: { exhibit: Exhibit }) {
   )
 }
 
+function ExhibitEditor({ exhibit, onDone }: { exhibit: Exhibit; onDone: (updated: Exhibit) => void }) {
+  switch (exhibit.kind) {
+    case 'text-exhibit':
+      return <TextExhibitEditor exhibit={exhibit} onDone={onDone} />
+    case 'data-table':
+      return <DataTableEditor exhibit={exhibit} onDone={onDone} />
+    case 'profit-tree':
+      return <ProfitTreeEditor exhibit={exhibit} onDone={onDone} />
+    case 'segmentation-matrix':
+      return <SegMatrixEditor exhibit={exhibit} onDone={onDone} />
+    case 'chart':
+      return <ChartEditor exhibit={exhibit} onDone={onDone} />
+  }
+}
+
 // ── Node blocks ───────────────────────────────────────────────────────────────
 
-export function NodeBlock({ node, allNodes }: { node: ScenarioNode; allNodes: ScenarioNode[] }) {
+interface NodeBlockProps {
+  node: ScenarioNode
+  allNodes: ScenarioNode[]
+  isEditing: boolean
+  onEditRequest: () => void
+  onUpdate: (updated: ScenarioNode) => void
+}
+
+export function NodeBlock({ node, allNodes, isEditing, onEditRequest, onUpdate }: NodeBlockProps) {
+  if (isEditing) {
+    return <NodeEditor node={node} allNodes={allNodes} onDone={onUpdate} />
+  }
+
   switch (node.type) {
     case 'decision':
-      return <DecisionBlock node={node} allNodes={allNodes} />
+      return <DecisionBlock node={node} allNodes={allNodes} onEditRequest={onEditRequest} />
     case 'transition':
-      return <TransitionBlock node={node} />
+      return <TransitionBlock node={node} onEditRequest={onEditRequest} />
     case 'feedback':
-      return <FeedbackBlock node={node} />
+      return <FeedbackBlock node={node} onEditRequest={onEditRequest} />
     case 'quant':
-      return <QuantBlock node={node} />
+      return <QuantBlock node={node} onEditRequest={onEditRequest} />
     default:
       return null
   }
 }
 
-function DecisionBlock({ node, allNodes }: { node: ScenarioNode; allNodes: ScenarioNode[] }) {
+function NodeEditor({
+  node,
+  allNodes,
+  onDone,
+}: {
+  node: ScenarioNode
+  allNodes: ScenarioNode[]
+  onDone: (updated: ScenarioNode) => void
+}) {
+  switch (node.type) {
+    case 'decision':
+      return <DecisionEditor node={node} allNodes={allNodes} onDone={onDone} />
+    case 'transition':
+      return <TransitionEditor node={node} allNodes={allNodes} onDone={onDone} />
+    case 'feedback':
+      return <FeedbackEditor node={node} onDone={onDone} />
+    case 'quant':
+      if (!node.quant) return null
+      return <QuantEditor node={node} onDone={onDone} />
+    default:
+      return null
+  }
+}
+
+// ── Decision (read-only) ──────────────────────────────────────────────────────
+
+function DecisionBlock({
+  node,
+  allNodes,
+  onEditRequest,
+}: {
+  node: ScenarioNode
+  allNodes: ScenarioNode[]
+  onEditRequest: () => void
+}) {
   const nodeMap = Object.fromEntries(allNodes.map(n => [n.nodeId, n]))
 
   return (
-    <BlockShell emoji="🔀" kindLabel="Decision">
+    <BlockShell emoji="🔀" kindLabel="Decision" onEditRequest={onEditRequest}>
       {/* Key Data (contextPanels) */}
       {(node.contextPanels ?? []).length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-white/[0.06]">
@@ -84,7 +168,6 @@ function DecisionBlock({ node, allNodes }: { node: ScenarioNode; allNodes: Scena
       <p className="text-[14px] text-white/85 leading-relaxed mb-3 font-medium">
         {node.narrative || <span className="italic text-white/30">No question text yet</span>}
       </p>
-
       {/* Options */}
       <div className="flex flex-col gap-1.5">
         {(node.choices ?? []).map(choice => {
@@ -92,37 +175,25 @@ function DecisionBlock({ node, allNodes }: { node: ScenarioNode; allNodes: Scena
           const signal = choice.qualitySignals?.[0]
           const quality = signal?.quality ?? 'developing'
           const colorClass = QUALITY_COLORS[quality] ?? QUALITY_COLORS.developing
-
-          // Determine target label
           let targetLabel = '→ unset'
           if (choice.nextNodeId) {
-            if (targetNode) {
-              targetLabel = `→ ${targetNode.narrative?.slice(0, 30) ?? targetNode.type}…`
-            } else {
-              targetLabel = '↩ redirect'
-            }
+            targetLabel = targetNode
+              ? `→ ${targetNode.narrative?.slice(0, 30) ?? targetNode.type}…`
+              : '↩ redirect'
           }
-
           return (
-            <div
-              key={choice.id}
-              className="flex items-start gap-2.5 px-3 py-2.5 border border-white/[0.06] rounded-lg bg-white/[0.02]"
-            >
-              {/* Badge */}
+            <div key={choice.id} className="flex items-start gap-2.5 px-3 py-2.5 border border-white/[0.06] rounded-lg bg-white/[0.02]">
               <span className="flex-none mt-[1px] w-[22px] h-[22px] rounded-[6px] flex items-center justify-center text-[11px] font-bold bg-white/[0.06] border border-white/10">
                 {choice.id}
               </span>
-              {/* Text */}
               <span className="flex-1 text-[13px] leading-[1.5] text-white/85">
                 {choice.text || <span className="italic text-white/30">No option text</span>}
               </span>
-              {/* Signal */}
               {signal && (
                 <span className={`flex-none text-[11px] font-semibold border rounded-full px-2 py-0.5 capitalize ${colorClass}`}>
                   {quality}
                 </span>
               )}
-              {/* Target */}
               <span className="flex-none text-[11px] text-white/30 font-medium whitespace-nowrap">
                 {targetLabel}
               </span>
@@ -137,9 +208,9 @@ function DecisionBlock({ node, allNodes }: { node: ScenarioNode; allNodes: Scena
   )
 }
 
-function TransitionBlock({ node }: { node: ScenarioNode }) {
+function TransitionBlock({ node, onEditRequest }: { node: ScenarioNode; onEditRequest: () => void }) {
   return (
-    <BlockShell emoji="↩" kindLabel="Redirect / Transition">
+    <BlockShell emoji="↩" kindLabel="Redirect / Transition" onEditRequest={onEditRequest}>
       <p className="text-[14px] text-white/70 leading-relaxed italic">
         {node.narrative || <span className="text-white/30">No bridge narrative yet</span>}
       </p>
@@ -152,9 +223,9 @@ function TransitionBlock({ node }: { node: ScenarioNode }) {
   )
 }
 
-function FeedbackBlock({ node }: { node: ScenarioNode }) {
+function FeedbackBlock({ node, onEditRequest }: { node: ScenarioNode; onEditRequest: () => void }) {
   return (
-    <BlockShell emoji="🏁" kindLabel="Ending">
+    <BlockShell emoji="🏁" kindLabel="Ending" onEditRequest={onEditRequest}>
       <p className="text-[14px] text-white/70 leading-relaxed">
         {node.narrative || <span className="italic text-white/30">No feedback narrative yet</span>}
       </p>
@@ -162,7 +233,7 @@ function FeedbackBlock({ node }: { node: ScenarioNode }) {
   )
 }
 
-function QuantBlock({ node }: { node: ScenarioNode }) {
+function QuantBlock({ node, onEditRequest }: { node: ScenarioNode; onEditRequest: () => void }) {
   const spec = node.quant
   if (!spec) return null
   const isStructured = spec.variant === 'structured-quant'
@@ -171,32 +242,24 @@ function QuantBlock({ node }: { node: ScenarioNode }) {
     <BlockShell
       emoji="🔢"
       kindLabel={isStructured ? 'Structured Quant' : 'Numeric Range'}
+      onEditRequest={onEditRequest}
     >
-      {/* Prompt */}
       <p className="text-[14px] text-white/85 leading-relaxed mb-3">
         {spec.prompt || node.narrative || <span className="italic text-white/30">No prompt yet</span>}
       </p>
-
-      {/* Formula display */}
       {spec.formula?.display && (
         <div className="mb-3 px-3 py-2 rounded-lg bg-[#1a5a8a]/10 border border-[#1a5a8a]/30">
           <p className="text-[11px] font-bold uppercase tracking-widest text-[#1a5a8a]/80 mb-1">Formula</p>
           <p className="text-[13px] text-sky-300 font-mono">{spec.formula.display}</p>
         </div>
       )}
-
-      {/* Fields */}
       {isStructured ? (
         <div className="flex flex-col gap-1.5">
-          {spec.fields.map(f => (
-            <BandRow key={f.id} label={f.label} unit={f.unit} ideal={f.modelAnswer} />
-          ))}
+          {spec.fields.map(f => <BandRow key={f.id} label={f.label} unit={f.unit} ideal={f.modelAnswer} />)}
         </div>
       ) : (
         <BandRow label={spec.field.label} unit={spec.field.unit} ideal={spec.field.modelAnswer} />
       )}
-
-      {/* Hint indicator */}
       {spec.hint && (
         <div className="mt-3 pl-3 border-l-2 border-amber-400/50 text-amber-300/80 text-[11.5px] leading-relaxed">
           Hint available — reveals formula, caps at <span className="font-semibold">Proficient</span>
@@ -215,7 +278,6 @@ function BandRow({ label, unit, ideal }: { label: string; unit?: string; ideal?:
           {ideal}{unit ? ` ${unit}` : ''} ideal
         </span>
       )}
-      {/* Mini band visualization */}
       <div className="w-24 h-1.5 rounded-full bg-white/[0.07] relative">
         <span className="absolute left-[30%] right-[25%] inset-y-0 rounded-full bg-emerald-400/25" />
         <span className="absolute left-[43%] right-[40%] -top-px -bottom-px rounded-full bg-emerald-400" />
@@ -281,16 +343,17 @@ function BlockShell({
   emoji,
   kindLabel,
   actionSlot,
+  onEditRequest,
   children,
 }: {
   emoji: string
   kindLabel: string
   actionSlot?: React.ReactNode
+  onEditRequest?: () => void
   children: React.ReactNode
 }) {
   return (
     <div className="group border border-white/10 rounded-[14px] bg-[#111] p-4 hover:border-white/20 transition-colors">
-      {/* Header row */}
       <div className="flex items-center gap-2 mb-3">
         <span className="text-[14px]">{emoji}</span>
         <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/30">
@@ -298,10 +361,15 @@ function BlockShell({
         </span>
         <div className="flex-1" />
         {actionSlot}
-        {/* ⋮ menu — Phase C will wire this to the inline editor */}
-        <button className="opacity-0 group-hover:opacity-100 transition-opacity text-[15px] text-white/35 hover:text-white/70 px-1">
-          ⋮
-        </button>
+        {onEditRequest && (
+          <button
+            onClick={onEditRequest}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold text-yellow-400/50 hover:text-yellow-300 hover:bg-yellow-400/[0.10] border border-yellow-400/20 hover:border-yellow-400/40 transition-all"
+            title="Edit"
+          >
+            ✎ Edit
+          </button>
+        )}
       </div>
       {children}
     </div>

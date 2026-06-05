@@ -14,16 +14,20 @@ import { BlockPicker } from './BlockPicker'
 interface Props {
   scenario: Scenario
   onInsert: (phaseId: string, kind: EntityKind) => void
+  onExhibitUpdate: (exhibit: Exhibit) => void
+  onNodeUpdate: (node: ScenarioNode) => void
   onPhaseVisible?: (phaseId: string) => void
 }
 
-export function PhaseDocument({ scenario, onInsert, onPhaseVisible }: Props) {
+export function PhaseDocument({ scenario, onInsert, onExhibitUpdate, onNodeUpdate, onPhaseVisible }: Props) {
   const { phases = [], exhibits = [], nodes = [] } = scenario
   const exhibitMap = Object.fromEntries(exhibits.map(e => [e.id, e]))
   const nodeMap = Object.fromEntries(nodes.map(n => [n.nodeId, n]))
 
   // Which phase currently has the picker open
   const [pickerPhaseId, setPickerPhaseId] = useState<string | null>(null)
+  // Which block is currently in edit mode (by id — exhibit.id or node.nodeId)
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
 
   function handlePick(kind: EntityKind) {
     if (pickerPhaseId) onInsert(pickerPhaseId, kind)
@@ -37,7 +41,14 @@ export function PhaseDocument({ scenario, onInsert, onPhaseVisible }: Props) {
         <div className="max-w-[820px] mx-auto flex flex-col gap-3">
           <p className="text-[12px] text-white/30 italic mb-2">No phases declared — add a phase in the left rail.</p>
           {nodes.map(node => (
-            <NodeBlock key={node.nodeId} node={node} allNodes={nodes} />
+            <NodeBlock
+              key={node.nodeId}
+              node={node}
+              allNodes={nodes}
+              isEditing={false}
+              onEditRequest={() => {}}
+              onUpdate={() => {}}
+            />
           ))}
         </div>
       </div>
@@ -63,6 +74,10 @@ export function PhaseDocument({ scenario, onInsert, onPhaseVisible }: Props) {
               exhibitMap={exhibitMap}
               nodeMap={nodeMap}
               allNodes={nodes}
+              editingBlockId={editingBlockId}
+              onEditRequest={setEditingBlockId}
+              onExhibitUpdate={(e) => { onExhibitUpdate(e); setEditingBlockId(null) }}
+              onNodeUpdate={(n) => { onNodeUpdate(n); setEditingBlockId(null) }}
               onInsertRequest={() => setPickerPhaseId(phase.id)}
               onVisible={onPhaseVisible}
             />
@@ -87,11 +102,15 @@ interface PhaseSectionProps {
   exhibitMap: Record<string, Exhibit>
   nodeMap: Record<string, ScenarioNode>
   allNodes: ScenarioNode[]
+  editingBlockId: string | null
+  onEditRequest: (blockId: string) => void
+  onExhibitUpdate: (exhibit: Exhibit) => void
+  onNodeUpdate: (node: ScenarioNode) => void
   onInsertRequest: () => void
   onVisible?: (phaseId: string) => void
 }
 
-function PhaseSection({ phase, exhibitMap, nodeMap, allNodes, onInsertRequest, onVisible }: PhaseSectionProps) {
+function PhaseSection({ phase, exhibitMap, nodeMap, allNodes, editingBlockId, onEditRequest, onExhibitUpdate, onNodeUpdate, onInsertRequest, onVisible }: PhaseSectionProps) {
   const headerRef = useRef<HTMLDivElement>(null)
   void onVisible // intersection observer wired in Phase D
 
@@ -150,9 +169,20 @@ function PhaseSection({ phase, exhibitMap, nodeMap, allNodes, onInsertRequest, o
           {blocks.map((block) => (
             <div key={block.id}>
               {block.kind === 'exhibit' ? (
-                <ExhibitBlock exhibit={block.exhibit} />
+                <ExhibitBlock
+                  exhibit={block.exhibit}
+                  isEditing={editingBlockId === block.exhibit.id}
+                  onEditRequest={() => onEditRequest(block.exhibit.id)}
+                  onUpdate={onExhibitUpdate}
+                />
               ) : (
-                <NodeBlock node={block.node} allNodes={allNodes} />
+                <NodeBlock
+                  node={block.node}
+                  allNodes={allNodes}
+                  isEditing={editingBlockId === block.node.nodeId}
+                  onEditRequest={() => onEditRequest(block.node.nodeId)}
+                  onUpdate={onNodeUpdate}
+                />
               )}
               <InsertAffordance onClick={onInsertRequest} />
             </div>
