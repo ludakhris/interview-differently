@@ -39,14 +39,14 @@ export function NumberInput(props: InputHTMLAttributes<HTMLInputElement>) {
 export function SelectInput({
   options,
   ...rest
-}: SelectHTMLAttributes<HTMLSelectElement> & { options: { value: string; label: string }[] }) {
+}: SelectHTMLAttributes<HTMLSelectElement> & { options: { value: string; label: string; disabled?: boolean }[] }) {
   return (
     <select
       {...rest}
       className={`${inputCls} cursor-pointer`}
     >
       {options.map(o => (
-        <option key={o.value} value={o.value}>{o.label}</option>
+        <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>
       ))}
     </select>
   )

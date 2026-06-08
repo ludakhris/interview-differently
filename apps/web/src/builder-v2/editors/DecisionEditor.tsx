@@ -84,16 +84,32 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
     setPanels(prev => prev.filter((_, i) => i !== idx))
   }
 
-  // ── Target options ─────────────────────────────────────────────────────────
+  // ── Target options — grouped by type ──────────────────────────────────────
+
+  const otherNodes = allNodes.filter(n => n.nodeId !== node.nodeId)
+  const endings  = otherNodes.filter(n => n.type === 'feedback')
+  const redirects = otherNodes.filter(n => n.type === 'transition')
+  const others    = otherNodes.filter(n => n.type !== 'feedback' && n.type !== 'transition')
+
+  function nodeLabel(n: typeof allNodes[0]): string {
+    const txt = n.narrative?.trim()
+    return txt ? (txt.length > 45 ? txt.slice(0, 45) + '…' : txt) : n.nodeId
+  }
 
   const targetOptions = [
-    { value: '', label: '— unset —' },
-    ...allNodes
-      .filter(n => n.nodeId !== node.nodeId)
-      .map(n => ({
-        value: n.nodeId,
-        label: `${n.nodeId} — ${n.narrative?.slice(0, 35) ?? n.type}${(n.narrative?.length ?? 0) > 35 ? '…' : ''}`,
-      })),
+    { value: '', label: '→ continue (next block)' },
+    ...(endings.length ? [
+      { value: '__sep_endings', label: '─── Endings ───', disabled: true },
+      ...endings.map(n => ({ value: n.nodeId, label: `🏁 ${nodeLabel(n)}` })),
+    ] : []),
+    ...(redirects.length ? [
+      { value: '__sep_redirects', label: '─── Redirects ───', disabled: true },
+      ...redirects.map(n => ({ value: n.nodeId, label: `↩ ${nodeLabel(n)}` })),
+    ] : []),
+    ...(others.length ? [
+      { value: '__sep_others', label: '─── Other nodes ───', disabled: true },
+      ...others.map(n => ({ value: n.nodeId, label: `${n.type === 'quant' ? '🔢' : '🔀'} ${nodeLabel(n)}` })),
+    ] : []),
   ]
 
   // ── Save ───────────────────────────────────────────────────────────────────

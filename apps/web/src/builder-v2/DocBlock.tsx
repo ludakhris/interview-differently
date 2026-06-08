@@ -32,11 +32,13 @@ const QUALITY_COLORS: Record<string, string> = {
 interface ExhibitBlockProps {
   exhibit: Exhibit
   isEditing: boolean
+  isShared?: boolean
   onEditRequest: () => void
   onUpdate: (updated: Exhibit) => void
+  onToggleShared?: () => void
 }
 
-export function ExhibitBlock({ exhibit, isEditing, onEditRequest, onUpdate }: ExhibitBlockProps) {
+export function ExhibitBlock({ exhibit, isEditing, isShared, onEditRequest, onUpdate, onToggleShared }: ExhibitBlockProps) {
   const desc = descriptorFor(exhibit.kind)
 
   if (isEditing) {
@@ -49,9 +51,18 @@ export function ExhibitBlock({ exhibit, isEditing, onEditRequest, onUpdate }: Ex
       kindLabel={desc.label}
       onEditRequest={onEditRequest}
       actionSlot={
-        <span className="text-[11px] font-semibold text-white/35 border border-white/10 rounded-full px-2.5 py-0.5">
+        <button
+          onClick={onToggleShared}
+          title={isShared ? 'Remove from later phases' : 'Show in all later phases too'}
+          className={[
+            'text-[11px] font-semibold border rounded-full px-2.5 py-0.5 transition-all',
+            isShared
+              ? 'text-emerald-300 bg-emerald-400/10 border-emerald-400/30 hover:bg-emerald-400/5'
+              : 'text-white/30 border-white/10 hover:text-white/50 hover:border-white/20',
+          ].join(' ')}
+        >
           ↻ show again later
-        </span>
+        </button>
       }
     >
       <ExhibitRenderer exhibit={exhibit} />
@@ -93,7 +104,7 @@ export function NodeBlock({ node, allNodes, isEditing, onEditRequest, onUpdate }
     case 'decision':
       return <DecisionBlock node={node} allNodes={allNodes} onEditRequest={onEditRequest} />
     case 'transition':
-      return <TransitionBlock node={node} onEditRequest={onEditRequest} />
+      return <TransitionBlock node={node} allNodes={allNodes} onEditRequest={onEditRequest} />
     case 'feedback':
       return <FeedbackBlock node={node} onEditRequest={onEditRequest} />
     case 'quant':
@@ -121,7 +132,7 @@ function NodeEditor({
       return <FeedbackEditor node={node} onDone={onDone} />
     case 'quant':
       if (!node.quant) return null
-      return <QuantEditor node={node} onDone={onDone} />
+      return <QuantEditor node={node} allNodes={allNodes} onDone={onDone} />
     default:
       return null
   }
@@ -175,11 +186,17 @@ function DecisionBlock({
           const signal = choice.qualitySignals?.[0]
           const quality = signal?.quality ?? 'developing'
           const colorClass = QUALITY_COLORS[quality] ?? QUALITY_COLORS.developing
-          let targetLabel = '→ unset'
+          let targetLabel = '→ continue'
           if (choice.nextNodeId) {
-            targetLabel = targetNode
-              ? `→ ${targetNode.narrative?.slice(0, 30) ?? targetNode.type}…`
-              : '↩ redirect'
+            if (!targetNode) {
+              targetLabel = '↩ redirect'
+            } else if (targetNode.type === 'feedback') {
+              const txt = targetNode.narrative?.trim()
+              targetLabel = `🏁 ${txt ? txt.slice(0, 30) : targetNode.nodeId}`
+            } else {
+              const txt = targetNode.narrative?.trim()
+              targetLabel = `→ ${txt ? txt.slice(0, 30) : targetNode.type}${(txt?.length ?? 0) > 30 ? '…' : ''}`
+            }
           }
           return (
             <div key={choice.id} className="flex items-start gap-2.5 px-3 py-2.5 border border-white/[0.06] rounded-lg bg-white/[0.02]">
@@ -208,15 +225,19 @@ function DecisionBlock({
   )
 }
 
-function TransitionBlock({ node, onEditRequest }: { node: ScenarioNode; onEditRequest: () => void }) {
+function TransitionBlock({ node, allNodes, onEditRequest }: { node: ScenarioNode; allNodes: ScenarioNode[]; onEditRequest: () => void }) {
+  const targetNode = node.nextNodeId ? allNodes.find(n => n.nodeId === node.nextNodeId) : null
+  const targetText = targetNode?.narrative?.trim()
   return (
     <BlockShell emoji="↩" kindLabel="Redirect / Transition" onEditRequest={onEditRequest}>
       <p className="text-[14px] text-white/70 leading-relaxed italic">
         {node.narrative || <span className="text-white/30">No bridge narrative yet</span>}
       </p>
       {node.nextNodeId && (
-        <div className="mt-2 text-[11px] text-white/35 font-medium">
-          Continues to: <span className="text-white/55 font-semibold">{node.nextNodeId}</span>
+        <div className="mt-2">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300">
+            ↩ back to: {targetText ? targetText.slice(0, 45) + (targetText.length > 45 ? '…' : '') : node.nextNodeId}
+          </span>
         </div>
       )}
     </BlockShell>

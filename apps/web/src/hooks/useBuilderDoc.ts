@@ -119,6 +119,26 @@ export function useBuilderDoc(initial: Scenario | null) {
     }))
   }, [patch])
 
+  // Toggle "show again later" — add/remove exhibit from all phases after fromPhaseId.
+  const toggleExhibitShared = useCallback((exhibitId: string, fromPhaseId: string) => {
+    patch(s => {
+      const phases = s.phases ?? []
+      const fromIdx = phases.findIndex(p => p.id === fromPhaseId)
+      if (fromIdx < 0) return s
+      const isShared = phases.slice(fromIdx + 1).some(p => (p.exhibitIds ?? []).includes(exhibitId))
+      const updatedPhases = phases.map((p, i) => {
+        if (i <= fromIdx) return p
+        const ids = p.exhibitIds ?? []
+        if (isShared) {
+          return { ...p, exhibitIds: ids.filter(id => id !== exhibitId) }
+        } else {
+          return ids.includes(exhibitId) ? p : { ...p, exhibitIds: [...ids, exhibitId] }
+        }
+      })
+      return { ...s, phases: updatedPhases }
+    })
+  }, [patch])
+
   // ── Nodes ──────────────────────────────────────────────────────────────────
   const addNode = useCallback((phaseId: string, node: ScenarioNode) => {
     patch(s => {
@@ -175,6 +195,7 @@ export function useBuilderDoc(initial: Scenario | null) {
     addNode,
     updateNode,
     removeNode,
+    toggleExhibitShared,
     saveNow,
   }
 }

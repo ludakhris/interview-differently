@@ -1,11 +1,12 @@
 // PhaseDocument — the main scrollable document area of the v2 editor.
 //
 // Renders each phase as a section with:
-//   - Phase header (type-to-rename, rubric chips)
+//   - Phase header (type-to-rename, clickable rubric chips)
 //   - Interleaved exhibit + node blocks in candidate-visible order
 //   - "+ insert block" affordances between blocks (Picker wired in Phase B)
+// After all phases: a Wrap-up section rendering all feedback / ending nodes.
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { Scenario, ScenarioPhase, Exhibit, ScenarioNode } from '@id/types'
 import type { EntityKind } from './registry'
 import { ExhibitBlock, NodeBlock, BriefingBlock, SidebarBlock } from './DocBlock'
@@ -13,26 +14,42 @@ import { BlockPicker } from './BlockPicker'
 
 interface Props {
   scenario: Scenario
+  activePhaseId?: string | null
   onInsert: (phaseId: string, kind: EntityKind) => void
   onExhibitUpdate: (exhibit: Exhibit) => void
   onNodeUpdate: (node: ScenarioNode) => void
+  onPhaseUpdate?: (phaseId: string, updates: Partial<ScenarioPhase>) => void
+  onToggleExhibitShared?: (exhibitId: string, fromPhaseId: string) => void
   onPhaseVisible?: (phaseId: string) => void
 }
 
-export function PhaseDocument({ scenario, onInsert, onExhibitUpdate, onNodeUpdate, onPhaseVisible }: Props) {
+export function PhaseDocument({ scenario, activePhaseId, onInsert, onExhibitUpdate, onNodeUpdate, onPhaseUpdate, onToggleExhibitShared, onPhaseVisible }: Props) {
   const { phases = [], exhibits = [], nodes = [] } = scenario
   const exhibitMap = Object.fromEntries(exhibits.map(e => [e.id, e]))
   const nodeMap = Object.fromEntries(nodes.map(n => [n.nodeId, n]))
+  const allDimensions = (scenario.rubric?.dimensions ?? []).map(d => d.name)
 
   // Which phase currently has the picker open
   const [pickerPhaseId, setPickerPhaseId] = useState<string | null>(null)
   // Which block is currently in edit mode (by id — exhibit.id or node.nodeId)
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
 
+  // Scroll to phase when selected from rail
+  const scrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!activePhaseId) return
+    const el = scrollRef.current?.querySelector(`[data-phase-id="${activePhaseId}"]`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [activePhaseId])
+
   function handlePick(kind: EntityKind) {
     if (pickerPhaseId) onInsert(pickerPhaseId, kind)
     setPickerPhaseId(null)
   }
+
+  // Feedback nodes not assigned to any phase — shown in Wrap-up
+  const phaseNodeIds = new Set(phases.flatMap(p => p.nodeIds ?? []))
+  const wrapUpNodes = nodes.filter(n => n.type === 'feedback' && !phaseNodeIds.has(n.nodeId))
 
   // If no phases declared, show all nodes sequentially as a single implicit phase
   if (phases.length === 0) {
@@ -57,7 +74,7 @@ export function PhaseDocument({ scenario, onInsert, onExhibitUpdate, onNodeUpdat
 
   return (
     <>
-      <div className="flex-1 overflow-auto px-10 py-8">
+      <div ref={scrollRef} className="flex-1 overflow-auto px-10 py-8">
         <div className="max-w-[820px] mx-auto flex flex-col gap-10">
           {/* Scenario-level blocks — always visible regardless of phase */}
           <div className="flex flex-col gap-3">
@@ -67,21 +84,53 @@ export function PhaseDocument({ scenario, onInsert, onExhibitUpdate, onNodeUpdat
             )}
           </div>
 
-          {phases.map(phase => (
+          {phases.map((phase, phaseIdx) => (
             <PhaseSection
               key={phase.id}
               phase={phase}
+              phaseIdx={phaseIdx}
+              allPhases={phases}
               exhibitMap={exhibitMap}
               nodeMap={nodeMap}
               allNodes={nodes}
+              allDimensions={allDimensions}
               editingBlockId={editingBlockId}
               onEditRequest={setEditingBlockId}
               onExhibitUpdate={(e) => { onExhibitUpdate(e); setEditingBlockId(null) }}
               onNodeUpdate={(n) => { onNodeUpdate(n); setEditingBlockId(null) }}
               onInsertRequest={() => setPickerPhaseId(phase.id)}
+              onPhaseUpdate={onPhaseUpdate}
+              onToggleExhibitShared={onToggleExhibitShared}
               onVisible={onPhaseVisible}
             />
           ))}
+
+          {/* Wrap-up — feedback / ending nodes not in any phase */}
+          {wrapUpNodes.length > 0 && (
+            <div>
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-1 self-stretch bg-amber-500/70 rounded-full flex-none mt-1" />
+                <div>
+                  <h2 className="text-[22px] font-bold tracking-tight text-white" style={{ fontFamily: 'Syne, sans-serif' }}>
+                    Wrap-up
+                  </h2>
+                  <p className="text-[13px] text-white/45 mt-0.5">Endings — referenced by decision option targets above</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                {wrapUpNodes.map(node => (
+                  <NodeBlock
+                    key={node.nodeId}
+                    node={node}
+                    allNodes={nodes}
+                    isEditing={editingBlockId === node.nodeId}
+                    onEditRequest={() => setEditingBlockId(node.nodeId)}
+                    onUpdate={n => { onNodeUpdate(n); setEditingBlockId(null) }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -99,25 +148,27 @@ export function PhaseDocument({ scenario, onInsert, onExhibitUpdate, onNodeUpdat
 
 interface PhaseSectionProps {
   phase: ScenarioPhase
+  phaseIdx: number
+  allPhases: ScenarioPhase[]
   exhibitMap: Record<string, Exhibit>
   nodeMap: Record<string, ScenarioNode>
   allNodes: ScenarioNode[]
+  allDimensions: string[]
   editingBlockId: string | null
   onEditRequest: (blockId: string) => void
   onExhibitUpdate: (exhibit: Exhibit) => void
   onNodeUpdate: (node: ScenarioNode) => void
   onInsertRequest: () => void
+  onPhaseUpdate?: (phaseId: string, updates: Partial<ScenarioPhase>) => void
+  onToggleExhibitShared?: (exhibitId: string, fromPhaseId: string) => void
   onVisible?: (phaseId: string) => void
 }
 
-function PhaseSection({ phase, exhibitMap, nodeMap, allNodes, editingBlockId, onEditRequest, onExhibitUpdate, onNodeUpdate, onInsertRequest, onVisible }: PhaseSectionProps) {
+function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNodes, allDimensions, editingBlockId, onEditRequest, onExhibitUpdate, onNodeUpdate, onInsertRequest, onPhaseUpdate, onToggleExhibitShared, onVisible }: PhaseSectionProps) {
   const headerRef = useRef<HTMLDivElement>(null)
   void onVisible // intersection observer wired in Phase D
 
-  // Build the ordered block stream: interleave exhibits + nodes in the order
-  // they appear in the arrays, preserving the author's intended candidate flow.
-  // We render exhibits listed in exhibitIds, then the node sequence, which
-  // matches how SimulationPage renders them (InlineExhibits above, then nodes).
+  // Build the ordered block stream
   type Block =
     | { kind: 'exhibit'; id: string; exhibit: Exhibit }
     | { kind: 'node'; id: string; node: ScenarioNode }
@@ -133,8 +184,23 @@ function PhaseSection({ phase, exhibitMap, nodeMap, allNodes, editingBlockId, on
     }),
   ]
 
+  // Rubric dimension toggle
+  function toggleDimension(dim: string) {
+    if (!onPhaseUpdate) return
+    const current = phase.rubricDimensions ?? []
+    const next = current.includes(dim)
+      ? current.filter(d => d !== dim)
+      : [...current, dim]
+    onPhaseUpdate(phase.id, { rubricDimensions: next.length ? next : undefined })
+  }
+
+  // Exhibit shared = appears in any phase after this one
+  function isExhibitShared(exhibitId: string): boolean {
+    return allPhases.slice(phaseIdx + 1).some(p => (p.exhibitIds ?? []).includes(exhibitId))
+  }
+
   return (
-    <div>
+    <div data-phase-id={phase.id}>
       {/* Phase header */}
       <div ref={headerRef} className="flex items-start gap-3 mb-4">
         <div className="w-1 self-stretch bg-emerald-500/70 rounded-full flex-none mt-1" />
@@ -145,17 +211,28 @@ function PhaseSection({ phase, exhibitMap, nodeMap, allNodes, editingBlockId, on
           {phase.description && (
             <p className="text-[13px] text-white/45 mt-0.5">{phase.description}</p>
           )}
-          {/* Rubric dimension chips */}
-          {(phase.rubricDimensions ?? []).length > 0 && (
+          {/* Rubric dimension chips — clickable toggles */}
+          {allDimensions.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
-              {(phase.rubricDimensions ?? []).map(dim => (
-                <span
-                  key={dim}
-                  className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/30 text-emerald-300"
-                >
-                  {dim}
-                </span>
-              ))}
+              {allDimensions.map(dim => {
+                const active = (phase.rubricDimensions ?? []).includes(dim)
+                return (
+                  <button
+                    key={dim}
+                    type="button"
+                    onClick={() => toggleDimension(dim)}
+                    title={active ? 'Remove from this phase' : 'Score this dimension in this phase'}
+                    className={[
+                      'text-[11px] font-semibold px-2.5 py-0.5 rounded-full border transition-all',
+                      active
+                        ? 'bg-emerald-400/10 border-emerald-400/30 text-emerald-300 hover:bg-emerald-400/5'
+                        : 'bg-transparent border-white/[0.08] text-white/25 hover:border-white/20 hover:text-white/40',
+                    ].join(' ')}
+                  >
+                    {dim}
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>
@@ -172,8 +249,12 @@ function PhaseSection({ phase, exhibitMap, nodeMap, allNodes, editingBlockId, on
                 <ExhibitBlock
                   exhibit={block.exhibit}
                   isEditing={editingBlockId === block.exhibit.id}
+                  isShared={isExhibitShared(block.exhibit.id)}
                   onEditRequest={() => onEditRequest(block.exhibit.id)}
                   onUpdate={onExhibitUpdate}
+                  onToggleShared={onToggleExhibitShared
+                    ? () => onToggleExhibitShared(block.exhibit.id, phase.id)
+                    : undefined}
                 />
               ) : (
                 <NodeBlock

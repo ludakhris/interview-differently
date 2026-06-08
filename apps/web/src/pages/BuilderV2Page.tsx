@@ -36,7 +36,7 @@ export function BuilderV2Page() {
   }, [scenarioId, getToken])
 
   const doc = useBuilderDoc(initial)
-  const { scenario, saveStatus, setTitle, addPhase, updatePhase, reorderPhases, addExhibit, updateExhibit, addNode, updateNode, saveNow } = doc
+  const { scenario, saveStatus, setTitle, addPhase, updatePhase, reorderPhases, addExhibit, updateExhibit, addNode, updateNode, saveNow, toggleExhibitShared } = doc
 
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null)
 
@@ -110,9 +110,12 @@ export function BuilderV2Page() {
 
         <PhaseDocument
           scenario={scenario}
+          activePhaseId={activePhaseId}
           onInsert={handleInsert}
           onExhibitUpdate={updateExhibit}
           onNodeUpdate={updateNode}
+          onPhaseUpdate={updatePhase}
+          onToggleExhibitShared={toggleExhibitShared}
           onPhaseVisible={setActivePhaseId}
         />
       </div>

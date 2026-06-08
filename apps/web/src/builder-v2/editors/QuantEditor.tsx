@@ -2,7 +2,7 @@
 // Includes: prompt, per-field bands, formula tokenizer, hint, footnote.
 
 import { useState } from 'react'
-import type { ScenarioNode, QuantSpec, QuantFieldSpec, QuantFormula, QuantVariable, QuantNumberFormat, QuantBand } from '@id/types'
+import type { ScenarioNode, QuantSpec, QuantFieldSpec, QuantFormula, QuantVariable, QuantNumberFormat, QuantBand, StructuredQuant } from '@id/types'
 import {
   EditShell, Field, TextInput, Textarea, NumberInput, SelectInput, SectionLabel, AddButton, RemoveButton,
 } from './shared'
@@ -94,9 +94,11 @@ function FieldEditor({
 function FormulaSection({
   formula,
   onChange,
+  priorQuantNodes,
 }: {
   formula: QuantFormula | undefined
   onChange: (f: QuantFormula | undefined) => void
+  priorQuantNodes?: ScenarioNode[]
 }) {
   const [enabled, setEnabled] = useState(!!formula)
   const [expression, setExpression] = useState(formula?.expression ?? '')
@@ -152,28 +154,66 @@ function FormulaSection({
           {variables.length > 0 && (
             <div className="flex flex-col gap-2">
               <SectionLabel label="Variables" />
-              {variables.map((v, i) => (
-                <div key={v.name} className="flex gap-2 items-center">
-                  <span className="text-[12px] font-mono text-emerald-300/70 w-24 flex-none">{`{${v.name}}`}</span>
-                  <TextInput
-                    value={v.label}
-                    onChange={e => updateVar(i, { label: e.target.value })}
-                    placeholder="Label"
-                  />
-                  <TextInput
-                    value={v.unit ?? ''}
-                    onChange={e => updateVar(i, { unit: e.target.value || undefined })}
-                    placeholder="Unit"
-                  />
-                  <div className="w-28 flex-none">
-                    <SelectInput
-                      value={v.format ?? 'decimal'}
-                      onChange={e => updateVar(i, { format: e.target.value as QuantNumberFormat })}
-                      options={FORMAT_OPTIONS}
+              {variables.map((v, i) => {
+                const sourceNode = priorQuantNodes?.find(n => n.nodeId === v.source?.nodeId)
+                const sourceFields = sourceNode?.quant?.variant === 'structured-quant'
+                  ? (sourceNode.quant as StructuredQuant).fields
+                  : undefined
+                return (
+                  <div key={v.name} className="flex flex-wrap gap-2 items-center">
+                    <span className="text-[12px] font-mono text-emerald-300/70 w-24 flex-none">{`{${v.name}}`}</span>
+                    <TextInput
+                      value={v.label}
+                      onChange={e => updateVar(i, { label: e.target.value })}
+                      placeholder="Label"
                     />
+                    <TextInput
+                      value={v.unit ?? ''}
+                      onChange={e => updateVar(i, { unit: e.target.value || undefined })}
+                      placeholder="Unit"
+                    />
+                    <div className="w-28 flex-none">
+                      <SelectInput
+                        value={v.format ?? 'decimal'}
+                        onChange={e => updateVar(i, { format: e.target.value as QuantNumberFormat })}
+                        options={FORMAT_OPTIONS}
+                      />
+                    </div>
+                    {/* Carry-forward source */}
+                    {priorQuantNodes && priorQuantNodes.length > 0 && (
+                      <div className="w-52 flex-none">
+                        <SelectInput
+                          value={v.source?.nodeId ?? ''}
+                          onChange={e => {
+                            const nodeId = e.target.value
+                            updateVar(i, { source: nodeId ? { nodeId } : undefined })
+                          }}
+                          options={[
+                            { value: '', label: '← carry fwd: none' },
+                            ...priorQuantNodes.map(n => ({
+                              value: n.nodeId,
+                              label: `← ${n.quant?.prompt?.slice(0, 28) ?? n.nodeId}`,
+                            })),
+                          ]}
+                        />
+                      </div>
+                    )}
+                    {/* Field picker when source is structured-quant */}
+                    {sourceFields && sourceFields.length > 1 && (
+                      <div className="w-36 flex-none">
+                        <SelectInput
+                          value={v.source?.fieldId ?? ''}
+                          onChange={e => updateVar(i, { source: { ...v.source!, fieldId: e.target.value || undefined } })}
+                          options={[
+                            { value: '', label: 'Any field' },
+                            ...sourceFields.map(f => ({ value: f.id, label: f.label })),
+                          ]}
+                        />
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </>
@@ -186,11 +226,17 @@ function FormulaSection({
 
 interface Props {
   node: ScenarioNode
+  allNodes?: ScenarioNode[]
   onDone: (updated: ScenarioNode) => void
 }
 
-export function QuantEditor({ node, onDone }: Props) {
+export function QuantEditor({ node, allNodes, onDone }: Props) {
   const spec = node.quant!
+  // Quant nodes that appear before this one — used for carry-forward dropdowns
+  const nodeList = allNodes ?? []
+  const currentIdx = nodeList.findIndex(n => n.nodeId === node.nodeId)
+  const priorQuantNodes = nodeList.slice(0, currentIdx < 0 ? 0 : currentIdx).filter(n => n.type === 'quant' && n.quant)
+
   const [narrative, setNarrative] = useState(node.narrative ?? '')
   const [prompt, setPrompt] = useState(spec.prompt ?? '')
   const [hint, setHint] = useState(spec.hint ?? '')
@@ -259,7 +305,7 @@ export function QuantEditor({ node, onDone }: Props) {
       {/* Formula */}
       <div className="flex flex-col gap-2">
         <SectionLabel label="Formula (optional)" />
-        <FormulaSection formula={formula} onChange={setFormula} />
+        <FormulaSection formula={formula} onChange={setFormula} priorQuantNodes={priorQuantNodes.length ? priorQuantNodes : undefined} />
       </div>
 
       {/* Hint */}
