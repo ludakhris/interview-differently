@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { Fragment, useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
@@ -19,6 +19,7 @@ import {
   type BulkRenderSummary,
 } from '@/services/scenarioMediaService'
 import type { Scenario } from '@id/types'
+import { BUSINESS_CASE_SUBCATEGORY_LABELS } from '@id/types'
 
 // ── Row action menu ───────────────────────────────────────────────────────────
 
@@ -44,7 +45,7 @@ function RowMenu({ actions }: { actions: MenuAction[] }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        className="text-[13px] text-white/30 hover:text-white/60 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg w-8 h-8 flex items-center justify-center transition-all"
+        className="text-[13px] text-white/40 hover:text-white/80 hover:bg-white/10 rounded-md w-7 h-7 flex items-center justify-center transition-all"
       >
         ···
       </button>
@@ -70,6 +71,7 @@ function RowMenu({ actions }: { actions: MenuAction[] }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const TRACK_COLORS: Record<string, string> = {
+  'business case': '#3b8fd6',
   operations: '#e05a2b',
   business: '#2b7de0',
   risk: '#c0392b',
@@ -88,6 +90,23 @@ function readPref(k: string): string {
 }
 function writePref(k: string, v: string) {
   try { const all = JSON.parse(localStorage.getItem(PREF_KEY) ?? '{}'); all[k] = v; localStorage.setItem(PREF_KEY, JSON.stringify(all)) } catch { /* ignore */ }
+}
+
+/** "Operations / Incident Response" → "Operations"; "Business Cases (Consulting)" → "Business Cases". */
+function shortTrack(track: string): string {
+  return (TRACK_LABELS[track] ?? track).split(/ [/(]/)[0].trim()
+}
+
+/**
+ * Tile text. Grouped by track → just the sub-track ("Growth Strategy", or "—"
+ * for tracks without one). Flat → "Business Cases / Growth Strategy".
+ */
+function trackTile(s: Scenario, grouped: boolean): string {
+  const sub = s.subcategory
+    ? (BUSINESS_CASE_SUBCATEGORY_LABELS as Record<string, string>)[s.subcategory] ?? s.subcategory.replace(/-/g, ' ')
+    : null
+  if (grouped) return sub ?? '—'
+  return sub ? `${shortTrack(s.track)} / ${sub}` : shortTrack(s.track)
 }
 
 function formatDate(iso: string): string {
@@ -219,16 +238,37 @@ export function BuilderListPage() {
     return q.split(/\s+/).every(term => hay.includes(term))
   })
 
-  const trackGroups = (() => {
-    const map = new Map<string, Scenario[]>()
-    filtered.forEach(s => { if (!map.has(s.track)) map.set(s.track, []); map.get(s.track)!.push(s) })
-    map.forEach(items => items.sort((a, b) => (b.builderMeta?.lastEditedAt ?? '').localeCompare(a.builderMeta?.lastEditedAt ?? '')))
-    return [...map.entries()]
-      .sort(([a], [b]) => {
-        const ia = TRACK_ORDER.indexOf(a), ib = TRACK_ORDER.indexOf(b)
-        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b)
-      })
-      .map(([track, items]) => ({ track, items }))
+  type SortKey = 'track' | 'title' | 'owner' | 'minutes' | 'status' | 'edited'
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>(() => {
+    const [k, d] = (readPref('sort') || 'track:1').split(':')
+    return { key: (k as SortKey) || 'track', dir: d === '-1' ? -1 : 1 }
+  })
+  useEffect(() => { writePref('sort', `${sort.key}:${sort.dir}`) }, [sort])
+  function setSortKey(key: SortKey) {
+    setSort(prev => (prev.key === key ? { key, dir: prev.dir === 1 ? -1 : 1 } : { key, dir: key === 'edited' ? -1 : 1 }))
+  }
+  const trackRank = (t: string) => { const i = TRACK_ORDER.indexOf(t); return i < 0 ? 99 : i }
+  const cmp = (a: Scenario, b: Scenario): number => {
+    switch (sort.key) {
+      case 'title': return (a.title || '').localeCompare(b.title || '')
+      case 'owner': return (a.institutionName ?? '').localeCompare(b.institutionName ?? '')
+      case 'minutes': return a.estimatedMinutes - b.estimatedMinutes
+      case 'status': return (a.builderMeta?.status ?? 'draft').localeCompare(b.builderMeta?.status ?? 'draft')
+      case 'edited': return (a.builderMeta?.lastEditedAt ?? '').localeCompare(b.builderMeta?.lastEditedAt ?? '')
+      case 'track': default: return trackRank(a.track) - trackRank(b.track) || a.track.localeCompare(b.track)
+    }
+  }
+  const sorted = [...filtered].sort((a, b) => {
+    const primary = cmp(a, b) * sort.dir
+    if (primary !== 0) return primary
+    // stable secondary: newest edit first
+    return (b.builderMeta?.lastEditedAt ?? '').localeCompare(a.builderMeta?.lastEditedAt ?? '')
+  })
+  const groupByTrack = sort.key === 'track'
+  const trackCounts = (() => {
+    const m = new Map<string, { total: number; published: number }>()
+    sorted.forEach(s => { const c = m.get(s.track) ?? { total: 0, published: 0 }; c.total++; if (s.builderMeta?.status === 'published') c.published++; m.set(s.track, c) })
+    return m
   })()
 
   function toggleTrack(track: string) {
@@ -382,7 +422,7 @@ export function BuilderListPage() {
         </div>
 
         {/* Search + filters */}
-        <div className="sticky top-0 z-10 -mx-2 px-2 py-3 bg-[#0a0a0a]/95 backdrop-blur border-b border-white/[0.06] mb-4 flex items-center gap-2 flex-wrap">
+        <div className="sticky top-0 z-10 py-3 bg-[#0a0a0a] mb-3 flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[220px]">
             <input
               ref={searchRef}
@@ -416,6 +456,15 @@ export function BuilderListPage() {
               {ownerOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
             </select>
           )}
+          <label className="flex items-center gap-1.5 text-[12px] text-white/50 cursor-pointer select-none px-1">
+            <input
+              type="checkbox"
+              checked={groupByTrack}
+              onChange={e => setSort(e.target.checked ? { key: 'track', dir: 1 } : { key: 'edited', dir: -1 })}
+              className="accent-emerald-400"
+            />
+            Group by track
+          </label>
           <span className="text-[11px] text-white/30 ml-auto">
             {filtered.length === scenarios.length ? `${scenarios.length} scenarios` : `${filtered.length} of ${scenarios.length}`}
           </span>
@@ -444,84 +493,122 @@ export function BuilderListPage() {
             <p className="text-[13px] text-white/40">Nothing matches — <button onClick={() => { setQuery(''); setStatusFilter('all'); setOwnerFilter('') }} className="text-emerald-400 hover:underline">clear filters</button>.</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
-            {trackGroups.map(group => {
-              const color = TRACK_COLORS[group.track] ?? '#888'
-              const collapsed = collapsedTracks.has(group.track) && !query
-              return (
-                <div key={group.track} className="bg-[#111111] border border-white/10 rounded-2xl overflow-hidden">
-                  <button
-                    onClick={() => toggleTrack(group.track)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/[0.03] transition-colors"
-                  >
-                    <span className="text-[10px] text-white/30 w-3">{collapsed ? '▸' : '▾'}</span>
-                    <span className="w-2 h-2 rounded-full flex-none" style={{ background: color }} />
-                    <span className="text-[13px] font-bold text-[#f5f3ee]">{TRACK_LABELS[group.track] ?? group.track}</span>
-                    <span className="text-[11px] text-white/30">{group.items.length}</span>
-                    <span className="ml-auto text-[10px] text-white/25">
-                      {group.items.filter(s => s.builderMeta?.status === 'published').length} published
-                    </span>
-                  </button>
-                  {!collapsed && (
-                    <ul className="border-t border-white/[0.06]">
-                      {group.items.map(scenario => {
-                        const status = scenario.builderMeta?.status ?? 'draft'
-                        const lastEdited = scenario.builderMeta?.lastEditedAt ?? ''
-                        return (
-                          <li
-                            key={scenario.scenarioId}
-                            className="flex items-center gap-3 px-4 py-2 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.03] transition-colors"
-                          >
+          <div className="bg-[#111111] border border-white/10 rounded-2xl overflow-x-auto">
+            <table className="w-full border-collapse table-fixed min-w-[560px]">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/[0.02]">
+                  {(
+                    [
+                      ['title', 'Title', 'text-left pl-5'],
+                      ['track', groupByTrack ? 'Sub-track' : 'Track', groupByTrack ? 'text-left w-[168px]' : 'text-left w-[236px]'],
+                      ['owner', 'Owner', 'text-left w-[92px]'],
+                      ['minutes', 'Min', 'text-right w-[48px]'],
+                      ['status', 'Status', 'text-left w-[100px]'],
+                      ['edited', 'Edited', 'text-right w-[92px]'],
+                    ] as [SortKey, string, string][]
+                  ).map(([key, label, cls]) => (
+                    <th key={key} className={`px-3 py-2.5 ${cls}`}>
+                      <button
+                        onClick={() => setSortKey(key)}
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                          sort.key === key ? 'text-[#f5f3ee]' : 'text-white/35 hover:text-white/70'
+                        }`}
+                      >
+                        {label}
+                        <span className={`text-[9px] ${sort.key === key ? 'opacity-100' : 'opacity-0'}`}>{sort.dir === 1 ? '▲' : '▼'}</span>
+                      </button>
+                    </th>
+                  ))}
+                  <th className="px-2 py-2.5 w-9" />
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((scenario, i) => {
+                  const status = scenario.builderMeta?.status ?? 'draft'
+                  const lastEdited = scenario.builderMeta?.lastEditedAt ?? ''
+                  const color = TRACK_COLORS[scenario.track] ?? '#888'
+                  const firstOfTrack = groupByTrack && (i === 0 || sorted[i - 1].track !== scenario.track)
+                  const collapsed = groupByTrack && collapsedTracks.has(scenario.track) && !query
+                  const counts = trackCounts.get(scenario.track)!
+                  return (
+                    <Fragment key={scenario.scenarioId}>
+                      {firstOfTrack && (
+                        <tr>
+                          <td colSpan={7} className="p-0">
                             <button
-                              onClick={() => navigate(`/builder/${scenario.scenarioId}`)}
-                              className="flex-1 min-w-0 flex items-center gap-3 text-left group"
+                              onClick={() => toggleTrack(scenario.track)}
+                              className="w-full flex items-center gap-3 pl-4 pr-4 py-2.5 text-left border-y border-white/[0.06] hover:brightness-125 transition"
+                              style={{ background: `${color}14`, boxShadow: `inset 3px 0 0 ${color}` }}
                             >
-                              <span className="text-[13px] font-semibold text-[#f5f3ee] group-hover:text-white truncate">
+                              <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color }}>
+                                {TRACK_LABELS[scenario.track] ?? scenario.track}
+                              </span>
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-black/30 text-white/60">
+                                {counts.total}
+                              </span>
+                              {counts.published !== counts.total && (
+                                <span className="text-[10px] text-white/35">{counts.published} published · {counts.total - counts.published} draft</span>
+                              )}
+                              <span className={`ml-auto text-[10px] text-white/40 transition-transform ${collapsed ? '-rotate-90' : ''}`}>▾</span>
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                      {!collapsed && (
+                        <tr className={`group/row border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.04] transition-colors ${i % 2 ? 'bg-white/[0.015]' : ''}`}>
+                          <td className="pl-5 pr-3 py-2.5">
+                            <button onClick={() => navigate(`/builder/${scenario.scenarioId}`)} className="flex items-baseline gap-2 text-left w-full min-w-0">
+                              <span className="text-[13px] font-semibold text-[#f5f3ee] group-hover/row:text-white truncate min-w-0" title={scenario.title}>
                                 {scenario.title || 'Untitled Scenario'}
                               </span>
-                              {scenario.subcategory && (
-                                <span className="text-[10px] text-white/30 flex-none hidden md:inline">{scenario.subcategory}</span>
-                              )}
-                              {scenario.mode === 'immersive' && (
-                                <span className="text-[10px] font-semibold text-white/40 flex-none" title="Immersive (AI interviewer)">🎙</span>
-                              )}
+                              {scenario.mode === 'immersive' && <span className="text-[10px] text-white/40 flex-none" title="Immersive (AI interviewer)">🎙</span>}
                             </button>
+                          </td>
+                          <td className="px-3 py-2.5 overflow-hidden">
+                            {trackTile(scenario, groupByTrack) === '—' ? (
+                              <span className="text-[11px] text-white/20 pl-2">—</span>
+                            ) : (
+                              <span
+                                className="block max-w-full w-fit text-[11px] font-medium px-2 py-1 rounded-md border truncate"
+                                style={{ color, background: `${color}14`, borderColor: `${color}33` }}
+                                title={trackTile(scenario, groupByTrack)}
+                              >
+                                {trackTile(scenario, groupByTrack)}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 whitespace-nowrap">
                             <span
-                              className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded flex-none ${
-                                scenario.institutionName ? 'bg-green/20 text-green-light' : 'bg-white/[0.06] text-white/35'
+                              className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                                scenario.institutionName ? 'bg-green/20 text-green-light' : 'bg-white/[0.07] text-white/40'
                               }`}
                               title={scenario.institutionName ? `Private to ${scenario.institutionName}` : 'Visible to every user'}
                             >
                               {scenario.institutionName ?? 'Public'}
                             </span>
-                            <span className="text-[11px] text-white/30 flex-none w-14 text-right hidden sm:inline">{scenario.estimatedMinutes} min</span>
+                          </td>
+                          <td className="px-3 py-2.5 text-right text-[11px] text-white/40 tabular-nums whitespace-nowrap">{scenario.estimatedMinutes}</td>
+                          <td className="px-3 py-2.5 whitespace-nowrap">
                             <span
-                              className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-md flex-none w-[84px] justify-center ${
+                              className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
                                 status === 'published'
-                                  ? 'text-[#2d9e5f] bg-[#2d9e5f]/10 border border-[#2d9e5f]/20'
-                                  : 'text-amber-400 bg-amber-400/10 border border-amber-400/20'
+                                  ? 'text-[#2d9e5f] bg-[#2d9e5f]/10 border-[#2d9e5f]/20'
+                                  : 'text-amber-400 bg-amber-400/10 border-amber-400/20'
                               }`}
                             >
                               <span className={`w-1.5 h-1.5 rounded-full ${status === 'published' ? 'bg-[#2d9e5f]' : 'bg-amber-400'}`} />
                               {status === 'published' ? 'Published' : 'Draft'}
                             </span>
-                            <span className="text-[11px] text-white/30 flex-none w-[84px] text-right hidden md:inline">
-                              {lastEdited ? formatDate(lastEdited) : '—'}
-                            </span>
-                            <div className="flex-none flex items-center">
-                              {confirmDelete === scenario.scenarioId ? (
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    onClick={() => handleDelete(scenario.scenarioId)}
-                                    className="text-[11px] text-red-400 hover:text-red-300 bg-red-400/10 border border-red-400/20 rounded-lg px-2 py-1 transition-all"
-                                  >
-                                    Confirm delete
-                                  </button>
-                                  <button onClick={() => setConfirmDelete(null)} className="text-[11px] text-white/30 hover:text-white/50 px-2 py-1">
-                                    Cancel
-                                  </button>
-                                </div>
-                              ) : (
+                          </td>
+                          <td className="px-3 py-2.5 text-right text-[11px] text-white/40 tabular-nums whitespace-nowrap">{lastEdited ? formatDate(lastEdited) : '—'}</td>
+                          <td className="px-3 py-2.5">
+                            {confirmDelete === scenario.scenarioId ? (
+                              <div className="flex items-center gap-1 justify-end">
+                                <button onClick={() => handleDelete(scenario.scenarioId)} className="text-[11px] text-red-400 hover:text-red-300 bg-red-400/10 border border-red-400/20 rounded-md px-2 py-1 whitespace-nowrap transition-all">Confirm</button>
+                                <button onClick={() => setConfirmDelete(null)} className="text-[11px] text-white/30 hover:text-white/50 px-1 py-1">Cancel</button>
+                              </div>
+                            ) : (
+                              <div className="flex justify-end">
                                 <RowMenu actions={[
                                   { label: 'Edit', onClick: () => navigate(`/builder/${scenario.scenarioId}`) },
                                   { label: 'Duplicate', onClick: () => handleDuplicate(scenario.scenarioId) },
@@ -529,16 +616,16 @@ export function BuilderListPage() {
                                   { label: 'Export JSON', onClick: () => handleExport(scenario.scenarioId, 'json') },
                                   { label: 'Delete', onClick: () => setConfirmDelete(scenario.scenarioId), danger: true },
                                 ]} />
-                              )}
-                            </div>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  )}
-                </div>
-              )
-            })}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )}
 

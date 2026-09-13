@@ -149,7 +149,7 @@ export function SetupEditor({ scenario, onDone }: Props) {
           />
         </Field>
         {isBusinessCase && (
-          <Field label="Case type">
+          <Field label="Sub-track">
             <SelectInput
               value={subcategory}
               onChange={e => setSubcategory(e.target.value)}

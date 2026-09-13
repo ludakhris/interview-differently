@@ -131,7 +131,7 @@ export function BuilderSetupPage() {
       return
     }
     if (showSubcategory && !subcategory) {
-      setError('Please select a business case subcategory.')
+      setError('Please select a sub-track.')
       return
     }
     const scenario = await createScenario(title.trim(), track, showSubcategory ? subcategory : undefined, owner)
@@ -316,11 +316,11 @@ export function BuilderSetupPage() {
           </div>
         </div>
 
-        {/* Business case subcategory */}
+        {/* Sub-track (business cases only today) */}
         {showSubcategory && (
           <div className="mb-8">
             <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
-              Subcategory
+              Sub-track
             </label>
             <div className="grid grid-cols-2 gap-2">
               {BUSINESS_CASE_SUBCATEGORIES.map((slug) => {
