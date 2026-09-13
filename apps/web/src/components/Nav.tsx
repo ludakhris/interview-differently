@@ -39,7 +39,7 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
         >
           Request a scenario
         </button>
-        {isLoaded && isSignedIn && tools.length > 0 && <ToolsMenu tools={tools} />}
+        {isLoaded && isSignedIn && tools.length > 0 && <ToolsMenu tools={tools} isAdmin={isAdmin} />}
         {isLoaded && isSignedIn && isAdmin && (
           <button
             onClick={() => navigate('/builder')}
@@ -77,7 +77,7 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
 // entries without a live route render dimmed instead of 404ing.
 const LIVE_TOOLS: ReadonlySet<ToolKey> = new Set<ToolKey>(['sql-sandbox'])
 
-function ToolsMenu({ tools }: { tools: ToolKey[] }) {
+function ToolsMenu({ tools, isAdmin }: { tools: ToolKey[]; isAdmin: boolean }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -123,6 +123,27 @@ function ToolsMenu({ tools }: { tools: ToolKey[] }) {
               </button>
             )
           })}
+          {isAdmin && (
+            <>
+              <div className="my-1 border-t border-white/8" />
+              <p className="px-3 pt-1.5 pb-0.5 text-[9px] font-bold uppercase tracking-widest text-white/30">Admin</p>
+              {[
+                { label: 'Datasets', path: '/admin/datasets' },
+                { label: 'Institutions & Cohorts', path: '/admin/institutions' },
+              ].map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => {
+                    setOpen(false)
+                    navigate(item.path)
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-[12px] text-slate-mid hover:text-[#f5f3ee] hover:bg-white/5 transition-colors"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>
