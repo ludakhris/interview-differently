@@ -1,4 +1,10 @@
 export const RUBRIC_TEMPLATES: Record<string, { name: string; description: string }[]> = {
+  'data-analytics': [
+    { name: 'Scoping the Ask', description: 'Does the candidate turn a vague stakeholder request into a precise, answerable question before writing SQL?' },
+    { name: 'Data Judgment', description: 'Does the candidate check the data before trusting it — statuses, NULLs, duplicates, fan-out — and handle what they find?' },
+    { name: 'Technical Accuracy', description: 'Do the queries return the right result sets, built in verified steps?' },
+    { name: 'Communicating Findings', description: 'Does the candidate hand back a number leadership can act on, with the caveats that matter?' },
+  ],
   operations: [
     { name: 'Prioritization Logic', description: 'Does the candidate identify the highest-impact issue first?' },
     { name: 'Stakeholder Communication', description: 'Does the candidate communicate to the right people at the right time?' },
@@ -44,6 +50,7 @@ export const TRACK_LABELS: Record<string, string> = {
   'business case': 'Business Cases (Consulting)',
   risk: 'Risk & Compliance',
   'customer-success': 'Customer Success',
+  'data-analytics': 'Data Analytics (SQL)',
   general: 'General Judgment',
   custom: 'Custom',
 }

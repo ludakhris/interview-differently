@@ -15,7 +15,7 @@ import type { Scenario } from '@id/types'
 import { BUSINESS_CASE_SUBCATEGORY_LABELS, TOOL_META, type ToolKey } from '@id/types'
 
 // Track order on the dashboard. Tracks not listed here fall to the end alphabetically.
-const TRACK_ORDER: string[] = ['business case', 'operations', 'business', 'risk', 'customer-success', 'general']
+const TRACK_ORDER: string[] = ['business case', 'data-analytics', 'operations', 'business', 'risk', 'customer-success', 'general']
 
 // Sub-category order within the "business case" track. Anything else trails alphabetically.
 const SUBCATEGORY_ORDER: string[] = [

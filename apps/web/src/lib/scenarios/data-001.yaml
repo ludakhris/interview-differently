@@ -1,0 +1,478 @@
+id: data-001
+title: 'Loyalty Launch: Who Gets the Offer?'
+track: data-analytics
+icon: Database
+estimatedMinutes: 30
+
+# First Data Analytics scenario (#25 Phase 4). Runs on the `sql-fundamentals`
+# dataset (apps/api/prisma/datasets/sql-fundamentals.sql). The traps are real
+# features of that data: a customer whose cancelled orders make them #1 on
+# gross value but drop them out of the completed-only top 5; three orders
+# marked pending that already shipped; a top-5 customer with no email; and a
+# tie at #3/#4. If the dataset is regenerated, re-verify the reference
+# queries and the top-5 exhibit below.
+
+briefing:
+  situation: >
+    You're three months into your first analyst role at Trailhead & Hearth, a
+    direct-to-consumer retailer of outdoor gear and home goods. It's Tuesday.
+    Priya, the Marketing Director, wants to email a VIP loyalty offer to "our top
+    five customers" on Friday and needs the list from you. Finance has one rule
+    for anything called revenue: completed orders only. You have read access to
+    the orders database. Scope the ask, check the data before you trust it, build
+    the query in verified steps, and hand Priya something she can act on.
+  role: Junior Data Analyst
+  organisation: Trailhead & Hearth — DTC outdoor & home goods retailer
+  reportsTo: Marcus, Analytics Lead
+  timeInRole: 3 months
+
+display:
+  contextStyle: context-cards
+  sidebar:
+    - title: Your Role
+      style: text
+      items:
+        - label: Title
+          value: Junior Data Analyst
+        - label: Requester
+          value: Priya, Marketing Director
+        - label: Reports to
+          value: Marcus, Analytics Lead
+    - title: Key Facts
+      style: list
+      items:
+        - label: Customers on file
+          value: '79'
+        - label: Orders on file
+          value: '187'
+        - label: Order statuses
+          value: completed · pending · cancelled
+        - label: Revenue definition
+          value: completed orders only
+        - label: Offer goes out
+          value: Friday
+          emphasis: warning
+
+rubric:
+  - name: Scoping the Ask
+    description: Does the candidate turn a vague stakeholder request into a precise, answerable question before writing SQL?
+  - name: Data Judgment
+    description: Does the candidate check the data before trusting it — statuses, NULLs, duplicates, fan-out — and handle what they find?
+  - name: Technical Accuracy
+    description: Do the queries return the right result sets, built in verified steps?
+  - name: Communicating Findings
+    description: Does the candidate hand back a number leadership can act on, with the caveats that matter?
+
+phases:
+  - id: scope
+    label: Scope
+    description: Turn "top five customers" into a question the database can answer.
+    nodeIds: [data-001-n1]
+    exhibitIds: [priya-request, data-dictionary]
+    rubricDimensions: [Scoping the Ask]
+  - id: explore
+    label: Explore
+    description: Check the data before you trust it.
+    nodeIds: [data-001-n3, data-001-n4, data-001-n5]
+    rubricDimensions: [Data Judgment, Technical Accuracy]
+  - id: build
+    label: Build
+    description: Build the answer in verified steps.
+    nodeIds: [data-001-n6, data-001-n7]
+    exhibitIds: [verified-steps]
+    rubricDimensions: [Technical Accuracy]
+  - id: recommend
+    label: Hand it back
+    description: Give Priya a list she can act on — with the caveats that matter.
+    nodeIds: [data-001-n8]
+    exhibitIds: [top5-result]
+    rubricDimensions: [Communicating Findings]
+
+exhibits:
+  - id: priya-request
+    kind: text-exhibit
+    title: Slack from Priya (Marketing Director)
+    caption: '9:12 AM — #analytics-requests'
+    blocks:
+      - kind: paragraph
+        text: >
+          Hey! Quick one 🙏 We're launching a VIP loyalty offer Friday and I want
+          to email it to our top five customers. Can you get me the list today or
+          tomorrow? Just need names and emails.
+      - kind: paragraph
+        text: >
+          Marcus said to ask you since you have the orders DB. Finance will ask
+          how we picked them, so whatever "top" means, make it defensible.
+      - kind: quote
+        text: 'If someone on the list can''t actually receive the email, I need to know that before Friday, not after.'
+        attribution: Priya
+
+  - id: data-dictionary
+    kind: text-exhibit
+    title: Orders database — data dictionary
+    caption: 'Four core tables plus one legacy import'
+    footnote: 'Row counts as of this morning. Use the Schema panel in the SQL workbench for column types.'
+    blocks:
+      - kind: bullets
+        items:
+          - 'customers — one row per customer: customer_id, first_name, last_name, email (nullable), city, state, country, signup_date'
+          - 'orders — one row per order: order_id, customer_id, order_date, status, shipped_date (nullable)'
+          - 'order_items — one row per line item: order_item_id, order_id, product_id, quantity, unit_price. Revenue for a line = quantity × unit_price.'
+          - 'products — product_id, product_name, category, unit_cost, stock_qty, is_active'
+          - 'customers_messy — a legacy CSV import of the customers table. Not cleaned. Do not use it for this request.'
+      - kind: paragraph
+        text: >
+          Finance's definition of revenue: orders with status = 'completed', nothing
+          else. Cancelled orders never count. Pending orders don't count until they complete.
+
+  - id: verified-steps
+    kind: text-exhibit
+    title: How Marcus builds a query
+    caption: 'Pinned in #analytics — the team convention'
+    blocks:
+      - kind: bullets
+        items:
+          - 'Filter first. Verify the rows you keep before joining anything.'
+          - 'Join one table at a time. Check the row count — a join that multiplies rows will inflate every SUM downstream.'
+          - 'Aggregate to the level the question is asked at (per customer, not per line item). One row per customer, or your GROUP BY is wrong.'
+          - 'ORDER BY before LIMIT, and look at the rows just below the cut before you cut.'
+      - kind: quote
+        text: 'Strong analysts don''t write the final query in one shot. They build it in steps they can check.'
+        attribution: Marcus
+
+  - id: top5-result
+    kind: data-table
+    title: Top 5 customers by completed revenue
+    caption: 'Your final query — completed orders only, highest first'
+    footnote: 'Owen Khan and Tomas Lewis are tied at $1,008.08. Owen Khan has no email on file.'
+    columns:
+      - key: rank
+        label: '#'
+        align: right
+        format: number
+      - key: name
+        label: Customer
+        align: left
+        format: text
+      - key: revenue
+        label: Completed revenue
+        align: right
+        format: currency
+      - key: email
+        label: Email
+        align: left
+        format: text
+    rows:
+      - { rank: 1, name: Kofi Rodriguez, revenue: '$1,305.88', email: OK }
+      - { rank: 2, name: Rohan King, revenue: '$1,194.33', email: OK }
+      - { rank: 3, name: Owen Khan, revenue: '$1,008.08', email: { value: Missing, tone: danger, emphasis: true } }
+      - { rank: 3, name: Tomas Lewis, revenue: '$1,008.08', email: OK }
+      - { rank: 5, name: Arjun King, revenue: '$949.12', email: OK }
+
+nodes:
+  # ── Phase 1: Scope ─────────────────────────────────────────────────────────
+  - id: data-001-n1
+    type: decision
+    narrative: >
+      Priya's message is short and the deadline is real. "Top five customers"
+      could mean five different things. What do you do first?
+    choices:
+      - id: A
+        text: 'Reply to Priya with a two-line proposal: rank by total revenue from completed orders, all time, and flag anyone without an email. Ask her to confirm before you build.'
+        next: data-001-n2a
+        signals:
+          Scoping the Ask: strong
+          Communicating Findings: strong
+      - id: B
+        text: 'Rank customers by number of orders. Loyalty is about coming back, and it avoids the whole revenue definition question.'
+        next: data-001-n2b
+        signals:
+          Scoping the Ask: developing
+      - id: C
+        text: 'Sum quantity × unit_price across every order line per customer and take the top five. Fast, and it uses all the data.'
+        next: data-001-n2c
+        signals:
+          Scoping the Ask: developing
+          Data Judgment: developing
+      - id: D
+        text: 'Ask Priya what time window she cares about and which channel, then rank by completed-order revenue.'
+        next: data-001-n2d
+        signals:
+          Scoping the Ask: proficient
+
+  - id: data-001-n2a
+    type: transition
+    narrative: >
+      Priya replies in four minutes: "Yes — completed only, all time, and please
+      flag missing emails. Thank you for checking." Marcus reacts with a 👍. You
+      now have a precise question. Before you sum anything, look at the data.
+    next: data-001-n3
+
+  - id: data-001-n2b
+    type: transition
+    narrative: >
+      Marcus catches it in the thread: "Order count will surface someone with
+      seven $8 orders over someone with two $600 ones. Finance defines this as
+      revenue from completed orders — scope it that way, and confirm with Priya."
+      You do. She agrees. Now check the data before you trust it.
+    next: data-001-n3
+
+  - id: data-001-n2c
+    type: transition
+    narrative: >
+      You're halfway through the query when you remember the finance rule —
+      cancelled orders aren't revenue, and summing every line would count them.
+      You back up and confirm the definition with Priya first: completed orders
+      only, all time, flag missing emails. Now check the data before you trust it.
+    next: data-001-n3
+
+  - id: data-001-n2d
+    type: transition
+    narrative: >
+      Good instinct on the window and channel. Priya: "All time is fine, and
+      it's email — so I need to know if anyone's missing one." You have your
+      definition. Now check the data before you trust it.
+    next: data-001-n3
+
+  # ── Phase 2: Explore ───────────────────────────────────────────────────────
+  - id: data-001-n3
+    type: sql
+    narrative: 'Check the order statuses before filtering on them.'
+    sqlSignalDimensions: [Technical Accuracy, Data Judgment]
+    sql:
+      context: >
+        The finance rule hinges on status = 'completed'. Before you filter on a
+        value, confirm the values that actually exist — a stray 'Completed' with
+        a capital C would silently drop rows.
+      prompt: Return every distinct order status and how many orders have it.
+      datasetSlug: sql-fundamentals
+      referenceSql: |
+        SELECT status, COUNT(*) AS orders
+        FROM orders
+        GROUP BY status;
+      hint: 'GROUP BY the status column and COUNT the rows in each group.'
+    next: data-001-n4
+
+  - id: data-001-n4
+    type: decision
+    narrative: >
+      Three statuses, clean casing — good. But while you're in the orders table
+      you notice something: three orders are marked 'pending' yet have a
+      shipped_date filled in. If they shipped, they're probably really
+      completed — and completed orders count as revenue. What do you do?
+    contextPanels:
+      - label: Pending with a ship date
+        value: '3'
+        type: alert
+        tone: danger
+        caption: status says pending, shipped_date is set
+      - label: Completed orders
+        value: '123'
+        type: metric
+        caption: the rows finance counts
+    choices:
+      - id: A
+        text: 'Exclude them (they aren''t completed in the system), flag the three order IDs to Marcus and ops as a data-quality issue, and note the exclusion in what you send Priya.'
+        next: data-001-n4-fb-a
+        signals:
+          Data Judgment: strong
+          Communicating Findings: strong
+      - id: B
+        text: 'Treat them as completed in your query — they shipped, so the status is just stale.'
+        next: data-001-n4-fb-b
+        signals:
+          Data Judgment: proficient
+      - id: C
+        text: 'Ignore it. Three orders out of 187 won''t move a top-five list.'
+        next: data-001-n4-fb-c
+        signals:
+          Data Judgment: developing
+      - id: D
+        text: 'Pause the analysis and tell Priya the list has to wait until ops fixes the statuses.'
+        next: data-001-n4-fb-d
+        signals:
+          Data Judgment: proficient
+          Communicating Findings: developing
+
+  - id: data-001-n4-fb-a
+    type: transition
+    narrative: >
+      Marcus: "Exactly right. We report what the system says and we surface what
+      looks wrong — we don't quietly fix data in a query." Ops picks up the
+      ticket. One more check before you build: Priya's channel is email.
+    next: data-001-n5
+
+  - id: data-001-n4-fb-b
+    type: transition
+    narrative: >
+      Marcus pushes back: "If you rewrite statuses inside a query, finance's
+      number and yours won't match, and nobody will know why. Use the system's
+      status, flag the three orders, and caveat it." You adjust. One more check
+      before you build: Priya's channel is email.
+    next: data-001-n5
+
+  - id: data-001-n4-fb-c
+    type: transition
+    narrative: >
+      Marcus, later, reviewing your query: "You saw three shipped-but-pending
+      orders and didn't mention them? Whether they change the top five isn't the
+      point — someone downstream will ask, and 'I noticed and ignored it' is the
+      worst answer." You add the flag. One more check before you build: Priya's
+      channel is email.
+    next: data-001-n5
+
+  - id: data-001-n4-fb-d
+    type: transition
+    narrative: >
+      Marcus: "Don't block a Friday send on a three-row cleanup. Exclude them,
+      flag them, caveat them — the list is still defensible." You un-pause. One
+      more check before you build: Priya's channel is email.
+    next: data-001-n5
+
+  - id: data-001-n5
+    type: sql
+    narrative: 'Check for missing emails before anyone is promised an offer.'
+    sqlSignalDimensions: [Technical Accuracy]
+    sql:
+      context: >
+        Priya's channel is email. If a top customer has no address on file, she
+        needs to know before Friday. Remember that NULL is not a value you can
+        compare with = .
+      prompt: How many customers have no email on file? Return a single number.
+      datasetSlug: sql-fundamentals
+      referenceSql: |
+        SELECT COUNT(*) AS missing_email
+        FROM customers
+        WHERE email IS NULL;
+      hint: 'Use IS NULL — WHERE email = NULL never matches anything.'
+    next: data-001-n6
+
+  # ── Phase 3: Build ─────────────────────────────────────────────────────────
+  - id: data-001-n6
+    type: sql
+    narrative: 'Step 1 — revenue per customer, completed orders only.'
+    sqlSignalDimensions: [Technical Accuracy]
+    sql:
+      context: >
+        Build the aggregate before the ranking. Filter to completed orders, join
+        the line items, and total revenue per customer. You should get one row
+        per customer who has at least one completed order — 59 rows.
+      prompt: Return each customer_id and their total revenue (quantity × unit_price) from completed orders only.
+      datasetSlug: sql-fundamentals
+      referenceSql: |
+        SELECT o.customer_id,
+               SUM(oi.quantity * oi.unit_price) AS total_revenue
+        FROM orders o
+        JOIN order_items oi ON o.order_id = oi.order_id
+        WHERE o.status = 'completed'
+        GROUP BY o.customer_id;
+      hint: 'Filter orders on status first, JOIN order_items on order_id, then GROUP BY customer_id and SUM.'
+    next: data-001-n7
+
+  - id: data-001-n7
+    type: sql
+    narrative: 'Step 2 — the list Priya asked for.'
+    sqlSignalDimensions: [Technical Accuracy]
+    sql:
+      context: >
+        Now add the customer names, flag anyone without an email, order by
+        revenue with the highest first, and cut to five. Because the flag uses
+        c.email, Postgres needs it in the GROUP BY even though it isn't selected
+        on its own.
+      prompt: >
+        Return the top 5 customers by completed-order revenue: customer_id,
+        first_name, last_name, total_revenue, and an email_status column that
+        reads 'Missing email' when email is NULL and 'OK' otherwise. Highest
+        revenue first.
+      datasetSlug: sql-fundamentals
+      referenceSql: |
+        SELECT c.customer_id,
+               c.first_name,
+               c.last_name,
+               SUM(oi.quantity * oi.unit_price) AS total_revenue,
+               CASE WHEN c.email IS NULL THEN 'Missing email' ELSE 'OK' END AS email_status
+        FROM orders o
+        JOIN customers c ON o.customer_id = c.customer_id
+        JOIN order_items oi ON o.order_id = oi.order_id
+        WHERE o.status = 'completed'
+        GROUP BY c.customer_id, c.first_name, c.last_name, c.email
+        ORDER BY total_revenue DESC
+        LIMIT 5;
+      hint: 'JOIN customers for the names, CASE WHEN c.email IS NULL for the flag, include c.email in GROUP BY, then ORDER BY total_revenue DESC LIMIT 5.'
+    next: data-001-n8
+
+  # ── Phase 4: Hand it back ──────────────────────────────────────────────────
+  - id: data-001-n8
+    type: decision
+    narrative: >
+      You have the list. Two things stand out: Owen Khan (#3) has no email on
+      file, and he's tied to the cent with Tomas Lewis at #3/#4 — so "top five"
+      is really a top four plus a tie. What do you send Priya?
+    contextPanels:
+      - label: On the list, no email
+        value: '1'
+        type: alert
+        tone: danger
+        caption: Owen Khan
+      - label: Tied at #3
+        value: '2'
+        type: info
+        caption: Khan and Lewis, $1,008.08 each
+      - label: Excluded orders
+        value: '3'
+        type: info
+        caption: shipped but still pending
+    choices:
+      - id: A
+        text: 'The five names with completed revenue, Owen Khan flagged as unreachable by email, the #3/#4 tie called out, and a one-line note that three shipped-but-pending orders were excluded and reported to ops. Ask her how she wants to handle the tie and the missing email.'
+        next: data-001-end-a
+        signals:
+          Communicating Findings: strong
+          Data Judgment: strong
+      - id: B
+        text: 'The five names and emails. She asked for a list; the rest is analyst detail.'
+        next: data-001-end-b
+        signals:
+          Communicating Findings: developing
+      - id: C
+        text: 'Drop Owen Khan since he can''t be emailed anyway, and send the next customer down as #5 so she gets five clean rows.'
+        next: data-001-end-c
+        signals:
+          Communicating Findings: developing
+          Data Judgment: developing
+      - id: D
+        text: 'Re-rank using all orders, including cancelled — it reflects gross demand and gives a cleaner top five without the tie.'
+        next: data-001-end-d
+        signals:
+          Communicating Findings: developing
+          Scoping the Ask: developing
+
+  - id: data-001-end-a
+    type: feedback
+    narrative: >
+      Priya gets exactly what she needs: a defensible list, the one name she
+      can't reach, a tie she has to decide on, and a caveat finance won't be
+      surprised by. She asks the CX team to chase Owen Khan's email and adds a
+      sixth invite for Tomas Lewis. That's the job — the query was the easy part.
+  - id: data-001-end-b
+    type: feedback
+    narrative: >
+      Friday morning the send goes out and one of five emails bounces — Owen
+      Khan never had an address on file. Priya finds out from the email tool,
+      not from you. The list was right; the hand-off wasn't. Surfacing what you
+      know is as much the deliverable as the numbers.
+  - id: data-001-end-c
+    type: feedback
+    narrative: >
+      The list is clean, but it's now a different question: "top five customers
+      we can email" instead of "top five customers." Priya didn't get to make
+      that call, and when finance asks why the #3 customer by revenue isn't on
+      the VIP list, nobody has an answer. Don't quietly change the question to
+      make the answer tidier.
+  - id: data-001-end-d
+    type: feedback
+    narrative: >
+      The re-ranked list puts a customer at #1 whose orders were mostly
+      cancelled. Finance rejects it in the first five minutes — that isn't
+      revenue by their definition or anyone's. You had the right list; the
+      problem was a tie you didn't want to explain. Explain the tie.

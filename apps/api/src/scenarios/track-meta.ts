@@ -34,6 +34,12 @@ export const TRACK_META: Record<string, {
     color: '#0a7bbf',
     icon: 'Users',
   },
+  'data-analytics': {
+    label: 'Data Analytics',
+    description: 'A stakeholder asks a business question; the answer is in the database. Scope the ask, check the data before you trust it, build the query in verified steps, and hand back a number leadership can act on — with the caveats that matter. Live SQL against a real dataset.',
+    color: '#0a9396',
+    icon: 'Database',
+  },
   general: {
     label: 'General',
     description: 'General workplace decision-making scenarios.',

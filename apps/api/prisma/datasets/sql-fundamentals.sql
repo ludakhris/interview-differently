@@ -107,7 +107,7 @@ INSERT INTO customers (customer_id, first_name, last_name, email, city, state, c
   (56, 'Liam', 'Lewis', 'liam.lewis@proton.me', 'Wilmington', 'DE', 'United States', '2025-04-27'),
   (57, 'Isabella', 'Harris', 'isabella.harris@gmail.com', 'New York', 'NY', 'United States', '2024-11-18'),
   (58, 'Tariq', 'Hernandez', 'tariq.hernandez@outlook.com', 'New York', 'NY', 'United States', '2024-10-19'),
-  (59, 'Owen', 'Khan', 'owen.khan@proton.me', 'Guadalajara', 'JAL', 'Mexico', '2023-03-05'),
+  (59, 'Owen', 'Khan', NULL, 'Guadalajara', 'JAL', 'Mexico', '2023-03-05'),
   (60, 'Chloe', 'White', 'chloe.white@gmail.com', 'Seattle', 'WA', 'United States', '2024-03-08'),
   (61, 'Yusuf', 'Smith', 'yusuf.smith@outlook.com', 'Pittsburgh', 'PA', 'United States', '2024-07-19'),
   (62, 'Zoe', 'Clark', 'zoe.clark@company.co', 'Miami', 'FL', 'United States', '2023-04-15'),

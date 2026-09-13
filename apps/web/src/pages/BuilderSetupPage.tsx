@@ -43,6 +43,13 @@ const TRACK_OPTIONS = [
     icon: '🤝',
   },
   {
+    value: 'data-analytics',
+    label: 'Data Analytics',
+    subtitle: 'SQL against a dataset',
+    color: '#0a9396',
+    icon: '🗄️',
+  },
+  {
     value: 'general',
     label: 'General',
     subtitle: 'Judgment & Thinking',

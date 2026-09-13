@@ -73,6 +73,7 @@ const TRACK_COLORS: Record<string, string> = {
   business: '#2b7de0',
   risk: '#c0392b',
   'customer-success': '#2d9e5f',
+  'data-analytics': '#0a9396',
   general: '#7b3fa0',
   custom: '#888888',
 }
