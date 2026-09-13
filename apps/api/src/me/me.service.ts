@@ -16,8 +16,8 @@ import { ClerkService } from '../auth/clerk.service'
  *
  * Domain matching is suffix-based (#14): an institution registered for
  * "harvard.edu" matches both "me@harvard.edu" and "me@cs.harvard.edu",
- * with longest match winning. Cohort joinKeys are unique per-institution,
- * so two schools can both have a "fall2026" cohort.
+ * with longest match winning. Cohort joinKeys are globally unique (#16), so
+ * a key always resolves to exactly one cohort.
  */
 @Injectable()
 export class MeService {
@@ -110,10 +110,7 @@ export class MeService {
    * Always upserts the User mirror first so the FK is satisfied — the user
    * may not have hit /me/sync yet on a brand-new signup.
    *
-   * joinKey is per-institution unique now (#14), so a key may match cohorts
-   * in multiple institutions. We disambiguate by preferring the cohort whose
-   * institution matches the caller's email domain. If still ambiguous, we
-   * 409 with the candidate institution names so the UI can ask the user.
+   * joinKey is globally unique (#16), so a key resolves to exactly one cohort.
    */
   async join(userId: string, input: { joinKey?: string; institutionId?: string }) {
     await this.sync(userId)
@@ -123,16 +120,10 @@ export class MeService {
 
     if (input.joinKey?.trim()) {
       const key = input.joinKey.trim()
-      const matches = await this.prisma.cohort.findMany({
-        where: { joinKey: key },
-        include: { institution: { select: { id: true, name: true, emailDomain: true } } },
-      })
-      if (matches.length === 0) {
-        throw new NotFoundException(`No cohort found for join key "${key}"`)
-      }
-      const chosen = matches.length === 1 ? matches[0] : await this.disambiguateCohorts(userId, matches)
-      institutionId = chosen.institutionId
-      cohortId = chosen.id
+      const cohort = await this.prisma.cohort.findUnique({ where: { joinKey: key }, select: { id: true, institutionId: true } })
+      if (!cohort) throw new NotFoundException(`No cohort found for join key "${key}"`)
+      institutionId = cohort.institutionId
+      cohortId = cohort.id
     } else if (input.institutionId) {
       const inst = await this.prisma.institution.findUnique({
         where: { id: input.institutionId },
@@ -168,37 +159,6 @@ export class MeService {
       throw new NotFoundException(`Membership ${membershipId} not found`)
     }
     await this.prisma.membership.delete({ where: { id: membershipId } })
-  }
-
-  // ── helpers ─────────────────────────────────────────────────────────────
-
-  /**
-   * Picks one cohort from a set of joinKey-collisions: prefers the cohort
-   * whose institution matches the caller's email domain. If no domain match
-   * exists (or the user has no email on record), we 409 with the candidate
-   * institution names so the UI can ask the user to specify.
-   */
-  private async disambiguateCohorts(
-    userId: string,
-    matches: Array<{
-      id: string
-      institutionId: string
-      institution: { id: string; name: string; emailDomain: string | null }
-    }>,
-  ) {
-    const profile = await this.clerk.getUserProfile(userId)
-    const domain = extractDomain(profile?.email)
-    if (domain) {
-      const candidates = candidateDomains(domain)
-      const domainMatch = matches.find(
-        (c) => c.institution.emailDomain && candidates.includes(c.institution.emailDomain),
-      )
-      if (domainMatch) return domainMatch
-    }
-    const names = matches.map((c) => c.institution.name).join(', ')
-    throw new ConflictException(
-      `That join key is used by multiple institutions (${names}). Ask your admin which to join.`,
-    )
   }
 }
 

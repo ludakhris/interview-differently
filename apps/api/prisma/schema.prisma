@@ -185,11 +185,10 @@ model Cohort {
   id            String       @id @default(uuid())
   institutionId String
   name          String
-  // Optional — students enter this at signup to auto-join. Per-institution
-  // unique (not globally), so two schools can both have a cohort keyed
-  // "fall2026" without colliding. The /welcome flow disambiguates ties
-  // by preferring the user's email-domain-matched institution.
-  joinKey       String?
+  // Optional — students enter this at signup to auto-join. Globally unique
+  // (decided 2026-09-13, closes #16): a key identifies exactly one cohort, so
+  // the join flow never has to disambiguate between institutions.
+  joinKey       String?      @unique
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   institution   Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
@@ -198,9 +197,7 @@ model Cohort {
   tools         CohortToolConfig[]
   deliveries    AssessmentDelivery[]
 
-  @@unique([institutionId, joinKey])
   @@index([institutionId])
-  @@index([joinKey])
 }
 
 model Membership {
