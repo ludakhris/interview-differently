@@ -315,6 +315,7 @@ model AssessmentDelivery {
   opensAt          DateTime?
   closesAt         DateTime?
   timeLimitMinutes Int?
+  inviteCode       String?             @unique              // /a/<code> — join the cohort + start; null = no public link
   createdAt        DateTime            @default(now())
   assessment       Assessment          @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   cohort           Cohort              @relation(fields: [cohortId], references: [id], onDelete: Cascade)
