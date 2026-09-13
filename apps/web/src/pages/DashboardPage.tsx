@@ -444,13 +444,7 @@ export function DashboardPage() {
         )}
 
         {isSignedIn && isAdmin && (
-          <div className="flex justify-end gap-6">
-            <button
-              onClick={() => navigate('/admin/datasets')}
-              className="text-[13px] font-semibold text-[#2d9e5f] hover:text-[#2d9e5f]/80 transition-colors underline-offset-2 hover:underline"
-            >
-              Manage datasets →
-            </button>
+          <div className="flex justify-end">
             <button
               onClick={() => navigate('/builder')}
               className="text-[13px] font-semibold text-[#2d9e5f] hover:text-[#2d9e5f]/80 transition-colors underline-offset-2 hover:underline"
