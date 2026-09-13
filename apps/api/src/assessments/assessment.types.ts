@@ -21,6 +21,7 @@ export interface SqlQuestion {
   type: 'sql'
   prompt: string
   referenceSql: string
+  starterSql?: string // optional example query the student starts from
   ordered: boolean // row order must match
   strictColumns: boolean // column names must match
 }

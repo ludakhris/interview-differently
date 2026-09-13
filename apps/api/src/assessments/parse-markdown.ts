@@ -18,6 +18,7 @@ const DRAW_RE = /^>\s*draw:\s*(\d+)\s*$/i
 const FLAG_RE = /^>\s*(ordered|strictColumns)\s*$/i
 const MC_ANSWER_RE = /^\*\*Answer:\s*([A-Z])\b/
 const SQL_ANSWER_RE = /^\*\*Answer:\*\*\s*$/
+const SQL_STARTER_RE = /^\*\*Starter:\*\*\s*$/
 const OPTION_SPLIT_RE = /(?:^|\s{2,}|\t)([A-Z])\)\s*/
 
 type Kind = 'mc' | 'sql' | 'skip'
@@ -60,8 +61,11 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
     optionText: string[]
     answer: string | null
     flags: Set<string>
-    sql: string[] | null // non-null while inside the ```sql fence
+    sql: string[] | null // non-null once **Answer:** is seen; the ```sql fence fills it
     sqlDone: boolean
+    starter: string[] | null // non-null once **Starter:** is seen; its fence fills it
+    starterDone: boolean
+    fenceTarget: 'starter' | 'answer' | null // which array the open fence writes to
   } | null = null
   let inFence = false
 
@@ -81,11 +85,13 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
     } else {
       const referenceSql = (q.sql ?? []).join('\n').trim()
       if (!referenceSql) throw new AssessmentParseError(`Question ${q.id}: missing \`\`\`sql reference query under **Answer:**`)
+      const starterSql = (q.starter ?? []).join('\n').trim()
       section.questions.push({
         id: q.id,
         type: 'sql',
         prompt,
         referenceSql,
+        ...(starterSql ? { starterSql } : {}),
         ordered: q.flags.has('ordered'),
         strictColumns: q.flags.has('strictcolumns'),
       })
@@ -108,7 +114,11 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
     if (inFence) {
       if (line.trim().startsWith('```')) {
         inFence = false
-        if (q) q.sqlDone = true
+        if (q?.fenceTarget === 'starter') q.starterDone = true
+        else if (q) q.sqlDone = true
+        if (q) q.fenceTarget = null
+      } else if (q?.fenceTarget === 'starter' && q.starter) {
+        q.starter.push(line)
       } else if (q?.sql) {
         q.sql.push(line)
       }
@@ -139,7 +149,7 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
       if (sections.some((s) => s.questions.some((x) => x.id === id))) {
         throw new AssessmentParseError(`Duplicate question id ${id}`)
       }
-      q = { id, kind, promptLines: qm[3] ? [qm[3]] : [], optionText: [], answer: null, flags: new Set(), sql: null, sqlDone: false }
+      q = { id, kind, promptLines: qm[3] ? [qm[3]] : [], optionText: [], answer: null, flags: new Set(), sql: null, sqlDone: false, starter: null, starterDone: false, fenceTarget: null }
       continue
     }
 
@@ -166,15 +176,19 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
     }
 
     if (q.kind === 'sql') {
+      if (SQL_STARTER_RE.test(line)) {
+        q.starter = []
+        continue
+      }
       if (SQL_ANSWER_RE.test(line)) {
         q.sql = []
         continue
       }
-      if (q.sql && !q.sqlDone && line.trim().startsWith('```')) {
-        inFence = true
-        continue
+      if (line.trim().startsWith('```')) {
+        if (q.sql && !q.sqlDone) { inFence = true; q.fenceTarget = 'answer'; continue }
+        if (q.starter && !q.starterDone) { inFence = true; q.fenceTarget = 'starter'; continue }
       }
-      if (q.sql === null && line.trim()) q.promptLines.push(line.trim())
+      if (q.sql === null && q.starter === null && line.trim()) q.promptLines.push(line.trim())
       continue
     }
 

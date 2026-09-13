@@ -57,7 +57,23 @@ LIMIT 5;
 | Hands-on SQL | `(Hands-On SQL)` | `**Answer:**` on its own line, then a ```` ```sql ```` fence with the reference query. |
 | Scenario / short answer | `(Scenario)` | Not supported yet — skipped with a warning. |
 
-**SQL flags** — `>` lines between the prompt and `**Answer:**`:
+**Starter query (optional)** — a `**Starter:**` line followed by a ```` ```sql ```` fence, placed before `**Answer:**`. The student's editor opens pre-filled with it (they're told it's an example to edit or replace). Useful for scaffolding a `SELECT … FROM …` skeleton or a partial query with a `-- finish this` comment:
+
+````markdown
+**2.3 (Hands-On SQL)** Count customers per state, most first.
+**Starter:**
+```sql
+SELECT state, COUNT(*) AS customers
+FROM customers
+-- group and order the result
+```
+**Answer:**
+```sql
+SELECT state, COUNT(*) AS customers FROM customers GROUP BY state ORDER BY customers DESC;
+```
+````
+
+**SQL flags** — `>` lines between the prompt and `**Starter:**` / `**Answer:**`:
 
 - `> ordered` — the student's row order must match the reference query's.
 - `> strictColumns` — the student's column names must match (case-insensitive).

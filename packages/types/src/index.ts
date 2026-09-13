@@ -723,6 +723,7 @@ export interface StudentSqlQuestion {
   id: string
   type: 'sql'
   prompt: string
+  starterSql?: string // optional example query pre-filled in the editor
   ordered: boolean
   strictColumns: boolean
 }

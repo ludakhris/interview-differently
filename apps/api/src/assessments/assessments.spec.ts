@@ -86,6 +86,40 @@ describe('parseAssessmentMarkdown', () => {
     expect(parsed.sections[1].questions[0]).toMatchObject({ id: '2.1', ordered: false, strictColumns: true })
   })
 
+  it('captures an optional starter query and keeps the prompt clean', () => {
+    const md = `---
+slug: s
+title: S
+dataset: d
+---
+
+## Section 1: X
+
+**1.1 (Hands-On SQL)** Count customers per state.
+> strictColumns
+**Starter:**
+\`\`\`sql
+SELECT state, COUNT(*) AS n
+FROM customers
+-- finish the query
+\`\`\`
+**Answer:**
+\`\`\`sql
+SELECT state, COUNT(*) AS n FROM customers GROUP BY state;
+\`\`\`
+`
+    const q = parseAssessmentMarkdown(md).sections[0].questions[0]
+    expect(q).toMatchObject({
+      type: 'sql',
+      prompt: 'Count customers per state.',
+      strictColumns: true,
+      starterSql: 'SELECT state, COUNT(*) AS n\nFROM customers\n-- finish the query',
+      referenceSql: 'SELECT state, COUNT(*) AS n FROM customers GROUP BY state;',
+    })
+    // no starter → no key at all (keeps stored JSON tidy)
+    expect('starterSql' in parsed.sections[0].questions[2]).toBe(false)
+  })
+
   it('rejects structural problems', () => {
     expect(() => parseAssessmentMarkdown('no frontmatter')).toThrow(AssessmentParseError)
     expect(() => parseAssessmentMarkdown(BANK.replace('**Answer: B**', ''))).toThrow(/1\.1: missing/)

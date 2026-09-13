@@ -669,7 +669,7 @@ function draw<T>(items: T[], n: number | null): T[] {
 
 function stripAnswer(q: AssessmentQuestion) {
   if (q.type === 'mc') return { id: q.id, type: 'mc' as const, prompt: q.prompt, options: q.options }
-  return { id: q.id, type: 'sql' as const, prompt: q.prompt, ordered: q.ordered, strictColumns: q.strictColumns }
+  return { id: q.id, type: 'sql' as const, prompt: q.prompt, ordered: q.ordered, strictColumns: q.strictColumns, ...(q.starterSql ? { starterSql: q.starterSql } : {}) }
 }
 
 /** overall + per-section percentages for one submitted attempt. */

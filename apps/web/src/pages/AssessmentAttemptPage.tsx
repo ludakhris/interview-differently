@@ -91,7 +91,14 @@ export function AssessmentAttemptPage() {
       setSubmitting(true)
       if (timerRef.current) window.clearTimeout(timerRef.current)
       try {
-        await submitAttempt(getToken, attemptId, { ...answers, ...dirtyRef.current })
+        // Untouched starter queries count as the student's answer.
+        const starters: Record<string, string> = {}
+        for (const sec of paper?.sections ?? []) {
+          for (const q of sec.questions) {
+            if (q.type === 'sql' && q.starterSql && !(answers[q.id] ?? dirtyRef.current[q.id])?.trim()) starters[q.id] = q.starterSql
+          }
+        }
+        await submitAttempt(getToken, attemptId, { ...starters, ...answers, ...dirtyRef.current })
         navigate(`/tools/assessments/attempt/${attemptId}/result`, { replace: true })
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Submit failed')
@@ -120,6 +127,7 @@ export function AssessmentAttemptPage() {
     [paper, answers],
   )
   const totalCount = paper?.sections.reduce((n, s) => n + s.questions.length, 0) ?? 0
+  const hasStarters = paper?.sections.some((s) => s.questions.some((q) => q.type === 'sql' && !!q.starterSql)) ?? false
 
   const goTo = (ix: number) => {
     void flush()
@@ -215,6 +223,21 @@ export function AssessmentAttemptPage() {
 
         {/* ── Questions ── */}
         <main className="flex-1 min-w-0 max-w-4xl px-8 py-8">
+          {sectionIx === 0 && (
+            <div className="mb-6 rounded-xl border border-white/10 bg-[#0d0d0d] px-5 py-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40 mb-2">How this works</p>
+              <ul className="text-[13px] text-[#f5f3ee]/80 leading-relaxed space-y-1 list-disc pl-5">
+                <li>Answers save as you go. Submit when you're done{paper.deadlineAt ? ' — or when the timer runs out' : ''}.</li>
+                <li>
+                  On SQL questions, press <span className="font-semibold text-[#f5f3ee]">Run</span> (⌘↵) to see your query's output before moving on. Only the query left in the editor is graded.
+                </li>
+                <li>
+                  Click <span className="font-semibold text-[#f5f3ee]">Schema</span> to open the table and column list beside the editor; clicking a name inserts it at the cursor.
+                </li>
+                {hasStarters && <li>Some questions start you off with an example query — edit it or replace it entirely.</li>}
+              </ul>
+            </div>
+          )}
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-1">
             Section {sectionIx + 1} of {paper.sections.length}
           </p>
@@ -236,7 +259,7 @@ export function AssessmentAttemptPage() {
                 </div>
                 <QuestionBody
                   q={q}
-                  value={answers[q.id] ?? ''}
+                  value={answers[q.id] ?? (q.type === 'sql' ? q.starterSql ?? '' : '')}
                   onChange={(v) => setAnswer(q.id, v)}
                   db={db}
                   tables={paper.dataset.schemaSummary}
@@ -320,7 +343,12 @@ function QuestionBody({
   }
   return (
     <div className="ml-10">
-      <SqlWorkbench db={db} tables={tables} value={value} onChange={onChange} />
+      <SqlWorkbench db={db} tables={tables} value={value} onChange={onChange} autoRun={!!q.starterSql} />
+      {q.starterSql && value === q.starterSql && (
+        <p className="text-[11px] text-amber-200/80 mt-2">
+          We've started you off with an example query — edit it or replace it entirely. It's graded as-is if you leave it unchanged.
+        </p>
+      )}
       {(q.ordered || q.strictColumns) && (
         <p className="text-[11px] text-white/40 mt-2">
           {q.ordered && 'Row order matters for this question. '}

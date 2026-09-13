@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { AlertTriangle, Play, Table2 } from 'lucide-react'
 import { SqlEditor } from './SqlEditor'
@@ -14,6 +14,8 @@ interface Props {
   onChange: (v: string) => void
   editorHeight?: number
   resultsHeight?: number
+  /** Run the initial query once the dataset is ready (e.g. an authored starter query). */
+  autoRun?: boolean
 }
 
 /**
@@ -21,7 +23,7 @@ interface Props {
  * an assessment or simulation. Shares one SandboxDb across every question on
  * the page; the caller owns the query text so it can be autosaved.
  */
-export function SqlWorkbench({ db, tables, value, onChange, editorHeight = 160, resultsHeight = 240 }: Props) {
+export function SqlWorkbench({ db, tables, value, onChange, editorHeight = 160, resultsHeight = 240, autoRun = false }: Props) {
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState<SandboxResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -56,6 +58,14 @@ export function SqlWorkbench({ db, tables, value, onChange, editorHeight = 160, 
     }
   }, [db, value, running])
 
+  // Auto-run once: fires the first time the db is ready with a non-empty query.
+  const autoRanRef = useRef(false)
+  useEffect(() => {
+    if (!autoRun || autoRanRef.current || !db || !value.trim()) return
+    autoRanRef.current = true
+    void run()
+  }, [autoRun, db, value, run])
+
   return (
     <div className="rounded-xl border border-white/10 overflow-hidden bg-[#0d0d0d]">
       <div className="flex items-center justify-between px-3 py-2 border-b border-white/8">
@@ -83,33 +93,38 @@ export function SqlWorkbench({ db, tables, value, onChange, editorHeight = 160, 
           </button>
         </div>
       </div>
-      {showSchema && (
-        <div className="px-4 py-3 border-b border-white/8 bg-[#0a0a0a] max-h-[260px] overflow-y-auto">
-          <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2">Tables — click a name to insert it</p>
-          <SchemaTree tables={tables} onPick={insertAtCursor} />
-        </div>
-      )}
-      <SqlEditor
-        ref={editorRef}
-        value={value}
-        onChange={onChange}
-        onRun={run}
-        tables={tables}
-        height={editorHeight}
-        placeholder="Write your query here…"
-      />
-      <div className="border-t border-white/8 overflow-auto bg-[#0a0a0a]" style={{ maxHeight: resultsHeight }}>
-        {error && (
-          <div className="m-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 flex gap-2">
-            <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-[12px] text-[#f5f3ee]/85 font-mono whitespace-pre-wrap">{error}</p>
-          </div>
+      {/* Schema opens as a left rail beside the editor so the tables stay visible while typing */}
+      <div className="flex min-w-0">
+        {showSchema && (
+          <aside className="w-[220px] flex-shrink-0 border-r border-white/8 bg-[#0a0a0a] px-3 py-3 overflow-y-auto" style={{ maxHeight: editorHeight + resultsHeight + 1 }}>
+            <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2">Tables — click to insert</p>
+            <SchemaTree tables={tables} onPick={insertAtCursor} />
+          </aside>
         )}
-        {result ? (
-          <ResultsGrid result={result} />
-        ) : !error ? (
-          <p className="px-4 py-4 text-[12px] text-white/30">Run your query to check the output before moving on.</p>
-        ) : null}
+        <div className="flex-1 min-w-0">
+          <SqlEditor
+            ref={editorRef}
+            value={value}
+            onChange={onChange}
+            onRun={run}
+            tables={tables}
+            height={editorHeight}
+            placeholder="Write your query here…"
+          />
+          <div className="border-t border-white/8 overflow-auto bg-[#0a0a0a]" style={{ maxHeight: resultsHeight }}>
+            {error && (
+              <div className="m-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 flex gap-2">
+                <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-[12px] text-[#f5f3ee]/85 font-mono whitespace-pre-wrap">{error}</p>
+              </div>
+            )}
+            {result ? (
+              <ResultsGrid result={result} />
+            ) : !error ? (
+              <p className="px-4 py-4 text-[12px] text-white/30">Run your query to check the output before moving on.</p>
+            ) : null}
+          </div>
+        </div>
       </div>
     </div>
   )
