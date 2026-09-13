@@ -16,6 +16,7 @@ export interface InstitutionAnalytics {
   cohort: { id: string; name: string } | null
   totalStudents: number
   activeStudentsLast30Days: number
+  assessmentsSubmitted: number
   completedSimulations: number
   startedSimulations: number
   /** Percent (0–100). Null when nobody has started yet. */
@@ -122,6 +123,16 @@ export interface StudentImmersiveSession {
   responseCount: number
 }
 
+export interface StudentAssessment {
+  attemptId: string
+  title: string
+  label: string
+  startedAt: string
+  submittedAt: string | null
+  percent: number | null
+  sections: Array<{ title: string; correct: number; total: number }>
+}
+
 export interface StudentDetailResponse {
   institution: { id: string; name: string }
   memberships: Array<{
@@ -137,6 +148,7 @@ export interface StudentDetailResponse {
   }
   completions: StudentCompletion[]
   immersiveSessions: StudentImmersiveSession[]
+  assessments: StudentAssessment[]
   /** Map dimension → chronological [{ completedAt, score }] points for the trend chart. */
   dimensionSeries: Record<string, Array<{ completedAt: string; score: number }>>
 }
@@ -185,4 +197,33 @@ export async function fetchHeatmap(
   const qs = cohortId ? `?cohortId=${encodeURIComponent(cohortId)}` : ''
   const res = await authedFetch(getToken, `/admin/institutions/${institutionId}/heatmap${qs}`)
   return res.json() as Promise<HeatmapResponse>
+}
+
+// ── Student roster ─────────────────────────────────────────────────────────
+
+export interface RosterStudent {
+  userId: string
+  anonymousLabel: string
+  email: string | null
+  displayName: string | null
+  cohorts: string[]
+  completedSimulations: number
+  immersiveCompleted: number
+  avgScore: number | null
+  assessmentsSubmitted: number
+  prePercent: number | null
+  postPercent: number | null
+  lastActiveAt: string | null
+}
+
+export interface RosterResponse {
+  institution: { id: string; name: string }
+  cohort: { id: string; name: string } | null
+  students: RosterStudent[]
+}
+
+export async function fetchStudentRoster(getToken: GetToken, institutionId: string, cohortId?: string): Promise<RosterResponse> {
+  const qs = cohortId ? `?cohortId=${encodeURIComponent(cohortId)}` : ''
+  const res = await authedFetch(getToken, `/admin/institutions/${institutionId}/students${qs}`)
+  return res.json() as Promise<RosterResponse>
 }

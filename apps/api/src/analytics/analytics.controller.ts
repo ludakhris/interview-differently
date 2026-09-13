@@ -40,6 +40,12 @@ export class AnalyticsController {
    * Per-student detail view: profile, all completions, dimension trend series.
    * Verifies the student is actually a member of the institution before returning.
    */
+  @Get('institutions/:institutionId/students')
+  @InstitutionAdminAllowed()
+  getStudentRoster(@Param('institutionId') institutionId: string, @Query('cohortId') cohortId?: string) {
+    return this.service.getStudentRoster(institutionId, cohortId || undefined)
+  }
+
   @Get('institutions/:institutionId/students/:userId')
   @InstitutionAdminAllowed()
   getStudentDetail(

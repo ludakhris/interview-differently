@@ -105,7 +105,7 @@ export function AdminInstitutionAssessmentsPage() {
           )}
         </div>
 
-        <AnalyticsTabs institutionId={institutionId} active="assessments" available={['overview', 'engagement', 'heatmap', 'assessments']} />
+        <AnalyticsTabs institutionId={institutionId} active="assessments" available={['overview', 'engagement', 'heatmap', 'assessments', 'students']} />
 
         {error && (
           <div className="rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 mb-4">
@@ -156,7 +156,7 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
       headers: [
         showNames ? 'name' : 'student',
         ...(showNames ? ['email'] : []),
-        ...keys.flatMap((k) => [`${k.title} pre`, `${k.title} post`, `${k.title} Δ`]),
+        ...keys.flatMap((k) => [`${k.title} pre`, `${k.title} post`, `${k.title} improvement`]),
       ],
       rows: pair.students.map((s) => [
         label(s),
@@ -183,11 +183,18 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
             </p>
           </div>
           <div className="flex items-center gap-6">
-            <Stat label="Pre" value={pair.averages.pre.overall} />
-            <Stat label="Post" value={pair.averages.post.overall} />
-            <Stat label="Δ paired" value={pair.averages.delta.overall} delta />
+            <Stat label="Pre" value={pair.averages.pre.overall} tone="text-[#d4830a]" />
+            <Stat label="Post" value={pair.averages.post.overall} tone="text-[#2d9e5f]" />
+            <Stat label="% Improvement" value={pair.averages.delta.overall} delta />
           </div>
         </div>
+
+        <p className="text-[11px] text-white/40 mb-4">
+          % Improvement = post score − pre score, in percentage points, averaged over the {pair.averages.pairedCount} student
+          {pair.averages.pairedCount === 1 ? '' : 's'} who completed both.
+          <span className="ml-3 inline-flex items-center gap-1.5"><span className="inline-block w-3 h-1.5 rounded-full bg-[#d4830a]" /> pre</span>
+          <span className="ml-2 inline-flex items-center gap-1.5"><span className="inline-block w-3 h-1.5 rounded-full bg-[#2d9e5f]" /> post</span>
+        </p>
 
         {/* Section averages */}
         <div className="overflow-x-auto mb-6">
@@ -197,7 +204,7 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
                 <th className="text-left py-2 pr-4 font-bold">Section</th>
                 <th className="text-right py-2 px-3 font-bold">Pre</th>
                 <th className="text-right py-2 px-3 font-bold">Post</th>
-                <th className="text-right py-2 pl-3 font-bold">Δ paired</th>
+                <th className="text-right py-2 pl-3 font-bold">% Improvement</th>
                 <th className="w-1/3 py-2 pl-4" />
               </tr>
             </thead>
@@ -209,8 +216,8 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
                 return (
                   <tr key={s.id} className="border-t border-white/5">
                     <td className="py-2 pr-4 text-[#f5f3ee]">{s.title}</td>
-                    <td className="text-right py-2 px-3 font-mono text-slate-light">{pct(p)}</td>
-                    <td className="text-right py-2 px-3 font-mono text-slate-light">{pct(q)}</td>
+                    <td className="text-right py-2 px-3 font-mono text-[#d4830a]">{pct(p)}</td>
+                    <td className="text-right py-2 px-3 font-mono text-[#2d9e5f]">{pct(q)}</td>
                     <td className={`text-right py-2 pl-3 font-mono font-semibold ${deltaCls(d)}`}>{signed(d)}</td>
                     <td className="py-2 pl-4">
                       <Bars pre={p} post={q} />
@@ -242,7 +249,7 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
                       {k.title.length > 14 ? `${k.title.slice(0, 13)}…` : k.title}
                     </th>
                   ))}
-                  <th className="text-right py-2 pl-3 font-bold">Δ</th>
+                  <th className="text-right py-2 pl-3 font-bold">% Improvement</th>
                 </tr>
               </thead>
               <tbody>
@@ -253,8 +260,10 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
                       {showNames && s.displayName && s.email && <p className="text-[11px] text-white/40">{s.email}</p>}
                     </td>
                     {keys.map((k) => (
-                      <td key={k.id} className="text-right py-2 px-2 font-mono text-slate-light whitespace-nowrap">
-                        {pct(s.pre?.[k.id] ?? null)} <span className="text-white/25">→</span> {pct(s.post?.[k.id] ?? null)}
+                      <td key={k.id} className="text-right py-2 px-2 font-mono whitespace-nowrap">
+                        <span className={s.pre?.[k.id] == null ? 'text-white/25' : 'text-[#d4830a]'}>{pct(s.pre?.[k.id] ?? null)}</span>
+                        <span className="text-white/25"> → </span>
+                        <span className={s.post?.[k.id] == null ? 'text-white/25' : 'text-[#2d9e5f]'}>{pct(s.post?.[k.id] ?? null)}</span>
                       </td>
                     ))}
                     <td className={`text-right py-2 pl-3 font-mono font-semibold ${deltaCls(s.delta)}`}>{signed(s.delta)}</td>
@@ -269,12 +278,12 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
   )
 }
 
-function Stat({ label, value, delta }: { label: string; value: number | null; delta?: boolean }) {
+function Stat({ label, value, delta, tone }: { label: string; value: number | null; delta?: boolean; tone?: string }) {
   return (
     <div className="text-right">
       <p className="text-[10px] uppercase tracking-widest text-white/40">{label}</p>
-      <p className={`font-display font-extrabold text-[22px] leading-none mt-0.5 ${delta ? deltaCls(value) : 'text-[#f5f3ee]'}`}>
-        {delta ? signed(value) : pct(value)}
+      <p className={`font-display font-extrabold text-[22px] leading-none mt-0.5 ${delta ? deltaCls(value) : (tone ?? 'text-[#f5f3ee]')}`}>
+        {delta ? (value == null ? '—' : `${value > 0 ? '+' : ''}${value}%`) : pct(value)}
       </p>
     </div>
   )
@@ -284,7 +293,7 @@ function Bars({ pre, post }: { pre: number | null; post: number | null }) {
   return (
     <div className="space-y-1">
       <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
-        <div className="h-full bg-white/30" style={{ width: `${pre ?? 0}%` }} />
+        <div className="h-full bg-[#d4830a]" style={{ width: `${pre ?? 0}%` }} />
       </div>
       <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
         <div className="h-full bg-[#2d9e5f]" style={{ width: `${post ?? 0}%` }} />

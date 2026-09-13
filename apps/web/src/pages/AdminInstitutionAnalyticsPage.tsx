@@ -104,7 +104,7 @@ export function AdminInstitutionAnalyticsPage() {
         <AnalyticsTabs
           institutionId={institutionId}
           active="overview"
-          available={['overview', 'engagement', 'heatmap', 'assessments']}
+          available={['overview', 'engagement', 'heatmap', 'assessments', 'students']}
         />
 
         {error && (
@@ -151,6 +151,7 @@ function AnalyticsSections({ analytics }: { analytics: InstitutionAnalytics }) {
                   'cohort',
                   'total_students',
                   'active_last_30_days',
+                  'assessments_submitted',
                   'completed_simulations',
                   'started_simulations',
                   'completion_rate_pct',
@@ -162,6 +163,7 @@ function AnalyticsSections({ analytics }: { analytics: InstitutionAnalytics }) {
                     analytics.cohort?.name ?? '(all cohorts)',
                     analytics.totalStudents,
                     analytics.activeStudentsLast30Days,
+                    analytics.assessmentsSubmitted,
                     analytics.completedSimulations,
                     analytics.startedSimulations,
                     analytics.completionRate,
@@ -172,10 +174,11 @@ function AnalyticsSections({ analytics }: { analytics: InstitutionAnalytics }) {
             }
           />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatCard label="Students" value={analytics.totalStudents} />
-          <StatCard label="Active (30d)" value={analytics.activeStudentsLast30Days} />
+          <StatCard label="Active (30d)" value={analytics.activeStudentsLast30Days} sublabel="sims, interviews or assessments" />
           <StatCard label="Completed sims" value={analytics.completedSimulations} />
+          <StatCard label="Assessments" value={analytics.assessmentsSubmitted} sublabel="submitted" />
           <StatCard
             label="Completion rate"
             value={

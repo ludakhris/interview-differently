@@ -57,6 +57,7 @@ export class AnalyticsService {
         cohort,
         totalStudents: 0,
         activeStudentsLast30Days: 0,
+        assessmentsSubmitted: 0,
         completedSimulations: 0,
         startedSimulations: 0,
         completionRate: null,
@@ -68,7 +69,7 @@ export class AnalyticsService {
     }
 
     // 2. SimulationResult + SimulationAttempt + ImmersiveSession rows for those users
-    const [results, traditionalAttempts, immersiveSessions] = await Promise.all([
+    const [results, traditionalAttempts, immersiveSessions, assessmentAttempts] = await Promise.all([
       this.prisma.simulationResult.findMany({
         where: { userId: { in: userIds } },
         select: {
@@ -88,9 +89,14 @@ export class AnalyticsService {
         where: { userId: { in: userIds } },
         select: { userId: true, status: true, createdAt: true },
       }),
+      this.prisma.assessmentAttempt.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, startedAt: true, submittedAt: true },
+      }),
     ])
 
     const completedSimulations = results.length
+    const assessmentsSubmitted = assessmentAttempts.filter((a) => a.submittedAt).length
     const avgOverallScore = avg(results.map((r) => r.overallScore))
 
     // Completion rate combines traditional + immersive starts/finishes.
@@ -107,11 +113,18 @@ export class AnalyticsService {
         ? null
         : Math.round(((completedSimulations + immersiveCompleted) / startedSimulations) * 1000) / 10
 
-    // 3. Active in last 30 days = distinct userIds with at least one completion in window
+    // 3. Active in last 30 days = distinct userIds with *any* activity in the
+    //    window: a simulation start or finish, an immersive session, or an
+    //    assessment attempt (started or submitted).
     const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    const activeStudentsLast30Days = new Set(
-      results.filter((r) => r.completedAt >= cutoff).map((r) => r.userId),
-    ).size
+    const activeStudentsLast30Days = new Set([
+      ...results.filter((r) => r.completedAt >= cutoff).map((r) => r.userId),
+      ...traditionalAttempts.filter((a) => a.startedAt >= cutoff).map((a) => a.userId),
+      ...immersiveSessions.filter((s) => s.createdAt >= cutoff).map((s) => s.userId),
+      ...assessmentAttempts
+        .filter((a) => a.startedAt >= cutoff || (a.submittedAt && a.submittedAt >= cutoff))
+        .map((a) => a.userId),
+    ]).size
 
     // 4. Per-track + per-dimension breakdowns
     const byTrack = groupAvg(results, (r) => r.track, (r) => r.overallScore)
@@ -130,6 +143,7 @@ export class AnalyticsService {
       cohort,
       totalStudents,
       activeStudentsLast30Days,
+      assessmentsSubmitted,
       completedSimulations,
       startedSimulations,
       completionRate,
@@ -437,7 +451,7 @@ export class AnalyticsService {
       select: { id: true, email: true, displayName: true, createdAt: true },
     })
 
-    const [results, immersiveSessions] = await Promise.all([
+    const [results, immersiveSessions, assessmentAttempts] = await Promise.all([
       this.prisma.simulationResult.findMany({
         where: { userId },
         orderBy: { completedAt: 'asc' },
@@ -454,6 +468,11 @@ export class AnalyticsService {
           updatedAt: true,
           _count: { select: { responses: true } },
         },
+      }),
+      this.prisma.assessmentAttempt.findMany({
+        where: { userId },
+        orderBy: { startedAt: 'asc' },
+        include: { delivery: { select: { label: true, assessment: { select: { title: true } } } } },
       }),
     ])
 
@@ -505,8 +524,103 @@ export class AnalyticsService {
         updatedAt: s.updatedAt.toISOString(),
         responseCount: s._count.responses,
       })),
+      assessments: assessmentAttempts.map((a) => {
+        const scores = (a.sectionScores as unknown as { sectionId: string; title: string; correct: number; total: number }[] | null) ?? []
+        const correct = scores.reduce((n, x) => n + x.correct, 0)
+        const total = scores.reduce((n, x) => n + x.total, 0)
+        return {
+          attemptId: a.id,
+          title: a.delivery.assessment.title,
+          label: a.delivery.label,
+          startedAt: a.startedAt.toISOString(),
+          submittedAt: a.submittedAt?.toISOString() ?? null,
+          percent: a.submittedAt && total ? Math.round((correct / total) * 100) : null,
+          sections: scores.map((x) => ({ title: x.title, correct: x.correct, total: x.total })),
+        }
+      }),
       dimensionSeries: series,
     }
+  }
+
+  /**
+   * Student roster for the Students tab: one row per member in scope with
+   * simulation, immersive and assessment activity rolled up. Students with
+   * nothing yet are included — "who hasn't started" is half the point.
+   */
+  async getStudentRoster(institutionId: string, cohortId?: string) {
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { id: true, name: true },
+    })
+    if (!institution) throw new NotFoundException(`Institution ${institutionId} not found`)
+    let cohort: { id: string; name: string } | null = null
+    if (cohortId) {
+      const c = await this.prisma.cohort.findFirst({ where: { id: cohortId, institutionId }, select: { id: true, name: true } })
+      if (!c) throw new NotFoundException(`Cohort ${cohortId} not found in institution ${institutionId}`)
+      cohort = c
+    }
+
+    const memberships = await this.prisma.membership.findMany({
+      where: { institutionId, ...(cohortId ? { cohortId } : {}) },
+      include: { user: { select: { email: true, displayName: true } }, cohort: { select: { name: true } } },
+    })
+    const byUser = new Map<string, { email: string | null; displayName: string | null; cohorts: string[] }>()
+    for (const m of memberships) {
+      const u = byUser.get(m.userId) ?? { email: m.user.email, displayName: m.user.displayName, cohorts: [] }
+      if (m.cohort) u.cohorts.push(m.cohort.name)
+      byUser.set(m.userId, u)
+    }
+    const userIds = [...byUser.keys()]
+    if (userIds.length === 0) return { institution, cohort, students: [] }
+
+    const [results, attempts, immersive, assessments] = await Promise.all([
+      this.prisma.simulationResult.findMany({ where: { userId: { in: userIds } }, select: { userId: true, overallScore: true, completedAt: true } }),
+      this.prisma.simulationAttempt.findMany({ where: { userId: { in: userIds } }, select: { userId: true, startedAt: true } }),
+      this.prisma.immersiveSession.findMany({ where: { userId: { in: userIds } }, select: { userId: true, status: true, createdAt: true } }),
+      this.prisma.assessmentAttempt.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, startedAt: true, submittedAt: true, sectionScores: true, delivery: { select: { label: true } } },
+      }),
+    ])
+
+    const students = userIds
+      .map((userId) => {
+        const u = byUser.get(userId)!
+        const r = results.filter((x) => x.userId === userId)
+        const a = assessments.filter((x) => x.userId === userId && x.submittedAt)
+        const pct = (x: (typeof a)[number]) => {
+          const sc = (x.sectionScores as unknown as { correct: number; total: number }[] | null) ?? []
+          const total = sc.reduce((n, y) => n + y.total, 0)
+          return total ? Math.round((sc.reduce((n, y) => n + y.correct, 0) / total) * 100) : null
+        }
+        const latest = (label: string) =>
+          a.filter((x) => x.delivery.label.toLowerCase().startsWith(label)).sort((x, y) => y.submittedAt!.getTime() - x.submittedAt!.getTime())[0]
+        const pre = latest('pre')
+        const post = latest('post')
+        const stamps = [
+          ...r.map((x) => x.completedAt),
+          ...attempts.filter((x) => x.userId === userId).map((x) => x.startedAt),
+          ...immersive.filter((x) => x.userId === userId).map((x) => x.createdAt),
+          ...assessments.filter((x) => x.userId === userId).flatMap((x) => [x.startedAt, ...(x.submittedAt ? [x.submittedAt] : [])]),
+        ]
+        return {
+          userId,
+          email: u.email,
+          displayName: u.displayName,
+          cohorts: u.cohorts,
+          completedSimulations: r.length,
+          immersiveCompleted: immersive.filter((x) => x.userId === userId && x.status === 'completed').length,
+          avgScore: avg(r.map((x) => x.overallScore)),
+          assessmentsSubmitted: a.length,
+          prePercent: pre ? pct(pre) : null,
+          postPercent: post ? pct(post) : null,
+          lastActiveAt: stamps.length ? new Date(Math.max(...stamps.map((d) => d.getTime()))).toISOString() : null,
+        }
+      })
+      .sort((x, y) => (x.displayName ?? x.email ?? x.userId).localeCompare(y.displayName ?? y.email ?? y.userId))
+      .map((st, index) => ({ ...st, anonymousLabel: `Student ${String(index + 1).padStart(2, '0')}` }))
+
+    return { institution, cohort, students }
   }
 
   /**
