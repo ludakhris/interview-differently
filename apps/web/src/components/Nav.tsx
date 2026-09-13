@@ -39,6 +39,14 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
         >
           Request a scenario
         </button>
+        {isLoaded && isSignedIn && (
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="text-[12px] font-medium text-slate-mid hover:text-[#f5f3ee] transition-colors"
+          >
+            Dashboard
+          </button>
+        )}
         {isLoaded && isSignedIn && tools.length > 0 && <ToolsMenu tools={tools} isAdmin={isAdmin} />}
         {isLoaded && isSignedIn && isAdmin && (
           <button

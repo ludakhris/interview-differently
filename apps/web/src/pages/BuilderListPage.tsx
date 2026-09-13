@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { MobileWarning } from '@/components/builder/MobileWarning'
 import {
   listScenarios,
+  getScenario,
   deleteScenario,
   duplicateScenario,
   importStaticScenario,
@@ -89,6 +91,7 @@ function formatDate(iso: string): string {
 
 export function BuilderListPage() {
   const navigate = useNavigate()
+  const { getToken } = useAuth()
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -101,8 +104,17 @@ export function BuilderListPage() {
   const [isRendering, setIsRendering] = useState(false)
 
   async function handleBulkRender() {
-    const totalNodes = scenarios
-      .filter((s) => s.mode === 'immersive' && s.builderMeta?.status === 'published')
+    // The list holds stripped summaries (no nodes) — pull the full payload
+    // for each published immersive scenario before counting / rendering.
+    const token = (await getToken()) ?? undefined
+    const full = (
+      await Promise.all(
+        scenarios
+          .filter((s) => s.mode === 'immersive' && s.builderMeta?.status === 'published')
+          .map((s) => getScenario(s.scenarioId, token)),
+      )
+    ).filter((s): s is Scenario => s !== null)
+    const totalNodes = full
       .reduce(
         (sum, s) =>
           sum +
@@ -130,7 +142,7 @@ export function BuilderListPage() {
     setRenderSummary(null)
     setRenderProgress(null)
     try {
-      const summary = await bulkRenderAllMedia(scenarios as unknown as Parameters<typeof bulkRenderAllMedia>[0], {
+      const summary = await bulkRenderAllMedia(full as unknown as Parameters<typeof bulkRenderAllMedia>[0], {
         onBeforeRender: (p) => setRenderProgress(p),
       })
       setRenderSummary(summary)
