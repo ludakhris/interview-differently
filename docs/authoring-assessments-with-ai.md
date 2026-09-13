@@ -21,7 +21,7 @@ The platform draws `draw` questions per section at random for each student, sepa
 
 ## 2. Exact grammar
 
-```markdown
+````markdown
 ---
 slug: sql-fundamentals-v1
 title: SQL Fundamentals Pre/Post
@@ -54,7 +54,7 @@ FROM …
 ```sql
 SELECT … ;
 ```
-```
+````
 
 Rules the parser enforces (import fails otherwise):
 
