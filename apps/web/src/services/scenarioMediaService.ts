@@ -1,4 +1,5 @@
 import type { ScenarioMediaAsset } from '@id/types'
+import { authHeader } from './authToken'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
@@ -11,6 +12,7 @@ export async function listScenarioMedia(scenarioId: string): Promise<ScenarioMed
 export async function renderNodeMedia(scenarioId: string, nodeId: string): Promise<ScenarioMediaAsset> {
   const res = await fetch(`${API_URL}/api/scenario-media/render/${scenarioId}/${nodeId}`, {
     method: 'POST',
+    headers: await authHeader(),
   })
   if (!res.ok) {
     const text = await res.text().catch(() => '')
@@ -22,6 +24,7 @@ export async function renderNodeMedia(scenarioId: string, nodeId: string): Promi
 export async function deleteNodeMedia(scenarioId: string, nodeId: string): Promise<void> {
   const res = await fetch(`${API_URL}/api/scenario-media/${scenarioId}/${nodeId}`, {
     method: 'DELETE',
+    headers: await authHeader(),
   })
   if (!res.ok && res.status !== 404) {
     throw new Error(`Delete failed: ${res.status}`)

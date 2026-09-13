@@ -85,7 +85,7 @@ export function AssessmentsPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: ACCENT }}>
-                        {d.label} · {d.cohortName}
+                        {d.label} · {d.cohortName ?? "cohort removed"}
                       </p>
                       <h3 className="mt-0.5 font-display font-bold text-[16px] text-[#f5f3ee] leading-snug">{d.title}</h3>
                       <p className="text-[12px] text-slate-mid mt-1">

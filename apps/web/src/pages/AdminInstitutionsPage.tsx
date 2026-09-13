@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
+import { useRole } from '@/hooks/useRole'
 import {
   addCohortMember,
   createCohort,
@@ -12,6 +13,7 @@ import {
   listCohortMembers,
   listInstitutions,
   removeCohortMember,
+  setMemberRole,
   type Cohort,
   type CohortMember,
   type Institution,
@@ -31,6 +33,7 @@ import { TOOL_META } from '@id/types'
 
 export function AdminInstitutionsPage() {
   const { getToken } = useAuth()
+  const { isAdmin } = useRole()
   const [institutions, setInstitutions] = useState<Institution[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detail, setDetail] = useState<InstitutionDetail | null>(null)
@@ -89,7 +92,9 @@ export function AdminInstitutionsPage() {
             Institutions &amp; Cohorts
           </h1>
           <p className="text-[13px] text-slate-mid mt-1">
-            Group students into institutions and cohorts. Powers the upcoming analytics dashboards.
+            {isAdmin
+              ? 'Group students into institutions and cohorts. Powers the analytics dashboards.'
+              : 'Manage the cohorts, members, and tools for your institution.'}
           </p>
         </div>
 
@@ -106,12 +111,14 @@ export function AdminInstitutionsPage() {
               <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
                 Institutions
               </h2>
-              <button
-                onClick={() => setShowCreate((v) => !v)}
-                className="text-[12px] font-semibold text-green-light hover:text-green transition-colors"
-              >
-                {showCreate ? 'Cancel' : '+ New'}
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowCreate((v) => !v)}
+                  className="text-[12px] font-semibold text-green-light hover:text-green transition-colors"
+                >
+                  {showCreate ? 'Cancel' : '+ New'}
+                </button>
+              )}
             </div>
 
             {showCreate && (
@@ -129,7 +136,9 @@ export function AdminInstitutionsPage() {
             {loading ? (
               <p className="text-[13px] text-slate-mid">Loading…</p>
             ) : institutions.length === 0 ? (
-              <p className="text-[13px] text-slate-mid">No institutions yet. Create one to get started.</p>
+              <p className="text-[13px] text-slate-mid">
+                {isAdmin ? 'No institutions yet. Create one to get started.' : 'You are not an admin of any institution yet.'}
+              </p>
             ) : (
               <ul className="space-y-1">
                 {institutions.map((inst) => (
@@ -166,6 +175,7 @@ export function AdminInstitutionsPage() {
             ) : (
               <InstitutionDetailView
                 detail={detail}
+                isAdmin={isAdmin}
                 getToken={getToken}
                 onChange={async () => {
                   await Promise.all([refreshInstitutions(), refreshDetail(detail.id)])
@@ -258,11 +268,13 @@ function NewInstitutionForm({
 
 function InstitutionDetailView({
   detail,
+  isAdmin,
   getToken,
   onChange,
   onDeleted,
 }: {
   detail: InstitutionDetail
+  isAdmin: boolean
   getToken: () => Promise<string | null>
   onChange: () => Promise<void>
   onDeleted: () => Promise<void>
@@ -288,20 +300,22 @@ function InstitutionDetailView({
           >
             View analytics →
           </button>
-          <button
-            onClick={async () => {
-              if (!confirm(`Delete "${detail.name}" and all its cohorts? This cannot be undone.`)) return
-              try {
-                await deleteInstitution(getToken, detail.id)
-                await onDeleted()
-              } catch (e) {
-                alert(e instanceof Error ? e.message : 'Failed to delete')
-              }
-            }}
-            className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors"
-          >
-            Delete
-          </button>
+          {isAdmin && (
+            <button
+              onClick={async () => {
+                if (!confirm(`Delete "${detail.name}" and all its cohorts? This cannot be undone.`)) return
+                try {
+                  await deleteInstitution(getToken, detail.id)
+                  await onDeleted()
+                } catch (e) {
+                  alert(e instanceof Error ? e.message : 'Failed to delete')
+                }
+              }}
+              className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors"
+            >
+              Delete
+            </button>
+          )}
         </div>
       </div>
 
@@ -335,6 +349,7 @@ function InstitutionDetailView({
             <li key={c.id}>
               <CohortRow
                 cohort={c}
+                isAdmin={isAdmin}
                 institutionId={detail.id}
                 expanded={expandedCohort === c.id}
                 onToggle={() => setExpandedCohort(expandedCohort === c.id ? null : c.id)}
@@ -419,6 +434,7 @@ function NewCohortForm({
 
 function CohortRow({
   cohort,
+  isAdmin,
   institutionId,
   expanded,
   onToggle,
@@ -426,6 +442,7 @@ function CohortRow({
   onChange,
 }: {
   cohort: Cohort
+  isAdmin: boolean
   institutionId: string
   expanded: boolean
   onToggle: () => void
@@ -497,10 +514,42 @@ function CohortRow({
                   className="flex items-center justify-between py-2 border-b border-white/5 last:border-0"
                 >
                   <div>
-                    <p className="text-[13px] text-[#f5f3ee]">{m.displayName ?? m.email ?? m.userId}</p>
+                    <p className="text-[13px] text-[#f5f3ee] flex items-center gap-2">
+                      {m.displayName ?? m.email ?? m.userId}
+                      {m.role === 'institution-admin' && (
+                        <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-green/20 text-green-light">
+                          Cohort admin
+                        </span>
+                      )}
+                      {m.role === 'admin' && (
+                        <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-white/10 text-white/60">
+                          Platform admin
+                        </span>
+                      )}
+                    </p>
                     {m.email && m.displayName && <p className="text-[11px] text-slate-mid">{m.email}</p>}
                   </div>
                   <div className="flex items-center gap-3">
+                    {isAdmin && m.role !== 'admin' && (
+                      <button
+                        onClick={async () => {
+                          const promote = m.role !== 'institution-admin'
+                          const msg = promote
+                            ? `Make ${m.displayName ?? m.email ?? m.userId} a cohort admin? They will be able to manage cohorts, members, tools, and assessments for every institution they belong to.`
+                            : `Remove cohort admin from ${m.displayName ?? m.email ?? m.userId}?`
+                          if (!confirm(msg)) return
+                          try {
+                            await setMemberRole(getToken, m.userId, promote ? 'institution-admin' : null)
+                            await refreshMembers()
+                          } catch (e) {
+                            alert(e instanceof Error ? e.message : 'Failed to update role')
+                          }
+                        }}
+                        className="text-[11px] text-slate-mid hover:text-green-light transition-colors"
+                      >
+                        {m.role === 'institution-admin' ? 'Remove admin' : 'Make cohort admin'}
+                      </button>
+                    )}
                     <button
                       onClick={() =>
                         navigate(`/admin/institutions/${institutionId}/students/${encodeURIComponent(m.userId)}`)

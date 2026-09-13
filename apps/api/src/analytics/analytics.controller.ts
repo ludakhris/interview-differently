@@ -1,11 +1,15 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common'
+import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common'
 import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
+import { InstitutionScope, type AdminRequest } from '../auth/scope'
 import { AnalyticsService } from './analytics.service'
 
 @Controller('admin')
 @UseGuards(AdminGuard)
 export class AnalyticsController {
-  constructor(private readonly service: AnalyticsService) {}
+  constructor(
+    private readonly service: AnalyticsService,
+    private readonly scope: InstitutionScope,
+  ) {}
 
   /**
    * Institution + cohort overview metrics. When `cohortId` is omitted,
@@ -15,9 +19,11 @@ export class AnalyticsController {
   @Get('institutions/:institutionId/analytics')
   @InstitutionAdminAllowed()
   getInstitutionAnalytics(
+    @Req() req: AdminRequest,
     @Param('institutionId') institutionId: string,
     @Query('cohortId') cohortId?: string,
   ) {
+    this.scope.assertInstitution(req, institutionId)
     return this.service.getInstitutionAnalytics(institutionId, cohortId || undefined)
   }
 
@@ -30,9 +36,11 @@ export class AnalyticsController {
   @Get('institutions/:institutionId/engagement')
   @InstitutionAdminAllowed()
   getScenarioEngagement(
+    @Req() req: AdminRequest,
     @Param('institutionId') institutionId: string,
     @Query('cohortId') cohortId?: string,
   ) {
+    this.scope.assertInstitution(req, institutionId)
     return this.service.getScenarioEngagement(institutionId, cohortId || undefined)
   }
 
@@ -42,16 +50,19 @@ export class AnalyticsController {
    */
   @Get('institutions/:institutionId/students')
   @InstitutionAdminAllowed()
-  getStudentRoster(@Param('institutionId') institutionId: string, @Query('cohortId') cohortId?: string) {
+  getStudentRoster(@Req() req: AdminRequest, @Param('institutionId') institutionId: string, @Query('cohortId') cohortId?: string) {
+    this.scope.assertInstitution(req, institutionId)
     return this.service.getStudentRoster(institutionId, cohortId || undefined)
   }
 
   @Get('institutions/:institutionId/students/:userId')
   @InstitutionAdminAllowed()
   getStudentDetail(
+    @Req() req: AdminRequest,
     @Param('institutionId') institutionId: string,
     @Param('userId') userId: string,
   ) {
+    this.scope.assertInstitution(req, institutionId)
     return this.service.getStudentDetail(institutionId, userId)
   }
 
@@ -64,9 +75,11 @@ export class AnalyticsController {
   @Get('institutions/:institutionId/heatmap')
   @InstitutionAdminAllowed()
   getCompetencyHeatmap(
+    @Req() req: AdminRequest,
     @Param('institutionId') institutionId: string,
     @Query('cohortId') cohortId?: string,
   ) {
+    this.scope.assertInstitution(req, institutionId)
     return this.service.getCompetencyHeatmap(institutionId, cohortId || undefined)
   }
 }

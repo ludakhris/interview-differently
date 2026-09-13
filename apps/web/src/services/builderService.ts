@@ -1,5 +1,6 @@
 import type { Scenario } from '@id/types'
 import { RUBRIC_TEMPLATES } from '@/lib/builderTemplates'
+import { authHeader } from './authToken'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
@@ -7,7 +8,7 @@ async function apiFetch<T>(path: string, init?: RequestInit, token?: string): Pr
   const res = await fetch(`${API_URL}/api${path}`, {
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : await authHeader()),
     },
     ...init,
   })
@@ -36,6 +37,8 @@ export async function createScenario(
   title: string,
   track: string,
   subcategory?: string,
+  /** Owner (#15). null = public; institution-admins default to their own institution server-side. */
+  institutionId: string | null = null,
 ): Promise<Scenario> {
   const id = crypto.randomUUID()
   const startNodeId = crypto.randomUUID()
@@ -44,6 +47,7 @@ export async function createScenario(
     title,
     track: track as Scenario['track'],
     ...(subcategory ? { subcategory } : {}),
+    institutionId,
     estimatedMinutes: 20,
     briefing: { situation: '', role: '', organisation: '', reportsTo: '', timeInRole: '' },
     nodes: [{ nodeId: startNodeId, type: 'decision', narrative: '' }],

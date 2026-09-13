@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useUser } from '@clerk/clerk-react'
+import { useAuth, useUser } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { MembershipsCard } from '@/components/MembershipsCard'
 import { fetchConfig, patchAdminConfig } from '@/services/configService'
@@ -48,6 +48,7 @@ function ToggleRow({ label, description, checked, saving, onChange }: ToggleRowP
 
 export function SettingsPage() {
   const { user } = useUser()
+  const { getToken } = useAuth()
   const isAdmin = user?.publicMetadata?.role === 'admin'
 
   const [aiFeedbackEnabled, setAiFeedbackEnabled] = useState(true)
@@ -69,7 +70,7 @@ export function SettingsPage() {
     setSaving(true)
     setError(null)
     try {
-      await patchAdminConfig(key, String(value))
+      await patchAdminConfig(getToken, key, String(value))
       if (key === 'ai_feedback_enabled') setAiFeedbackEnabled(value)
     } catch {
       setError('Failed to save. Try again.')

@@ -30,12 +30,18 @@ export interface DatasetSummary {
   schemaSummary: SchemaTable[]
 }
 
-export interface AdminDatasetSummary extends DatasetSummary {
+/** null institution = platform-wide (read-only for institution-admins). */
+export interface OwnedContent {
+  institutionId: string | null
+  institutionName: string | null
+}
+
+export interface AdminDatasetSummary extends DatasetSummary, OwnedContent {
   cohortCount: number
   updatedAt: string
 }
 
-export interface DatasetDetail extends DatasetSummary {
+export interface DatasetDetail extends DatasetSummary, OwnedContent {
   setupSql: string
   setupHash: string
   cohortIds: string[]
@@ -46,6 +52,8 @@ export interface DatasetInput {
   name: string
   description?: string | null
   setupSql: string
+  /** Owner on create; ignored on update. */
+  institutionId?: string | null
 }
 
 export interface CohortOption {

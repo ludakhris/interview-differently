@@ -80,4 +80,33 @@ export class ClerkService {
       return null
     }
   }
+
+  /**
+   * Roles for many users at once (cohort member lists). Missing users map
+   * to null. Clerk caps `userId` filters at 100 per call, so we page.
+   */
+  async getRoles(userIds: string[]): Promise<Map<string, string | null>> {
+    const out = new Map<string, string | null>(userIds.map((id) => [id, null]))
+    if (!this.client || userIds.length === 0) return out
+    try {
+      for (let i = 0; i < userIds.length; i += 100) {
+        const page = await this.client.users.getUserList({ userId: userIds.slice(i, i + 100), limit: 100 })
+        for (const u of page.data) {
+          out.set(u.id, (u.publicMetadata as { role?: string } | null)?.role ?? null)
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to batch-fetch Clerk roles: ${err instanceof Error ? err.message : 'unknown'}`)
+    }
+    return out
+  }
+
+  /**
+   * Sets (or clears, with null) `publicMetadata.role`. Other metadata keys
+   * are preserved — Clerk merges publicMetadata on update.
+   */
+  async setRole(userId: string, role: string | null): Promise<void> {
+    if (!this.client) throw new Error('CLERK_SECRET_KEY not set')
+    await this.client.users.updateUserMetadata(userId, { publicMetadata: { role } })
+  }
 }

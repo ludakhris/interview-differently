@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth, useUser, UserButton } from '@clerk/clerk-react'
+import { useAuth, UserButton } from '@clerk/clerk-react'
 import { ChevronDown } from 'lucide-react'
 import { TOOL_META, type ToolKey } from '@id/types'
 import { useMyTools } from '@/hooks/useMyTools'
+import { useRole } from '@/hooks/useRole'
 
 interface NavProps {
   trackLabel?: string
@@ -13,8 +14,7 @@ interface NavProps {
 export function Nav({ trackLabel, stepLabel }: NavProps) {
   const navigate = useNavigate()
   const { isSignedIn, isLoaded } = useAuth()
-  const { user } = useUser()
-  const isAdmin = user?.publicMetadata?.role === 'admin'
+  const { isAnyAdmin } = useRole()
   const tools = useMyTools()
 
   return (
@@ -47,8 +47,8 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
             Dashboard
           </button>
         )}
-        {isLoaded && isSignedIn && tools.length > 0 && <ToolsMenu tools={tools} isAdmin={isAdmin} />}
-        {isLoaded && isSignedIn && isAdmin && (
+        {isLoaded && isSignedIn && (tools.length > 0 || isAnyAdmin) && <ToolsMenu tools={tools} isAnyAdmin={isAnyAdmin} />}
+        {isLoaded && isSignedIn && isAnyAdmin && (
           <button
             onClick={() => navigate('/builder')}
             className="text-[12px] font-medium text-slate-mid hover:text-[#f5f3ee] transition-colors"
@@ -81,7 +81,7 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
   )
 }
 
-function ToolsMenu({ tools, isAdmin }: { tools: ToolKey[]; isAdmin: boolean }) {
+function ToolsMenu({ tools, isAnyAdmin }: { tools: ToolKey[]; isAnyAdmin: boolean }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -127,9 +127,9 @@ function ToolsMenu({ tools, isAdmin }: { tools: ToolKey[]; isAdmin: boolean }) {
               </button>
             )
           })}
-          {isAdmin && (
+          {isAnyAdmin && (
             <>
-              <div className="my-1 border-t border-white/8" />
+              {tools.length > 0 && <div className="my-1 border-t border-white/8" />}
               <p className="px-3 pt-1.5 pb-0.5 text-[9px] font-bold uppercase tracking-widest text-white/30">Admin</p>
               {[
                 { label: 'Datasets', path: '/admin/datasets' },

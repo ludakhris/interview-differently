@@ -17,8 +17,14 @@ export type ScenariosData = {
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
-export async function fetchScenarios(): Promise<ScenariosData> {
-  const res = await fetch(`${API_URL}/api/scenarios`)
+/** Pass `getToken` when signed in — members then also get their institutions' private scenarios. */
+export async function fetchScenarios(getToken?: () => Promise<string | null>): Promise<ScenariosData> {
+  const headers: HeadersInit = {}
+  if (getToken) {
+    const token = await getToken()
+    if (token) headers.Authorization = `Bearer ${token}`
+  }
+  const res = await fetch(`${API_URL}/api/scenarios`, { headers })
   if (!res.ok) throw new Error('Failed to fetch scenarios')
   return res.json() as Promise<ScenariosData>
 }

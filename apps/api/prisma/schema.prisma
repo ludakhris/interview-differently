@@ -8,11 +8,15 @@ datasource db {
 }
 
 model Scenario {
-  scenarioId String   @id
-  status     String   @default("draft")
-  data       Json
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  scenarioId    String       @id
+  status        String       @default("draft")
+  data          Json
+  institutionId String? // null = public to every user; set = private to that institution's members (#15)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+
+  @@index([institutionId])
 }
 
 // Written when a user mounts the play page for a traditional simulation
@@ -170,6 +174,9 @@ model Institution {
   updatedAt   DateTime     @updatedAt
   cohorts     Cohort[]
   memberships Membership[]
+  datasets    Dataset[]
+  assessments Assessment[]
+  scenarios   Scenario[]
 
   @@index([emailDomain])
 }
@@ -264,10 +271,14 @@ model Dataset {
   setupSql      String
   setupHash     String // sha256 of setupSql
   schemaSummary Json // [{ table, columns: [{ name, type }], rowCount }] introspected on save
+  institutionId String? // null = platform-wide (authored by a full admin); set = owned by that institution (#25 Phase 5)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
+  institution   Institution?    @relation(fields: [institutionId], references: [id], onDelete: Restrict)
   cohorts       CohortDataset[]
   assessments   Assessment[]
+
+  @@index([institutionId])
 }
 
 // Which datasets a cohort can open in the SQL sandbox. A cohort with at least
@@ -299,18 +310,21 @@ model Assessment {
   sourceMarkdown String                                   // last imported markdown, re-import replaces
   sections       Json                                     // ParsedSection[] — see assessments/parse-markdown.ts
   defaultDraw    Int?                                     // frontmatter `draw`; null = every question
+  institutionId  String?                                  // null = platform-wide; see Dataset.institutionId
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   dataset        Dataset              @relation(fields: [datasetId], references: [id], onDelete: Restrict)
+  institution    Institution?         @relation(fields: [institutionId], references: [id], onDelete: Restrict)
   deliveries     AssessmentDelivery[]
 
   @@index([datasetId])
+  @@index([institutionId])
 }
 
 model AssessmentDelivery {
   id               String              @id @default(uuid())
   assessmentId     String
-  cohortId         String
+  cohortId         String?                                // null once the cohort is deleted — attempts stay with the student
   label            String                                 // 'pre' | 'post' | free text
   opensAt          DateTime?
   closesAt         DateTime?
@@ -318,7 +332,7 @@ model AssessmentDelivery {
   inviteCode       String?             @unique              // /a/<code> — join the cohort + start; null = no public link
   createdAt        DateTime            @default(now())
   assessment       Assessment          @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  cohort           Cohort              @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  cohort           Cohort?             @relation(fields: [cohortId], references: [id], onDelete: SetNull)
   attempts         AssessmentAttempt[]
 
   @@index([assessmentId])

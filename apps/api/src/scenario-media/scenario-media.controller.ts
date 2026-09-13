@@ -8,11 +8,15 @@ import {
   NotFoundException,
   Param,
   Post,
+  Req,
   Res,
+  UseGuards,
 } from '@nestjs/common'
 import type { Response } from 'express'
 import { ScenarioMediaService } from './scenario-media.service'
 import { LocalDiskPublicStorage } from '../storage/local-disk-storage'
+import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
+import { InstitutionScope, type AdminRequest } from '../auth/scope'
 
 @Controller('scenario-media')
 export class ScenarioMediaController {
@@ -21,6 +25,7 @@ export class ScenarioMediaController {
     // Used by the dev-only /files/* route below; never hit in prod (R2 serves
     // the MP4s directly via the custom domain).
     private readonly localStorage: LocalDiskPublicStorage,
+    private readonly scope: InstitutionScope,
   ) {}
 
   @Get(':scenarioId')
@@ -30,10 +35,14 @@ export class ScenarioMediaController {
 
   @Post('render/:scenarioId/:nodeId')
   @HttpCode(200)
+  @UseGuards(AdminGuard)
+  @InstitutionAdminAllowed()
   async renderNode(
+    @Req() req: AdminRequest,
     @Param('scenarioId') scenarioId: string,
     @Param('nodeId') nodeId: string,
   ) {
+    await this.scope.assertScenario(req, scenarioId)
     try {
       return await this.service.renderNode(scenarioId, nodeId)
     } catch (err) {
@@ -45,10 +54,14 @@ export class ScenarioMediaController {
 
   @Delete(':scenarioId/:nodeId')
   @HttpCode(204)
+  @UseGuards(AdminGuard)
+  @InstitutionAdminAllowed()
   async deleteAsset(
+    @Req() req: AdminRequest,
     @Param('scenarioId') scenarioId: string,
     @Param('nodeId') nodeId: string,
   ) {
+    await this.scope.assertScenario(req, scenarioId)
     await this.service.deleteAsset(scenarioId, nodeId)
   }
 

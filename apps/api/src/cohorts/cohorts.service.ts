@@ -92,13 +92,31 @@ export class CohortsService {
       orderBy: { createdAt: 'asc' },
       include: { user: true },
     })
+    const roles = await this.clerk.getRoles(rows.map((m) => m.userId))
     return rows.map((m) => ({
       membershipId: m.id,
       userId: m.userId,
       email: m.user?.email ?? null,
       displayName: m.user?.displayName ?? null,
       joinedAt: m.createdAt,
+      role: roles.get(m.userId) ?? null,
     }))
+  }
+
+  /**
+   * Promote a cohort member to institution-admin (or demote back to a plain
+   * member). Full-admin promotion stays a Clerk-dashboard action on purpose,
+   * and a full admin can't be demoted from here either.
+   */
+  async setMemberRole(userId: string, role: 'institution-admin' | null): Promise<void> {
+    if (role !== 'institution-admin' && role !== null) {
+      throw new BadRequestException("role must be 'institution-admin' or null")
+    }
+    const current = await this.clerk.getRole(userId)
+    if (current === 'admin') throw new BadRequestException('Full admins are managed in Clerk')
+    const memberships = await this.prisma.membership.count({ where: { userId } })
+    if (memberships === 0) throw new BadRequestException('User is not a member of any institution')
+    await this.clerk.setRole(userId, role)
   }
 
   /**

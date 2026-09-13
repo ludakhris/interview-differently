@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { ClerkService } from './clerk.service'
+import { PrismaService } from '../prisma/prisma.service'
 
 /**
  * Guard for admin-only endpoints.
@@ -17,7 +18,8 @@ import { ClerkService } from './clerk.service'
  * is `admin` (or `institution-admin`, when @InstitutionAdminAllowed() is set).
  *
  * Attaches `request.userId` and `request.userRole` so controllers can use them
- * without re-decoding the token.
+ * without re-decoding the token. For institution-admins it also attaches
+ * `request.institutionIds` (from their Membership rows) for InstitutionScope.
  *
  * Note: existing endpoints in this codebase don't use auth — they trust the
  * userId in the URL/body. This guard is the start of tightening that pattern;
@@ -31,6 +33,7 @@ export class AdminGuard implements CanActivate {
   constructor(
     private readonly clerk: ClerkService,
     private readonly reflector: Reflector,
+    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -38,6 +41,7 @@ export class AdminGuard implements CanActivate {
       headers: Record<string, string | undefined>
       userId?: string
       userRole?: string
+      institutionIds?: string[]
     }>()
 
     const auth = request.headers['authorization'] ?? request.headers['Authorization']
@@ -56,7 +60,12 @@ export class AdminGuard implements CanActivate {
     if (role === 'admin') {
       // Full admin always allowed.
     } else if (allowInstitutionAdmin && role === 'institution-admin') {
-      // OK
+      const memberships = await this.prisma.membership.findMany({
+        where: { userId },
+        select: { institutionId: true },
+        distinct: ['institutionId'],
+      })
+      request.institutionIds = memberships.map((m) => m.institutionId)
     } else {
       this.logger.debug(`Access denied for ${userId} (role=${role ?? 'none'})`)
       throw new ForbiddenException('Admin role required')
@@ -70,7 +79,7 @@ export class AdminGuard implements CanActivate {
 
 /**
  * Method decorator that lets institution-admins through AdminGuard alongside
- * full admins. Use sparingly — most cohort/institution mutations should be
- * full-admin only until the institution-admin role is fully fleshed out.
+ * full admins. Handlers that use it must scope by institution via
+ * InstitutionScope — the guard only proves the role, not the binding.
  */
 export const InstitutionAdminAllowed = () => SetMetadata('allowInstitutionAdmin', true)

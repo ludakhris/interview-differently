@@ -4,6 +4,8 @@ import { useAuth } from '@clerk/clerk-react'
 import CodeMirror from '@uiw/react-codemirror'
 import { PostgreSQL, sql } from '@codemirror/lang-sql'
 import { Nav } from '@/components/Nav'
+import { useRole } from '@/hooks/useRole'
+import { useOwnerOptions, type OwnerOption } from '@/hooks/useOwnerOptions'
 import { sandboxEditorTheme } from '@/lib/sql/editorTheme'
 import {
   createDataset,
@@ -33,6 +35,8 @@ type GetToken = () => Promise<string | null>
 
 export function AdminDatasetsPage() {
   const { getToken } = useAuth()
+  const { isAdmin } = useRole()
+  const owners = useOwnerOptions()
   const [datasets, setDatasets] = useState<AdminDatasetSummary[]>([])
   const [cohorts, setCohorts] = useState<CohortOption[]>([])
   const [selectedId, setSelectedId] = useState<string | 'new' | null>(null)
@@ -109,7 +113,10 @@ export function AdminDatasetsPage() {
                         selectedId === d.id ? 'bg-white/10 border border-white/15' : 'border border-transparent hover:bg-white/5'
                       }`}
                     >
-                      <p className="text-[13px] font-semibold text-[#f5f3ee]">{d.name}</p>
+                      <p className="text-[13px] font-semibold text-[#f5f3ee] flex items-center gap-2">
+                        {d.name}
+                        <OwnerBadge institutionName={d.institutionName} />
+                      </p>
                       <p className="text-[11px] text-slate-mid">
                         <span className="font-mono">{d.slug}</span> · {d.schemaSummary.length} table{d.schemaSummary.length !== 1 ? 's' : ''} ·{' '}
                         {d.cohortCount} cohort{d.cohortCount !== 1 ? 's' : ''}
@@ -127,6 +134,8 @@ export function AdminDatasetsPage() {
                 key="new"
                 getToken={getToken}
                 cohorts={cohorts}
+                owners={owners}
+                readOnly={false}
                 onSaved={async (saved) => {
                   await refresh()
                   setSelectedId(saved.id)
@@ -143,6 +152,8 @@ export function AdminDatasetsPage() {
                 key={detail.id}
                 getToken={getToken}
                 cohorts={cohorts}
+                owners={owners}
+                readOnly={!isAdmin && detail.institutionId === null}
                 initial={detail}
                 onSaved={async () => {
                   await refresh()
@@ -161,25 +172,47 @@ export function AdminDatasetsPage() {
   )
 }
 
+/** "Platform" for shared content, else the owning institution's name. */
+export function OwnerBadge({ institutionName }: { institutionName: string | null }) {
+  return (
+    <span
+      className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded flex-shrink-0 ${
+        institutionName ? 'bg-green/20 text-green-light' : 'bg-white/10 text-white/50'
+      }`}
+    >
+      {institutionName ?? 'Platform'}
+    </span>
+  )
+}
+
 // ── Editor ─────────────────────────────────────────────────────────────────
 
 const inputCls =
-  'w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-[#f5f3ee] placeholder:text-white/25 focus:outline-none focus:border-white/30'
+  'w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-[#f5f3ee] placeholder:text-white/25 focus:outline-none focus:border-white/30 disabled:opacity-60'
 
 function DatasetEditor({
   getToken,
   cohorts,
+  owners,
+  readOnly,
   initial,
   onSaved,
   onDeleted,
 }: {
   getToken: GetToken
   cohorts: CohortOption[]
+  owners: OwnerOption[]
+  /** Institution-admin looking at a platform dataset: script locked, cohort access still editable. */
+  readOnly: boolean
   initial?: DatasetDetail
   onSaved: (saved: DatasetDetail) => Promise<void>
   onDeleted?: () => Promise<void>
 }) {
   const navigate = useNavigate()
+  const [ownerId, setOwnerId] = useState<string | null>(owners[0]?.id ?? null)
+  useEffect(() => {
+    if (!owners.some((o) => o.id === ownerId)) setOwnerId(owners[0]?.id ?? null)
+  }, [owners, ownerId])
   const [slug, setSlug] = useState(initial?.slug ?? '')
   const [name, setName] = useState(initial?.name ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
@@ -209,8 +242,13 @@ function DatasetEditor({
     setSaving(true)
     setMsg(null)
     try {
-      const payload = { slug, name, description: description.trim() || null, setupSql }
-      const saved = initial ? await updateDataset(getToken, initial.id, payload) : await createDataset(getToken, payload)
+      let saved: DatasetDetail
+      if (readOnly && initial) {
+        saved = initial
+      } else {
+        const payload = { slug, name, description: description.trim() || null, setupSql, institutionId: ownerId }
+        saved = initial ? await updateDataset(getToken, initial.id, payload) : await createDataset(getToken, payload)
+      }
       await setDatasetCohorts(getToken, saved.id, cohortIds)
       setSchema(saved.schemaSummary)
       setMsg({ kind: 'ok', text: 'Saved.' })
@@ -234,10 +272,27 @@ function DatasetEditor({
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px]">
         {/* ── Script ── */}
         <div className="p-6 space-y-4 min-w-0">
+          {readOnly && (
+            <p className="text-[12px] text-white/50 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+              Platform dataset — shared with every institution and maintained by the platform team. You can give your cohorts access below.
+            </p>
+          )}
+          {!initial && owners.length > 1 && (
+            <label className="block">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Owner</span>
+              <select value={ownerId ?? ''} onChange={(e) => setOwnerId(e.target.value || null)} className={`${inputCls} mt-1`}>
+                {owners.map((o) => (
+                  <option key={o.id ?? 'platform'} value={o.id ?? ''}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-3">
             <label className="block">
               <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Name</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="SQL Fundamentals" className={`${inputCls} mt-1`} />
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="SQL Fundamentals" disabled={readOnly} className={`${inputCls} mt-1`} />
             </label>
             <label className="block">
               <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Slug</span>
@@ -245,6 +300,7 @@ function DatasetEditor({
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
                 placeholder="sql-fundamentals"
+                disabled={readOnly}
                 className={`${inputCls} mt-1 font-mono`}
               />
             </label>
@@ -255,6 +311,7 @@ function DatasetEditor({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="One line shown to students (optional)"
+              disabled={readOnly}
               className={`${inputCls} mt-1`}
             />
           </label>
@@ -268,6 +325,7 @@ function DatasetEditor({
               <CodeMirror
                 value={setupSql}
                 onChange={setSetupSql}
+                editable={!readOnly}
                 theme="dark"
                 height="420px"
                 placeholder={'CREATE TABLE customers (...);\nINSERT INTO customers VALUES (...);'}
@@ -360,7 +418,7 @@ function DatasetEditor({
       {/* ── Action bar ── */}
       <div className="sticky bottom-0 flex items-center justify-between gap-4 px-6 py-3 border-t border-white/8 bg-[#0d0d0d]">
         <div className="flex items-center gap-4 min-w-0">
-          {initial && onDeleted && (
+          {initial && onDeleted && !readOnly && (
             <button
               onClick={async () => {
                 if (!confirm(`Delete dataset "${initial.name}"? Cohorts will lose access.`)) return
@@ -391,19 +449,21 @@ function DatasetEditor({
           )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={validate}
-            disabled={validating || !setupSql.trim()}
-            className="px-3 py-1.5 rounded-md border border-white/15 hover:border-white/30 text-[12px] font-semibold text-[#f5f3ee] disabled:opacity-50 transition-colors"
-          >
-            {validating ? 'Validating…' : 'Validate'}
-          </button>
+          {!readOnly && (
+            <button
+              onClick={validate}
+              disabled={validating || !setupSql.trim()}
+              className="px-3 py-1.5 rounded-md border border-white/15 hover:border-white/30 text-[12px] font-semibold text-[#f5f3ee] disabled:opacity-50 transition-colors"
+            >
+              {validating ? 'Validating…' : 'Validate'}
+            </button>
+          )}
           <button
             onClick={save}
             disabled={saving || !slug.trim() || !name.trim() || !setupSql.trim()}
             className="px-3 py-1.5 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white disabled:opacity-50 transition-colors"
           >
-            {saving ? 'Saving…' : initial ? 'Save' : 'Create'}
+            {saving ? 'Saving…' : readOnly ? 'Save cohort access' : initial ? 'Save' : 'Create'}
           </button>
         </div>
       </div>

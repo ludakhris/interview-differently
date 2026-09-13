@@ -33,6 +33,7 @@ import { QuantGalleryPage } from '@/pages/dev/QuantGalleryPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
 import { useUserSync } from '@/hooks/useUserSync'
+import { useRegisterToken } from '@/hooks/useRegisterToken'
 
 function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const [searchParams] = useSearchParams()
@@ -62,6 +63,7 @@ function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
 
 export default function App() {
   useUserSync()
+  useRegisterToken()
   return (
     <Routes>
       {/* Public */}

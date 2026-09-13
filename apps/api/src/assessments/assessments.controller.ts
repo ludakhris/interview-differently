@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common'
-import { AdminGuard } from '../auth/admin.guard'
+import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
+import { InstitutionScope, type AdminRequest } from '../auth/scope'
 import { AssessmentsService, type DeliveryInput } from './assessments.service'
 
 interface AuthedRequest {
@@ -10,63 +11,91 @@ interface AuthedRequest {
 @Controller('admin')
 @UseGuards(AdminGuard)
 export class AssessmentsAdminController {
-  constructor(private readonly service: AssessmentsService) {}
+  constructor(
+    private readonly service: AssessmentsService,
+    private readonly scope: InstitutionScope,
+  ) {}
 
   @Get('assessments')
-  list() {
-    return this.service.list()
+  @InstitutionAdminAllowed()
+  list(@Req() req: AdminRequest) {
+    return this.service.list(this.scope.contentWhere(req))
   }
 
   @Post('assessments/preview')
-  preview(@Body() body: { markdown: string }) {
-    return this.service.preview(body.markdown)
+  @InstitutionAdminAllowed()
+  preview(@Req() req: AdminRequest, @Body() body: { markdown: string }) {
+    return this.service.preview(body.markdown, this.scope.contentWhere(req))
   }
 
   @Post('assessments/import')
-  import(@Body() body: { markdown: string }) {
-    return this.service.import(body.markdown)
+  @InstitutionAdminAllowed()
+  import(@Req() req: AdminRequest, @Body() body: { markdown: string; institutionId?: string | null }) {
+    const owner = this.scope.ownerFor(req, body.institutionId)
+    return this.service.import(body.markdown, this.scope.contentWhere(req), owner, (existingOwner) => {
+      if (this.scope.isFullAdmin(req)) return true
+      return existingOwner !== null && (req.institutionIds ?? []).includes(existingOwner)
+    })
   }
 
   @Get('assessments/:id')
-  get(@Param('id') id: string) {
-    return this.service.get(id)
+  @InstitutionAdminAllowed()
+  async get(@Req() req: AdminRequest, @Param('id') id: string) {
+    const a = await this.service.get(id)
+    this.scope.assertReadable(req, a.institutionId)
+    return a
   }
 
   @Delete('assessments/:id')
   @HttpCode(204)
-  async remove(@Param('id') id: string): Promise<void> {
+  @InstitutionAdminAllowed()
+  async remove(@Req() req: AdminRequest, @Param('id') id: string): Promise<void> {
+    this.scope.assertOwns(req, (await this.service.get(id)).institutionId)
     await this.service.remove(id)
   }
 
   @Post('assessments/:id/deliveries')
-  createDelivery(@Param('id') id: string, @Body() body: DeliveryInput) {
+  @InstitutionAdminAllowed()
+  async createDelivery(@Req() req: AdminRequest, @Param('id') id: string, @Body() body: DeliveryInput) {
+    this.scope.assertReadable(req, (await this.service.get(id)).institutionId)
+    await this.scope.assertCohort(req, body.cohortId)
     return this.service.createDelivery(id, body)
   }
 
   @Delete('deliveries/:id')
   @HttpCode(204)
-  async removeDelivery(@Param('id') id: string): Promise<void> {
+  @InstitutionAdminAllowed()
+  async removeDelivery(@Req() req: AdminRequest, @Param('id') id: string): Promise<void> {
+    await this.scope.assertDelivery(req, id)
     await this.service.removeDelivery(id)
   }
 
   @Get('deliveries/:id/results')
-  results(@Param('id') id: string) {
+  @InstitutionAdminAllowed()
+  async results(@Req() req: AdminRequest, @Param('id') id: string) {
+    await this.scope.assertDelivery(req, id)
     return this.service.deliveryResults(id)
   }
 
   @Get('institutions/:institutionId/assessments')
-  prePost(@Param('institutionId') institutionId: string, @Query('cohortId') cohortId?: string) {
+  @InstitutionAdminAllowed()
+  prePost(@Req() req: AdminRequest, @Param('institutionId') institutionId: string, @Query('cohortId') cohortId?: string) {
+    this.scope.assertInstitution(req, institutionId)
     return this.service.institutionPrePost(institutionId, cohortId || undefined)
   }
 
   @Post('deliveries/:id/invite')
-  createInvite(@Param('id') id: string) {
+  @InstitutionAdminAllowed()
+  async createInvite(@Req() req: AdminRequest, @Param('id') id: string) {
+    await this.scope.assertDelivery(req, id)
     return this.service.createInvite(id)
   }
 
   @Delete('deliveries/:id/invite')
   @HttpCode(204)
-  async revokeInvite(@Param('id') id: string): Promise<void> {
+  @InstitutionAdminAllowed()
+  async revokeInvite(@Req() req: AdminRequest, @Param('id') id: string): Promise<void> {
+    await this.scope.assertDelivery(req, id)
     await this.service.revokeInvite(id)
   }
 }

@@ -1,19 +1,27 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, UseGuards } from '@nestjs/common'
-import { AdminGuard } from '../auth/admin.guard'
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Req, UseGuards } from '@nestjs/common'
+import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
+import { InstitutionScope, type AdminRequest } from '../auth/scope'
 import { InstitutionsService, type InstitutionInput } from './institutions.service'
 
+/** Reads are open to institution-admins (own institutions only); mutations are full-admin. */
 @Controller('admin/institutions')
 @UseGuards(AdminGuard)
 export class InstitutionsController {
-  constructor(private readonly service: InstitutionsService) {}
+  constructor(
+    private readonly service: InstitutionsService,
+    private readonly scope: InstitutionScope,
+  ) {}
 
   @Get()
-  list() {
-    return this.service.list()
+  @InstitutionAdminAllowed()
+  list(@Req() req: AdminRequest) {
+    return this.service.list(this.scope.visible(req))
   }
 
   @Get(':id')
-  get(@Param('id') id: string) {
+  @InstitutionAdminAllowed()
+  get(@Req() req: AdminRequest, @Param('id') id: string) {
+    this.scope.assertInstitution(req, id)
     return this.service.get(id)
   }
 

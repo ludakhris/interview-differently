@@ -37,8 +37,10 @@ function normaliseDomain(raw: string | null | undefined): string | null {
 export class InstitutionsService {
   constructor(private prisma: PrismaService) {}
 
-  async list(): Promise<InstitutionSummary[]> {
+  /** `onlyIds` narrows to an institution-admin's institutions; null = all. */
+  async list(onlyIds: string[] | null = null): Promise<InstitutionSummary[]> {
     const rows = await this.prisma.institution.findMany({
+      where: onlyIds ? { id: { in: onlyIds } } : undefined,
       orderBy: { name: 'asc' },
       include: {
         _count: { select: { cohorts: true, memberships: true } },
@@ -120,8 +122,11 @@ export class InstitutionsService {
     try {
       await this.prisma.institution.delete({ where: { id } })
     } catch (err) {
-      if ((err as { code?: string }).code === 'P2025') {
-        throw new NotFoundException(`Institution ${id} not found`)
+      const code = (err as { code?: string }).code
+      if (code === 'P2025') throw new NotFoundException(`Institution ${id} not found`)
+      // Datasets / assessments / scenarios reference institutions with ON DELETE RESTRICT (#25 Phase 5).
+      if (code === 'P2003') {
+        throw new ConflictException('Institution still owns datasets, assessments, or scenarios — delete or reassign those first')
       }
       throw err
     }

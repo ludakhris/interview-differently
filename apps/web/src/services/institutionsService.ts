@@ -45,6 +45,8 @@ export interface CohortMember {
   email: string | null
   displayName: string | null
   joinedAt: string
+  /** Clerk role: 'admin' | 'institution-admin' | null */
+  role: string | null
 }
 
 async function authedFetch(
@@ -168,5 +170,13 @@ export async function removeCohortMember(
 ): Promise<void> {
   await authedFetch(getToken, `/admin/cohorts/${cohortId}/members/${membershipId}`, {
     method: 'DELETE',
+  })
+}
+
+/** Full-admin only. Promote a member to institution-admin (role) or demote (null). */
+export async function setMemberRole(getToken: GetToken, userId: string, role: 'institution-admin' | null): Promise<void> {
+  await authedFetch(getToken, `/admin/users/${encodeURIComponent(userId)}/role`, {
+    method: 'PUT',
+    body: JSON.stringify({ role }),
   })
 }

@@ -6,6 +6,7 @@ import { SqlRunnerService, type QueryOutcome } from '../sql-runner/sql-runner.se
 import { AssessmentParseError, parseAssessmentMarkdown, questionIndex } from './parse-markdown'
 import { compareResults } from './grade'
 import type { AssessmentQuestion, AssessmentSection, ParsedAssessment, SectionScore } from './assessment.types'
+import type { ContentWhere } from '../datasets/datasets.service'
 
 export interface DeliveryInput {
   cohortId: string
@@ -33,21 +34,35 @@ export class AssessmentsService {
    * Parses the markdown and runs every reference query against the dataset.
    * Returns the parsed bank plus per-question SQL errors. Nothing is saved.
    */
-  async preview(markdown: string) {
+  async preview(markdown: string, datasetWhere: ContentWhere) {
     const parsed = this.parse(markdown)
-    const dataset = await this.prisma.dataset.findUnique({ where: { slug: parsed.dataset } })
+    const dataset = await this.prisma.dataset.findFirst({ where: { slug: parsed.dataset, ...(datasetWhere ?? {}) } })
     if (!dataset) throw new BadRequestException(`Dataset "${parsed.dataset}" not found — create it under Admin → Datasets first`)
     const sqlErrors = await this.checkReferenceQueries(dataset.setupSql, parsed.sections)
     return { parsed, datasetId: dataset.id, datasetName: dataset.name, sqlErrors }
   }
 
-  /** Creates or replaces (by slug) an assessment from markdown. Refuses if any reference query fails. */
-  async import(markdown: string) {
-    const { parsed, datasetId, sqlErrors } = await this.preview(markdown)
+  /**
+   * Creates or replaces (by slug) an assessment from markdown. Refuses if
+   * any reference query fails. Re-import keeps the original owner; the
+   * caller has already checked the new owner and passes `canOverwrite` to
+   * decide whether an existing slug may be replaced.
+   */
+  async import(
+    markdown: string,
+    datasetWhere: ContentWhere,
+    institutionId: string | null,
+    canOverwrite: (owner: string | null) => boolean,
+  ) {
+    const { parsed, datasetId, sqlErrors } = await this.preview(markdown, datasetWhere)
     if (sqlErrors.length > 0) {
       throw new BadRequestException(
         `Reference queries failed: ${sqlErrors.map((e) => `${e.questionId} (${e.error})`).join('; ')}`,
       )
+    }
+    const existing = await this.prisma.assessment.findUnique({ where: { slug: parsed.slug }, select: { institutionId: true } })
+    if (existing && !canOverwrite(existing.institutionId)) {
+      throw new ForbiddenException(`Slug "${parsed.slug}" belongs to another institution — change the slug`)
     }
     const data = {
       title: parsed.title,
@@ -59,7 +74,7 @@ export class AssessmentsService {
     const row = await this.prisma.assessment.upsert({
       where: { slug: parsed.slug },
       update: data,
-      create: { slug: parsed.slug, ...data },
+      create: { slug: parsed.slug, institutionId, ...data },
     })
     return { id: row.id, slug: row.slug, warnings: parsed.warnings }
   }
@@ -86,10 +101,15 @@ export class AssessmentsService {
 
   // ── Admin: read / delete ─────────────────────────────────────────────────
 
-  async list() {
+  async list(where: ContentWhere) {
     const rows = await this.prisma.assessment.findMany({
+      where,
       orderBy: { title: 'asc' },
-      include: { dataset: { select: { slug: true, name: true } }, _count: { select: { deliveries: true } } },
+      include: {
+        dataset: { select: { slug: true, name: true } },
+        institution: { select: { name: true } },
+        _count: { select: { deliveries: true } },
+      },
     })
     return rows.map((a) => {
       const sections = a.sections as unknown as AssessmentSection[]
@@ -98,6 +118,8 @@ export class AssessmentsService {
         slug: a.slug,
         title: a.title,
         dataset: a.dataset,
+        institutionId: a.institutionId,
+        institutionName: a.institution?.name ?? null,
         sectionCount: sections.length,
         questionCount: sections.reduce((n, s) => n + s.questions.length, 0),
         deliveryCount: a._count.deliveries,
@@ -111,6 +133,7 @@ export class AssessmentsService {
       where: { id },
       include: {
         dataset: { select: { slug: true, name: true } },
+        institution: { select: { name: true } },
         deliveries: {
           orderBy: { createdAt: 'desc' },
           include: {
@@ -126,6 +149,8 @@ export class AssessmentsService {
       slug: a.slug,
       title: a.title,
       dataset: a.dataset,
+      institutionId: a.institutionId,
+      institutionName: a.institution?.name ?? null,
       defaultDraw: a.defaultDraw,
       sections: a.sections as unknown as AssessmentSection[],
       sourceMarkdown: a.sourceMarkdown,
@@ -133,7 +158,7 @@ export class AssessmentsService {
       deliveries: a.deliveries.map((d) => ({
         id: d.id,
         label: d.label,
-        cohort: { id: d.cohort.id, name: d.cohort.name, institutionName: d.cohort.institution.name },
+        cohort: d.cohort ? { id: d.cohort.id, name: d.cohort.name, institutionName: d.cohort.institution.name } : null,
         opensAt: d.opensAt,
         closesAt: d.closesAt,
         timeLimitMinutes: d.timeLimitMinutes,
@@ -197,13 +222,15 @@ export class AssessmentsService {
   async createInvite(deliveryId: string) {
     const d = await this.prisma.assessmentDelivery.findUnique({ where: { id: deliveryId } })
     if (!d) throw new NotFoundException(`Delivery ${deliveryId} not found`)
+    if (!d.cohortId) throw new BadRequestException('This delivery\'s cohort was deleted — no cohort to invite into')
+    const cohortId = d.cohortId
     const inviteCode = randomBytes(12).toString('base64url')
     await this.prisma.$transaction([
       this.prisma.assessmentDelivery.update({ where: { id: deliveryId }, data: { inviteCode } }),
       this.prisma.cohortToolConfig.upsert({
-        where: { cohortId_toolKey: { cohortId: d.cohortId, toolKey: 'assessments' } },
+        where: { cohortId_toolKey: { cohortId, toolKey: 'assessments' } },
         update: { enabled: true },
-        create: { cohortId: d.cohortId, toolKey: 'assessments', enabled: true },
+        create: { cohortId, toolKey: 'assessments', enabled: true },
       }),
     ])
     return { inviteCode }
@@ -256,8 +283,9 @@ export class AssessmentsService {
         cohort: { select: { name: true, institutionId: true, institution: { select: { name: true } } } },
       },
     })
-    if (!d) throw new NotFoundException('This invite link is no longer valid')
-    return d
+    // A delivery whose cohort was deleted has nothing to invite into.
+    if (!d || !d.cohort || !d.cohortId) throw new NotFoundException('This invite link is no longer valid')
+    return { ...d, cohort: d.cohort, cohortId: d.cohortId }
   }
 
   /** Mirrors MeService.join for the invite path: User row first (FK), then Membership if missing. */
@@ -290,7 +318,7 @@ export class AssessmentsService {
     const byId = new Map(users.map((u) => [u.id, u]))
     const sections = (d.assessment.sections as unknown as AssessmentSection[]).map((s) => ({ id: s.id, title: s.title }))
     return {
-      delivery: { id: d.id, label: d.label, cohortName: d.cohort.name, assessmentTitle: d.assessment.title },
+      delivery: { id: d.id, label: d.label, cohortName: d.cohort?.name ?? null, assessmentTitle: d.assessment.title },
       sections,
       attempts: d.attempts.map((a) => {
         const scores = (a.sectionScores as unknown as SectionScore[] | null) ?? null
@@ -409,11 +437,15 @@ export class AssessmentsService {
 
   // ── Student ──────────────────────────────────────────────────────────────
 
-  /** Deliveries the user can see: their cohorts with the assessments tool on (admins: all). */
+  /**
+   * Deliveries the user can see: their cohorts with the assessments tool on,
+   * plus anything they already attempted (so results outlive the cohort).
+   * Admins see all.
+   */
   async listForUser(userId: string) {
     const isAdmin = await this.clerk.isAdmin(userId)
     const rows = await this.prisma.assessmentDelivery.findMany({
-      where: isAdmin ? {} : { cohort: this.assessmentsCohortFor(userId) },
+      where: isAdmin ? {} : { OR: [{ cohort: this.assessmentsCohortFor(userId) }, { attempts: { some: { userId } } }] },
       orderBy: [{ opensAt: 'asc' }, { createdAt: 'asc' }],
       include: {
         assessment: { select: { title: true, sections: true } },
@@ -429,7 +461,7 @@ export class AssessmentsService {
         id: d.id,
         title: d.assessment.title,
         label: d.label,
-        cohortName: d.cohort.name,
+        cohortName: d.cohort?.name ?? null,
         opensAt: d.opensAt,
         closesAt: d.closesAt,
         timeLimitMinutes: d.timeLimitMinutes,
@@ -452,10 +484,10 @@ export class AssessmentsService {
       include: { assessment: { include: { dataset: { select: { setupHash: true } } } } },
     })
     if (!d) throw new NotFoundException(`Delivery ${deliveryId} not found`)
-    await this.assertCanSee(userId, d.cohortId)
-
+    // Own attempt first: a student keeps access to their paper even after the cohort is gone.
     const existing = await this.prisma.assessmentAttempt.findUnique({ where: { deliveryId_userId: { deliveryId, userId } } })
     if (existing) return { id: existing.id }
+    await this.assertCanSee(userId, d.cohortId)
     if (!this.isOpen(d, Date.now())) throw new ForbiddenException('This assessment is not open right now')
 
     const sections = d.assessment.sections as unknown as AssessmentSection[]
@@ -589,8 +621,9 @@ export class AssessmentsService {
     return a
   }
 
-  private async assertCanSee(userId: string, cohortId: string) {
+  private async assertCanSee(userId: string, cohortId: string | null) {
     if (await this.clerk.isAdmin(userId)) return
+    if (!cohortId) throw new NotFoundException('Delivery not found')
     const n = await this.prisma.cohort.count({ where: { id: cohortId, ...this.assessmentsCohortFor(userId) } })
     if (n === 0) throw new NotFoundException('Delivery not found')
   }

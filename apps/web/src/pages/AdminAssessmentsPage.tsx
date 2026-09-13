@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
+import { useRole } from '@/hooks/useRole'
+import { useOwnerOptions, type OwnerOption } from '@/hooks/useOwnerOptions'
+import { OwnerBadge } from './AdminDatasetsPage'
 import { downloadCsv } from '@/lib/csv'
 import { listCohortOptions, type CohortOption } from '@/services/datasetsService'
 import {
@@ -37,6 +40,8 @@ function fmt(iso: string | null): string {
 
 export function AdminAssessmentsPage() {
   const { getToken } = useAuth()
+  const { isAdmin } = useRole()
+  const owners = useOwnerOptions()
   const [items, setItems] = useState<AssessmentSummary[]>([])
   const [cohorts, setCohorts] = useState<CohortOption[]>([])
   const [selectedId, setSelectedId] = useState<string | 'import' | null>(null)
@@ -127,7 +132,10 @@ export function AdminAssessmentsPage() {
                         selectedId === a.id ? 'bg-white/10 border border-white/15' : 'border border-transparent hover:bg-white/5'
                       }`}
                     >
-                      <p className="text-[13px] font-semibold text-[#f5f3ee]">{a.title}</p>
+                      <p className="text-[13px] font-semibold text-[#f5f3ee] flex items-center gap-2">
+                        {a.title}
+                        <OwnerBadge institutionName={a.institutionName} />
+                      </p>
                       <p className="text-[11px] text-slate-mid">
                         {a.questionCount} q · {a.sectionCount} sections · {a.deliveryCount} deliver{a.deliveryCount === 1 ? 'y' : 'ies'}
                       </p>
@@ -143,6 +151,7 @@ export function AdminAssessmentsPage() {
               <ImportPanel
                 getToken={getToken}
                 seed={importSeed}
+                owners={owners}
                 onImported={async (id) => {
                   await refresh()
                   setSelectedId(id)
@@ -159,6 +168,7 @@ export function AdminAssessmentsPage() {
                 key={detail.id}
                 getToken={getToken}
                 detail={detail}
+                canEdit={isAdmin || detail.institutionId !== null}
                 cohorts={cohorts}
                 onChange={async () => {
                   await Promise.all([refresh(), refreshDetail(detail.id)])
@@ -182,8 +192,22 @@ export function AdminAssessmentsPage() {
 
 // ── Import ─────────────────────────────────────────────────────────────────
 
-function ImportPanel({ getToken, seed, onImported }: { getToken: GetToken; seed: string; onImported: (id: string) => Promise<void> }) {
+function ImportPanel({
+  getToken,
+  seed,
+  owners,
+  onImported,
+}: {
+  getToken: GetToken
+  seed: string
+  owners: OwnerOption[]
+  onImported: (id: string) => Promise<void>
+}) {
   const [markdown, setMarkdown] = useState(seed)
+  const [ownerId, setOwnerId] = useState<string | null>(owners[0]?.id ?? null)
+  useEffect(() => {
+    if (!owners.some((o) => o.id === ownerId)) setOwnerId(owners[0]?.id ?? null)
+  }, [owners, ownerId])
   const [preview, setPreview] = useState<PreviewResult | null>(null)
   const [busy, setBusy] = useState<'preview' | 'import' | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -205,7 +229,7 @@ function ImportPanel({ getToken, seed, onImported }: { getToken: GetToken; seed:
     setBusy('import')
     setErr(null)
     try {
-      const r = await importAssessment(getToken, markdown)
+      const r = await importAssessment(getToken, markdown, ownerId)
       await onImported(r.id)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Import failed')
@@ -218,6 +242,19 @@ function ImportPanel({ getToken, seed, onImported }: { getToken: GetToken; seed:
   return (
     <div className="bg-[#111111] rounded-xl border border-white/10 overflow-hidden">
       <div className="p-6 space-y-4">
+        {owners.length > 1 && (
+          <label className="block">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Owner</span>
+            <select value={ownerId ?? ''} onChange={(e) => setOwnerId(e.target.value || null)} className={`${inputCls} mt-1`}>
+              {owners.map((o) => (
+                <option key={o.id ?? 'platform'} value={o.id ?? ''}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-white/40 mt-1">Only applies to a new slug — re-importing keeps the existing owner.</p>
+          </label>
+        )}
         <div>
           <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Markdown</span>
           <textarea
@@ -315,6 +352,7 @@ function ImportPanel({ getToken, seed, onImported }: { getToken: GetToken; seed:
 function DetailPanel({
   getToken,
   detail,
+  canEdit,
   cohorts,
   onChange,
   onReimport,
@@ -322,6 +360,8 @@ function DetailPanel({
 }: {
   getToken: GetToken
   detail: AssessmentDetail
+  /** false = institution-admin viewing a platform bank: deliver it, but no re-import/delete. */
+  canEdit: boolean
   cohorts: CohortOption[]
   onChange: () => Promise<void>
   onReimport: () => void
@@ -336,27 +376,32 @@ function DetailPanel({
       <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
-            <h2 className="font-display font-bold text-[18px] text-[#f5f3ee]">{detail.title}</h2>
+            <h2 className="font-display font-bold text-[18px] text-[#f5f3ee] flex items-center gap-2">
+              {detail.title}
+              <OwnerBadge institutionName={detail.institutionName} />
+            </h2>
             <p className="text-[12px] text-slate-mid mt-0.5">
               <span className="font-mono">{detail.slug}</span> · dataset {detail.dataset.name} · {totalQ} questions · imported{' '}
               {fmt(detail.updatedAt)}
             </p>
           </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <button onClick={onReimport} className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors">
-              Edit markdown →
-            </button>
-            <button
-              onClick={async () => {
-                if (!confirm(`Delete "${detail.title}"? All deliveries and attempts go with it.`)) return
-                await deleteAssessment(getToken, detail.id)
-                await onDeleted()
-              }}
-              className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors"
-            >
-              Delete
-            </button>
-          </div>
+          {canEdit && (
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button onClick={onReimport} className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors">
+                Edit markdown →
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm(`Delete "${detail.title}"? All deliveries and attempts go with it.`)) return
+                  await deleteAssessment(getToken, detail.id)
+                  await onDeleted()
+                }}
+                className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          )}
         </div>
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {detail.sections.map((s) => {
@@ -402,7 +447,13 @@ function DetailPanel({
                 <div className="min-w-0">
                   <p className="text-[13px] font-semibold text-[#f5f3ee]">
                     <span className="uppercase tracking-widest text-[10px] text-[#2d9e5f] mr-2">{d.label}</span>
-                    {d.cohort.name} <span className="text-white/40 font-normal">· {d.cohort.institutionName}</span>
+                    {d.cohort ? (
+                      <>
+                        {d.cohort.name} <span className="text-white/40 font-normal">· {d.cohort.institutionName}</span>
+                      </>
+                    ) : (
+                      <span className="text-white/40 font-normal italic">cohort deleted — results kept</span>
+                    )}
                   </p>
                   <p className="text-[11px] text-slate-mid">
                     {d.opensAt || d.closesAt ? `${fmt(d.opensAt)} → ${fmt(d.closesAt)}` : 'always open'}

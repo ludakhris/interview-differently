@@ -1,58 +1,81 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Req, UseGuards } from '@nestjs/common'
-import { AdminGuard } from '../auth/admin.guard'
+import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
+import { InstitutionScope, type AdminRequest } from '../auth/scope'
 import { DatasetsService, type DatasetInput } from './datasets.service'
 
 interface AuthedRequest {
   userId: string
 }
 
+/**
+ * Institution-admins see platform datasets (read-only) plus their own
+ * institutions' (full CRUD); full admins see and edit everything.
+ */
 @Controller('admin/datasets')
 @UseGuards(AdminGuard)
 export class DatasetsAdminController {
-  constructor(private readonly service: DatasetsService) {}
+  constructor(
+    private readonly service: DatasetsService,
+    private readonly scope: InstitutionScope,
+  ) {}
 
   @Get()
-  list() {
-    return this.service.list()
+  @InstitutionAdminAllowed()
+  list(@Req() req: AdminRequest) {
+    return this.service.list(this.scope.contentWhere(req))
   }
 
   // Declared before `:id` so the literal path wins.
   @Get('cohort-options')
-  cohortOptions() {
-    return this.service.cohortOptions()
+  @InstitutionAdminAllowed()
+  cohortOptions(@Req() req: AdminRequest) {
+    return this.service.cohortOptions(this.scope.visible(req))
   }
 
   @Post('validate')
+  @InstitutionAdminAllowed()
+  // eslint-disable-next-line local/institution-scope -- runs the script in a throwaway PGlite; reads no institution data
   validate(@Body() body: { setupSql: string }) {
     return this.service.validate(body.setupSql)
   }
 
   @Get(':id')
-  get(@Param('id') id: string) {
-    return this.service.get(id)
+  @InstitutionAdminAllowed()
+  async get(@Req() req: AdminRequest, @Param('id') id: string) {
+    const d = await this.service.get(id)
+    this.scope.assertReadable(req, d.institutionId)
+    return d
   }
 
   @Post()
-  create(@Body() body: DatasetInput) {
-    return this.service.create(body)
+  @InstitutionAdminAllowed()
+  create(@Req() req: AdminRequest, @Body() body: DatasetInput) {
+    return this.service.create(body, this.scope.ownerFor(req, body.institutionId))
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: DatasetInput) {
+  @InstitutionAdminAllowed()
+  async update(@Req() req: AdminRequest, @Param('id') id: string, @Body() body: DatasetInput) {
+    this.scope.assertOwns(req, (await this.service.get(id)).institutionId)
     return this.service.update(id, body)
   }
 
   @Delete(':id')
   @HttpCode(204)
-  async remove(@Param('id') id: string): Promise<void> {
+  @InstitutionAdminAllowed()
+  async remove(@Req() req: AdminRequest, @Param('id') id: string): Promise<void> {
+    this.scope.assertOwns(req, (await this.service.get(id)).institutionId)
     await this.service.remove(id)
   }
 
+  /** Assigning is allowed on any readable dataset — platform ones included. */
   @Put(':id/cohorts')
   @HttpCode(204)
-  async setCohorts(@Param('id') id: string, @Body() body: { cohortIds: string[] }): Promise<void> {
-    await this.service.setCohorts(id, body.cohortIds ?? [])
+  @InstitutionAdminAllowed()
+  async setCohorts(@Req() req: AdminRequest, @Param('id') id: string, @Body() body: { cohortIds: string[] }): Promise<void> {
+    this.scope.assertReadable(req, (await this.service.get(id)).institutionId)
+    await this.service.setCohorts(id, body.cohortIds ?? [], this.scope.visible(req))
   }
 }
 

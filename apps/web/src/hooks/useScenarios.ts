@@ -6,16 +6,20 @@ import type { Scenario } from '@id/types'
 export type { TrackMeta }
 
 export function useScenarios() {
+  const { isLoaded, isSignedIn, getToken } = useAuth()
   const [data, setData] = useState<ScenariosData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
-    fetchScenarios()
+    // Wait for Clerk so a signed-in member's institution scenarios aren't
+    // missed by a pre-load fetch as a guest.
+    if (!isLoaded) return
+    fetchScenarios(isSignedIn ? () => getToken() : undefined)
       .then(setData)
       .catch((err: unknown) => setError(err instanceof Error ? err : new Error(String(err))))
       .finally(() => setIsLoading(false))
-  }, [])
+  }, [isLoaded, isSignedIn, getToken])
 
   return {
     scenarios: data?.scenarios ?? [],

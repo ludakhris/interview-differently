@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
 import { MobileWarning } from '@/components/builder/MobileWarning'
 import { createScenario } from '@/services/builderService'
+import { useOwnerOptions } from '@/hooks/useOwnerOptions'
 import { RUBRIC_TEMPLATES, TRACK_LABELS } from '@/lib/builderTemplates'
 import { BUSINESS_CASE_SUBCATEGORIES, BUSINESS_CASE_SUBCATEGORY_LABELS } from '@id/types'
 
@@ -69,6 +70,8 @@ export function BuilderSetupPage() {
   const navigate = useNavigate()
   const [title, setTitle] = useState('')
   const [track, setTrack] = useState<string>('')
+  const owners = useOwnerOptions()
+  const [ownerId, setOwnerId] = useState<string | null | undefined>(undefined) // undefined = use first option
   const [subcategory, setSubcategory] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
 
@@ -93,6 +96,7 @@ export function BuilderSetupPage() {
       title.trim(),
       track,
       showSubcategory ? subcategory : undefined,
+      ownerId === undefined ? (owners[0]?.id ?? null) : ownerId,
     )
     navigate(`/builder/${scenario.scenarioId}`)
   }
@@ -127,6 +131,26 @@ export function BuilderSetupPage() {
             className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[15px] text-[#f5f3ee] placeholder:text-white/20 focus:outline-none focus:border-white/30 transition-colors"
           />
         </div>
+
+        {/* Owner — only when there's a choice (#15) */}
+        {owners.length > 1 && (
+          <div className="mb-8">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+              Visible to
+            </label>
+            <select
+              value={(ownerId === undefined ? owners[0]?.id : ownerId) ?? ''}
+              onChange={(e) => setOwnerId(e.target.value || null)}
+              className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[15px] text-[#f5f3ee] focus:outline-none focus:border-white/30 transition-colors"
+            >
+              {owners.map((o) => (
+                <option key={o.id ?? 'public'} value={o.id ?? ''}>
+                  {o.id === null ? 'Everyone (public)' : `${o.label} members only`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Track selector */}
         <div className="mb-8">

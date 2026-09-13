@@ -565,6 +565,10 @@ export interface Scenario {
   display?: ScenarioDisplay
   createdBy?: string // institution id for custom scenarios
   publishedTo?: string[] // cohort ids
+  // Ownership (#15). null/absent = public to every user; set = private to
+  // that institution's members. Column-backed on the API; read-only here.
+  institutionId?: string | null
+  institutionName?: string | null
   nodes: ScenarioNode[]
   // Optional ordered phases — used by case-style scenarios where the candidate
   // moves through distinct stages (Structure → Sizing → Read Exhibit → Recommend).

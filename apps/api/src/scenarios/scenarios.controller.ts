@@ -1,25 +1,32 @@
-import { Controller, Get, Post, Put, Delete, Patch, Param, Body, HttpCode, Headers } from '@nestjs/common'
-import { ScenariosService } from './scenarios.service'
+import { Controller, Get, Post, Put, Delete, Patch, Param, Body, HttpCode, Headers, Req, UseGuards } from '@nestjs/common'
+import { ScenariosService, type Viewer } from './scenarios.service'
 import { ClerkService } from '../auth/clerk.service'
+import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
+import { InstitutionScope, type AdminRequest } from '../auth/scope'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Scenario = any
 
+/**
+ * Reads use optional auth (anonymous gets public summaries). Mutations
+ * require an admin: full admins own everything, institution-admins only
+ * their institutions' scenarios (#15, closes #26).
+ */
 @Controller('scenarios')
 export class ScenariosController {
   constructor(
     private readonly scenariosService: ScenariosService,
     private readonly clerk: ClerkService,
+    private readonly scope: InstitutionScope,
   ) {}
 
   /**
-   * Always returns the stripped summary form. Auth doesn't change the
-   * shape here — the dashboard only needs title + track + estimated
-   * duration. Full scenario payloads come from GET /:id which requires
-   * a Bearer token.
+   * Always returns the stripped summary form. Auth widens *which*
+   * scenarios appear (institution-private ones for members), not the
+   * shape. Full scenario payloads come from GET /:id.
    */
   @Get()
-  findAll() {
-    return this.scenariosService.findAll()
+  async findAll(@Headers('authorization') auth?: string) {
+    return this.scenariosService.findAll(await viewerFrom(this.clerk, auth))
   }
 
   /**
@@ -33,29 +40,40 @@ export class ScenariosController {
    */
   @Get(':id')
   async findOne(@Param('id') id: string, @Headers('authorization') auth?: string) {
-    const authed = await isAuthed(this.clerk, auth)
-    if (authed) return this.scenariosService.findOne(id, { authed: true })
+    const viewer = await viewerFrom(this.clerk, auth)
+    if (viewer) return this.scenariosService.findOne(id, viewer)
     return this.scenariosService.findSummary(id)
   }
 
   @Post()
-  create(@Body() scenario: Scenario) {
-    return this.scenariosService.create(scenario)
+  @UseGuards(AdminGuard)
+  @InstitutionAdminAllowed()
+  create(@Req() req: AdminRequest, @Body() scenario: Scenario) {
+    return this.scenariosService.create(scenario, this.scope.ownerFor(req, scenario.institutionId))
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() scenario: Scenario) {
+  @UseGuards(AdminGuard)
+  @InstitutionAdminAllowed()
+  async update(@Req() req: AdminRequest, @Param('id') id: string, @Body() scenario: Scenario) {
+    this.scope.assertOwns(req, await this.scenariosService.ownerOf(id))
     return this.scenariosService.update(id, scenario)
   }
 
   @Delete(':id')
   @HttpCode(204)
-  remove(@Param('id') id: string) {
+  @UseGuards(AdminGuard)
+  @InstitutionAdminAllowed()
+  async remove(@Req() req: AdminRequest, @Param('id') id: string) {
+    this.scope.assertOwns(req, await this.scenariosService.ownerOf(id))
     return this.scenariosService.remove(id)
   }
 
   @Patch(':id/publish')
-  publish(@Param('id') id: string) {
+  @UseGuards(AdminGuard)
+  @InstitutionAdminAllowed()
+  async publish(@Req() req: AdminRequest, @Param('id') id: string) {
+    this.scope.assertOwns(req, await this.scenariosService.ownerOf(id))
     return this.scenariosService.publish(id)
   }
 }
@@ -63,14 +81,14 @@ export class ScenariosController {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Returns true when the request carries a valid Clerk Bearer token. The
- * caller decides what to do with the result — full payload vs summary —
- * so we don't throw here on a missing/invalid token.
+ * Resolves the caller from an optional Bearer header. Returns null for
+ * missing/invalid tokens — the caller decides what anonymous gets.
  */
-async function isAuthed(clerk: ClerkService, authHeader?: string): Promise<boolean> {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return false
+async function viewerFrom(clerk: ClerkService, authHeader?: string): Promise<Viewer | null> {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null
   const token = authHeader.slice('Bearer '.length).trim()
-  if (!token) return false
+  if (!token) return null
   const userId = await clerk.verifyBearerToken(token)
-  return userId !== null
+  if (!userId) return null
+  return { userId, role: await clerk.getRole(userId) }
 }

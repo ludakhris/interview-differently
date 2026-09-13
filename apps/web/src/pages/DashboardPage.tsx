@@ -6,6 +6,7 @@ import { Nav } from '@/components/Nav'
 import { Footer } from '@/components/Footer'
 import { TrackIcon } from '@/components/TrackIcon'
 import { useScenarios } from '@/hooks/useScenarios'
+import { useRole } from '@/hooks/useRole'
 import { useProfile } from '@/hooks/useProfile'
 import { fetchImmersiveSessionsForUser, type ImmersiveSessionSummary } from '@/services/immersiveService'
 import { fetchMyDatasets, type DatasetSummary } from '@/services/datasetsService'
@@ -81,7 +82,7 @@ export function DashboardPage() {
   const location = useLocation()
   const { isSignedIn, userId, getToken } = useAuth()
   const { user } = useUser()
-  const isAdmin = user?.publicMetadata?.role === 'admin'
+  const { isAnyAdmin: isAdmin } = useRole()
   const { scenarios, trackMeta, isLoading, error } = useScenarios()
   const [tools, setTools] = useState<ToolKey[]>([])
   const [datasets, setDatasets] = useState<DatasetSummary[]>([])

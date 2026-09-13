@@ -10,10 +10,11 @@ export async function fetchConfig(): Promise<PublicConfig> {
   return res.json() as Promise<PublicConfig>
 }
 
-export async function patchAdminConfig(key: string, value: string): Promise<void> {
+export async function patchAdminConfig(getToken: () => Promise<string | null>, key: string, value: string): Promise<void> {
+  const token = await getToken()
   const res = await fetch(`${API_URL}/api/admin/config`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ key, value }),
   })
   if (!res.ok) throw new Error('Failed to update config')

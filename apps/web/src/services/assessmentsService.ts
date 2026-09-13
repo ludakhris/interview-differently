@@ -43,6 +43,9 @@ export interface AssessmentSummary {
   slug: string
   title: string
   dataset: { slug: string; name: string }
+  /** null = platform-wide (read-only for institution-admins) */
+  institutionId: string | null
+  institutionName: string | null
   sectionCount: number
   questionCount: number
   deliveryCount: number
@@ -52,7 +55,8 @@ export interface AssessmentSummary {
 export interface DeliverySummary {
   id: string
   label: string
-  cohort: { id: string; name: string; institutionName: string }
+  /** null once the cohort was deleted — attempts/results are kept */
+  cohort: { id: string; name: string; institutionName: string } | null
   opensAt: string | null
   closesAt: string | null
   timeLimitMinutes: number | null
@@ -67,6 +71,8 @@ export interface AssessmentDetail {
   slug: string
   title: string
   dataset: { slug: string; name: string }
+  institutionId: string | null
+  institutionName: string | null
   defaultDraw: number | null
   sections: AssessmentSection[]
   sourceMarkdown: string
@@ -90,7 +96,7 @@ export interface DeliveryInput {
 }
 
 export interface DeliveryResults {
-  delivery: { id: string; label: string; cohortName: string; assessmentTitle: string }
+  delivery: { id: string; label: string; cohortName: string | null; assessmentTitle: string }
   sections: { id: string; title: string }[]
   attempts: {
     attemptId: string
@@ -120,8 +126,12 @@ export async function previewAssessment(getToken: GetToken, markdown: string): P
   return res.json() as Promise<PreviewResult>
 }
 
-export async function importAssessment(getToken: GetToken, markdown: string): Promise<{ id: string; slug: string; warnings: string[] }> {
-  const res = await authedFetch(getToken, '/admin/assessments/import', { method: 'POST', body: JSON.stringify({ markdown }) })
+export async function importAssessment(
+  getToken: GetToken,
+  markdown: string,
+  institutionId: string | null,
+): Promise<{ id: string; slug: string; warnings: string[] }> {
+  const res = await authedFetch(getToken, '/admin/assessments/import', { method: 'POST', body: JSON.stringify({ markdown, institutionId }) })
   return res.json() as Promise<{ id: string; slug: string; warnings: string[] }>
 }
 
@@ -158,7 +168,7 @@ export interface MyDelivery {
   id: string
   title: string
   label: string
-  cohortName: string
+  cohortName: string | null
   opensAt: string | null
   closesAt: string | null
   timeLimitMinutes: number | null

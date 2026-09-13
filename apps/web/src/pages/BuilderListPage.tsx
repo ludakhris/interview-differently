@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { Fragment, useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
+import { useRole } from '@/hooks/useRole'
 import { MobileWarning } from '@/components/builder/MobileWarning'
 import {
   listScenarios,
@@ -93,6 +94,7 @@ function formatDate(iso: string): string {
 export function BuilderListPage() {
   const navigate = useNavigate()
   const { getToken } = useAuth()
+  const { isAdmin } = useRole()
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -157,7 +159,9 @@ export function BuilderListPage() {
     setIsLoading(true)
     try {
       const result = await listScenarios()
-      setScenarios(result)
+      // Institution-admins can only edit their own institutions' scenarios
+      // (#15) — public ones are read-only to them, so keep them off the list.
+      setScenarios(isAdmin ? result : result.filter((s) => s.institutionId))
     } finally {
       setIsLoading(false)
     }
@@ -165,7 +169,23 @@ export function BuilderListPage() {
 
   useEffect(() => {
     refresh()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin])
+
+  // Group by owner: public first, then institutions alphabetically. Header
+  // rows only appear when there's more than one group.
+  const groups = (() => {
+    const map = new Map<string, { label: string; items: Scenario[] }>()
+    for (const s of scenarios) {
+      const key = s.institutionId ?? ''
+      if (!map.has(key)) map.set(key, { label: s.institutionName ?? 'Public', items: [] })
+      map.get(key)!.items.push(s)
+    }
+    return [...map.entries()]
+      .sort(([a, ga], [b, gb]) => (a === '' ? -1 : b === '' ? 1 : ga.label.localeCompare(gb.label)))
+      .map(([, g]) => g)
+  })()
+  const rows = groups.flatMap((g) => g.items)
 
   function handleYamlImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -225,6 +245,7 @@ export function BuilderListPage() {
               onChange={handleYamlImport}
               className="hidden"
             />
+            {isAdmin && (
             <button
               onClick={handleBulkRender}
               disabled={isRendering}
@@ -233,6 +254,7 @@ export function BuilderListPage() {
             >
               {isRendering ? 'Re-rendering…' : 'Re-render all media'}
             </button>
+            )}
             <button
               onClick={() => fileInputRef.current?.click()}
               className="text-[13px] font-medium text-white/50 hover:text-white/80 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl px-4 py-2.5 transition-all"
@@ -342,15 +364,23 @@ export function BuilderListPage() {
                 </tr>
               </thead>
               <tbody>
-                {scenarios.map((scenario, i) => {
+                {rows.map((scenario, i) => {
                   const trackColor = TRACK_COLORS[scenario.track] ?? '#888'
                   const status = scenario.builderMeta?.status ?? 'draft'
                   const lastEdited = scenario.builderMeta?.lastEditedAt ?? ''
+                  const group = groups.find((g) => g.items[0] === scenario)
 
                   return (
+                    <Fragment key={scenario.scenarioId}>
+                    {groups.length > 1 && group && (
+                      <tr className="bg-[#0d0d0d] border-b border-white/5">
+                        <td colSpan={5} className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-white/40">
+                          {group.label}
+                        </td>
+                      </tr>
+                    )}
                     <tr
-                      key={scenario.scenarioId}
-                      className={`border-b border-white/5 hover:bg-white/3 transition-colors ${i === scenarios.length - 1 ? 'border-b-0' : ''}`}
+                      className={`border-b border-white/5 hover:bg-white/3 transition-colors ${i === rows.length - 1 ? 'border-b-0' : ''}`}
                     >
                       <td className="px-6 py-4">
                         <div
@@ -428,6 +458,7 @@ export function BuilderListPage() {
                         </div>
                       </td>
                     </tr>
+                    </Fragment>
                   )
                 })}
               </tbody>
