@@ -189,6 +189,7 @@ model Cohort {
   memberships   Membership[]
   datasets      CohortDataset[]
   tools         CohortToolConfig[]
+  deliveries    AssessmentDelivery[]
 
   @@unique([institutionId, joinKey])
   @@index([institutionId])
@@ -266,6 +267,7 @@ model Dataset {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   cohorts       CohortDataset[]
+  assessments   Assessment[]
 }
 
 // Which datasets a cohort can open in the SQL sandbox. A cohort with at least
@@ -279,4 +281,62 @@ model CohortDataset {
 
   @@id([cohortId, datasetId])
   @@index([datasetId])
+}
+
+// ── Tools: assessments ──────────────────────────────────────────────────────
+//
+// An Assessment is a question bank imported from markdown (see
+// docs/assessment-format.md). A Delivery schedules it for one cohort with a
+// label ("pre" / "post"), a window, and how many questions to draw per
+// section. Each student gets one Attempt per delivery; the drawn question
+// ids are fixed at start so a refresh doesn't reshuffle the paper.
+
+model Assessment {
+  id             String               @id @default(uuid())
+  slug           String               @unique
+  title          String
+  datasetId      String
+  sourceMarkdown String                                   // last imported markdown, re-import replaces
+  sections       Json                                     // ParsedSection[] — see assessments/parse-markdown.ts
+  defaultDraw    Int?                                     // frontmatter `draw`; null = every question
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  dataset        Dataset              @relation(fields: [datasetId], references: [id], onDelete: Restrict)
+  deliveries     AssessmentDelivery[]
+
+  @@index([datasetId])
+}
+
+model AssessmentDelivery {
+  id               String              @id @default(uuid())
+  assessmentId     String
+  cohortId         String
+  label            String                                 // 'pre' | 'post' | free text
+  opensAt          DateTime?
+  closesAt         DateTime?
+  timeLimitMinutes Int?
+  createdAt        DateTime            @default(now())
+  assessment       Assessment          @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  cohort           Cohort              @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  attempts         AssessmentAttempt[]
+
+  @@index([assessmentId])
+  @@index([cohortId])
+}
+
+model AssessmentAttempt {
+  id               String             @id @default(uuid())
+  deliveryId       String
+  userId           String
+  datasetHash      String                                 // Dataset.setupHash at start — grading pins to this script
+  drawnQuestionIds Json                                   // string[] in paper order
+  answers          Json                                   // Record<questionId, string> — MC letter or SQL text
+  sectionScores    Json?                                  // SectionScore[] once submitted
+  startedAt        DateTime           @default(now())
+  submittedAt      DateTime?
+  submittedLate    Boolean            @default(false)
+  delivery         AssessmentDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@unique([deliveryId, userId])
+  @@index([userId])
 }

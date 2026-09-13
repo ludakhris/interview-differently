@@ -393,8 +393,7 @@ export function DashboardPage() {
               {tools.map((key) => {
                 const meta = TOOL_META[key]
                 const Icon = key === 'sql-sandbox' ? Database : ClipboardCheck
-                // Assessments ships in Phase 2 of #25 — flag exists, page doesn't yet.
-                const available = key === 'sql-sandbox'
+                const available = meta.live
                 const blurb =
                   key === 'sql-sandbox' && datasets.length > 0
                     ? `Write and run SQL against ${datasets.length === 1 ? datasets[0].name : `${datasets.length} datasets`}.`

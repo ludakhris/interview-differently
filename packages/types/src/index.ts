@@ -650,15 +650,81 @@ export const TOOL_KEYS = ['sql-sandbox', 'assessments'] as const
 
 export type ToolKey = (typeof TOOL_KEYS)[number]
 
-export const TOOL_META: Record<ToolKey, { label: string; description: string; path: string }> = {
+// `live` — the tool's page exists. A flag can be switched on before the
+// page ships; the UI renders such tools dimmed instead of 404ing.
+export const TOOL_META: Record<ToolKey, { label: string; description: string; path: string; live: boolean }> = {
   'sql-sandbox': {
     label: 'SQL Sandbox',
     description: 'Write and run SQL against a cohort dataset in a private in-browser Postgres.',
     path: '/tools/sql',
+    live: true,
   },
   assessments: {
     label: 'Assessments',
     description: 'Pre/post assessments with multiple-choice and hands-on SQL questions.',
     path: '/tools/assessments',
+    live: true,
   },
+}
+
+// ── Tools: assessments ────────────────────────────────────────────────────────
+//
+// Mirrors apps/api/src/assessments/assessment.types.ts. The student-facing
+// question shapes omit `answer` / `referenceSql` — the API strips them.
+
+export interface McOption {
+  key: string
+  text: string
+}
+
+export interface StudentMcQuestion {
+  id: string
+  type: 'mc'
+  prompt: string
+  options: McOption[]
+}
+
+export interface StudentSqlQuestion {
+  id: string
+  type: 'sql'
+  prompt: string
+  ordered: boolean
+  strictColumns: boolean
+}
+
+export type StudentQuestion = StudentMcQuestion | StudentSqlQuestion
+
+export interface McQuestion extends StudentMcQuestion {
+  answer: string
+}
+
+export interface SqlQuestion extends StudentSqlQuestion {
+  referenceSql: string
+}
+
+export type AssessmentQuestion = McQuestion | SqlQuestion
+
+export interface AssessmentSection {
+  id: string
+  number: number
+  title: string
+  draw: number | null
+  questions: AssessmentQuestion[]
+}
+
+export interface SectionScoreSummary {
+  sectionId: string
+  title: string
+  correct: number
+  total: number
+}
+
+export interface SectionScore extends SectionScoreSummary {
+  questions: { id: string; type: 'mc' | 'sql'; correct: boolean; error?: string }[]
+}
+
+export interface OverallScore {
+  correct: number
+  total: number
+  percent: number
 }

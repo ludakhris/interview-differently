@@ -29,7 +29,13 @@ export interface QueryResult {
   rows: unknown[][]
   rowCount: number
   command: string
+  truncated?: boolean
 }
+
+export type QueryOutcome = { ok: true; result: QueryResult } | { ok: false; error: string }
+
+// Grading cap — a runaway cartesian join shouldn't take the API down.
+const GRADE_ROW_CAP = 5000
 
 // Return dates / numerics as their Postgres text form instead of JS Date /
 // number so results look like psql output and compare byte-for-byte between
@@ -87,14 +93,44 @@ export class SqlRunnerService {
   async execute(setupSql: string, sql: string): Promise<QueryResult> {
     const db = await this.build(setupSql)
     try {
-      const results = await db.exec(sql)
-      const last = results[results.length - 1]
-      if (!last) return { columns: [], rows: [], rowCount: 0, command: '' }
-      const columns = last.fields.map((f) => f.name)
-      const rows = last.rows.map((r) => columns.map((c) => (r as Record<string, unknown>)[c]))
-      return { columns, rows, rowCount: rows.length, command: last.command ?? '' }
+      return await this.runOne(db, sql)
     } finally {
       await db.close()
     }
+  }
+
+  /**
+   * Runs several queries against one fresh instance, each inside a rolled-
+   * back transaction so an earlier (student) statement can't alter the data
+   * a later one sees. Errors are captured per query, not thrown.
+   */
+  async executeMany(setupSql: string, queries: string[]): Promise<QueryOutcome[]> {
+    const db = await this.build(setupSql)
+    try {
+      const out: QueryOutcome[] = []
+      for (const sql of queries) {
+        await db.exec('BEGIN')
+        try {
+          out.push({ ok: true, result: await this.runOne(db, sql) })
+        } catch (err) {
+          out.push({ ok: false, error: (err as Error).message })
+        } finally {
+          await db.exec('ROLLBACK')
+        }
+      }
+      return out
+    } finally {
+      await db.close()
+    }
+  }
+
+  private async runOne(db: PGlite, sql: string): Promise<QueryResult> {
+    const results = await db.exec(sql)
+    const last = results[results.length - 1]
+    if (!last) return { columns: [], rows: [], rowCount: 0, command: '' }
+    const columns = last.fields.map((f) => f.name)
+    const all = last.rows as Record<string, unknown>[]
+    const rows = all.slice(0, GRADE_ROW_CAP).map((r) => columns.map((c) => r[c]))
+    return { columns, rows, rowCount: all.length, command: last.command ?? '', truncated: all.length > GRADE_ROW_CAP }
   }
 }

@@ -1,19 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
-import CodeMirror, { Prec, keymap, type ReactCodeMirrorRef } from '@uiw/react-codemirror'
-import { PostgreSQL, sql } from '@codemirror/lang-sql'
-import { AlertTriangle, ChevronDown, ChevronRight, Play, RotateCcw } from 'lucide-react'
+import type { ReactCodeMirrorRef } from '@uiw/react-codemirror'
+import { AlertTriangle, Play, RotateCcw } from 'lucide-react'
 import { Nav } from '@/components/Nav'
+import { SqlEditor } from '@/components/sql/SqlEditor'
+import { SchemaTree } from '@/components/sql/SchemaTree'
+import { ResultsGrid } from '@/components/sql/ResultsGrid'
 import { SandboxDb, ROW_CAP, type SandboxResult } from '@/lib/sql/sandboxDb'
-import { sandboxEditorTheme } from '@/lib/sql/editorTheme'
-import {
-  fetchMyDataset,
-  fetchMyDatasets,
-  type DatasetDetail,
-  type DatasetSummary,
-  type SchemaTable,
-} from '@/services/datasetsService'
+import { fetchMyDataset, fetchMyDatasets, type DatasetDetail, type DatasetSummary } from '@/services/datasetsService'
 
 /**
  * SQL Sandbox (#25) — a DB-client-style workspace against a cohort dataset.
@@ -135,23 +130,7 @@ export function SqlSandboxPage() {
     }
   }, [query, slug, running])
 
-  // Keep the Mod-Enter keymap pointed at the latest `run` without rebuilding
-  // the editor extensions on every keystroke. Prec.highest so it beats the
-  // default keymap's Mod-Enter (insertBlankLine).
-  const runRef = useRef(run)
-  runRef.current = run
-  const extensions = useMemo(
-    () => [
-      Prec.highest(keymap.of([{ key: 'Mod-Enter', run: () => (runRef.current(), true) }])),
-      sandboxEditorTheme,
-      sql({
-        dialect: PostgreSQL,
-        upperCaseKeywords: true,
-        ...schemaForCompletion(dataset?.schemaSummary ?? []),
-      }),
-    ],
-    [dataset?.schemaSummary],
-  )
+  const tables = useMemo(() => dataset?.schemaSummary ?? [], [dataset?.schemaSummary])
 
   const reset = useCallback(async () => {
     const db = dbRef.current
@@ -317,16 +296,14 @@ export function SqlSandboxPage() {
 
             {/* Editor */}
             <div style={{ height: editorHeight }} className="flex-shrink-0 bg-[#0d0d0d]">
-              <CodeMirror
+              <SqlEditor
                 ref={editorRef}
                 value={query}
                 onChange={setQuery}
-                theme="dark"
-                height={`${editorHeight}px`}
+                onRun={run}
+                tables={tables}
+                height={editorHeight}
                 placeholder="SELECT * FROM customers LIMIT 10;"
-                extensions={extensions}
-                basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: true }}
-                style={{ fontSize: 13, height: '100%' }}
               />
             </div>
 
@@ -388,142 +365,4 @@ export function SqlSandboxPage() {
       )}
     </div>
   )
-}
-
-// ── Subcomponents ─────────────────────────────────────────────────────────
-
-// Feeds lang-sql's completion: table names (with row counts) rank above
-// keywords, and `table.` / alias completion lists columns with their types.
-function schemaForCompletion(tables: SchemaTable[]) {
-  return {
-    schema: Object.fromEntries(
-      tables.map((t) => [t.table, t.columns.map((c) => ({ label: c.name, detail: c.type, type: 'property', boost: 2 }))]),
-    ),
-    tables: tables.map((t) => ({ label: t.table, detail: `${t.rowCount} rows`, type: 'class', boost: 3 })),
-  }
-}
-
-// Postgres data_type → short badge + colour. Anything unknown renders dim.
-function typeBadge(type: string): { label: string; cls: string } {
-  if (/int/.test(type)) return { label: 'int', cls: 'text-sky-400 bg-sky-400/10' }
-  if (/numeric|decimal|double|real|money/.test(type)) return { label: 'num', cls: 'text-emerald-400 bg-emerald-400/10' }
-  if (/date|time/.test(type)) return { label: type.startsWith('time') ? 'ts' : 'date', cls: 'text-amber-400 bg-amber-400/10' }
-  if (/bool/.test(type)) return { label: 'bool', cls: 'text-violet-400 bg-violet-400/10' }
-  if (/text|char/.test(type)) return { label: 'text', cls: 'text-slate-light bg-white/5' }
-  return { label: type.slice(0, 6), cls: 'text-white/40 bg-white/5' }
-}
-
-function SchemaTree({ tables, onPick }: { tables: SchemaTable[]; onPick: (name: string) => void }) {
-  // First table open by default so the rail isn't a wall of columns.
-  const [open, setOpen] = useState<Record<string, boolean>>(() => (tables[0] ? { [tables[0].table]: true } : {}))
-  return (
-    <ul className="space-y-0.5">
-      {tables.map((t) => {
-        const expanded = open[t.table] ?? false
-        return (
-          <li key={t.table}>
-            <div className="flex items-center gap-1 group">
-              <button
-                onClick={() => setOpen((o) => ({ ...o, [t.table]: !expanded }))}
-                className="flex items-center gap-1 flex-1 min-w-0 py-1 text-left text-[#f5f3ee] hover:text-green-light transition-colors"
-              >
-                {expanded ? (
-                  <ChevronDown size={12} className="text-white/30 flex-shrink-0" />
-                ) : (
-                  <ChevronRight size={12} className="text-white/30 flex-shrink-0" />
-                )}
-                <span className="font-mono text-[12px] font-semibold truncate">{t.table}</span>
-              </button>
-              <button
-                onClick={() => onPick(t.table)}
-                title={`${t.rowCount} rows — click to insert table name`}
-                className="font-mono text-[10px] text-white/30 group-hover:text-white/60 hover:!text-green-light px-1.5 py-0.5 rounded bg-white/5 transition-colors"
-              >
-                {t.rowCount}
-              </button>
-            </div>
-            {expanded && (
-              <ul className="ml-4 mb-2 border-l border-white/8 pl-2.5">
-                {t.columns.map((c) => {
-                  const b = typeBadge(c.type)
-                  return (
-                    <li key={c.name}>
-                      <button
-                        onClick={() => onPick(c.name)}
-                        title={`${c.type} — click to insert`}
-                        className="w-full flex items-center justify-between gap-2 py-[3px] group/col"
-                      >
-                        <span className="font-mono text-[11px] text-white/60 group-hover/col:text-[#f5f3ee] truncate transition-colors">
-                          {c.name}
-                        </span>
-                        <span className={`font-mono text-[9px] px-1 py-px rounded ${b.cls}`}>{b.label}</span>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </li>
-        )
-      })}
-    </ul>
-  )
-}
-
-const NUMERIC_RE = /^-?\d+(\.\d+)?$/
-
-function ResultsGrid({ result }: { result: SandboxResult }) {
-  if (result.columns.length === 0) {
-    return (
-      <p className="px-5 py-6 text-[13px] text-slate-mid font-mono">
-        {result.command || 'OK'} — no rows returned.
-      </p>
-    )
-  }
-  // Right-align a column when every non-null value in it looks numeric.
-  const numeric = result.columns.map((_, ci) =>
-    result.rows.every((r) => r[ci] == null || typeof r[ci] === 'number' || NUMERIC_RE.test(String(r[ci]))),
-  )
-  return (
-    <table className="min-w-full text-[12px] font-mono border-collapse">
-      <thead className="sticky top-0 z-10 bg-[#111111] shadow-[0_1px_0_rgba(255,255,255,0.08)]">
-        <tr>
-          <th className="px-3 py-2 text-right text-[10px] text-white/25 font-normal w-10">#</th>
-          {result.columns.map((c, i) => (
-            <th
-              key={i}
-              className={`px-3 py-2 text-[10px] uppercase tracking-widest text-slate-light font-bold whitespace-nowrap ${
-                numeric[i] ? 'text-right' : 'text-left'
-              }`}
-            >
-              {c}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {result.rows.map((row, ri) => (
-          <tr key={ri} className="odd:bg-white/[0.02] hover:bg-[#2d9e5f]/10">
-            <td className="px-3 py-1.5 text-right text-white/25">{ri + 1}</td>
-            {row.map((v, ci) => (
-              <td
-                key={ci}
-                className={`px-3 py-1.5 whitespace-nowrap ${numeric[ci] ? 'text-right text-[#f5f3ee]' : 'text-left text-[#f5f3ee]/85'}`}
-              >
-                {formatCell(v)}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
-}
-
-function formatCell(v: unknown): React.ReactNode {
-  if (v === null || v === undefined) return <span className="text-white/25 italic">null</span>
-  if (typeof v === 'boolean')
-    return v ? <span className="text-emerald-400">true</span> : <span className="text-white/40">false</span>
-  if (typeof v === 'object') return JSON.stringify(v)
-  return String(v)
 }

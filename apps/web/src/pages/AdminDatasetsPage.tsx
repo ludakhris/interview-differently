@@ -121,7 +121,7 @@ export function AdminDatasetsPage() {
             )}
           </div>
 
-          <div>
+          <div className="min-w-0">
             {selectedId === 'new' ? (
               <DatasetEditor
                 key="new"

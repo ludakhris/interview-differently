@@ -73,10 +73,6 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
   )
 }
 
-// Tools ships in phases (#25): a flag can be on before its page exists, so
-// entries without a live route render dimmed instead of 404ing.
-const LIVE_TOOLS: ReadonlySet<ToolKey> = new Set<ToolKey>(['sql-sandbox'])
-
 function ToolsMenu({ tools, isAdmin }: { tools: ToolKey[]; isAdmin: boolean }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -104,7 +100,7 @@ function ToolsMenu({ tools, isAdmin }: { tools: ToolKey[]; isAdmin: boolean }) {
         <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-white/10 bg-[#111111] shadow-card-lg py-1 z-50">
           {tools.map((key) => {
             const meta = TOOL_META[key]
-            const live = LIVE_TOOLS.has(key)
+            const live = meta.live
             return (
               <button
                 key={key}
@@ -129,6 +125,7 @@ function ToolsMenu({ tools, isAdmin }: { tools: ToolKey[]; isAdmin: boolean }) {
               <p className="px-3 pt-1.5 pb-0.5 text-[9px] font-bold uppercase tracking-widest text-white/30">Admin</p>
               {[
                 { label: 'Datasets', path: '/admin/datasets' },
+                { label: 'Assessments', path: '/admin/assessments' },
                 { label: 'Institutions & Cohorts', path: '/admin/institutions' },
               ].map((item) => (
                 <button
