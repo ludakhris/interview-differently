@@ -9,7 +9,6 @@ import { ImmersiveSimulationPage } from '@/pages/ImmersiveSimulationPage'
 import { ImmersiveFeedbackPage } from '@/pages/ImmersiveFeedbackPage'
 import { BuilderListPage } from '@/pages/BuilderListPage'
 import { BuilderSetupPage } from '@/pages/BuilderSetupPage'
-import { BuilderCanvasPage } from '@/pages/BuilderCanvasPage'
 import { BuilderV2Page } from '@/pages/BuilderV2Page'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { WelcomePage } from '@/pages/WelcomePage'
@@ -96,8 +95,8 @@ export default function App() {
       <Route path="/builder/new" element={<AdminRoute><BuilderSetupPage /></AdminRoute>} />
       {/* Document editor — the builder (#24 Phase G) */}
       <Route path="/builder/:scenarioId" element={<AdminRoute><BuilderV2Page /></AdminRoute>} />
-      {/* Legacy graph canvas — kept as "Advanced" mode */}
-      <Route path="/builder/:scenarioId/advanced" element={<AdminRoute><BuilderCanvasPage /></AdminRoute>} />
+      {/* The graph canvas is gone (#28) — old links land on the editor */}
+      <Route path="/builder/:scenarioId/advanced" element={<BuilderV2Redirect />} />
       {/* Old v2 URL — bookmarks / preview back-links */}
       <Route path="/builder/v2/:scenarioId" element={<BuilderV2Redirect />} />
       <Route path="/tools/sql" element={<ProtectedRoute><SqlSandboxPage /></ProtectedRoute>} />

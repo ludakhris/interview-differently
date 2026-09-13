@@ -193,10 +193,7 @@ function toSummary(full: Scenario): Scenario {
     // briefing page renders "What you'll be evaluated on"). It does NOT
     // contain user scores or model-answer derivations.
     ...(full.rubric ? { rubric: full.rubric } : {}),
-    // Publish state + last-edit stamp for the builder list. Canvas
-    // positions stay private — they're builder-only geometry.
-    ...(full.builderMeta
-      ? { builderMeta: { status: full.builderMeta.status, lastEditedAt: full.builderMeta.lastEditedAt, positions: {} } }
-      : {}),
+    // Publish state + last-edit stamp for the builder list.
+    ...(full.builderMeta ? { builderMeta: { status: full.builderMeta.status, lastEditedAt: full.builderMeta.lastEditedAt } } : {}),
   }
 }

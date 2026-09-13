@@ -224,7 +224,7 @@ export function useBuilderDoc(initial: Scenario | null) {
 
   /** Reflect a server-side publish locally without triggering another save. */
   const markPublished = useCallback(() => {
-    setScenario(prev => prev ? { ...prev, builderMeta: { ...prev.builderMeta, status: 'published', lastEditedAt: new Date().toISOString(), positions: prev.builderMeta?.positions ?? {} } } : prev)
+    setScenario(prev => prev ? { ...prev, builderMeta: { ...prev.builderMeta, status: 'published', lastEditedAt: new Date().toISOString() } } : prev)
   }, [])
 
   // ── Manual save ────────────────────────────────────────────────────────────

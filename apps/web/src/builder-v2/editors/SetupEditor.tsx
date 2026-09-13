@@ -1,7 +1,7 @@
 // SetupEditor — in-place editor for scenario-level setup (#24 Phase H).
 // Briefing, format (text / immersive + persona), track, rubric dimensions,
 // and the candidate's sidebar / display config. Replaces the legacy
-// BriefingEditor + RubricEditor side drawers.
+// legacy BriefingEditor + RubricEditor side drawers (deleted in #28).
 
 import { useState } from 'react'
 import type {

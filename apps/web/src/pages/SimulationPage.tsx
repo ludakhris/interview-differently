@@ -29,7 +29,7 @@ export function SimulationPage() {
   const { scenario: liveScenario, isLoading } = useScenario(scenarioId)
   const { trackMeta } = useScenarios()
 
-  // In preview mode, load the scenario from sessionStorage (saved by BuilderCanvasPage)
+  // In preview mode, load the scenario from sessionStorage (saved by the builder)
   const previewScenario = useMemo<Scenario | null>(() => {
     if (!isPreview || !scenarioId) return null
     try {
@@ -107,10 +107,7 @@ function SimulationContent({
   isPreview?: boolean
 }) {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const builderPath = searchParams.get('from') === 'advanced'
-    ? `/builder/${scenarioId}/advanced`
-    : `/builder/${scenarioId}`
+  const builderPath = `/builder/${scenarioId}`
   const meta = trackMeta[scenario.track]
 
   const { isSignedIn, isLoaded, userId } = useAuth()

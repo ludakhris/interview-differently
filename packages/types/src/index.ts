@@ -268,7 +268,8 @@ export interface BuilderNodePosition {
 export interface BuilderMeta {
   status: 'draft' | 'published'
   lastEditedAt: string
-  positions: Record<string, BuilderNodePosition> // nodeId → canvas position
+  /** Legacy graph-canvas geometry (#28). Still present on older rows; nothing reads or writes it now. */
+  positions?: Record<string, BuilderNodePosition>
 }
 
 export interface ScenarioInterviewer {

@@ -137,7 +137,6 @@ export function BuilderV2Page() {
   return (
     <div className="h-screen flex flex-col bg-[#0a0a0a] overflow-hidden">
       <V2Toolbar
-        scenarioId={scenarioId}
         title={scenario.title}
         saveStatus={saveStatus}
         institutionName={scenario.institutionName ?? null}

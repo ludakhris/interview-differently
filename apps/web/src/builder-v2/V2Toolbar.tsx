@@ -1,12 +1,10 @@
 // V2Toolbar — top bar for the document editor.
-// Editable title, save status, Preview / Advanced / Publish actions.
+// Editable title, save status, Preview / Publish actions.
 
 import { useState } from 'react'
 import type { SaveStatus } from '@/hooks/useBuilderDoc'
-import { useNavigate } from 'react-router-dom'
 
 interface Props {
-  scenarioId: string
   title: string
   saveStatus: SaveStatus
   /** Institution name for private scenarios; null = public (#15). */
@@ -18,10 +16,9 @@ interface Props {
   onPreview: () => void
 }
 
-export function V2Toolbar({ scenarioId, title, saveStatus, institutionName, status, onPublish, onTitleChange, onSave, onPreview }: Props) {
+export function V2Toolbar({ title, saveStatus, institutionName, status, onPublish, onTitleChange, onSave, onPreview }: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(title)
-  const navigate = useNavigate()
 
   function commitTitle() {
     const trimmed = draft.trim()
@@ -87,15 +84,6 @@ export function V2Toolbar({ scenarioId, title, saveStatus, institutionName, stat
         className="flex items-center gap-1.5 text-[12px] font-semibold text-white/65 hover:text-white border border-white/10 hover:border-white/20 rounded-lg px-3 py-1.5 transition-all"
       >
         ▶ Preview as candidate
-      </button>
-
-      {/* Advanced (graph) */}
-      <button
-        onClick={() => navigate(`/builder/${scenarioId}/advanced`)}
-        className="text-[12px] font-semibold text-white/35 hover:text-white/60 transition-colors"
-        title="Open the graph canvas (advanced)"
-      >
-        Advanced ↗
       </button>
 
       {/* Status + Publish */}

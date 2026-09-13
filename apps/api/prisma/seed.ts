@@ -133,7 +133,6 @@ function yamlToScenario(yamlStr: string): Scenario {
     builderMeta: {
       status: 'published',
       lastEditedAt: new Date().toISOString(),
-      positions: {},
     },
   }
 

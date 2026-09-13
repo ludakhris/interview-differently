@@ -55,7 +55,6 @@ export async function createScenario(
     builderMeta: {
       status: 'draft',
       lastEditedAt: new Date().toISOString(),
-      positions: { [startNodeId]: { x: 300, y: 100 } },
     },
   }
   return apiFetch<Scenario>('/scenarios', { method: 'POST', body: JSON.stringify(scenario) })
@@ -76,65 +75,6 @@ export async function publishScenario(id: string): Promise<Scenario> {
   return apiFetch<Scenario>(`/scenarios/${id}/publish`, { method: 'PATCH' })
 }
 
-export function autoLayoutPositions(scenario: Scenario): Record<string, { x: number; y: number }> {
-  const positions: Record<string, { x: number; y: number }> = {}
-  const nodes = scenario.nodes
-  if (!nodes.length) return positions
-
-  const children: Record<string, string[]> = {}
-  nodes.forEach((n) => {
-    children[n.nodeId] = []
-    if (n.type === 'decision' && n.choices) {
-      n.choices.forEach((c) => {
-        if (c.nextNodeId) children[n.nodeId].push(c.nextNodeId)
-      })
-    }
-    if (n.type === 'transition' && n.nextNodeId) {
-      children[n.nodeId].push(n.nextNodeId)
-    }
-  })
-
-  const firstNodeId = nodes[0].nodeId
-  const layers: string[][] = []
-  const visited = new Set<string>()
-  let queue = [firstNodeId]
-  visited.add(firstNodeId)
-
-  while (queue.length > 0) {
-    layers.push(queue)
-    const next: string[] = []
-    queue.forEach((id) => {
-      ;(children[id] ?? []).forEach((childId) => {
-        if (!visited.has(childId)) {
-          visited.add(childId)
-          next.push(childId)
-        }
-      })
-    })
-    queue = next
-  }
-
-  nodes.forEach((n) => {
-    if (!visited.has(n.nodeId)) layers.push([n.nodeId])
-  })
-
-  const LAYER_H = 220
-  const NODE_W = 300
-  const CENTER_X = 400
-
-  positions[`start-${firstNodeId}`] = { x: CENTER_X, y: 20 }
-
-  layers.forEach((layer, depth) => {
-    const totalWidth = (layer.length - 1) * NODE_W
-    const startX = CENTER_X - totalWidth / 2
-    layer.forEach((nodeId, i) => {
-      positions[nodeId] = { x: startX + i * NODE_W, y: 160 + depth * LAYER_H }
-    })
-  })
-
-  return positions
-}
-
 export async function importStaticScenario(scenario: Scenario): Promise<Scenario> {
   // Check if already exists
   const existing = await getScenario(scenario.scenarioId)
@@ -144,7 +84,6 @@ export async function importStaticScenario(scenario: Scenario): Promise<Scenario
     builderMeta: {
       status: 'published',
       lastEditedAt: new Date().toISOString(),
-      positions: autoLayoutPositions(scenario),
     },
   }
   return apiFetch<Scenario>('/scenarios', { method: 'POST', body: JSON.stringify(imported) })
@@ -188,7 +127,6 @@ export async function createScenarioFromImport(
     builderMeta: {
       status: 'draft',
       lastEditedAt: new Date().toISOString(),
-      positions: scenario.builderMeta?.positions ?? autoLayoutPositions(scenario),
     },
   }
   return apiFetch<Scenario>('/scenarios', { method: 'POST', body: JSON.stringify(draft) })
