@@ -48,7 +48,6 @@ export function BuilderCanvasPage() {
   const [validationErrors, setValidationErrors] = useState<ReturnType<typeof validateScenario> | null>(null)
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null)
   const [mediaAssets, setMediaAssets] = useState<ScenarioMediaAsset[]>([])
-  const saveStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Load scenario asynchronously on mount
   useEffect(() => {
@@ -77,10 +76,11 @@ export function BuilderCanvasPage() {
   const handleSave = useCallback(
     (updated: Scenario) => {
       setSaveStatus('saving')
-      updateScenario(updated)
       setScenario(updated)
-      if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current)
-      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('saved'), 600)
+      // Surface failures — a rejected PUT used to still flip to "Saved".
+      updateScenario(updated)
+        .then(() => setSaveStatus('saved'))
+        .catch(() => setSaveStatus('error'))
     },
     []
   )

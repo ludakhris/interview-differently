@@ -10,7 +10,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import type { Scenario, ScenarioPhase, Exhibit, ScenarioNode } from '@id/types'
 import { updateScenario } from '@/services/builderService'
 
-export type SaveStatus = 'saved' | 'saving' | 'unsaved'
+export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
 export function useBuilderDoc(initial: Scenario | null) {
   const [scenario, setScenario] = useState<Scenario | null>(initial)
@@ -47,7 +47,7 @@ export function useBuilderDoc(initial: Scenario | null) {
         setSaveStatus('saving')
         updateScenario(next)
           .then(() => setSaveStatus('saved'))
-          .catch(() => setSaveStatus('unsaved'))
+          .catch(() => setSaveStatus('error'))
       }, 800)
       return next
     })
@@ -178,7 +178,7 @@ export function useBuilderDoc(initial: Scenario | null) {
     setSaveStatus('saving')
     updateScenario(s)
       .then(() => setSaveStatus('saved'))
-      .catch(() => setSaveStatus('unsaved'))
+      .catch(() => setSaveStatus('error'))
   }, [])
 
   return {

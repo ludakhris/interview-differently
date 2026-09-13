@@ -70,7 +70,7 @@ export class ScenariosService {
   }
 
   async update(id: string, scenario: Scenario): Promise<Scenario> {
-    await this.findOne(id) // throws if not found
+    await this.findOne(id, { authed: true }) // existence check — internal, not a client read
     const updated = {
       ...scenario,
       builderMeta: {
@@ -89,12 +89,12 @@ export class ScenariosService {
   }
 
   async remove(id: string): Promise<void> {
-    await this.findOne(id) // throws if not found
+    await this.findOne(id, { authed: true }) // existence check — internal, not a client read
     await this.prisma.scenario.delete({ where: { scenarioId: id } })
   }
 
   async publish(id: string): Promise<Scenario> {
-    const scenario = await this.findOne(id)
+    const scenario = await this.findOne(id, { authed: true })
     const published = {
       ...scenario,
       builderMeta: {

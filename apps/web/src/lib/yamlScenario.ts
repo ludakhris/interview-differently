@@ -41,6 +41,7 @@ interface YamlScenario {
   icon?: string
   estimatedMinutes: number
   mode?: 'text' | 'immersive'
+  interviewer?: { presenterId: string; voiceId: string }
   briefing: {
     situation: string
     role: string
@@ -107,6 +108,7 @@ export function yamlToScenario(yamlStr: string): Scenario {
     ...(raw.icon ? { icon: raw.icon } : {}),
     estimatedMinutes: raw.estimatedMinutes,
     ...(raw.mode ? { mode: raw.mode } : {}),
+    ...(raw.interviewer ? { interviewer: raw.interviewer } : {}),
     briefing: {
       situation: raw.briefing.situation ?? '',
       role: raw.briefing.role ?? '',
@@ -135,6 +137,7 @@ export function scenarioToYaml(scenario: Scenario): string {
     ...(scenario.icon ? { icon: scenario.icon } : {}),
     estimatedMinutes: scenario.estimatedMinutes,
     ...(scenario.mode ? { mode: scenario.mode } : {}),
+    ...(scenario.interviewer ? { interviewer: scenario.interviewer } : {}),
     briefing: scenario.briefing,
     ...(scenario.display ? { display: scenario.display } : {}),
     rubric: scenario.rubric.dimensions,

@@ -53,6 +53,7 @@ interface YamlScenario {
   icon?: string
   estimatedMinutes: number
   mode?: 'text' | 'immersive'
+  interviewer?: { presenterId: string; voiceId: string }   // immersive persona — lives in YAML so reseeds keep it
   briefing: {
     situation: string
     role: string
@@ -115,6 +116,7 @@ function yamlToScenario(yamlStr: string): Scenario {
     ...(raw.icon ? { icon: raw.icon } : {}),
     estimatedMinutes: raw.estimatedMinutes,
     ...(raw.mode ? { mode: raw.mode } : {}),
+    ...(raw.interviewer ? { interviewer: raw.interviewer } : {}),
     briefing: {
       situation: raw.briefing.situation,
       role: raw.briefing.role,

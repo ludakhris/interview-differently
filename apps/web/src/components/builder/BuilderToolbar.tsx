@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
-export type SaveStatus = 'saved' | 'unsaved' | 'saving'
+export type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error'
 
 interface BuilderToolbarProps {
   title: string
@@ -61,6 +61,7 @@ export function BuilderToolbar({
     saved: { label: 'Saved', color: '#2d9e5f' },
     unsaved: { label: 'Unsaved changes', color: '#d4830a' },
     saving: { label: 'Saving…', color: 'rgba(255,255,255,0.4)' },
+    error: { label: 'Save failed — click to retry', color: '#ef4444' },
   }
   const status = statusConfig[saveStatus]
 
@@ -101,10 +102,10 @@ export function BuilderToolbar({
       {/* Right */}
       <div className="flex items-center gap-3">
         <button
-          onClick={saveStatus === 'unsaved' ? onSave : undefined}
+          onClick={saveStatus === 'unsaved' || saveStatus === 'error' ? onSave : undefined}
           className="text-[11px] font-medium transition-opacity"
-          style={{ color: status.color, cursor: saveStatus === 'unsaved' ? 'pointer' : 'default' }}
-          title={saveStatus === 'unsaved' ? 'Click to save' : undefined}
+          style={{ color: status.color, cursor: saveStatus === 'unsaved' || saveStatus === 'error' ? 'pointer' : 'default' }}
+          title={saveStatus === 'unsaved' || saveStatus === 'error' ? 'Click to save' : undefined}
         >
           {status.label}
         </button>
