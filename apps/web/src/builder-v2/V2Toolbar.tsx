@@ -9,12 +9,14 @@ interface Props {
   scenarioId: string
   title: string
   saveStatus: SaveStatus
+  /** Institution name for private scenarios; null = public (#15). */
+  institutionName: string | null
   onTitleChange: (title: string) => void
   onSave: () => void
   onPreview: () => void
 }
 
-export function V2Toolbar({ scenarioId, title, saveStatus, onTitleChange, onSave, onPreview }: Props) {
+export function V2Toolbar({ scenarioId, title, saveStatus, institutionName, onTitleChange, onSave, onPreview }: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(title)
   const navigate = useNavigate()
@@ -57,6 +59,15 @@ export function V2Toolbar({ scenarioId, title, saveStatus, onTitleChange, onSave
           {title}
         </button>
       )}
+
+      <span
+        title={institutionName ? `Only ${institutionName} members can see this scenario` : 'Visible to every user'}
+        className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded flex-none ${
+          institutionName ? 'bg-green/20 text-green-light' : 'bg-white/10 text-white/50'
+        }`}
+      >
+        {institutionName ?? 'Public'}
+      </span>
 
       <div className="flex-1" />
 

@@ -12,6 +12,11 @@ import { updateScenario } from '@/services/builderService'
 
 export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
+/** Scenario-level fields the Setup block edits (everything except title / phases / nodes / exhibits). */
+export type ScenarioMeta = Partial<
+  Pick<Scenario, 'briefing' | 'estimatedMinutes' | 'mode' | 'interviewer' | 'display' | 'track' | 'subcategory' | 'rubric'>
+>
+
 export function useBuilderDoc(initial: Scenario | null) {
   const [scenario, setScenario] = useState<Scenario | null>(initial)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
@@ -56,6 +61,18 @@ export function useBuilderDoc(initial: Scenario | null) {
   // ── Title ──────────────────────────────────────────────────────────────────
   const setTitle = useCallback((title: string) => {
     patch(s => ({ ...s, title }))
+  }, [patch])
+
+  // ── Scenario setup (briefing, format, track, rubric, display) ──────────────
+  const updateMeta = useCallback((updates: ScenarioMeta) => {
+    patch(s => {
+      const next = { ...s, ...updates }
+      // Undefined means "clear" for optional keys — don't leave stale values behind.
+      for (const k of ['interviewer', 'display', 'subcategory'] as const) {
+        if (k in updates && updates[k] === undefined) delete next[k]
+      }
+      return next
+    })
   }, [patch])
 
   // ── Phases ─────────────────────────────────────────────────────────────────
@@ -162,12 +179,47 @@ export function useBuilderDoc(initial: Scenario | null) {
   const removeNode = useCallback((nodeId: string) => {
     patch(s => ({
       ...s,
-      nodes: s.nodes.filter(n => n.nodeId !== nodeId),
+      nodes: s.nodes.filter(n => n.nodeId !== nodeId).map(n => unlink(n, nodeId)),
       phases: (s.phases ?? []).map(p => ({
         ...p,
         nodeIds: p.nodeIds.filter(id => id !== nodeId),
       })),
     }))
+  }, [patch])
+
+  // ── Block order + phase removal (#24 Phase H) ─────────────────────────────
+  /** Moves a block one step within its phase. Exhibits and nodes are separate lists (exhibits always render first). */
+  const moveBlock = useCallback((phaseId: string, kind: 'exhibit' | 'node', id: string, dir: -1 | 1) => {
+    patch(s => ({
+      ...s,
+      phases: (s.phases ?? []).map(p => {
+        if (p.id !== phaseId) return p
+        const key = kind === 'exhibit' ? 'exhibitIds' : 'nodeIds'
+        const ids = [...(p[key] ?? [])]
+        const i = ids.indexOf(id)
+        const j = i + dir
+        if (i < 0 || j < 0 || j >= ids.length) return p
+        ;[ids[i], ids[j]] = [ids[j], ids[i]]
+        return { ...p, [key]: ids }
+      }),
+    }))
+  }, [patch])
+
+  /** Deletes a phase with its nodes; exhibits survive only if another phase still shows them. */
+  const removePhase = useCallback((phaseId: string) => {
+    patch(s => {
+      const phase = (s.phases ?? []).find(p => p.id === phaseId)
+      if (!phase) return s
+      const otherPhases = (s.phases ?? []).filter(p => p.id !== phaseId)
+      const stillShown = new Set(otherPhases.flatMap(p => p.exhibitIds ?? []))
+      const gone = new Set(phase.nodeIds)
+      return {
+        ...s,
+        phases: otherPhases,
+        nodes: s.nodes.filter(n => !gone.has(n.nodeId)).map(n => [...gone].reduce((acc, id) => unlink(acc, id), n)),
+        exhibits: (s.exhibits ?? []).filter(e => stillShown.has(e.id) || !(phase.exhibitIds ?? []).includes(e.id)),
+      }
+    })
   }, [patch])
 
   // ── Manual save ────────────────────────────────────────────────────────────
@@ -186,6 +238,7 @@ export function useBuilderDoc(initial: Scenario | null) {
     saveStatus,
     // mutations
     setTitle,
+    updateMeta,
     addPhase,
     updatePhase,
     reorderPhases,
@@ -195,7 +248,22 @@ export function useBuilderDoc(initial: Scenario | null) {
     addNode,
     updateNode,
     removeNode,
+    moveBlock,
+    removePhase,
     toggleExhibitShared,
     saveNow,
   }
+}
+
+/** Drops any link from `n` to `targetId` so a deleted node leaves no dangling targets (falls back to "continue"). */
+function unlink(n: ScenarioNode, targetId: string): ScenarioNode {
+  let next = n
+  if (n.nextNodeId === targetId) {
+    next = { ...n }
+    delete next.nextNodeId
+  }
+  if (n.choices?.some(c => c.nextNodeId === targetId)) {
+    next = { ...next, choices: n.choices.map(c => (c.nextNodeId === targetId ? { ...c, nextNodeId: '' } : c)) }
+  }
+  return next
 }

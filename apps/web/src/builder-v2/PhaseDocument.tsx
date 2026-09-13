@@ -9,21 +9,32 @@
 import { useState, useRef, useEffect } from 'react'
 import type { Scenario, ScenarioPhase, Exhibit, ScenarioNode } from '@id/types'
 import type { EntityKind } from './registry'
-import { ExhibitBlock, NodeBlock, BriefingBlock, SidebarBlock } from './DocBlock'
+import { ExhibitBlock, NodeBlock, SetupBlock, SidebarBlock } from './DocBlock'
+import { SetupEditor } from './editors/SetupEditor'
+import type { ScenarioMeta } from '@/hooks/useBuilderDoc'
 import { BlockPicker } from './BlockPicker'
 
 interface Props {
   scenario: Scenario
   activePhaseId?: string | null
   onInsert: (phaseId: string, kind: EntityKind) => void
+  onMetaUpdate: (updates: ScenarioMeta) => void
   onExhibitUpdate: (exhibit: Exhibit) => void
   onNodeUpdate: (node: ScenarioNode) => void
   onPhaseUpdate?: (phaseId: string, updates: Partial<ScenarioPhase>) => void
   onToggleExhibitShared?: (exhibitId: string, fromPhaseId: string) => void
   onPhaseVisible?: (phaseId: string) => void
+  /** Block actions (#24 Phase H) */
+  onMoveBlock: (phaseId: string, kind: 'exhibit' | 'node', id: string, dir: -1 | 1) => void
+  onRemoveExhibit: (exhibitId: string) => void
+  onRemoveNode: (nodeId: string) => void
+  onRemovePhase: (phaseId: string) => void
 }
 
-export function PhaseDocument({ scenario, activePhaseId, onInsert, onExhibitUpdate, onNodeUpdate, onPhaseUpdate, onToggleExhibitShared, onPhaseVisible }: Props) {
+/** editingBlockId sentinel for the scenario-level setup block. */
+const SETUP_BLOCK_ID = '__setup__'
+
+export function PhaseDocument({ scenario, activePhaseId, onInsert, onMetaUpdate, onExhibitUpdate, onNodeUpdate, onPhaseUpdate, onToggleExhibitShared, onPhaseVisible, onMoveBlock, onRemoveExhibit, onRemoveNode, onRemovePhase }: Props) {
   const { phases = [], exhibits = [], nodes = [] } = scenario
   const exhibitMap = Object.fromEntries(exhibits.map(e => [e.id, e]))
   const nodeMap = Object.fromEntries(nodes.map(n => [n.nodeId, n]))
@@ -56,15 +67,22 @@ export function PhaseDocument({ scenario, activePhaseId, onInsert, onExhibitUpda
     return (
       <div className="flex-1 overflow-auto px-10 py-8">
         <div className="max-w-[820px] mx-auto flex flex-col gap-3">
-          <p className="text-[12px] text-white/30 italic mb-2">No phases declared — add a phase in the left rail.</p>
+          {editingBlockId === SETUP_BLOCK_ID ? (
+            <SetupEditor scenario={scenario} onDone={(updates) => { onMetaUpdate(updates); setEditingBlockId(null) }} />
+          ) : (
+            <SetupBlock scenario={scenario} onEditRequest={() => setEditingBlockId(SETUP_BLOCK_ID)} />
+          )}
+          <p className="text-[12px] text-white/30 italic mb-2">
+            No phases declared — the candidate walks these steps in order. Add a phase in the left rail to group them.
+          </p>
           {nodes.map(node => (
             <NodeBlock
               key={node.nodeId}
               node={node}
               allNodes={nodes}
-              isEditing={false}
-              onEditRequest={() => {}}
-              onUpdate={() => {}}
+              isEditing={editingBlockId === node.nodeId}
+              onEditRequest={() => setEditingBlockId(node.nodeId)}
+              onUpdate={(n) => { onNodeUpdate(n); setEditingBlockId(null) }}
             />
           ))}
         </div>
@@ -78,9 +96,18 @@ export function PhaseDocument({ scenario, activePhaseId, onInsert, onExhibitUpda
         <div className="max-w-[820px] mx-auto flex flex-col gap-10">
           {/* Scenario-level blocks — always visible regardless of phase */}
           <div className="flex flex-col gap-3">
-            <BriefingBlock briefing={scenario.briefing} />
-            {scenario.display?.sidebar && scenario.display.sidebar.length > 0 && (
-              <SidebarBlock sidebar={scenario.display.sidebar} />
+            {editingBlockId === SETUP_BLOCK_ID ? (
+              <SetupEditor
+                scenario={scenario}
+                onDone={(updates) => { onMetaUpdate(updates); setEditingBlockId(null) }}
+              />
+            ) : (
+              <>
+                <SetupBlock scenario={scenario} onEditRequest={() => setEditingBlockId(SETUP_BLOCK_ID)} />
+                {scenario.display?.sidebar && scenario.display.sidebar.length > 0 && (
+                  <SidebarBlock sidebar={scenario.display.sidebar} />
+                )}
+              </>
             )}
           </div>
 
@@ -102,6 +129,9 @@ export function PhaseDocument({ scenario, activePhaseId, onInsert, onExhibitUpda
               onPhaseUpdate={onPhaseUpdate}
               onToggleExhibitShared={onToggleExhibitShared}
               onVisible={onPhaseVisible}
+              onMoveBlock={(kind, id, dir) => onMoveBlock(phase.id, kind, id, dir)}
+              onRemoveBlock={(kind, id) => { if (kind === 'exhibit') onRemoveExhibit(id); else onRemoveNode(id) }}
+              onRemovePhase={() => onRemovePhase(phase.id)}
             />
           ))}
 
@@ -162,9 +192,13 @@ interface PhaseSectionProps {
   onPhaseUpdate?: (phaseId: string, updates: Partial<ScenarioPhase>) => void
   onToggleExhibitShared?: (exhibitId: string, fromPhaseId: string) => void
   onVisible?: (phaseId: string) => void
+  onMoveBlock: (kind: 'exhibit' | 'node', id: string, dir: -1 | 1) => void
+  onRemoveBlock: (kind: 'exhibit' | 'node', id: string) => void
+  onRemovePhase: () => void
 }
 
-function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNodes, allDimensions, editingBlockId, onEditRequest, onExhibitUpdate, onNodeUpdate, onInsertRequest, onPhaseUpdate, onToggleExhibitShared, onVisible }: PhaseSectionProps) {
+function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNodes, allDimensions, editingBlockId, onEditRequest, onExhibitUpdate, onNodeUpdate, onInsertRequest, onPhaseUpdate, onToggleExhibitShared, onVisible, onMoveBlock, onRemoveBlock, onRemovePhase }: PhaseSectionProps) {
+  const [editingDescription, setEditingDescription] = useState(false)
   const headerRef = useRef<HTMLDivElement>(null)
   void onVisible // intersection observer wired in Phase D
 
@@ -208,8 +242,26 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
           <h2 className="text-[22px] font-bold tracking-tight text-white" style={{ fontFamily: 'Syne, sans-serif' }}>
             {phase.label}
           </h2>
-          {phase.description && (
-            <p className="text-[13px] text-white/45 mt-0.5">{phase.description}</p>
+          {editingDescription ? (
+            <input
+              autoFocus
+              defaultValue={phase.description ?? ''}
+              placeholder="One line on what this phase is for (shown to the candidate)"
+              onBlur={e => { onPhaseUpdate?.(phase.id, { description: e.target.value.trim() || undefined }); setEditingDescription(false) }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                if (e.key === 'Escape') setEditingDescription(false)
+              }}
+              className="mt-1 w-full bg-[#0a0a0a] border border-white/12 rounded-md px-2 py-1 text-[13px] text-white/75 outline-none focus:border-emerald-400/50"
+            />
+          ) : (
+            <p
+              className="text-[13px] text-white/45 mt-0.5 cursor-text hover:text-white/70 transition-colors"
+              title="Click to edit the phase description"
+              onClick={() => onPhaseUpdate && setEditingDescription(true)}
+            >
+              {phase.description || <span className="italic text-white/25">Add a phase description…</span>}
+            </p>
           )}
           {/* Rubric dimension chips — clickable toggles */}
           {allDimensions.length > 0 && (
@@ -236,6 +288,17 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
             </div>
           )}
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            const n = phase.nodeIds.length
+            if (confirm(`Delete phase "${phase.label}"${n ? ` and its ${n} question block${n === 1 ? '' : 's'}` : ''}? Exhibits shown in other phases are kept.`)) onRemovePhase()
+          }}
+          title="Delete this phase"
+          className="text-[11px] text-white/25 hover:text-red-400/80 transition-colors mt-1"
+        >
+          Delete phase
+        </button>
       </div>
 
       {/* Block stream */}
@@ -243,8 +306,18 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
         <EmptyPhase onClick={onInsertRequest} />
       ) : (
         <div className="flex flex-col gap-3">
-          {blocks.map((block) => (
-            <div key={block.id}>
+          {blocks.map((block, blockIdx) => (
+            <div key={block.id} className="relative group/blk">
+              <BlockGutter
+                canUp={block.kind === 'exhibit' ? blockIdx > 0 : blockIdx > blocks.findIndex(b => b.kind === 'node')}
+                canDown={block.kind === 'exhibit' ? blockIdx < blocks.filter(b => b.kind === 'exhibit').length - 1 : blockIdx < blocks.length - 1}
+                onUp={() => onMoveBlock(block.kind, block.id, -1)}
+                onDown={() => onMoveBlock(block.kind, block.id, 1)}
+                onRemove={() => {
+                  const what = block.kind === 'exhibit' ? 'this exhibit' : 'this block'
+                  if (confirm(`Remove ${what} from the scenario? Options pointing at it will fall back to "continue".`)) onRemoveBlock(block.kind, block.id)
+                }}
+              />
               {block.kind === 'exhibit' ? (
                 <ExhibitBlock
                   exhibit={block.exhibit}
@@ -270,6 +343,18 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+/** Hover controls in the left gutter of each block: move up / down within its list, remove. */
+function BlockGutter({ canUp, canDown, onUp, onDown, onRemove }: { canUp: boolean; canDown: boolean; onUp: () => void; onDown: () => void; onRemove: () => void }) {
+  const btn = 'w-6 h-6 flex items-center justify-center rounded-md text-[11px] border border-white/10 bg-[#111] text-white/40 hover:text-white/85 hover:border-white/25 disabled:opacity-25 disabled:hover:text-white/40 transition-colors'
+  return (
+    <div className="absolute -left-9 top-2 flex flex-col gap-1 opacity-0 group-hover/blk:opacity-100 focus-within:opacity-100 transition-opacity">
+      <button type="button" onClick={onUp} disabled={!canUp} title="Move up" className={btn}>▲</button>
+      <button type="button" onClick={onDown} disabled={!canDown} title="Move down" className={btn}>▼</button>
+      <button type="button" onClick={onRemove} title="Remove block" className={`${btn} hover:text-red-400 hover:border-red-400/40`}>✕</button>
     </div>
   )
 }

@@ -7,17 +7,19 @@
 // Phase B: gallery picker + insertion.
 // Phase C: in-place editors.
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { getScenario } from '@/services/builderService'
+import { listScenarioMedia } from '@/services/scenarioMediaService'
 import { useBuilderDoc } from '@/hooks/useBuilderDoc'
 import { V2Toolbar } from '@/builder-v2/V2Toolbar'
 import { PhasesRail } from '@/builder-v2/PhasesRail'
 import { PhaseDocument } from '@/builder-v2/PhaseDocument'
 import { descriptorFor, seedExhibit, seedNode } from '@/builder-v2/registry'
 import type { EntityKind } from '@/builder-v2/registry'
-import type { Scenario } from '@id/types'
+import { ImmersiveProvider, type ImmersiveState } from '@/builder-v2/ImmersiveContext'
+import type { Scenario, ScenarioMediaAsset } from '@id/types'
 
 export function BuilderV2Page() {
   const { scenarioId } = useParams<{ scenarioId: string }>()
@@ -36,9 +38,23 @@ export function BuilderV2Page() {
   }, [scenarioId, getToken])
 
   const doc = useBuilderDoc(initial)
-  const { scenario, saveStatus, setTitle, addPhase, updatePhase, reorderPhases, addExhibit, updateExhibit, addNode, updateNode, saveNow, toggleExhibitShared } = doc
+  const { scenario, saveStatus, setTitle, updateMeta, addPhase, updatePhase, reorderPhases, addExhibit, updateExhibit, removeExhibit, addNode, updateNode, removeNode, moveBlock, removePhase, saveNow, toggleExhibitShared } = doc
 
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null)
+
+  // Immersive: rendered-media assets per node, refreshed after each render (#24 Phase H)
+  const [mediaAssets, setMediaAssets] = useState<Record<string, ScenarioMediaAsset>>({})
+  const isImmersive = scenario?.mode === 'immersive'
+  useEffect(() => {
+    if (!scenarioId || !isImmersive) return
+    listScenarioMedia(scenarioId)
+      .then(list => setMediaAssets(Object.fromEntries(list.map(a => [a.nodeId, a]))))
+      .catch(() => {/* status shows "not rendered" */})
+  }, [scenarioId, isImmersive])
+  const immersive = useMemo<ImmersiveState | null>(
+    () => (isImmersive && scenarioId ? { scenarioId, assets: mediaAssets, onRendered: a => setMediaAssets(m => ({ ...m, [a.nodeId]: a })) } : null),
+    [isImmersive, scenarioId, mediaAssets],
+  )
 
   // Set initial active phase once scenario loads
   useEffect(() => {
@@ -93,6 +109,7 @@ export function BuilderV2Page() {
         scenarioId={scenarioId}
         title={scenario.title}
         saveStatus={saveStatus}
+        institutionName={scenario.institutionName ?? null}
         onTitleChange={setTitle}
         onSave={saveNow}
         onPreview={handlePreview}
@@ -108,16 +125,23 @@ export function BuilderV2Page() {
           onAdd={addPhase}
         />
 
-        <PhaseDocument
-          scenario={scenario}
-          activePhaseId={activePhaseId}
-          onInsert={handleInsert}
-          onExhibitUpdate={updateExhibit}
-          onNodeUpdate={updateNode}
-          onPhaseUpdate={updatePhase}
-          onToggleExhibitShared={toggleExhibitShared}
-          onPhaseVisible={setActivePhaseId}
-        />
+        <ImmersiveProvider value={immersive}>
+          <PhaseDocument
+            scenario={scenario}
+            activePhaseId={activePhaseId}
+            onInsert={handleInsert}
+            onMetaUpdate={updateMeta}
+            onExhibitUpdate={updateExhibit}
+            onNodeUpdate={updateNode}
+            onPhaseUpdate={updatePhase}
+            onToggleExhibitShared={toggleExhibitShared}
+            onPhaseVisible={setActivePhaseId}
+            onMoveBlock={moveBlock}
+            onRemoveExhibit={removeExhibit}
+            onRemoveNode={removeNode}
+            onRemovePhase={removePhase}
+          />
+        </ImmersiveProvider>
       </div>
     </div>
   )

@@ -4,7 +4,9 @@
 // Phase C: ⋮ button triggers inline edit mode — block replaces with the
 //          appropriate editor. "✓ Done" commits and returns to read-only.
 
-import type { Exhibit, ScenarioNode, ScenarioBriefing, SidebarSection } from '@id/types'
+import type { Exhibit, Scenario, ScenarioNode, SidebarSection } from '@id/types'
+import { BUSINESS_CASE_SUBCATEGORY_LABELS } from '@id/types'
+import { TRACK_LABELS } from '@/lib/builderTemplates'
 import { ExhibitRenderer } from '@/components/exhibits/ExhibitRenderer'
 import { descriptorFor } from './registry'
 
@@ -19,6 +21,8 @@ import { DataTableEditor } from './editors/DataTableEditor'
 import { ProfitTreeEditor } from './editors/ProfitTreeEditor'
 import { SegMatrixEditor } from './editors/SegMatrixEditor'
 import { ChartEditor } from './editors/ChartEditor'
+import { useImmersive } from './ImmersiveContext'
+import { NodeRenderStatus } from '@/components/builder/NodeRenderStatus'
 
 // ── Quality signal badge colour ───────────────────────────────────────────────
 
@@ -156,9 +160,30 @@ function DecisionBlock({
   onEditRequest: () => void
 }) {
   const nodeMap = Object.fromEntries(allNodes.map(n => [n.nodeId, n]))
+  const immersive = useImmersive()
 
   return (
     <BlockShell emoji="🔀" kindLabel="Decision" onEditRequest={onEditRequest}>
+      {/* Immersive: what the interviewer says + render state (#24 Phase H) */}
+      {immersive && (
+        <div className="mb-3 pb-3 border-b border-white/[0.06]">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">🎙 Interviewer says</span>
+          {node.audioScript?.trim() ? (
+            <p className="text-[13px] text-white/70 leading-relaxed mt-0.5">{node.audioScript}</p>
+          ) : (
+            <p className="text-[12px] text-white/30 italic mt-0.5">No audio script — the narrative is spoken instead.</p>
+          )}
+          <div className="mt-2 max-w-[360px]">
+            <NodeRenderStatus
+              scenarioId={immersive.scenarioId}
+              nodeId={node.nodeId}
+              audioScript={node.audioScript?.trim() || node.narrative?.trim() || ''}
+              asset={immersive.assets[node.nodeId] ?? null}
+              onRendered={immersive.onRendered}
+            />
+          </div>
+        </div>
+      )}
       {/* Key Data (contextPanels) */}
       {(node.contextPanels ?? []).length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-white/[0.06]">
@@ -336,29 +361,57 @@ function BandRow({ label, unit, ideal }: { label: string; unit?: string; ideal?:
   )
 }
 
-// ── Briefing block ────────────────────────────────────────────────────────────
+// ── Setup block — briefing + format + track + rubric (read view) ──────────────
 
-export function BriefingBlock({ briefing }: { briefing: ScenarioBriefing }) {
+export function SetupBlock({ scenario, onEditRequest }: { scenario: Scenario; onEditRequest: () => void }) {
+  const { briefing } = scenario
+  const dims = scenario.rubric?.dimensions ?? []
+  const facts: { label: string; value: string }[] = [
+    { label: 'Role', value: briefing.role },
+    { label: 'Organisation', value: briefing.organisation },
+    { label: 'Reports to', value: briefing.reportsTo },
+    { label: 'Time in role', value: briefing.timeInRole },
+  ]
+  const chips = [
+    TRACK_LABELS[scenario.track] ?? scenario.track,
+    ...(scenario.subcategory ? [BUSINESS_CASE_SUBCATEGORY_LABELS[scenario.subcategory as keyof typeof BUSINESS_CASE_SUBCATEGORY_LABELS] ?? scenario.subcategory] : []),
+    `${scenario.estimatedMinutes} min`,
+    scenario.mode === 'immersive' ? (scenario.interviewer ? '🎙 Immersive · persona set' : '🎙 Immersive · no persona') : 'Text',
+  ]
   return (
-    <BlockShell emoji="📋" kindLabel="Briefing">
+    <BlockShell emoji="📋" kindLabel="Scenario Setup" onEditRequest={onEditRequest}>
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {chips.map(c => (
+          <span key={c} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/[0.06] text-white/60 border border-white/10">{c}</span>
+        ))}
+      </div>
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 mb-3">
-        {[
-          { label: 'Role', value: briefing.role },
-          { label: 'Organisation', value: briefing.organisation },
-          { label: 'Reports to', value: briefing.reportsTo },
-          { label: 'Time in role', value: briefing.timeInRole },
-        ].map(({ label, value }) => value ? (
+        {facts.map(({ label, value }) => value ? (
           <div key={label}>
             <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">{label}</span>
             <p className="text-[13px] text-white/75 mt-0.5">{value}</p>
           </div>
         ) : null)}
       </div>
-      {briefing.situation && (
+      {briefing.situation ? (
         <p className="text-[13px] text-white/65 leading-relaxed border-t border-white/[0.06] pt-3 mt-1">
           {briefing.situation.slice(0, 220)}{briefing.situation.length > 220 ? '…' : ''}
         </p>
+      ) : (
+        <p className="text-[12px] text-white/30 italic border-t border-white/[0.06] pt-3 mt-1">No situation written yet — click ✎ Edit.</p>
       )}
+      <div className="border-t border-white/[0.06] pt-3 mt-3">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">Scored on</span>
+        {dims.length === 0 ? (
+          <p className="text-[12px] text-white/30 italic mt-1">No rubric dimensions yet.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            {dims.map(d => (
+              <span key={d.name} title={d.description} className="text-[11px] px-2 py-0.5 rounded-md bg-emerald-400/[0.08] text-emerald-200/80 border border-emerald-400/20">{d.name}</span>
+            ))}
+          </div>
+        )}
+      </div>
     </BlockShell>
   )
 }

@@ -2,6 +2,7 @@
 // Covers: narrative, Key Data (contextPanels), choices (text + quality + target).
 
 import { useState } from 'react'
+import { useImmersive } from '../ImmersiveContext'
 import type { ScenarioNode, Choice, ContextPanel, QualitySignal } from '@id/types'
 import {
   EditShell, Field, TextInput, Textarea, SelectInput, SectionLabel, AddButton, RemoveButton,
@@ -29,6 +30,8 @@ interface Props {
 
 export function DecisionEditor({ node, allNodes, onDone }: Props) {
   const [narrative, setNarrative] = useState(node.narrative ?? '')
+  const [audioScript, setAudioScript] = useState(node.audioScript ?? '')
+  const immersive = useImmersive()
   const [panels, setPanels] = useState<ContextPanel[]>(node.contextPanels ?? [])
   const [choices, setChoices] = useState<Choice[]>(node.choices ?? [])
 
@@ -115,7 +118,13 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
   // ── Save ───────────────────────────────────────────────────────────────────
 
   function handleDone() {
-    onDone({ ...node, narrative, contextPanels: panels.length ? panels : undefined, choices })
+    onDone({
+      ...node,
+      narrative,
+      audioScript: immersive && audioScript.trim() ? audioScript : undefined,
+      contextPanels: panels.length ? panels : undefined,
+      choices,
+    })
   }
 
   return (
@@ -129,6 +138,17 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
           placeholder="The question or scenario the candidate is responding to."
         />
       </Field>
+
+      {immersive && (
+        <Field label="Audio script — what the interviewer says aloud (optional; defaults to the narrative)">
+          <Textarea
+            value={audioScript}
+            onChange={e => setAudioScript(e.target.value)}
+            rows={3}
+            placeholder="Spoken version of the question. Keep it conversational; changing it marks the rendered video stale."
+          />
+        </Field>
+      )}
 
       {/* Key Data panels */}
       <div className="flex flex-col gap-2">
