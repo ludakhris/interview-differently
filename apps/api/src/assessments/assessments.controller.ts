@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Req, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common'
 import { AdminGuard } from '../auth/admin.guard'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
 import { AssessmentsService, type DeliveryInput } from './assessments.service'
@@ -52,6 +52,11 @@ export class AssessmentsAdminController {
   @Get('deliveries/:id/results')
   results(@Param('id') id: string) {
     return this.service.deliveryResults(id)
+  }
+
+  @Get('institutions/:institutionId/assessments')
+  prePost(@Param('institutionId') institutionId: string, @Query('cohortId') cohortId?: string) {
+    return this.service.institutionPrePost(institutionId, cohortId || undefined)
   }
 
   @Post('deliveries/:id/invite')

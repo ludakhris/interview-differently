@@ -147,7 +147,7 @@ export function AdminInstitutionHeatmapPage() {
           <AnalyticsTabs
             institutionId={institutionId}
             active="heatmap"
-            available={['overview', 'engagement', 'heatmap']}
+            available={['overview', 'engagement', 'heatmap', 'assessments']}
           />
         </div>
 

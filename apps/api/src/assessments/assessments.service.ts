@@ -309,6 +309,104 @@ export class AssessmentsService {
     }
   }
 
+  // ── Institution analytics: pre ↔ post ────────────────────────────────────
+  //
+  // Deliveries on the same assessment + cohort whose labels start with "pre"
+  // and "post" form a pair. Averages are per-student percentages averaged
+  // across submitted attempts (not pooled question counts), and the delta is
+  // *paired*: only students who submitted both sides contribute, so a
+  // dropout between pre and post doesn't masquerade as improvement.
+
+  async institutionPrePost(institutionId: string, cohortId?: string) {
+    const institution = await this.prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { id: true, name: true },
+    })
+    if (!institution) throw new NotFoundException(`Institution ${institutionId} not found`)
+    const cohort = cohortId
+      ? await this.prisma.cohort.findFirst({ where: { id: cohortId, institutionId }, select: { id: true, name: true } })
+      : null
+    if (cohortId && !cohort) throw new NotFoundException(`Cohort ${cohortId} not found in this institution`)
+
+    const deliveries = await this.prisma.assessmentDelivery.findMany({
+      where: { cohort: { institutionId, ...(cohortId ? { id: cohortId } : {}) } },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        assessment: { select: { id: true, title: true, sections: true } },
+        cohort: { select: { id: true, name: true } },
+        attempts: { where: { submittedAt: { not: null } }, select: { userId: true, sectionScores: true } },
+      },
+    })
+
+    // Group by (assessment, cohort); newest matching delivery wins per side.
+    type D = (typeof deliveries)[number]
+    const groups = new Map<string, { assessment: D['assessment']; cohort: D['cohort']; pre?: D; post?: D }>()
+    for (const d of deliveries) {
+      const key = `${d.assessmentId}:${d.cohortId}`
+      const g = groups.get(key) ?? { assessment: d.assessment, cohort: d.cohort }
+      const label = d.label.trim().toLowerCase()
+      if (label.startsWith('pre') && !g.pre) g.pre = d
+      else if (label.startsWith('post') && !g.post) g.post = d
+      groups.set(key, g)
+    }
+
+    const userIds = [...new Set(deliveries.flatMap((d) => d.attempts.map((a) => a.userId)))]
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, email: true, displayName: true },
+    })
+    const userById = new Map(users.map((u) => [u.id, u]))
+
+    const pairs = [...groups.values()]
+      .filter((g) => g.pre || g.post)
+      .map((g) => {
+        const sections = (g.assessment.sections as unknown as AssessmentSection[]).map((s) => ({ id: s.id, title: s.title }))
+        const side = (d?: D) => new Map((d?.attempts ?? []).map((a) => [a.userId, pctBySection(a.sectionScores as unknown as SectionScore[] | null)]))
+        const pre = side(g.pre)
+        const post = side(g.post)
+        const ids = [...new Set([...pre.keys(), ...post.keys()])].sort((a, b) => {
+          const ua = userById.get(a), ub = userById.get(b)
+          return (ua?.displayName ?? ua?.email ?? a).localeCompare(ub?.displayName ?? ub?.email ?? b)
+        })
+        const keys = ['overall', ...sections.map((s) => s.id)]
+        const students = ids.map((userId, index) => {
+          const u = userById.get(userId)
+          const p = pre.get(userId) ?? null
+          const q = post.get(userId) ?? null
+          return {
+            userId,
+            anonymousLabel: `Student ${String(index + 1).padStart(2, '0')}`,
+            displayName: u?.displayName ?? null,
+            email: u?.email ?? null,
+            pre: p,
+            post: q,
+            delta: p && q ? q.overall - p.overall : null,
+          }
+        })
+        const both = students.filter((st) => st.pre && st.post)
+        const avg = (rows: Record<string, number>[]) =>
+          Object.fromEntries(keys.map((k) => [k, rows.length ? Math.round(rows.reduce((n, r) => n + r[k], 0) / rows.length) : null]))
+        return {
+          assessmentId: g.assessment.id,
+          assessmentTitle: g.assessment.title,
+          cohort: g.cohort,
+          sections,
+          pre: g.pre ? { deliveryId: g.pre.id, label: g.pre.label, submittedCount: pre.size } : null,
+          post: g.post ? { deliveryId: g.post.id, label: g.post.label, submittedCount: post.size } : null,
+          averages: {
+            pre: avg([...pre.values()]),
+            post: avg([...post.values()]),
+            // paired: same students on both sides
+            delta: avg(both.map((st) => Object.fromEntries(keys.map((k) => [k, st.post![k] - st.pre![k]])))),
+            pairedCount: both.length,
+          },
+          students,
+        }
+      })
+
+    return { institution, cohort, pairs }
+  }
+
   // ── Student ──────────────────────────────────────────────────────────────
 
   /** Deliveries the user can see: their cohorts with the assessments tool on (admins: all). */
@@ -539,4 +637,13 @@ function draw<T>(items: T[], n: number | null): T[] {
 function stripAnswer(q: AssessmentQuestion) {
   if (q.type === 'mc') return { id: q.id, type: 'mc' as const, prompt: q.prompt, options: q.options }
   return { id: q.id, type: 'sql' as const, prompt: q.prompt, ordered: q.ordered, strictColumns: q.strictColumns }
+}
+
+/** overall + per-section percentages for one submitted attempt. */
+function pctBySection(scores: SectionScore[] | null): Record<string, number> {
+  const out: Record<string, number> = {}
+  const o = overall(scores ?? [])
+  out.overall = o.percent
+  for (const s of scores ?? []) out[s.sectionId] = s.total ? Math.round((s.correct / s.total) * 100) : 0
+  return out
 }

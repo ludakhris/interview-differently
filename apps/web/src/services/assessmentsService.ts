@@ -241,3 +241,43 @@ export async function acceptInvite(getToken: GetToken, code: string): Promise<{ 
   const res = await authedFetch(getToken, `/invites/${encodeURIComponent(code)}/accept`, { method: 'POST' })
   return res.json() as Promise<{ attemptId: string; submitted: boolean }>
 }
+
+// ── Institution analytics: pre ↔ post ──────────────────────────────────────
+
+export interface PrePostStudent {
+  userId: string
+  anonymousLabel: string
+  displayName: string | null
+  email: string | null
+  pre: Record<string, number> | null // 'overall' + sectionId → percent
+  post: Record<string, number> | null
+  delta: number | null // post.overall − pre.overall, students with both only
+}
+
+export interface PrePostPair {
+  assessmentId: string
+  assessmentTitle: string
+  cohort: { id: string; name: string }
+  sections: { id: string; title: string }[]
+  pre: { deliveryId: string; label: string; submittedCount: number } | null
+  post: { deliveryId: string; label: string; submittedCount: number } | null
+  averages: {
+    pre: Record<string, number | null>
+    post: Record<string, number | null>
+    delta: Record<string, number | null>
+    pairedCount: number
+  }
+  students: PrePostStudent[]
+}
+
+export interface PrePostResponse {
+  institution: { id: string; name: string }
+  cohort: { id: string; name: string } | null
+  pairs: PrePostPair[]
+}
+
+export async function fetchPrePost(getToken: GetToken, institutionId: string, cohortId?: string): Promise<PrePostResponse> {
+  const qs = cohortId ? `?cohortId=${encodeURIComponent(cohortId)}` : ''
+  const res = await authedFetch(getToken, `/admin/institutions/${institutionId}/assessments${qs}`)
+  return res.json() as Promise<PrePostResponse>
+}

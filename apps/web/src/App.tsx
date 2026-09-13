@@ -17,6 +17,7 @@ import { AdminInstitutionsPage } from '@/pages/AdminInstitutionsPage'
 import { AdminInstitutionAnalyticsPage } from '@/pages/AdminInstitutionAnalyticsPage'
 import { AdminInstitutionEngagementPage } from '@/pages/AdminInstitutionEngagementPage'
 import { AdminInstitutionHeatmapPage } from '@/pages/AdminInstitutionHeatmapPage'
+import { AdminInstitutionAssessmentsPage } from '@/pages/AdminInstitutionAssessmentsPage'
 import { AdminStudentDetailPage } from '@/pages/AdminStudentDetailPage'
 import { AdminDatasetsPage } from '@/pages/AdminDatasetsPage'
 import { SqlSandboxPage } from '@/pages/SqlSandboxPage'
@@ -103,6 +104,7 @@ export default function App() {
       <Route path="/admin/institutions/:institutionId/analytics" element={<AdminRoute><AdminInstitutionAnalyticsPage /></AdminRoute>} />
       <Route path="/admin/institutions/:institutionId/engagement" element={<AdminRoute><AdminInstitutionEngagementPage /></AdminRoute>} />
       <Route path="/admin/institutions/:institutionId/heatmap" element={<AdminRoute><AdminInstitutionHeatmapPage /></AdminRoute>} />
+      <Route path="/admin/institutions/:institutionId/assessments" element={<AdminRoute><AdminInstitutionAssessmentsPage /></AdminRoute>} />
       <Route path="/admin/institutions/:institutionId/students/:userId" element={<AdminRoute><AdminStudentDetailPage /></AdminRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
