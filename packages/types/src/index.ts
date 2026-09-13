@@ -696,7 +696,7 @@ export type ToolKey = (typeof TOOL_KEYS)[number]
 export const TOOL_META: Record<ToolKey, { label: string; description: string; path: string; live: boolean }> = {
   'sql-sandbox': {
     label: 'SQL Sandbox',
-    description: 'Write and run SQL against a cohort dataset in a private in-browser Postgres.',
+    description: 'Write and run SQL against a cohort dataset in a private in-browser Postgres database instance.',
     path: '/tools/sql',
     live: true,
   },

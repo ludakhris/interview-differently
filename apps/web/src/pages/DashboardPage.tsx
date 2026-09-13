@@ -397,7 +397,9 @@ export function DashboardPage() {
                 const available = meta.live
                 const blurb =
                   key === 'sql-sandbox' && datasets.length > 0
-                    ? `Write and run SQL against ${datasets.length === 1 ? datasets[0].name : `${datasets.length} datasets`}.`
+                    ? datasets.length === 1
+                      ? `Write and run SQL against the "${datasets[0].name}" dataset in a private in-browser Postgres database instance.`
+                      : `Write and run SQL against ${datasets.length} datasets in a private in-browser Postgres database instance.`
                     : key === 'sql-sandbox'
                       ? 'No datasets assigned to your cohorts yet.'
                       : meta.description
