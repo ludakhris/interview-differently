@@ -1,6 +1,6 @@
 // BuilderV2Page — the document-model scenario editor.
 //
-// Route: /builder/v2/:scenarioId  (AdminRoute guarded)
+// Route: /builder/:scenarioId  (AdminRoute guarded); /builder/v2/:id redirects here
 // Legacy graph canvas lives on at /builder/:scenarioId (renamed to "Advanced").
 //
 // Phase A: read-only document shell + phases rail.
@@ -73,7 +73,7 @@ export function BuilderV2Page() {
 
   function handlePreview() {
     sessionStorage.setItem(`builder-preview-${scenarioId}`, JSON.stringify(scenario))
-    navigate(`/scenario/${scenarioId}/play?builderPreview=true&from=v2`)
+    navigate(`/scenario/${scenarioId}/play?builderPreview=true`)
   }
 
   function handleInsert(phaseId: string, kind: EntityKind) {

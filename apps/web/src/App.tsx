@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { SignIn, SignUp } from '@clerk/clerk-react'
 import { LandingPage } from '@/pages/LandingPage'
 import { DashboardPage } from '@/pages/DashboardPage'
@@ -34,6 +34,11 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
 import { useUserSync } from '@/hooks/useUserSync'
 import { useRegisterToken } from '@/hooks/useRegisterToken'
+
+function BuilderV2Redirect() {
+  const { scenarioId } = useParams()
+  return <Navigate to={`/builder/${scenarioId}`} replace />
+}
 
 function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const [searchParams] = useSearchParams()
@@ -89,10 +94,12 @@ export default function App() {
       <Route path="/scenario/:scenarioId/immersive/:sessionId/feedback" element={<ProtectedRoute><ImmersiveFeedbackPage /></ProtectedRoute>} />
       <Route path="/builder" element={<AdminRoute><BuilderListPage /></AdminRoute>} />
       <Route path="/builder/new" element={<AdminRoute><BuilderSetupPage /></AdminRoute>} />
-      {/* v2 document editor — default authoring path */}
-      <Route path="/builder/v2/:scenarioId" element={<AdminRoute><BuilderV2Page /></AdminRoute>} />
+      {/* Document editor — the builder (#24 Phase G) */}
+      <Route path="/builder/:scenarioId" element={<AdminRoute><BuilderV2Page /></AdminRoute>} />
       {/* Legacy graph canvas — kept as "Advanced" mode */}
-      <Route path="/builder/:scenarioId" element={<AdminRoute><BuilderCanvasPage /></AdminRoute>} />
+      <Route path="/builder/:scenarioId/advanced" element={<AdminRoute><BuilderCanvasPage /></AdminRoute>} />
+      {/* Old v2 URL — bookmarks / preview back-links */}
+      <Route path="/builder/v2/:scenarioId" element={<BuilderV2Redirect />} />
       <Route path="/tools/sql" element={<ProtectedRoute><SqlSandboxPage /></ProtectedRoute>} />
       <Route path="/tools/assessments" element={<ProtectedRoute><AssessmentsPage /></ProtectedRoute>} />
       <Route path="/tools/assessments/attempt/:attemptId" element={<ProtectedRoute><AssessmentAttemptPage /></ProtectedRoute>} />

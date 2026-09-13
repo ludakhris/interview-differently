@@ -101,7 +101,7 @@ export function BuilderCanvasPage() {
   useEffect(() => {
     if (isPreview && scenario) {
       sessionStorage.setItem(`builder-preview-${scenarioId}`, JSON.stringify(scenario))
-      navigate(`/scenario/${scenarioId}/play?builderPreview=true`)
+      navigate(`/scenario/${scenarioId}/play?builderPreview=true&from=advanced`)
     }
   }, [isPreview, scenario, scenarioId, navigate])
 
@@ -222,7 +222,7 @@ export function BuilderCanvasPage() {
 
   function handlePreview() {
     sessionStorage.setItem(`builder-preview-${scenarioId}`, JSON.stringify(currentScenario))
-    navigate(`/scenario/${scenarioId}/play?builderPreview=true`)
+    navigate(`/scenario/${scenarioId}/play?builderPreview=true&from=advanced`)
   }
 
   function handlePublish() {

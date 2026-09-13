@@ -78,7 +78,7 @@ export function V2Toolbar({ scenarioId, title, saveStatus, onTitleChange, onSave
 
       {/* Advanced (graph) */}
       <button
-        onClick={() => navigate(`/builder/${scenarioId}`)}
+        onClick={() => navigate(`/builder/${scenarioId}/advanced`)}
         className="text-[12px] font-semibold text-white/35 hover:text-white/60 transition-colors"
         title="Open the graph canvas (advanced)"
       >

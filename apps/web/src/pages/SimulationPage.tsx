@@ -108,8 +108,8 @@ function SimulationContent({
 }) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const builderPath = searchParams.get('from') === 'v2'
-    ? `/builder/v2/${scenarioId}`
+  const builderPath = searchParams.get('from') === 'advanced'
+    ? `/builder/${scenarioId}/advanced`
     : `/builder/${scenarioId}`
   const meta = trackMeta[scenario.track]
 

@@ -113,7 +113,7 @@ export const REGISTRY: EntityDescriptor[] = [
     emoji: '🗄️',
     blurb: 'Candidate writes and runs SQL against a dataset; graded by comparing result sets to your reference query.',
     example: 'e.g. "Which states have more than 10 customers?"',
-    screenshot: 'tools-assessments/04-student-attempt.png',
+    screenshot: 'quant/04-sql-question.png',
   },
   // ── Nodes ───────────────────────────────────────────────────────────────────
   {
