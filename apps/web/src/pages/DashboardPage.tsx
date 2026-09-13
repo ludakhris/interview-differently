@@ -1,15 +1,18 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth, useUser } from '@clerk/clerk-react'
 import { useEffect, useMemo, useState } from 'react'
+import { ClipboardCheck, Database } from 'lucide-react'
 import { Nav } from '@/components/Nav'
 import { Footer } from '@/components/Footer'
 import { TrackIcon } from '@/components/TrackIcon'
 import { useScenarios } from '@/hooks/useScenarios'
 import { useProfile } from '@/hooks/useProfile'
 import { fetchImmersiveSessionsForUser, type ImmersiveSessionSummary } from '@/services/immersiveService'
+import { fetchMyDatasets, type DatasetSummary } from '@/services/datasetsService'
+import { fetchMyTools } from '@/services/toolsService'
 import type { ResultSummary } from '@/services/resultsService'
 import type { Scenario } from '@id/types'
-import { BUSINESS_CASE_SUBCATEGORY_LABELS } from '@id/types'
+import { BUSINESS_CASE_SUBCATEGORY_LABELS, TOOL_META, type ToolKey } from '@id/types'
 
 // Track order on the dashboard. Tracks not listed here fall to the end alphabetically.
 const TRACK_ORDER: string[] = ['business case', 'operations', 'business', 'risk', 'customer-success', 'general']
@@ -65,6 +68,9 @@ function groupScenarios(scenarios: Scenario[]) {
   })
 }
 
+// Accent for tool cards — sits alongside the per-track colours from trackMeta.
+const TOOL_COLOR = '#2d9e5f'
+
 function subcategoryLabel(key: string): string {
   if (key === 'uncategorized') return 'Other'
   return (BUSINESS_CASE_SUBCATEGORY_LABELS as Record<string, string>)[key] ?? key
@@ -73,10 +79,22 @@ function subcategoryLabel(key: string): string {
 export function DashboardPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isSignedIn, userId } = useAuth()
+  const { isSignedIn, userId, getToken } = useAuth()
   const { user } = useUser()
   const isAdmin = user?.publicMetadata?.role === 'admin'
   const { scenarios, trackMeta, isLoading, error } = useScenarios()
+  const [tools, setTools] = useState<ToolKey[]>([])
+  const [datasets, setDatasets] = useState<DatasetSummary[]>([])
+
+  useEffect(() => {
+    if (!isSignedIn) return
+    fetchMyTools(getToken)
+      .then(setTools)
+      .catch(() => {/* non-critical — Tools section just stays hidden */})
+    fetchMyDatasets(getToken)
+      .then(setDatasets)
+      .catch(() => {/* non-critical */})
+  }, [isSignedIn, getToken])
   const groupedScenarios = useMemo(() => groupScenarios(scenarios), [scenarios])
   const refreshKey = (location.state as { refreshedAt?: number } | null)?.refreshedAt
   const { profile, isLoading: profileLoading } = useProfile(isSignedIn ? userId : null, refreshKey)
@@ -365,8 +383,75 @@ export function DashboardPage() {
           </div>
         )}
 
+        {/* ── Tools (#25) — one card per tool enabled on any of the user's cohorts ── */}
+        {isSignedIn && tools.length > 0 && (
+          <div className="mb-12">
+            <h3 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid mb-5">
+              Tools
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {tools.map((key) => {
+                const meta = TOOL_META[key]
+                const Icon = key === 'sql-sandbox' ? Database : ClipboardCheck
+                // Assessments ships in Phase 2 of #25 — flag exists, page doesn't yet.
+                const available = key === 'sql-sandbox'
+                const blurb =
+                  key === 'sql-sandbox' && datasets.length > 0
+                    ? `Write and run SQL against ${datasets.length === 1 ? datasets[0].name : `${datasets.length} datasets`}.`
+                    : key === 'sql-sandbox'
+                      ? 'No datasets assigned to your cohorts yet.'
+                      : meta.description
+                return (
+                  <div
+                    key={key}
+                    onClick={() => available && navigate(meta.path)}
+                    className={`bg-[#111111] rounded-2xl border border-white/10 overflow-hidden transition-all group ${
+                      available ? 'hover:border-white/20 hover:-translate-y-0.5 cursor-pointer' : 'opacity-60'
+                    }`}
+                  >
+                    <div className="h-1.5 w-full" style={{ backgroundColor: TOOL_COLOR }} />
+                    <div className="p-5">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div
+                          className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
+                          style={{ backgroundColor: `${TOOL_COLOR}22`, color: TOOL_COLOR }}
+                        >
+                          <Icon size={20} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: TOOL_COLOR }}>
+                            {available ? 'Tool' : 'Coming soon'}
+                          </p>
+                          <h4 className="mt-0.5 font-display font-bold text-[15px] text-[#f5f3ee] leading-snug">{meta.label}</h4>
+                        </div>
+                      </div>
+                      <p className="text-[12px] text-slate-mid leading-relaxed">{blurb}</p>
+                      {available && (
+                        <p className="mt-3 text-right">
+                          <span
+                            className="text-[11px] font-semibold group-hover:translate-x-1 transition-transform inline-block"
+                            style={{ color: TOOL_COLOR }}
+                          >
+                            Open →
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {isSignedIn && isAdmin && (
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-6">
+            <button
+              onClick={() => navigate('/admin/datasets')}
+              className="text-[13px] font-semibold text-[#2d9e5f] hover:text-[#2d9e5f]/80 transition-colors underline-offset-2 hover:underline"
+            >
+              Manage datasets →
+            </button>
             <button
               onClick={() => navigate('/builder')}
               className="text-[13px] font-semibold text-[#2d9e5f] hover:text-[#2d9e5f]/80 transition-colors underline-offset-2 hover:underline"

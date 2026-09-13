@@ -639,3 +639,26 @@ export interface ApiResponse<T> {
   data: T
   error?: string
 }
+
+// ── Tools (#25) ───────────────────────────────────────────────────────────────
+//
+// Cohort-scoped feature flags. An admin enables a tool per cohort; members of
+// that cohort then see it under "Tools" on their dashboard. Mirrored in
+// apps/api/src/tools/tool-keys.ts.
+
+export const TOOL_KEYS = ['sql-sandbox', 'assessments'] as const
+
+export type ToolKey = (typeof TOOL_KEYS)[number]
+
+export const TOOL_META: Record<ToolKey, { label: string; description: string; path: string }> = {
+  'sql-sandbox': {
+    label: 'SQL Sandbox',
+    description: 'Write and run SQL against a cohort dataset in a private in-browser Postgres.',
+    path: '/tools/sql',
+  },
+  assessments: {
+    label: 'Assessments',
+    description: 'Pre/post assessments with multiple-choice and hands-on SQL questions.',
+    path: '/tools/assessments',
+  },
+}

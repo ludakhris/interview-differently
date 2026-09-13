@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client'
 import { readFileSync, readdirSync } from 'fs'
 import { join, resolve } from 'path'
+import { createHash } from 'crypto'
 import * as yaml from 'js-yaml'
+import { SqlRunnerService } from '../src/sql-runner/sql-runner.service'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Scenario = any
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -197,6 +199,42 @@ async function main() {
   }
 
   console.log(`\n✅ Done. ${seeded} new scenario(s) seeded.`)
+
+  await seedDatasets()
+}
+
+/**
+ * Seeds SQL sandbox datasets from prisma/datasets/*.sql (#25). File name =
+ * slug; the first `-- ` comment line = display name. Like scenarios, the file
+ * is the source of truth: an existing row is refreshed when its script
+ * changed (hash mismatch), and left alone otherwise.
+ */
+async function seedDatasets() {
+  const dir = resolve(__dirname, 'datasets')
+  const files = readdirSync(dir).filter((f) => f.endsWith('.sql'))
+  if (files.length === 0) return
+  console.log('🌱 Seeding SQL datasets...')
+  const runner = new SqlRunnerService()
+  for (const file of files) {
+    const slug = file.replace(/\.sql$/, '')
+    const setupSql = readFileSync(join(dir, file), 'utf-8')
+    const setupHash = createHash('sha256').update(setupSql).digest('hex')
+    const existing = await prisma.dataset.findUnique({ where: { slug } })
+    if (existing?.setupHash === setupHash) {
+      console.log(`  = ${slug} unchanged.`)
+      continue
+    }
+    const name = setupSql.match(/^--\s*(.+)$/m)?.[1]?.trim() ?? slug
+    const schemaSummary = (await runner.introspect(setupSql)) as unknown as object[]
+    const data = { name, setupSql, setupHash, schemaSummary }
+    if (existing) {
+      await prisma.dataset.update({ where: { slug }, data })
+      console.log(`  ↻ ${slug} refreshed.`)
+    } else {
+      await prisma.dataset.create({ data: { slug, ...data } })
+      console.log(`  ✓ ${slug} — ${name}`)
+    }
+  }
 }
 
 main()

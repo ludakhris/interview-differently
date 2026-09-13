@@ -17,6 +17,8 @@ import {
   type Institution,
   type InstitutionDetail,
 } from '@/services/institutionsService'
+import { listCohortTools, setCohortTool, type CohortToolState } from '@/services/toolsService'
+import { TOOL_META } from '@id/types'
 
 /**
  * Admin page for managing institutions, cohorts, and cohort members.
@@ -470,6 +472,8 @@ function CohortRow({
 
       {expanded && (
         <div className="border-t border-white/10 p-4 bg-[#0a0a0a]">
+          <CohortToolsToggles getToken={getToken} cohortId={cohort.id} />
+
           <AddMemberForm
             getToken={getToken}
             cohortId={cohort.id}
@@ -542,6 +546,60 @@ function CohortRow({
               Delete cohort
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * One switch per known tool (#25). Enabling a tool is what makes it appear
+ * under "Tools" on members' dashboards — assigning datasets alone doesn't.
+ */
+function CohortToolsToggles({ cohortId, getToken }: { cohortId: string; getToken: () => Promise<string | null> }) {
+  const [tools, setTools] = useState<CohortToolState[] | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    listCohortTools(getToken, cohortId)
+      .then(setTools)
+      .catch((e) => setErr(e instanceof Error ? e.message : 'Failed to load tools'))
+  }, [getToken, cohortId])
+
+  return (
+    <div className="mb-4 pb-4 border-b border-white/5">
+      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">Tools</p>
+      {err && <p className="text-[11px] text-red-400">{err}</p>}
+      {!tools ? (
+        <p className="text-[12px] text-slate-mid">Loading…</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {tools.map((t) => (
+            <button
+              key={t.toolKey}
+              type="button"
+              title={TOOL_META[t.toolKey].description}
+              onClick={async () => {
+                const next = !t.enabled
+                setTools((ts) => ts && ts.map((x) => (x.toolKey === t.toolKey ? { ...x, enabled: next } : x)))
+                try {
+                  await setCohortTool(getToken, cohortId, t.toolKey, next)
+                } catch (e) {
+                  setTools((ts) => ts && ts.map((x) => (x.toolKey === t.toolKey ? { ...x, enabled: !next } : x)))
+                  setErr(e instanceof Error ? e.message : 'Failed to update tool')
+                }
+              }}
+              className={`flex items-center gap-2 px-2.5 py-1 rounded-full text-[12px] border transition-colors ${
+                t.enabled
+                  ? 'bg-[#1a6b3c]/30 border-[#2d9e5f]/60 text-[#f5f3ee]'
+                  : 'border-white/10 text-slate-mid hover:border-white/30'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${t.enabled ? 'bg-[#2d9e5f]' : 'bg-white/20'}`} />
+              {TOOL_META[t.toolKey].label}
+              <span className="text-[10px] text-white/40">{t.enabled ? 'on' : 'off'}</span>
+            </button>
+          ))}
         </div>
       )}
     </div>

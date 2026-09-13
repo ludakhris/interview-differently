@@ -12,4 +12,8 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  // PGlite loads its WASM relative to its own module URL — pre-bundling breaks that.
+  optimizeDeps: {
+    exclude: ['@electric-sql/pglite'],
+  },
 })

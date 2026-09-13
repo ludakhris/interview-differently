@@ -187,6 +187,8 @@ model Cohort {
   updatedAt     DateTime     @updatedAt
   institution   Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   memberships   Membership[]
+  datasets      CohortDataset[]
+  tools         CohortToolConfig[]
 
   @@unique([institutionId, joinKey])
   @@index([institutionId])
@@ -226,4 +228,55 @@ model ScenarioMediaAsset {
   @@unique([scenarioId, nodeId])
   @@index([scenarioId])
   @@index([status])
+}
+
+// ── Tools (#25) ─────────────────────────────────────────────────────────────
+//
+// Tools are cohort-scoped feature flags. A cohort sees a tool only when an
+// admin has explicitly enabled it here — assigning datasets or scheduling an
+// assessment is not enough on its own. Known keys live in src/tools/tool-keys.ts.
+
+model CohortToolConfig {
+  cohortId  String
+  toolKey   String   // 'sql-sandbox' | 'assessments'
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cohort    Cohort   @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+
+  @@id([cohortId, toolKey])
+}
+
+// ── Tools: SQL datasets ─────────────────────────────────────────────────────
+//
+// A Dataset is a self-contained Postgres setup script. Every PGlite instance
+// (browser sandbox or server-side grader) starts empty and runs `setupSql`,
+// so every student sees identical data. `setupHash` lets later attempts pin
+// the exact script they were graded against.
+
+model Dataset {
+  id            String          @id @default(uuid())
+  slug          String          @unique
+  name          String
+  description   String?
+  dialect       String          @default("postgres") // reserved — only postgres runs today
+  setupSql      String
+  setupHash     String // sha256 of setupSql
+  schemaSummary Json // [{ table, columns: [{ name, type }], rowCount }] introspected on save
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  cohorts       CohortDataset[]
+}
+
+// Which datasets a cohort can open in the SQL sandbox. A cohort with at least
+// one dataset has the sandbox tool enabled — there is no separate flag.
+model CohortDataset {
+  cohortId  String
+  datasetId String
+  createdAt DateTime @default(now())
+  cohort    Cohort   @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  dataset   Dataset  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@id([cohortId, datasetId])
+  @@index([datasetId])
 }

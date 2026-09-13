@@ -18,6 +18,8 @@ import { AdminInstitutionAnalyticsPage } from '@/pages/AdminInstitutionAnalytics
 import { AdminInstitutionEngagementPage } from '@/pages/AdminInstitutionEngagementPage'
 import { AdminInstitutionHeatmapPage } from '@/pages/AdminInstitutionHeatmapPage'
 import { AdminStudentDetailPage } from '@/pages/AdminStudentDetailPage'
+import { AdminDatasetsPage } from '@/pages/AdminDatasetsPage'
+import { SqlSandboxPage } from '@/pages/SqlSandboxPage'
 import { RequestScenarioPage } from '@/pages/RequestScenarioPage'
 import { ExhibitGalleryPage } from '@/pages/dev/ExhibitGalleryPage'
 import { QuantGalleryPage } from '@/pages/dev/QuantGalleryPage'
@@ -78,10 +80,12 @@ export default function App() {
       <Route path="/builder/v2/:scenarioId" element={<AdminRoute><BuilderV2Page /></AdminRoute>} />
       {/* Legacy graph canvas — kept as "Advanced" mode */}
       <Route path="/builder/:scenarioId" element={<AdminRoute><BuilderCanvasPage /></AdminRoute>} />
+      <Route path="/tools/sql" element={<ProtectedRoute><SqlSandboxPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/welcome" element={<ProtectedRoute><WelcomePage /></ProtectedRoute>} />
       {/* Legacy alias — old admin-only path now goes to the unified settings page */}
       <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />
+      <Route path="/admin/datasets" element={<AdminRoute><AdminDatasetsPage /></AdminRoute>} />
       <Route path="/admin/institutions" element={<AdminRoute><AdminInstitutionsPage /></AdminRoute>} />
       <Route path="/admin/institutions/:institutionId/analytics" element={<AdminRoute><AdminInstitutionAnalyticsPage /></AdminRoute>} />
       <Route path="/admin/institutions/:institutionId/engagement" element={<AdminRoute><AdminInstitutionEngagementPage /></AdminRoute>} />
