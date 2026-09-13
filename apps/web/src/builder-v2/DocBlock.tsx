@@ -13,6 +13,7 @@ import { DecisionEditor } from './editors/DecisionEditor'
 import { TransitionEditor } from './editors/TransitionEditor'
 import { FeedbackEditor } from './editors/FeedbackEditor'
 import { QuantEditor } from './editors/QuantEditor'
+import { SqlQuestionEditor } from './editors/SqlQuestionEditor'
 import { TextExhibitEditor } from './editors/TextExhibitEditor'
 import { DataTableEditor } from './editors/DataTableEditor'
 import { ProfitTreeEditor } from './editors/ProfitTreeEditor'
@@ -109,6 +110,8 @@ export function NodeBlock({ node, allNodes, isEditing, onEditRequest, onUpdate }
       return <FeedbackBlock node={node} onEditRequest={onEditRequest} />
     case 'quant':
       return <QuantBlock node={node} onEditRequest={onEditRequest} />
+    case 'sql':
+      return <SqlBlock node={node} onEditRequest={onEditRequest} />
     default:
       return null
   }
@@ -133,6 +136,9 @@ function NodeEditor({
     case 'quant':
       if (!node.quant) return null
       return <QuantEditor node={node} allNodes={allNodes} onDone={onDone} />
+    case 'sql':
+      if (!node.sql) return null
+      return <SqlQuestionEditor node={node} onDone={onDone} />
     default:
       return null
   }
@@ -284,6 +290,29 @@ function QuantBlock({ node, onEditRequest }: { node: ScenarioNode; onEditRequest
       {spec.hint && (
         <div className="mt-3 pl-3 border-l-2 border-amber-400/50 text-amber-300/80 text-[11.5px] leading-relaxed">
           Hint available — reveals formula, caps at <span className="font-semibold">Proficient</span>
+        </div>
+      )}
+    </BlockShell>
+  )
+}
+
+function SqlBlock({ node, onEditRequest }: { node: ScenarioNode; onEditRequest: () => void }) {
+  const spec = node.sql
+  if (!spec) return null
+  return (
+    <BlockShell emoji="🗄️" kindLabel="SQL Question" onEditRequest={onEditRequest}>
+      <p className="text-[14px] text-white/85 leading-relaxed mb-3">
+        {spec.prompt || <span className="italic text-white/30">No prompt yet</span>}
+      </p>
+      <div className="flex items-center gap-2 mb-2 text-[11px] text-white/40">
+        <span className="font-mono px-1.5 py-0.5 rounded bg-white/5">{spec.datasetSlug}</span>
+        {spec.ordered && <span>· ordered</span>}
+        {spec.strictColumns && <span>· strict columns</span>}
+      </div>
+      <pre className="px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.06] font-mono text-[12px] text-sky-300/90 whitespace-pre-wrap">{spec.referenceSql}</pre>
+      {spec.hint && (
+        <div className="mt-3 pl-3 border-l-2 border-amber-400/50 text-amber-300/80 text-[11.5px] leading-relaxed">
+          Hint available — caps at <span className="font-semibold">Proficient</span>
         </div>
       )}
     </BlockShell>

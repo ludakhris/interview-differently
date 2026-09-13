@@ -59,6 +59,21 @@ export class SandboxDb {
     return { columns, rows, rowCount: all.length, command: last.command ?? '', durationMs }
   }
 
+  /**
+   * Runs `sql` inside a transaction that is always rolled back, so grading a
+   * submission (student query, then reference query) can't be skewed by
+   * anything the candidate changed while exploring. Errors propagate.
+   */
+  async runIsolated(sql: string): Promise<SandboxResult> {
+    if (!this.db) throw new Error('Dataset not loaded')
+    await this.db.exec('BEGIN')
+    try {
+      return await this.run(sql)
+    } finally {
+      await this.db.exec('ROLLBACK')
+    }
+  }
+
   async close(): Promise<void> {
     if (this.db) {
       await this.db.close()

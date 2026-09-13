@@ -68,6 +68,11 @@ function PhaseChip({ view, accentColor }: { view: PhaseView; accentColor: string
           {index + 1}
         </span>
         <span className="whitespace-nowrap">{phase.label}</span>
+        {view.totalCount > 1 && (
+          <span className="font-mono text-[10px] text-white/50">
+            {view.answeredCount}/{view.totalCount}
+          </span>
+        )}
       </span>
     )
   }

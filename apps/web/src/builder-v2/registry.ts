@@ -23,6 +23,7 @@ export type EntityKind =
   // quant
   | 'numeric-range'
   | 'structured-quant'
+  | 'sql-question'
   // nodes
   | 'decision'
   | 'transition'
@@ -104,6 +105,15 @@ export const REGISTRY: EntityDescriptor[] = [
     blurb: 'Several linked numbers, each with its own band. Carry one answer into the next.',
     example: 'e.g. TAM → SAM → SOM',
     screenshot: 'quant/03-structured-quant.png',
+  },
+  {
+    kind: 'sql-question',
+    group: 'quant',
+    label: 'SQL Question',
+    emoji: '🗄️',
+    blurb: 'Candidate writes and runs SQL against a dataset; graded by comparing result sets to your reference query.',
+    example: 'e.g. "Which states have more than 10 customers?"',
+    screenshot: 'tools-assessments/04-student-attempt.png',
   },
   // ── Nodes ───────────────────────────────────────────────────────────────────
   {
@@ -268,6 +278,19 @@ export function seedNode(kind: EntityKind, id: string): ScenarioNode {
             derivation: 'Explain the derivation here.',
           },
         } satisfies QuantSpec,
+      }
+    case 'sql-question':
+      return {
+        nodeId: id,
+        type: 'sql',
+        narrative: 'PLACEHOLDER — replace with the business ask for this case.',
+        sql: {
+          prompt: 'PLACEHOLDER — what does the business need from the data? e.g. "Which states have more than 10 customers? Return the state and its count."',
+          context: 'Replace this with who is asking and why. The dataset below must be the one this case is about.',
+          datasetSlug: 'sql-fundamentals',
+          referenceSql: '-- Replace with the reference query; its result set is the answer key.\nSELECT state, COUNT(*) AS customer_count\nFROM customers\nGROUP BY state\nHAVING COUNT(*) > 10;',
+        },
+        sqlSignalDimensions: ['Technical Accuracy'],
       }
     case 'structured-quant':
       return {

@@ -11,6 +11,7 @@ import { PhaseStepper } from '@/components/PhaseStepper'
 import { InlineExhibits } from '@/components/InlineExhibits'
 import { KeyDataPanel, isKeyDataLayout } from '@/components/keydata/KeyDataPanel'
 import { QuantNode } from '@/components/quant/QuantNode'
+import { SqlNode } from '@/components/sql/SqlNode'
 import { saveResult, recordSimulationAttempt } from '@/services/resultsService'
 import { useSimulation } from '@/hooks/useSimulation'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
@@ -142,6 +143,9 @@ function SimulationContent({
     buildCarryForward,
     markHintUsed,
     quantAnswers,
+    submitSql,
+    advanceSql,
+    sqlAnswers,
   } = useSimulation(scenario)
 
   // Gate the entire simulation for unauthenticated visitors — case content
@@ -174,8 +178,8 @@ function SimulationContent({
   // Treat both decision answers and quant submissions as "node answered" so
   // the phase stepper marks them complete consistently.
   const answeredNodeIds = useMemo(
-    () => new Set([...Object.keys(choicesMade), ...Object.keys(quantAnswers)]),
-    [choicesMade, quantAnswers],
+    () => new Set([...Object.keys(choicesMade), ...Object.keys(quantAnswers), ...Object.keys(sqlAnswers)]),
+    [choicesMade, quantAnswers, sqlAnswers],
   )
   const phaseViews = useMemo(
     () => buildPhaseViews(scenario, currentNode.nodeId, answeredNodeIds),
@@ -220,7 +224,7 @@ function SimulationContent({
   }
 
   const stepLabel =
-    currentNode.type === 'decision'
+    currentNode.type === 'decision' || currentNode.type === 'quant' || currentNode.type === 'sql'
       ? `Step ${stepNumber} of ${totalDecisionNodes}`
       : 'Outcome'
 
@@ -334,6 +338,33 @@ function SimulationContent({
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={advanceQuant}
+                    className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                  >
+                    Continue
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── SQL node ── */}
+          {currentNode.type === 'sql' && currentNode.sql && (
+            <div className="max-w-4xl mx-auto px-6 py-8 animate-slide-up">
+              {hasPhases && (
+                <div className="mb-6">
+                  <InlineExhibits
+                    phase={currentPhase}
+                    catalog={exhibitCatalog}
+                    accentColor={meta?.color}
+                    label={exhibitsLabel}
+                  />
+                </div>
+              )}
+              <SqlNode key={currentNode.nodeId} node={currentNode} onSubmit={submitSql} onHintUsed={markHintUsed} />
+              {sqlAnswers[currentNode.nodeId] && currentNode.nextNodeId && (
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={advanceSql}
                     className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
                   >
                     Continue

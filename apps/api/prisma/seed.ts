@@ -24,7 +24,7 @@ interface YamlChoice {
 
 interface YamlNode {
   id: string
-  type: 'decision' | 'transition' | 'feedback' | 'quant'
+  type: 'decision' | 'transition' | 'feedback' | 'quant' | 'sql'
   narrative: string
   choices?: YamlChoice[]
   next?: string
@@ -34,6 +34,8 @@ interface YamlNode {
   responsePrompt?: string
   quant?: unknown                      // shape enforced by web-side TS layer
   quantSignalDimensions?: string[]
+  sql?: unknown
+  sqlSignalDimensions?: string[]
 }
 
 interface YamlPhase {
@@ -84,9 +86,11 @@ function yamlToScenario(yamlStr: string): Scenario {
     if (n.responsePrompt) Object.assign(base, { responsePrompt: n.responsePrompt })
     if (n.quant) Object.assign(base, { quant: n.quant })
     if (n.quantSignalDimensions?.length) Object.assign(base, { quantSignalDimensions: n.quantSignalDimensions })
-    // Quant nodes carry their next pointer via `next` (same as transitions);
-    // map to nextNodeId in the runtime shape.
-    if (n.type === 'quant' && n.next) Object.assign(base, { nextNodeId: n.next })
+    if (n.sql) Object.assign(base, { sql: n.sql })
+    if (n.sqlSignalDimensions?.length) Object.assign(base, { sqlSignalDimensions: n.sqlSignalDimensions })
+    // Quant / sql nodes carry their next pointer via `next` (same as
+    // transitions); map to nextNodeId in the runtime shape.
+    if ((n.type === 'quant' || n.type === 'sql') && n.next) Object.assign(base, { nextNodeId: n.next })
 
     if (n.type === 'decision' && n.choices) {
       const choices: Choice[] = n.choices.map((c) => ({

@@ -14,6 +14,11 @@ export interface PhaseView {
   index: number
   status: PhaseStatus
   isImplicit: boolean
+  // Interactive nodes in this phase and how many the candidate has answered —
+  // lets the stepper show "2/3" so a phase with several SQL steps doesn't
+  // feel like a black box.
+  answeredCount: number
+  totalCount: number
 }
 
 /**
@@ -78,11 +83,24 @@ export function buildPhaseViews(
     )
   }
 
+  const interactive = new Set(
+    (scenario.nodes ?? [])
+      .filter(n => n.type === 'decision' || n.type === 'quant' || n.type === 'sql')
+      .map(n => n.nodeId),
+  )
   return phases.map((phase, index) => {
     const status: PhaseStatus =
       index < activeIndex ? 'complete'
         : index === activeIndex ? 'active'
           : 'locked'
-    return { phase, index, status, isImplicit }
+    const ids = phase.nodeIds.filter(id => interactive.has(id))
+    return {
+      phase,
+      index,
+      status,
+      isImplicit,
+      answeredCount: ids.filter(id => answeredNodeIds.has(id)).length,
+      totalCount: ids.length,
+    }
   })
 }

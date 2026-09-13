@@ -9,6 +9,7 @@ import type {
   QuantAnswer,
   QuantFieldResult,
   QuantNodeResultSummary,
+  SqlNodeResultSummary,
   PhaseScore,
 } from '@id/types'
 import { getPhaseForNode } from '@/lib/phases'
@@ -28,6 +29,8 @@ interface SimulationState {
   // submitting. Used to dock the quant signal (cap at proficient) and to
   // flag the submission on the results page.
   hintsUsed: string[]
+  // SQL submissions at sql nodes. Keyed by nodeId; one submission per node.
+  sqlAnswers: Record<string, { sql: string; correct: boolean; reason?: string }>
   startedAt: string
 }
 
@@ -76,7 +79,7 @@ export function useSimulation(scenario: Scenario) {
   const nodes = useMemo(() => scenario.nodes ?? [], [scenario.nodes])
   const firstNode = useMemo(
     () =>
-      nodes.find((n) => n.type === 'decision' || n.type === 'quant') ?? nodes[0],
+      nodes.find((n) => n.type === 'decision' || n.type === 'quant' || n.type === 'sql') ?? nodes[0],
     [nodes],
   )
 
@@ -86,6 +89,7 @@ export function useSimulation(scenario: Scenario) {
     quantAnswers: {},
     quantResults: {},
     quantSignals: [],
+    sqlAnswers: {},
     hintsUsed: [],
     startedAt: new Date().toISOString(),
   })
@@ -155,6 +159,25 @@ export function useSimulation(scenario: Scenario) {
   // feedback. Separated from `submitQuant` so the feedback panel can render
   // before transitioning.
   const advanceQuant = useCallback(() => {
+    if (!currentNode.nextNodeId) return
+    setIsTransitioning(true)
+    setTimeout(() => {
+      setState((prev) => ({ ...prev, currentNodeId: currentNode.nextNodeId! }))
+      setIsTransitioning(false)
+    }, 300)
+  }, [currentNode])
+
+  // SQL submission — records the graded outcome for the current node. The
+  // signal is derived at compute time (correct → strong, wrong → developing,
+  // hint caps at proficient) so the hint dock rule lives in one place.
+  const submitSql = useCallback(
+    (payload: { sql: string; correct: boolean; reason?: string }) => {
+      setState((prev) => ({ ...prev, sqlAnswers: { ...prev.sqlAnswers, [currentNode.nodeId]: payload } }))
+    },
+    [currentNode],
+  )
+
+  const advanceSql = useCallback(() => {
     if (!currentNode.nextNodeId) return
     setIsTransitioning(true)
     setTimeout(() => {
@@ -240,6 +263,15 @@ export function useSimulation(scenario: Scenario) {
       if (hintsUsedSet.has(nodeId) && quality === 'strong') quality = 'proficient'
       for (const dim of dims) pushSignal(nodeId, { dimension: dim, quality })
     }
+    // SQL signals — same hint dock as quant.
+    for (const [nodeId, answer] of Object.entries(state.sqlAnswers)) {
+      const node = scenario.nodes.find((n) => n.nodeId === nodeId)
+      if (!node) continue
+      const dims = node.sqlSignalDimensions ?? ['Technical Accuracy']
+      let quality: ScoreQuality = answer.correct ? 'strong' : 'developing'
+      if (hintsUsedSet.has(nodeId) && quality === 'strong') quality = 'proficient'
+      for (const dim of dims) pushSignal(nodeId, { dimension: dim, quality })
+    }
 
     // ── Overall dimension scores (existing behaviour) ───────────────────────
     const dimensionScores: DimensionScore[] = scenario.rubric.dimensions.map((dim) =>
@@ -267,6 +299,23 @@ export function useSimulation(scenario: Scenario) {
           band: r.band,
         })),
         ...(variables ? { variables } : {}),
+        ...(hintsUsedSet.has(nodeId) ? { hintUsed: true } : {}),
+      })
+    }
+
+    // ── SQL results catalogue ───────────────────────────────────────────────
+    const sqlResults: SqlNodeResultSummary[] = []
+    for (const [nodeId, answer] of Object.entries(state.sqlAnswers)) {
+      const node = scenario.nodes.find((n) => n.nodeId === nodeId)
+      if (!node?.sql) continue
+      const phase = getPhaseForNode(scenario, nodeId)
+      sqlResults.push({
+        nodeId,
+        ...(phase ? { phaseId: phase.id } : {}),
+        prompt: node.sql.prompt,
+        sql: answer.sql,
+        correct: answer.correct,
+        ...(answer.reason ? { reason: answer.reason } : {}),
         ...(hintsUsedSet.has(nodeId) ? { hintUsed: true } : {}),
       })
     }
@@ -299,6 +348,7 @@ export function useSimulation(scenario: Scenario) {
           : 0
         // Phase quant results (catalogue filtered by phase membership).
         const phaseQuant = quantResults.filter((q) => q.phaseId === phase.id)
+        const phaseSql = sqlResults.filter((q) => q.phaseId === phase.id)
         return {
           phaseId: phase.id,
           label: phase.label,
@@ -306,6 +356,7 @@ export function useSimulation(scenario: Scenario) {
           overallScore: phaseOverall,
           dimensionScores: phaseDimensionScores,
           quantResults: phaseQuant,
+          ...(phaseSql.length ? { sqlResults: phaseSql } : {}),
         }
       })
     }
@@ -321,8 +372,9 @@ export function useSimulation(scenario: Scenario) {
       choiceSequence: Object.values(state.choicesMade),
       ...(phaseScores ? { phaseScores } : {}),
       ...(quantResults.length ? { quantResults } : {}),
+      ...(sqlResults.length ? { sqlResults } : {}),
     }
-  }, [scenario, state.choicesMade, state.quantResults, state.quantAnswers, state.hintsUsed, userId])
+  }, [scenario, state.choicesMade, state.quantResults, state.quantAnswers, state.sqlAnswers, state.hintsUsed, userId])
 
   const isComplete = currentNode?.type === 'feedback'
   // Step counter counts decision *and* quant submissions — both are
@@ -330,9 +382,10 @@ export function useSimulation(scenario: Scenario) {
   const stepNumber =
     Object.keys(state.choicesMade).length +
     Object.keys(state.quantAnswers).length +
+    Object.keys(state.sqlAnswers).length +
     1
   const totalInteractiveNodes = scenario.nodes.filter(
-    (n) => n.type === 'decision' || n.type === 'quant',
+    (n) => n.type === 'decision' || n.type === 'quant' || n.type === 'sql',
   ).length
 
   return {
@@ -355,5 +408,9 @@ export function useSimulation(scenario: Scenario) {
     quantAnswers: state.quantAnswers,
     quantResults: state.quantResults,
     hintsUsed: state.hintsUsed,
+    // SQL API
+    submitSql,
+    advanceSql,
+    sqlAnswers: state.sqlAnswers,
   }
 }

@@ -152,16 +152,30 @@ export class DatasetsService {
     return rows
   }
 
+  /**
+   * Full dataset for a signed-in user. Allowed when the user is an admin, a
+   * member of a cohort with the sandbox on and this dataset assigned, or the
+   * dataset is referenced by an `sql` node in a published scenario — a
+   * simulation player needs the script regardless of cohort tooling.
+   */
   async getForUser(userId: string, slug: string) {
     const d = await this.prisma.dataset.findUnique({ where: { slug } })
     if (!d) throw new NotFoundException(`Dataset ${slug} not found`)
-    if (!(await this.clerk.isAdmin(userId))) {
-      const allowed = await this.prisma.cohortDataset.count({
-        where: { datasetId: d.id, cohort: this.sandboxCohortFor(userId) },
-      })
-      if (allowed === 0) throw new NotFoundException(`Dataset ${slug} not found`)
-    }
-    return d
+    if (await this.clerk.isAdmin(userId)) return d
+    const viaCohort = await this.prisma.cohortDataset.count({
+      where: { datasetId: d.id, cohort: this.sandboxCohortFor(userId) },
+    })
+    if (viaCohort > 0) return d
+    if (await this.referencedByPublishedScenario(slug)) return d
+    throw new NotFoundException(`Dataset ${slug} not found`)
+  }
+
+  private async referencedByPublishedScenario(slug: string): Promise<boolean> {
+    const rows = await this.prisma.scenario.findMany({ where: { status: 'published' }, select: { data: true } })
+    return rows.some((r) => {
+      const nodes = (r.data as { nodes?: { type?: string; sql?: { datasetSlug?: string } }[] }).nodes ?? []
+      return nodes.some((n) => n.type === 'sql' && n.sql?.datasetSlug === slug)
+    })
   }
 
   /** Prisma filter: a cohort the user belongs to with 'sql-sandbox' switched on. */

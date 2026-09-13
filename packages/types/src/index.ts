@@ -62,6 +62,8 @@ export interface PhaseScore {
   // Quant submissions made during this phase, in answered order. Empty when
   // the phase has no quant nodes.
   quantResults: QuantNodeResultSummary[]
+  // SQL submissions made during this phase. Absent for legacy results.
+  sqlResults?: SqlNodeResultSummary[]
 }
 
 export interface ScenarioResult {
@@ -80,11 +82,12 @@ export interface ScenarioResult {
   // Top-level catalog of every quant submission across the simulation, in
   // answered order. Convenient for the "What to work on" panel.
   quantResults?: QuantNodeResultSummary[]
+  sqlResults?: SqlNodeResultSummary[]
 }
 
 // ── Scenario ─────────────────────────────────────────────────────────────────
 
-export type NodeType = 'decision' | 'transition' | 'feedback' | 'quant'
+export type NodeType = 'decision' | 'transition' | 'feedback' | 'quant' | 'sql'
 
 export type TrackType =
   | 'operations'
@@ -92,6 +95,7 @@ export type TrackType =
   | 'business case'
   | 'risk'
   | 'customer-success'
+  | 'data-analytics'
   | 'general'
   | 'custom'
 
@@ -232,6 +236,10 @@ export interface ScenarioNode {
   responsePrompt?: string              // open-ended question the candidate answers verbally
   // quant nodes — required when type === 'quant', ignored otherwise
   quant?: QuantSpec
+  // sql nodes — required when type === 'sql', ignored otherwise
+  sql?: SqlSpec
+  // Rubric dimensions an sql node's outcome feeds (default 'Technical Accuracy').
+  sqlSignalDimensions?: string[]
   // Per-rubric-dimension signals contributed when a quant answer lands
   // entirely in the ideal / accepted / out-of-range bracket. Strong when all
   // fields are ideal, proficient when all are at least accepted, developing
@@ -488,6 +496,35 @@ export interface StructuredQuant extends QuantNodeBase {
 }
 
 export type QuantSpec = NumericRangeQuant | StructuredQuant
+
+// ── SQL questions (#25 Phase 4) ───────────────────────────────────────────────
+//
+// An sql node drops a SQL workbench into the simulation: the candidate runs
+// queries freely against a Dataset (same in-browser PGlite as the sandbox),
+// then submits one. Grading is a result-set comparison against
+// `referenceSql` — the same rules the Assessments tool uses. Correct → strong,
+// wrong → developing; revealing the hint caps at proficient, like quant.
+
+export interface SqlSpec {
+  prompt: string                       // the business ask, e.g. "Which states have more than 10 customers?"
+  context?: string                     // optional framing shown above the prompt
+  datasetSlug: string                  // Dataset.slug (Admin → Datasets)
+  referenceSql: string                 // author's query; result set is the answer key
+  ordered?: boolean                    // row order must match
+  strictColumns?: boolean              // column names must match
+  hint?: string                        // optional nudge; using it docks the signal to proficient
+}
+
+// Outcome of an sql node submission, preserved for the results page.
+export interface SqlNodeResultSummary {
+  nodeId: string
+  phaseId?: string
+  prompt: string
+  sql: string                          // what the candidate submitted
+  correct: boolean
+  reason?: string                      // mismatch explanation when incorrect
+  hintUsed?: boolean
+}
 
 // Answer submitted by the candidate. numeric-range answers carry a single
 // `value`; structured-quant answers carry one entry per field, keyed by fieldId.

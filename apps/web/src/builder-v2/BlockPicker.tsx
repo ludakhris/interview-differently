@@ -87,7 +87,7 @@ type GroupId = 'exhibit' | 'quant' | 'node'
 const GROUP_TABS: { id: GroupId; label: string }[] = [
   { id: 'node', label: 'Decisions & Flow' },
   { id: 'exhibit', label: 'Exhibits' },
-  { id: 'quant', label: 'Quant' },
+  { id: 'quant', label: 'Graded Questions' },
 ]
 
 interface Props {

@@ -1,5 +1,5 @@
 import jsYaml from 'js-yaml'
-import type { Scenario, ScenarioNode, ScenarioPhase, Exhibit, Choice, ScoreQuality, QuantSpec } from '@id/types'
+import type { Scenario, ScenarioNode, ScenarioPhase, Exhibit, Choice, ScoreQuality, QuantSpec, SqlSpec } from '@id/types'
 
 // ── YAML schema types ─────────────────────────────────────────────────────────
 
@@ -12,7 +12,7 @@ interface YamlChoice {
 
 interface YamlNode {
   id: string
-  type: 'decision' | 'transition' | 'feedback' | 'quant'
+  type: 'decision' | 'transition' | 'feedback' | 'quant' | 'sql'
   narrative: string
   contextPanels?: { label: string; value: string; type: 'alert' | 'info' | 'metric' }[]
   chart?: Scenario['nodes'][number]['chart']
@@ -22,6 +22,8 @@ interface YamlNode {
   responsePrompt?: string
   quant?: QuantSpec
   quantSignalDimensions?: string[]
+  sql?: SqlSpec
+  sqlSignalDimensions?: string[]
 }
 
 interface YamlPhase {
@@ -88,6 +90,8 @@ export function yamlToScenario(yamlStr: string): Scenario {
       ...(n.quantSignalDimensions?.length
         ? { quantSignalDimensions: n.quantSignalDimensions }
         : {}),
+      ...(n.sql ? { sql: n.sql } : {}),
+      ...(n.sqlSignalDimensions?.length ? { sqlSignalDimensions: n.sqlSignalDimensions } : {}),
     }
   })
 
@@ -182,6 +186,8 @@ export function scenarioToYaml(scenario: Scenario): string {
         ...(n.quantSignalDimensions?.length
           ? { quantSignalDimensions: n.quantSignalDimensions }
           : {}),
+        ...(n.sql ? { sql: n.sql } : {}),
+        ...(n.sqlSignalDimensions?.length ? { sqlSignalDimensions: n.sqlSignalDimensions } : {}),
       }
     }),
   }

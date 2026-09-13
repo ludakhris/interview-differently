@@ -4,6 +4,7 @@
 
 import type { PhaseScore } from '@id/types'
 import { QuantComparePanel } from './QuantComparePanel'
+import { SqlResultPanel } from './SqlResultPanel'
 
 const qualityLabel = { strong: 'Strong', proficient: 'Proficient', developing: 'Developing' } as const
 const qualityColor = { strong: '#2d9e5f', proficient: '#d4830a', developing: '#c0392b' } as const
@@ -80,7 +81,15 @@ export function PhaseScoreCard({ phase, index }: Props) {
           </div>
         )}
 
-        {phase.dimensionScores.length === 0 && phase.quantResults.length === 0 && (
+        {phase.sqlResults && phase.sqlResults.length > 0 && (
+          <div className="space-y-3 pt-1">
+            {phase.sqlResults.map((q) => (
+              <SqlResultPanel key={q.nodeId} result={q} />
+            ))}
+          </div>
+        )}
+
+        {phase.dimensionScores.length === 0 && phase.quantResults.length === 0 && !phase.sqlResults?.length && (
           <p className="text-[12px] text-white/35 italic">
             No scored interaction in this phase.
           </p>

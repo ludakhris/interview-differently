@@ -104,6 +104,9 @@ export function FeedbackPage() {
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: qualityColor[overallQuality] }} />
             Overall: {qualityLabel[overallQuality]}
           </div>
+          <p className="mt-3 text-[12px] text-white/40">
+            Average of your {result.dimensionScores.length} competency scores below.
+          </p>
         </div>
 
         <div className="mb-8">
