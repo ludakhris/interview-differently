@@ -150,13 +150,23 @@ export async function importStaticScenario(scenario: Scenario): Promise<Scenario
   return apiFetch<Scenario>('/scenarios', { method: 'POST', body: JSON.stringify(imported) })
 }
 
-export async function duplicateScenario(id: string): Promise<Scenario | null> {
+/**
+ * Copies a scenario into a new draft. `title` / `institutionId` override the
+ * source (the setup page's Clone path); with neither it's the list's quick
+ * "Duplicate". Node/exhibit ids are kept — they only need to be unique within
+ * a scenario.
+ */
+export async function duplicateScenario(
+  id: string,
+  opts: { title?: string; institutionId?: string | null } = {},
+): Promise<Scenario | null> {
   const original = await getScenario(id)
   if (!original) return null
   const copy: Scenario = {
     ...original,
     scenarioId: crypto.randomUUID(),
-    title: `${original.title} (copy)`,
+    title: opts.title?.trim() || `${original.title} (copy)`,
+    ...('institutionId' in opts ? { institutionId: opts.institutionId ?? null } : {}),
     builderMeta: {
       ...original.builderMeta!,
       status: 'draft',
@@ -164,4 +174,22 @@ export async function duplicateScenario(id: string): Promise<Scenario | null> {
     },
   }
   return apiFetch<Scenario>('/scenarios', { method: 'POST', body: JSON.stringify(copy) })
+}
+
+/** Creates a *draft* from an imported YAML/JSON scenario (unlike importStaticScenario, which publishes). */
+export async function createScenarioFromImport(
+  scenario: Scenario,
+  opts: { title?: string; institutionId?: string | null } = {},
+): Promise<Scenario> {
+  const draft: Scenario = {
+    ...scenario,
+    title: opts.title?.trim() || scenario.title,
+    ...('institutionId' in opts ? { institutionId: opts.institutionId ?? null } : {}),
+    builderMeta: {
+      status: 'draft',
+      lastEditedAt: new Date().toISOString(),
+      positions: scenario.builderMeta?.positions ?? autoLayoutPositions(scenario),
+    },
+  }
+  return apiFetch<Scenario>('/scenarios', { method: 'POST', body: JSON.stringify(draft) })
 }

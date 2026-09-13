@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
 import { MobileWarning } from '@/components/builder/MobileWarning'
-import { createScenario } from '@/services/builderService'
+import { createScenario, createScenarioFromImport, duplicateScenario, listScenarios } from '@/services/builderService'
+import { yamlToScenario } from '@/lib/yamlScenario'
+import type { Scenario } from '@id/types'
 import { useOwnerOptions } from '@/hooks/useOwnerOptions'
 import { RUBRIC_TEMPLATES, TRACK_LABELS } from '@/lib/builderTemplates'
 import { BUSINESS_CASE_SUBCATEGORIES, BUSINESS_CASE_SUBCATEGORY_LABELS } from '@id/types'
@@ -75,11 +77,51 @@ export function BuilderSetupPage() {
   const [subcategory, setSubcategory] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
 
+  // Start from: blank form, clone an existing scenario, or import a YAML / JSON file (#24 Phase E)
+  const [startFrom, setStartFrom] = useState<'blank' | 'clone' | 'import'>('blank')
+  const [sources, setSources] = useState<Scenario[]>([])
+  const [cloneId, setCloneId] = useState('')
+  const [importDoc, setImportDoc] = useState<{ name: string; scenario: Scenario } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (startFrom === 'clone' && sources.length === 0) listScenarios().then(setSources).catch(() => setSources([]))
+  }, [startFrom, sources.length])
+
   const selectedTrackOption = TRACK_OPTIONS.find(t => t.value === track)
   const previewDimensions = track ? (RUBRIC_TEMPLATES[track] ?? []) : []
   const showSubcategory = track === 'business case'
 
   async function handleCreate() {
+    const owner = ownerId === undefined ? (owners[0]?.id ?? null) : ownerId
+    if (startFrom === 'clone') {
+      if (!cloneId) { setError('Pick a scenario to clone.'); return }
+      setBusy(true)
+      try {
+        const copy = await duplicateScenario(cloneId, { title: title.trim() || undefined, institutionId: owner })
+        if (!copy) throw new Error('Could not load the source scenario.')
+        navigate(`/builder/${copy.scenarioId}`)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Clone failed.')
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
+    if (startFrom === 'import') {
+      if (!importDoc) { setError('Choose a YAML or JSON file to import.'); return }
+      setBusy(true)
+      try {
+        const created = await createScenarioFromImport(importDoc.scenario, { title: title.trim() || undefined, institutionId: owner })
+        navigate(`/builder/${created.scenarioId}`)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Import failed.'
+        setError(/409|already/i.test(msg) ? `A scenario with id "${importDoc.scenario.scenarioId}" already exists — change the id in the file.` : msg)
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
     if (!title.trim()) {
       setError('Please enter a scenario title.')
       return
@@ -92,13 +134,29 @@ export function BuilderSetupPage() {
       setError('Please select a business case subcategory.')
       return
     }
-    const scenario = await createScenario(
-      title.trim(),
-      track,
-      showSubcategory ? subcategory : undefined,
-      ownerId === undefined ? (owners[0]?.id ?? null) : ownerId,
-    )
+    const scenario = await createScenario(title.trim(), track, showSubcategory ? subcategory : undefined, owner)
     navigate(`/builder/${scenario.scenarioId}`)
+  }
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setError(null)
+    const reader = new FileReader()
+    reader.onload = ev => {
+      try {
+        const text = String(ev.target?.result ?? '')
+        const scenario = file.name.endsWith('.json') ? (JSON.parse(text) as Scenario) : yamlToScenario(text)
+        if (!scenario?.scenarioId || !scenario.nodes) throw new Error('not a scenario')
+        setImportDoc({ name: file.name, scenario })
+        if (!title.trim()) setTitle(scenario.title)
+      } catch {
+        setImportDoc(null)
+        setError(`Couldn't read ${file.name} — expected a scenario YAML or JSON export.`)
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
   }
 
   return (
@@ -115,10 +173,78 @@ export function BuilderSetupPage() {
           </h2>
         </div>
 
+        {/* Start from */}
+        <div className="mb-8">
+          <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+            Start from
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {(
+              [
+                { value: 'blank', label: 'Blank', hint: 'Pick a track, start writing' },
+                { value: 'clone', label: 'Clone', hint: 'Copy an existing scenario' },
+                { value: 'import', label: 'Import', hint: 'YAML or JSON file' },
+              ] as const
+            ).map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => { setStartFrom(opt.value); setError(null) }}
+                className="text-left rounded-xl p-3 border transition-all"
+                style={{
+                  background: startFrom === opt.value ? '#2d9e5f15' : '#111111',
+                  borderColor: startFrom === opt.value ? '#2d9e5f' : 'rgba(255,255,255,0.1)',
+                }}
+              >
+                <div className="text-[13px] font-bold text-[#f5f3ee]">{opt.label}</div>
+                <div className="text-[11px] text-white/30">{opt.hint}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {startFrom === 'clone' && (
+          <div className="mb-8">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+              Scenario to clone
+            </label>
+            <select
+              value={cloneId}
+              onChange={e => { setCloneId(e.target.value); setError(null) }}
+              className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[15px] text-[#f5f3ee] focus:outline-none focus:border-white/30 transition-colors"
+            >
+              <option value="">{sources.length ? '— pick one —' : 'Loading…'}</option>
+              {sources.map(sc => (
+                <option key={sc.scenarioId} value={sc.scenarioId}>
+                  {sc.title} · {TRACK_LABELS[sc.track] ?? sc.track}{sc.institutionName ? ` · ${sc.institutionName}` : ''}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-white/30 mt-2">Track, rubric, phases, exhibits and questions are copied. The copy starts as a draft.</p>
+          </div>
+        )}
+
+        {startFrom === 'import' && (
+          <div className="mb-8">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+              File
+            </label>
+            <input ref={fileRef} type="file" accept=".yaml,.yml,.json" className="hidden" onChange={handleFile} />
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="w-full text-left bg-[#111111] border border-dashed border-white/15 hover:border-white/30 rounded-xl px-4 py-3 text-[13px] text-white/60 transition-colors"
+            >
+              {importDoc ? `✓ ${importDoc.name} — ${importDoc.scenario.nodes.length} blocks, ${importDoc.scenario.phases?.length ?? 0} phases` : 'Choose a .yaml or .json scenario file…'}
+            </button>
+            <p className="text-[11px] text-white/30 mt-2">
+              Write the YAML offline (AI-assisted works well — see <span className="font-mono">apps/web/src/lib/scenarios/</span> for the format). Imports start as drafts.
+            </p>
+          </div>
+        )}
+
         {/* Title input */}
         <div className="mb-8">
           <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
-            Scenario Title
+            Scenario Title{startFrom !== 'blank' && <span className="normal-case tracking-normal font-normal text-white/25"> — optional, keeps the source title if blank</span>}
           </label>
           <input
             type="text"
@@ -152,6 +278,7 @@ export function BuilderSetupPage() {
           </div>
         )}
 
+        {startFrom === 'blank' && (<>
         {/* Track selector */}
         <div className="mb-8">
           <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
@@ -254,6 +381,8 @@ export function BuilderSetupPage() {
           </div>
         )}
 
+        </>)}
+
         {/* Error */}
         {error && (
           <div className="mb-6 flex items-center gap-2 text-amber-400 text-[13px]">
@@ -272,13 +401,13 @@ export function BuilderSetupPage() {
           </button>
           <button
             onClick={handleCreate}
-            disabled={!title.trim() || !track}
+            disabled={busy || (startFrom === 'blank' ? !title.trim() || !track : startFrom === 'clone' ? !cloneId : !importDoc)}
             className="flex-1 py-3 rounded-xl text-[13px] font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
-              background: !title.trim() || !track ? 'rgba(255,255,255,0.08)' : '#1a6b3c',
+              background: (startFrom === 'blank' ? !title.trim() || !track : startFrom === 'clone' ? !cloneId : !importDoc) ? 'rgba(255,255,255,0.08)' : '#1a6b3c',
             }}
           >
-            Create Scenario →
+            {busy ? 'Working…' : startFrom === 'clone' ? 'Clone Scenario →' : startFrom === 'import' ? 'Import as Draft →' : 'Create Scenario →'}
           </button>
         </div>
       </div>

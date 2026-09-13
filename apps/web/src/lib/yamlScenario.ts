@@ -211,3 +211,17 @@ export function downloadScenarioYaml(scenario: Scenario): void {
   a.click()
   URL.revokeObjectURL(url)
 }
+
+/** Raw scenario JSON — the exact document the builder stores. Ownership fields are stripped (they're set by the importer). */
+export function downloadScenarioJson(scenario: Scenario): void {
+  const doc: Scenario = { ...scenario }
+  delete doc.institutionId
+  delete doc.institutionName
+  const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${scenario.scenarioId}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}

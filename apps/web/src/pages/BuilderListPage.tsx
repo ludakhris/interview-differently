@@ -12,7 +12,7 @@ import {
   importStaticScenario,
 } from '@/services/builderService'
 import { TRACK_LABELS } from '@/lib/builderTemplates'
-import { downloadScenarioYaml, yamlToScenario } from '@/lib/yamlScenario'
+import { downloadScenarioYaml, downloadScenarioJson, yamlToScenario } from '@/lib/yamlScenario'
 import {
   bulkRenderAllMedia,
   type BulkRenderProgress,
@@ -220,6 +220,14 @@ export function BuilderListPage() {
   async function handleDuplicate(id: string) {
     await duplicateScenario(id)
     await refresh()
+  }
+
+  // Rows are stripped summaries — fetch the full document before exporting.
+  async function handleExport(id: string, format: 'yaml' | 'json') {
+    const full = await getScenario(id)
+    if (!full) { alert('Could not load the scenario to export.'); return }
+    if (format === 'yaml') downloadScenarioYaml(full)
+    else downloadScenarioJson(full)
   }
 
   return (
@@ -451,7 +459,8 @@ export function BuilderListPage() {
                             <RowMenu actions={[
                               { label: 'Edit', onClick: () => navigate(`/builder/${scenario.scenarioId}`) },
                               { label: 'Duplicate', onClick: () => handleDuplicate(scenario.scenarioId) },
-                              { label: 'Export YAML', onClick: () => downloadScenarioYaml(scenario) },
+                              { label: 'Export YAML', onClick: () => handleExport(scenario.scenarioId, 'yaml') },
+                              { label: 'Export JSON', onClick: () => handleExport(scenario.scenarioId, 'json') },
                               { label: 'Delete', onClick: () => setConfirmDelete(scenario.scenarioId), danger: true },
                             ]} />
                           )}
