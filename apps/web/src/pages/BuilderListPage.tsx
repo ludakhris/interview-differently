@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
@@ -77,6 +77,17 @@ const TRACK_COLORS: Record<string, string> = {
   'data-analytics': '#0a9396',
   general: '#7b3fa0',
   custom: '#888888',
+}
+
+const TRACK_ORDER: string[] = ['business case', 'data-analytics', 'operations', 'business', 'risk', 'customer-success', 'general', 'custom']
+
+// Filter / collapse prefs — per-browser conveniences, safe to lose.
+const PREF_KEY = 'builder-list-prefs'
+function readPref(k: string): string {
+  try { return (JSON.parse(localStorage.getItem(PREF_KEY) ?? '{}') as Record<string, string>)[k] ?? '' } catch { return '' }
+}
+function writePref(k: string, v: string) {
+  try { const all = JSON.parse(localStorage.getItem(PREF_KEY) ?? '{}'); all[k] = v; localStorage.setItem(PREF_KEY, JSON.stringify(all)) } catch { /* ignore */ }
 }
 
 function formatDate(iso: string): string {
@@ -172,20 +183,57 @@ export function BuilderListPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin])
 
-  // Group by owner: public first, then institutions alphabetically. Header
-  // rows only appear when there's more than one group.
-  const groups = (() => {
-    const map = new Map<string, { label: string; items: Scenario[] }>()
-    for (const s of scenarios) {
-      const key = s.institutionId ?? ''
-      if (!map.has(key)) map.set(key, { label: s.institutionName ?? 'Public', items: [] })
-      map.get(key)!.items.push(s)
+  // ── Search / filters / track groups (#29) ─────────────────────────────────
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published'>(() => (readPref('status') as 'all' | 'draft' | 'published') || 'all')
+  const [ownerFilter, setOwnerFilter] = useState<string>(() => readPref('owner') || '')
+  const [collapsedTracks, setCollapsedTracks] = useState<Set<string>>(() => new Set((readPref('collapsed') || '').split(',').filter(Boolean)))
+  const searchRef = useRef<HTMLInputElement>(null)
+  useEffect(() => { writePref('status', statusFilter) }, [statusFilter])
+  useEffect(() => { writePref('owner', ownerFilter) }, [ownerFilter])
+  useEffect(() => { writePref('collapsed', [...collapsedTracks].join(',')) }, [collapsedTracks])
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === '/' && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement)) {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
     }
-    return [...map.entries()]
-      .sort(([a, ga], [b, gb]) => (a === '' ? -1 : b === '' ? 1 : ga.label.localeCompare(gb.label)))
-      .map(([, g]) => g)
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
+
+  const ownerOptions = (() => {
+    const m = new Map<string, string>()
+    scenarios.forEach(s => m.set(s.institutionId ?? 'public', s.institutionName ?? 'Public'))
+    return [...m.entries()].map(([id, label]) => ({ id, label }))
   })()
-  const rows = groups.flatMap((g) => g.items)
+
+  const q = query.trim().toLowerCase()
+  const filtered = scenarios.filter(s => {
+    if (statusFilter !== 'all' && (s.builderMeta?.status ?? 'draft') !== statusFilter) return false
+    if (ownerFilter && (s.institutionId ?? 'public') !== ownerFilter) return false
+    if (!q) return true
+    const hay = [s.title, s.scenarioId, s.track, TRACK_LABELS[s.track], s.subcategory, s.institutionName, s.briefing?.role, s.briefing?.organisation]
+      .filter(Boolean).join(' ').toLowerCase()
+    return q.split(/\s+/).every(term => hay.includes(term))
+  })
+
+  const trackGroups = (() => {
+    const map = new Map<string, Scenario[]>()
+    filtered.forEach(s => { if (!map.has(s.track)) map.set(s.track, []); map.get(s.track)!.push(s) })
+    map.forEach(items => items.sort((a, b) => (b.builderMeta?.lastEditedAt ?? '').localeCompare(a.builderMeta?.lastEditedAt ?? '')))
+    return [...map.entries()]
+      .sort(([a], [b]) => {
+        const ia = TRACK_ORDER.indexOf(a), ib = TRACK_ORDER.indexOf(b)
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b)
+      })
+      .map(([track, items]) => ({ track, items }))
+  })()
+
+  function toggleTrack(track: string) {
+    setCollapsedTracks(prev => { const n = new Set(prev); if (n.has(track)) n.delete(track); else n.add(track); return n })
+  }
 
   function handleYamlImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -333,6 +381,46 @@ export function BuilderListPage() {
           )}
         </div>
 
+        {/* Search + filters */}
+        <div className="sticky top-0 z-10 -mx-2 px-2 py-3 bg-[#0a0a0a]/95 backdrop-blur border-b border-white/[0.06] mb-4 flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[220px]">
+            <input
+              ref={searchRef}
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search scenarios…  ( / )"
+              className="w-full bg-[#111111] border border-white/10 rounded-lg pl-3 pr-8 py-2 text-[13px] text-[#f5f3ee] placeholder:text-white/25 focus:outline-none focus:border-white/30 transition-colors"
+            />
+            {query && (
+              <button onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 text-[14px]" title="Clear">×</button>
+            )}
+          </div>
+          <div className="flex items-center rounded-lg border border-white/10 overflow-hidden text-[12px] font-medium">
+            {(['all', 'draft', 'published'] as const).map(v => (
+              <button
+                key={v}
+                onClick={() => setStatusFilter(v)}
+                className={`px-3 py-2 transition-colors ${statusFilter === v ? 'bg-white/10 text-[#f5f3ee]' : 'text-white/40 hover:text-white/70'}`}
+              >
+                {v === 'all' ? 'All' : v === 'draft' ? 'Drafts' : 'Published'}
+              </button>
+            ))}
+          </div>
+          {isAdmin && ownerOptions.length > 1 && (
+            <select
+              value={ownerFilter}
+              onChange={e => setOwnerFilter(e.target.value)}
+              className="bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[12px] text-white/70 focus:outline-none focus:border-white/30"
+            >
+              <option value="">All owners</option>
+              {ownerOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+          )}
+          <span className="text-[11px] text-white/30 ml-auto">
+            {filtered.length === scenarios.length ? `${scenarios.length} scenarios` : `${filtered.length} of ${scenarios.length}`}
+          </span>
+        </div>
+
         {/* Loading state */}
         {isLoading ? (
           <div className="bg-[#111111] border border-white/10 rounded-2xl p-16 text-center">
@@ -351,129 +439,108 @@ export function BuilderListPage() {
               Create First Scenario
             </button>
           </div>
-        ) : scenarios.length > 0 ? (
-          <div className="bg-[#111111] border border-white/10 rounded-2xl">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left text-[10px] font-bold uppercase tracking-widest text-white/30 px-6 py-4">
-                    Title
-                  </th>
-                  <th className="text-left text-[10px] font-bold uppercase tracking-widest text-white/30 px-4 py-4">
-                    Track
-                  </th>
-                  <th className="text-left text-[10px] font-bold uppercase tracking-widest text-white/30 px-4 py-4">
-                    Status
-                  </th>
-                  <th className="text-left text-[10px] font-bold uppercase tracking-widest text-white/30 px-4 py-4">
-                    Last edited
-                  </th>
-                  <th className="px-4 py-4" />
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((scenario, i) => {
-                  const trackColor = TRACK_COLORS[scenario.track] ?? '#888'
-                  const status = scenario.builderMeta?.status ?? 'draft'
-                  const lastEdited = scenario.builderMeta?.lastEditedAt ?? ''
-                  const group = groups.find((g) => g.items[0] === scenario)
-
-                  return (
-                    <Fragment key={scenario.scenarioId}>
-                    {groups.length > 1 && group && (
-                      <tr className="bg-[#0d0d0d] border-b border-white/5">
-                        <td colSpan={5} className="px-6 py-2 text-[10px] font-bold uppercase tracking-widest text-white/40">
-                          {group.label}
-                        </td>
-                      </tr>
-                    )}
-                    <tr
-                      className={`border-b border-white/5 hover:bg-white/3 transition-colors ${i === rows.length - 1 ? 'border-b-0' : ''}`}
-                    >
-                      <td className="px-6 py-4">
-                        <div
-                          className="flex items-center gap-3 cursor-pointer group"
-                          onClick={() => navigate(`/builder/${scenario.scenarioId}`)}
-                        >
-                          <div
-                            className="w-1 h-8 rounded-full flex-shrink-0"
-                            style={{ background: trackColor }}
-                          />
-                          <div>
-                            <p className="text-[14px] font-semibold text-[#f5f3ee] group-hover:text-white transition-colors">
-                              {scenario.title || 'Untitled Scenario'}
-                            </p>
-                            <p className="text-[11px] text-white/30">
-                              {(scenario.nodes ?? []).length} node{(scenario.nodes ?? []).length !== 1 ? 's' : ''}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span
-                          className="text-[11px] font-medium px-2 py-1 rounded-md"
-                          style={{
-                            color: trackColor,
-                            background: `${trackColor}18`,
-                          }}
-                        >
-                          {TRACK_LABELS[scenario.track] ?? scenario.track}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        {status === 'published' ? (
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#2d9e5f] bg-[#2d9e5f]/10 border border-[#2d9e5f]/20 px-2 py-1 rounded-md">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#2d9e5f]" />
-                            Published
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-1 rounded-md">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                            Draft
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className="text-[12px] text-white/30">
-                          {lastEdited ? formatDate(lastEdited) : '—'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex justify-end">
-                          {confirmDelete === scenario.scenarioId ? (
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => handleDelete(scenario.scenarioId)}
-                                className="text-[11px] text-red-400 hover:text-red-300 bg-red-400/10 border border-red-400/20 rounded-lg px-2 py-1.5 transition-all"
-                              >
-                                Confirm delete
-                              </button>
-                              <button
-                                onClick={() => setConfirmDelete(null)}
-                                className="text-[11px] text-white/30 hover:text-white/50 px-2 py-1.5"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <RowMenu actions={[
-                              { label: 'Edit', onClick: () => navigate(`/builder/${scenario.scenarioId}`) },
-                              { label: 'Duplicate', onClick: () => handleDuplicate(scenario.scenarioId) },
-                              { label: 'Export YAML', onClick: () => handleExport(scenario.scenarioId, 'yaml') },
-                              { label: 'Export JSON', onClick: () => handleExport(scenario.scenarioId, 'json') },
-                              { label: 'Delete', onClick: () => setConfirmDelete(scenario.scenarioId), danger: true },
-                            ]} />
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                    </Fragment>
-                  )
-                })}
-              </tbody>
-            </table>
+        ) : filtered.length === 0 ? (
+          <div className="bg-[#111111] border border-white/10 rounded-2xl p-10 text-center">
+            <p className="text-[13px] text-white/40">Nothing matches — <button onClick={() => { setQuery(''); setStatusFilter('all'); setOwnerFilter('') }} className="text-emerald-400 hover:underline">clear filters</button>.</p>
           </div>
-        ) : null}
+        ) : (
+          <div className="flex flex-col gap-3">
+            {trackGroups.map(group => {
+              const color = TRACK_COLORS[group.track] ?? '#888'
+              const collapsed = collapsedTracks.has(group.track) && !query
+              return (
+                <div key={group.track} className="bg-[#111111] border border-white/10 rounded-2xl overflow-hidden">
+                  <button
+                    onClick={() => toggleTrack(group.track)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/[0.03] transition-colors"
+                  >
+                    <span className="text-[10px] text-white/30 w-3">{collapsed ? '▸' : '▾'}</span>
+                    <span className="w-2 h-2 rounded-full flex-none" style={{ background: color }} />
+                    <span className="text-[13px] font-bold text-[#f5f3ee]">{TRACK_LABELS[group.track] ?? group.track}</span>
+                    <span className="text-[11px] text-white/30">{group.items.length}</span>
+                    <span className="ml-auto text-[10px] text-white/25">
+                      {group.items.filter(s => s.builderMeta?.status === 'published').length} published
+                    </span>
+                  </button>
+                  {!collapsed && (
+                    <ul className="border-t border-white/[0.06]">
+                      {group.items.map(scenario => {
+                        const status = scenario.builderMeta?.status ?? 'draft'
+                        const lastEdited = scenario.builderMeta?.lastEditedAt ?? ''
+                        return (
+                          <li
+                            key={scenario.scenarioId}
+                            className="flex items-center gap-3 px-4 py-2 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.03] transition-colors"
+                          >
+                            <button
+                              onClick={() => navigate(`/builder/${scenario.scenarioId}`)}
+                              className="flex-1 min-w-0 flex items-center gap-3 text-left group"
+                            >
+                              <span className="text-[13px] font-semibold text-[#f5f3ee] group-hover:text-white truncate">
+                                {scenario.title || 'Untitled Scenario'}
+                              </span>
+                              {scenario.subcategory && (
+                                <span className="text-[10px] text-white/30 flex-none hidden md:inline">{scenario.subcategory}</span>
+                              )}
+                              {scenario.mode === 'immersive' && (
+                                <span className="text-[10px] font-semibold text-white/40 flex-none" title="Immersive (AI interviewer)">🎙</span>
+                              )}
+                            </button>
+                            <span
+                              className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded flex-none ${
+                                scenario.institutionName ? 'bg-green/20 text-green-light' : 'bg-white/[0.06] text-white/35'
+                              }`}
+                              title={scenario.institutionName ? `Private to ${scenario.institutionName}` : 'Visible to every user'}
+                            >
+                              {scenario.institutionName ?? 'Public'}
+                            </span>
+                            <span className="text-[11px] text-white/30 flex-none w-14 text-right hidden sm:inline">{scenario.estimatedMinutes} min</span>
+                            <span
+                              className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-md flex-none w-[84px] justify-center ${
+                                status === 'published'
+                                  ? 'text-[#2d9e5f] bg-[#2d9e5f]/10 border border-[#2d9e5f]/20'
+                                  : 'text-amber-400 bg-amber-400/10 border border-amber-400/20'
+                              }`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${status === 'published' ? 'bg-[#2d9e5f]' : 'bg-amber-400'}`} />
+                              {status === 'published' ? 'Published' : 'Draft'}
+                            </span>
+                            <span className="text-[11px] text-white/30 flex-none w-[84px] text-right hidden md:inline">
+                              {lastEdited ? formatDate(lastEdited) : '—'}
+                            </span>
+                            <div className="flex-none flex items-center">
+                              {confirmDelete === scenario.scenarioId ? (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleDelete(scenario.scenarioId)}
+                                    className="text-[11px] text-red-400 hover:text-red-300 bg-red-400/10 border border-red-400/20 rounded-lg px-2 py-1 transition-all"
+                                  >
+                                    Confirm delete
+                                  </button>
+                                  <button onClick={() => setConfirmDelete(null)} className="text-[11px] text-white/30 hover:text-white/50 px-2 py-1">
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <RowMenu actions={[
+                                  { label: 'Edit', onClick: () => navigate(`/builder/${scenario.scenarioId}`) },
+                                  { label: 'Duplicate', onClick: () => handleDuplicate(scenario.scenarioId) },
+                                  { label: 'Export YAML', onClick: () => handleExport(scenario.scenarioId, 'yaml') },
+                                  { label: 'Export JSON', onClick: () => handleExport(scenario.scenarioId, 'json') },
+                                  { label: 'Delete', onClick: () => setConfirmDelete(scenario.scenarioId), danger: true },
+                                ]} />
+                              )}
+                            </div>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
 
       </div>
     </div>
