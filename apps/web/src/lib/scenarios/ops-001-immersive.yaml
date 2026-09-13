@@ -3,6 +3,11 @@ title: 'Incident Response: Payment Degradation (Interview)'
 track: operations
 estimatedMinutes: 15
 mode: immersive
+# D-ID presenter + Azure voice for the pre-rendered interviewer clips. Kept
+# here (not just in the DB) so a reseed doesn't lose the persona.
+interviewer:
+  presenterId: v2_public_Amber_RedSweater_HomeOffice@atjDiWT4JK
+  voiceId: en-US-JennyNeural
 
 briefing:
   situation: >
