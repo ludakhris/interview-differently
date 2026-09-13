@@ -29,12 +29,20 @@ interface Props {
   onRemoveExhibit: (exhibitId: string) => void
   onRemoveNode: (nodeId: string) => void
   onRemovePhase: (phaseId: string) => void
+  jumpTarget?: JumpTarget | null
 }
 
 /** editingBlockId sentinel for the scenario-level setup block. */
 const SETUP_BLOCK_ID = '__setup__'
 
-export function PhaseDocument({ scenario, activePhaseId, onInsert, onMetaUpdate, onExhibitUpdate, onNodeUpdate, onPhaseUpdate, onToggleExhibitShared, onPhaseVisible, onMoveBlock, onRemoveExhibit, onRemoveNode, onRemovePhase }: Props) {
+/** Where the Issues panel asked us to scroll. `nonce` re-triggers repeat jumps to the same target. */
+export interface JumpTarget {
+  kind: 'setup' | 'phase' | 'block'
+  id: string
+  nonce: number
+}
+
+export function PhaseDocument({ scenario, activePhaseId, onInsert, onMetaUpdate, onExhibitUpdate, onNodeUpdate, onPhaseUpdate, onToggleExhibitShared, onPhaseVisible, onMoveBlock, onRemoveExhibit, onRemoveNode, onRemovePhase, jumpTarget }: Props) {
   const { phases = [], exhibits = [], nodes = [] } = scenario
   const exhibitMap = Object.fromEntries(exhibits.map(e => [e.id, e]))
   const nodeMap = Object.fromEntries(nodes.map(n => [n.nodeId, n]))
@@ -53,6 +61,18 @@ export function PhaseDocument({ scenario, activePhaseId, onInsert, onMetaUpdate,
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [activePhaseId])
 
+  // Jump from the Issues panel: scroll the target into view and flash it
+  useEffect(() => {
+    if (!jumpTarget) return
+    const sel = jumpTarget.kind === 'phase' ? `[data-phase-id="${jumpTarget.id}"]` : `[data-block-id="${jumpTarget.id}"]`
+    const el = (scrollRef.current ?? document).querySelector<HTMLElement>(sel)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.classList.add('ring-2', 'ring-amber-400/70', 'rounded-[14px]')
+    const t = setTimeout(() => el.classList.remove('ring-2', 'ring-amber-400/70', 'rounded-[14px]'), 1800)
+    return () => clearTimeout(t)
+  }, [jumpTarget])
+
   function handlePick(kind: EntityKind) {
     if (pickerPhaseId) onInsert(pickerPhaseId, kind)
     setPickerPhaseId(null)
@@ -67,23 +87,26 @@ export function PhaseDocument({ scenario, activePhaseId, onInsert, onMetaUpdate,
     return (
       <div className="flex-1 overflow-auto px-10 py-8">
         <div className="max-w-[820px] mx-auto flex flex-col gap-3">
-          {editingBlockId === SETUP_BLOCK_ID ? (
-            <SetupEditor scenario={scenario} onDone={(updates) => { onMetaUpdate(updates); setEditingBlockId(null) }} />
-          ) : (
-            <SetupBlock scenario={scenario} onEditRequest={() => setEditingBlockId(SETUP_BLOCK_ID)} />
-          )}
+          <div data-block-id={SETUP_BLOCK_ID}>
+            {editingBlockId === SETUP_BLOCK_ID ? (
+              <SetupEditor scenario={scenario} onDone={(updates) => { onMetaUpdate(updates); setEditingBlockId(null) }} />
+            ) : (
+              <SetupBlock scenario={scenario} onEditRequest={() => setEditingBlockId(SETUP_BLOCK_ID)} />
+            )}
+          </div>
           <p className="text-[12px] text-white/30 italic mb-2">
             No phases declared — the candidate walks these steps in order. Add a phase in the left rail to group them.
           </p>
           {nodes.map(node => (
+            <div key={node.nodeId} data-block-id={node.nodeId}>
             <NodeBlock
-              key={node.nodeId}
               node={node}
               allNodes={nodes}
               isEditing={editingBlockId === node.nodeId}
               onEditRequest={() => setEditingBlockId(node.nodeId)}
               onUpdate={(n) => { onNodeUpdate(n); setEditingBlockId(null) }}
             />
+            </div>
           ))}
         </div>
       </div>
@@ -95,7 +118,7 @@ export function PhaseDocument({ scenario, activePhaseId, onInsert, onMetaUpdate,
       <div ref={scrollRef} className="flex-1 overflow-auto px-10 py-8">
         <div className="max-w-[820px] mx-auto flex flex-col gap-10">
           {/* Scenario-level blocks — always visible regardless of phase */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3" data-block-id={SETUP_BLOCK_ID}>
             {editingBlockId === SETUP_BLOCK_ID ? (
               <SetupEditor
                 scenario={scenario}
@@ -307,7 +330,7 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
       ) : (
         <div className="flex flex-col gap-3">
           {blocks.map((block, blockIdx) => (
-            <div key={block.id} className="relative group/blk">
+            <div key={block.id} className="relative group/blk" data-block-id={block.id}>
               <BlockGutter
                 canUp={block.kind === 'exhibit' ? blockIdx > 0 : blockIdx > blocks.findIndex(b => b.kind === 'node')}
                 canDown={block.kind === 'exhibit' ? blockIdx < blocks.filter(b => b.kind === 'exhibit').length - 1 : blockIdx < blocks.length - 1}

@@ -10,7 +10,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
-import { getScenario } from '@/services/builderService'
+import { getScenario, updateScenario, publishScenario } from '@/services/builderService'
 import { listScenarioMedia } from '@/services/scenarioMediaService'
 import { useBuilderDoc } from '@/hooks/useBuilderDoc'
 import { V2Toolbar } from '@/builder-v2/V2Toolbar'
@@ -19,6 +19,9 @@ import { PhaseDocument } from '@/builder-v2/PhaseDocument'
 import { descriptorFor, seedExhibit, seedNode } from '@/builder-v2/registry'
 import type { EntityKind } from '@/builder-v2/registry'
 import { ImmersiveProvider, type ImmersiveState } from '@/builder-v2/ImmersiveContext'
+import { IssuesPanel } from '@/builder-v2/IssuesPanel'
+import { validateScenarioDoc, type ValidationIssue } from '@/builder-v2/validate'
+import type { JumpTarget } from '@/builder-v2/PhaseDocument'
 import type { Scenario, ScenarioMediaAsset } from '@id/types'
 
 export function BuilderV2Page() {
@@ -38,9 +41,15 @@ export function BuilderV2Page() {
   }, [scenarioId, getToken])
 
   const doc = useBuilderDoc(initial)
-  const { scenario, saveStatus, setTitle, updateMeta, addPhase, updatePhase, reorderPhases, addExhibit, updateExhibit, removeExhibit, addNode, updateNode, removeNode, moveBlock, removePhase, saveNow, toggleExhibitShared } = doc
+  const { scenario, saveStatus, setTitle, updateMeta, addPhase, updatePhase, reorderPhases, addExhibit, updateExhibit, removeExhibit, addNode, updateNode, removeNode, moveBlock, removePhase, saveNow, markPublished, toggleExhibitShared } = doc
 
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null)
+
+  // Publish gate (#24 Phase F): validate → Issues panel → publish only when clean
+  const [issues, setIssues] = useState<ValidationIssue[] | null>(null)
+  const [publishing, setPublishing] = useState(false)
+  const [publishError, setPublishError] = useState<string | null>(null)
+  const [jumpTarget, setJumpTarget] = useState<JumpTarget | null>(null)
 
   // Immersive: rendered-media assets per node, refreshed after each render (#24 Phase H)
   const [mediaAssets, setMediaAssets] = useState<Record<string, ScenarioMediaAsset>>({})
@@ -87,6 +96,28 @@ export function BuilderV2Page() {
     )
   }
 
+  function openPublish() {
+    if (!scenario) return
+    setPublishError(null)
+    setIssues(validateScenarioDoc(scenario, Object.values(mediaAssets)))
+  }
+
+  async function handlePublish() {
+    if (!scenario || !scenarioId) return
+    setPublishing(true)
+    setPublishError(null)
+    try {
+      await updateScenario(scenario) // flush any pending autosave so the server publishes what the author sees
+      await publishScenario(scenarioId)
+      markPublished()
+      setIssues(null)
+    } catch (e) {
+      setPublishError(e instanceof Error ? e.message : 'Publish failed')
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   function handlePreview() {
     sessionStorage.setItem(`builder-preview-${scenarioId}`, JSON.stringify(scenario))
     navigate(`/scenario/${scenarioId}/play?builderPreview=true`)
@@ -110,6 +141,8 @@ export function BuilderV2Page() {
         title={scenario.title}
         saveStatus={saveStatus}
         institutionName={scenario.institutionName ?? null}
+        status={scenario.builderMeta?.status === 'published' ? 'published' : 'draft'}
+        onPublish={openPublish}
         onTitleChange={setTitle}
         onSave={saveNow}
         onPreview={handlePreview}
@@ -140,9 +173,21 @@ export function BuilderV2Page() {
             onRemoveExhibit={removeExhibit}
             onRemoveNode={removeNode}
             onRemovePhase={removePhase}
+            jumpTarget={jumpTarget}
           />
         </ImmersiveProvider>
       </div>
+
+      {issues && (
+        <IssuesPanel
+          issues={publishError ? [{ level: 'error', message: `Publish failed: ${publishError}` }, ...issues] : issues}
+          status={scenario.builderMeta?.status === 'published' ? 'published' : 'draft'}
+          publishing={publishing}
+          onJump={(where) => { setIssues(null); setJumpTarget({ ...where, nonce: Date.now() }) }}
+          onPublish={handlePublish}
+          onClose={() => setIssues(null)}
+        />
+      )}
     </div>
   )
 }

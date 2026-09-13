@@ -11,12 +11,14 @@ interface Props {
   saveStatus: SaveStatus
   /** Institution name for private scenarios; null = public (#15). */
   institutionName: string | null
+  status: 'draft' | 'published'
+  onPublish: () => void
   onTitleChange: (title: string) => void
   onSave: () => void
   onPreview: () => void
 }
 
-export function V2Toolbar({ scenarioId, title, saveStatus, institutionName, onTitleChange, onSave, onPreview }: Props) {
+export function V2Toolbar({ scenarioId, title, saveStatus, institutionName, status, onPublish, onTitleChange, onSave, onPreview }: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(title)
   const navigate = useNavigate()
@@ -96,9 +98,20 @@ export function V2Toolbar({ scenarioId, title, saveStatus, institutionName, onTi
         Advanced ↗
       </button>
 
-      {/* Publish */}
-      <button className="text-[13px] font-bold bg-emerald-600 hover:bg-emerald-500 text-black rounded-lg px-4 py-1.5 transition-colors">
-        Publish
+      {/* Status + Publish */}
+      <span
+        title={status === 'published' ? 'Candidates see the last published version. Re-publish to push your edits.' : 'Not visible to candidates yet'}
+        className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded flex-none ${
+          status === 'published' ? 'bg-emerald-400/15 text-emerald-300' : 'bg-amber-400/15 text-amber-300'
+        }`}
+      >
+        {status}
+      </span>
+      <button
+        onClick={onPublish}
+        className="text-[13px] font-bold bg-emerald-600 hover:bg-emerald-500 text-black rounded-lg px-4 py-1.5 whitespace-nowrap transition-colors"
+      >
+        {status === 'published' ? 'Re-publish' : 'Publish'}
       </button>
     </div>
   )

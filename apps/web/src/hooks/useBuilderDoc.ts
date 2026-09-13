@@ -222,6 +222,11 @@ export function useBuilderDoc(initial: Scenario | null) {
     })
   }, [patch])
 
+  /** Reflect a server-side publish locally without triggering another save. */
+  const markPublished = useCallback(() => {
+    setScenario(prev => prev ? { ...prev, builderMeta: { ...prev.builderMeta, status: 'published', lastEditedAt: new Date().toISOString(), positions: prev.builderMeta?.positions ?? {} } } : prev)
+  }, [])
+
   // ── Manual save ────────────────────────────────────────────────────────────
   const saveNow = useCallback(() => {
     const s = scenarioRef.current
@@ -252,6 +257,7 @@ export function useBuilderDoc(initial: Scenario | null) {
     removePhase,
     toggleExhibitShared,
     saveNow,
+    markPublished,
   }
 }
 
