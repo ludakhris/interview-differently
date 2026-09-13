@@ -260,16 +260,9 @@ export interface ScenarioBriefing {
   timeInRole: string
 }
 
-export interface BuilderNodePosition {
-  x: number
-  y: number
-}
-
 export interface BuilderMeta {
   status: 'draft' | 'published'
   lastEditedAt: string
-  /** Legacy graph-canvas geometry (#28). Still present on older rows; nothing reads or writes it now. */
-  positions?: Record<string, BuilderNodePosition>
 }
 
 export interface ScenarioInterviewer {
