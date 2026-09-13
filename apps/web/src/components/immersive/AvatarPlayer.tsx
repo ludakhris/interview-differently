@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useDIdAvatar } from '@/hooks/useDIdAvatar'
+import { authHeader } from '@/services/authToken'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -50,7 +51,7 @@ export function AvatarPlayer({ onReady, onDone, onError, className }: AvatarPlay
 
     async function init() {
       try {
-        const res = await fetch(`${API_URL}/api/did/presenters`)
+        const res = await fetch(`${API_URL}/api/did/presenters`, { headers: await authHeader() })
         let sourceUrl = ''
         let gender: 'male' | 'female' = 'male'
 

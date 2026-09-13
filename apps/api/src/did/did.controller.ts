@@ -8,8 +8,10 @@ import {
   HttpCode,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common'
 import { DidService } from './did.service'
+import { AuthenticatedGuard } from '../auth/authenticated.guard'
 
 interface CreateStreamDto {
   sourceUrl: string
@@ -37,7 +39,9 @@ interface CloseStreamDto {
   sessionId: string
 }
 
+/** Signed-in only — every stream costs D-ID credits (#27). */
 @Controller('did')
+@UseGuards(AuthenticatedGuard)
 export class DidController {
   constructor(private readonly service: DidService) {}
 

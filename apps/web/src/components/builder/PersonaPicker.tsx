@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ScenarioInterviewer } from '@id/types'
+import { authHeader } from '@/services/authToken'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -35,7 +36,8 @@ export function PersonaPicker({ value, onChange }: PersonaPickerProps) {
 
   useEffect(() => {
     let cancelled = false
-    fetch(`${API_URL}/api/did/presenters`)
+    authHeader()
+      .then((headers) => fetch(`${API_URL}/api/did/presenters`, { headers }))
       .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
       .then((list: CuratedPresenter[]) => {
         if (cancelled) return

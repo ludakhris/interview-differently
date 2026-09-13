@@ -3,6 +3,7 @@ import type {
   ImmersiveResponse,
   ImmersiveSummary,
 } from '@id/types'
+import { authHeader } from './authToken'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
@@ -12,7 +13,7 @@ export async function createImmersiveSession(
 ): Promise<ImmersiveSession> {
   const res = await fetch(`${API_URL}/api/immersive-sessions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
     body: JSON.stringify({ scenarioId, userId }),
   })
   if (!res.ok) throw new Error(`Failed to create immersive session: ${res.status}`)
@@ -40,6 +41,7 @@ export async function submitImmersiveResponse(
 
   const res = await fetch(`${API_URL}/api/immersive-sessions/${sessionId}/responses`, {
     method: 'POST',
+    headers: await authHeader(),
     body: form,
   })
   if (!res.ok) throw new Error(`Failed to submit response: ${res.status}`)
@@ -50,21 +52,21 @@ export async function fetchImmersiveResponse(
   sessionId: string,
   responseId: string,
 ): Promise<ImmersiveResponse> {
-  const res = await fetch(
-    `${API_URL}/api/immersive-sessions/${sessionId}/responses/${responseId}`,
-  )
+  const res = await fetch(`${API_URL}/api/immersive-sessions/${sessionId}/responses/${responseId}`, {
+    headers: await authHeader(),
+  })
   if (!res.ok) throw new Error(`Failed to fetch response: ${res.status}`)
   return res.json() as Promise<ImmersiveResponse>
 }
 
 export async function fetchImmersiveSession(sessionId: string): Promise<ImmersiveSession> {
-  const res = await fetch(`${API_URL}/api/immersive-sessions/${sessionId}`)
+  const res = await fetch(`${API_URL}/api/immersive-sessions/${sessionId}`, { headers: await authHeader() })
   if (!res.ok) throw new Error(`Failed to fetch session: ${res.status}`)
   return res.json() as Promise<ImmersiveSession>
 }
 
 export async function fetchImmersiveSummary(sessionId: string): Promise<ImmersiveSummary> {
-  const res = await fetch(`${API_URL}/api/immersive-sessions/${sessionId}/summary`)
+  const res = await fetch(`${API_URL}/api/immersive-sessions/${sessionId}/summary`, { headers: await authHeader() })
   if (!res.ok) throw new Error(`Failed to fetch session summary: ${res.status}`)
   return res.json() as Promise<ImmersiveSummary>
 }
@@ -80,7 +82,7 @@ export interface ImmersiveSessionSummary {
 export async function fetchImmersiveSessionsForUser(
   userId: string,
 ): Promise<ImmersiveSessionSummary[]> {
-  const res = await fetch(`${API_URL}/api/immersive-sessions/user/${userId}`)
+  const res = await fetch(`${API_URL}/api/immersive-sessions/user/${userId}`, { headers: await authHeader() })
   if (!res.ok) throw new Error(`Failed to fetch immersive sessions: ${res.status}`)
   return res.json() as Promise<ImmersiveSessionSummary[]>
 }

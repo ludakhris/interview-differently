@@ -4,27 +4,32 @@ import {
   Get,
   Body,
   Param,
-  Headers,
   HttpCode,
   HttpException,
   HttpStatus,
   NotFoundException,
-  UnauthorizedException,
-  ForbiddenException,
+  Req,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
 import { ImmersiveSessionsService } from './immersive-sessions.service'
 import { TranscriptionService } from '../transcription/transcription.service'
 import { ClerkService } from '../auth/clerk.service'
+import { AuthenticatedGuard } from '../auth/authenticated.guard'
+import { assertOwnerOrAdmin, type AuthedRequest } from '../auth/owner'
 
 interface CreateSessionDto {
   scenarioId: string
-  userId: string
 }
 
+/**
+ * Immersive (avatar) sessions. Signed-in only; sessions are created for
+ * the caller and every read/write on a session is own-or-admin (#27).
+ */
 @Controller('immersive-sessions')
+@UseGuards(AuthenticatedGuard)
 export class ImmersiveSessionsController {
   constructor(
     private readonly service: ImmersiveSessionsService,
@@ -34,17 +39,19 @@ export class ImmersiveSessionsController {
 
   @Post()
   @HttpCode(201)
-  createSession(@Body() dto: CreateSessionDto) {
-    return this.service.createSession(dto.scenarioId, dto.userId)
+  createSession(@Req() req: AuthedRequest, @Body() dto: CreateSessionDto) {
+    return this.service.createSession(dto.scenarioId, req.userId)
   }
 
   @Get('user/:userId')
-  getSessionsForUser(@Param('userId') userId: string) {
+  async getSessionsForUser(@Req() req: AuthedRequest, @Param('userId') userId: string) {
+    await assertOwnerOrAdmin(this.clerk, req, userId)
     return this.service.getSessionsForUser(userId)
   }
 
   @Get(':sessionId')
-  async getSession(@Param('sessionId') sessionId: string) {
+  async getSession(@Req() req: AuthedRequest, @Param('sessionId') sessionId: string) {
+    await this.assertSession(req, sessionId)
     try {
       return await this.service.getSession(sessionId)
     } catch (err) {
@@ -57,10 +64,12 @@ export class ImmersiveSessionsController {
   @HttpCode(201)
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 25 * 1024 * 1024 } }))
   async createResponse(
+    @Req() req: AuthedRequest,
     @Param('sessionId') sessionId: string,
     @Body() body: Record<string, string>,
     @UploadedFile() file?: Express.Multer.File,
   ) {
+    await this.assertSession(req, sessionId)
     try {
       // Save immediately so the frontend can navigate without waiting for Whisper
       const response = await this.service.createResponse(
@@ -96,30 +105,14 @@ export class ImmersiveSessionsController {
     }
   }
 
-  /**
-   * Time-limited signed URL for playing back a candidate's recorded response.
-   * Auth: requires a valid Clerk Bearer JWT, and the requesting user must
-   * either own the session OR have publicMetadata.role === 'admin'.
-   */
+  /** Time-limited signed URL for playing back a candidate's recorded response. */
   @Get(':sessionId/responses/:responseId/media-url')
   async getResponseMediaUrl(
+    @Req() req: AuthedRequest,
     @Param('sessionId') sessionId: string,
     @Param('responseId') responseId: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    const token = authHeader?.replace(/^Bearer\s+/i, '')
-    if (!token) throw new UnauthorizedException('Missing bearer token')
-    const requestingUserId = await this.clerk.verifyBearerToken(token)
-    if (!requestingUserId) throw new UnauthorizedException('Invalid token')
-
-    const ownerUserId = await this.service.getSessionOwner(sessionId)
-    if (!ownerUserId) throw new NotFoundException(`Session ${sessionId} not found`)
-
-    if (ownerUserId !== requestingUserId) {
-      const isAdmin = await this.clerk.isAdmin(requestingUserId)
-      if (!isAdmin) throw new ForbiddenException('Not authorised to view this response')
-    }
-
+    await this.assertSession(req, sessionId)
     try {
       return await this.service.getResponseSignedUrl(sessionId, responseId)
     } catch (err) {
@@ -130,9 +123,11 @@ export class ImmersiveSessionsController {
 
   @Get(':sessionId/responses/:responseId')
   async getResponse(
+    @Req() req: AuthedRequest,
     @Param('sessionId') sessionId: string,
     @Param('responseId') responseId: string,
   ) {
+    await this.assertSession(req, sessionId)
     try {
       return await this.service.getResponse(sessionId, responseId)
     } catch (err) {
@@ -142,12 +137,20 @@ export class ImmersiveSessionsController {
   }
 
   @Get(':sessionId/summary')
-  async getSessionSummary(@Param('sessionId') sessionId: string) {
+  async getSessionSummary(@Req() req: AuthedRequest, @Param('sessionId') sessionId: string) {
+    await this.assertSession(req, sessionId)
     try {
       return await this.service.getSessionSummary(sessionId)
     } catch (err) {
       if (err instanceof NotFoundException) throw err
       throw new HttpException('Summary generation failed', HttpStatus.SERVICE_UNAVAILABLE)
     }
+  }
+
+  /** 404 for unknown sessions, 403 unless the caller owns it or is a full admin. */
+  private async assertSession(req: AuthedRequest, sessionId: string): Promise<void> {
+    const ownerUserId = await this.service.getSessionOwner(sessionId)
+    if (!ownerUserId) throw new NotFoundException(`Session ${sessionId} not found`)
+    await assertOwnerOrAdmin(this.clerk, req, ownerUserId)
   }
 }

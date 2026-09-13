@@ -1,4 +1,5 @@
 import type { ScenarioResult } from '@id/types'
+import { authHeader } from './authToken'
 
 export interface DimensionAverage {
   dimension: string
@@ -24,7 +25,7 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 export async function saveResult(result: ScenarioResult & { scenarioTitle: string }): Promise<void> {
   const res = await fetch(`${API_URL}/api/results`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
     body: JSON.stringify(result),
   })
   if (!res.ok) {
@@ -46,7 +47,7 @@ export async function recordSimulationAttempt(payload: {
   try {
     const res = await fetch(`${API_URL}/api/results/attempts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
       body: JSON.stringify(payload),
     })
     if (!res.ok) console.warn('Failed to record simulation attempt:', res.status)
@@ -56,7 +57,7 @@ export async function recordSimulationAttempt(payload: {
 }
 
 export async function fetchResult(resultId: string): Promise<ScenarioResult> {
-  const res = await fetch(`${API_URL}/api/results/${resultId}`)
+  const res = await fetch(`${API_URL}/api/results/${resultId}`, { headers: await authHeader() })
   if (!res.ok) throw new Error(`Result fetch failed: ${res.status}`)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const row = await res.json() as any
@@ -78,7 +79,7 @@ export async function fetchResult(resultId: string): Promise<ScenarioResult> {
 }
 
 export async function fetchProfile(userId: string): Promise<CompetencyProfile> {
-  const res = await fetch(`${API_URL}/api/results/profile/${userId}`)
+  const res = await fetch(`${API_URL}/api/results/profile/${userId}`, { headers: await authHeader() })
   if (!res.ok) throw new Error('Failed to fetch competency profile')
   return res.json() as Promise<CompetencyProfile>
 }
@@ -94,7 +95,7 @@ export interface AiFeedbackResponse {
 }
 
 export async function fetchAiFeedback(resultId: string): Promise<AiFeedbackResponse> {
-  const res = await fetch(`${API_URL}/api/results/${resultId}/ai-feedback`)
+  const res = await fetch(`${API_URL}/api/results/${resultId}/ai-feedback`, { headers: await authHeader() })
   if (!res.ok) throw new Error(`AI feedback fetch failed: ${res.status}`)
   return res.json() as Promise<AiFeedbackResponse>
 }

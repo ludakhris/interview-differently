@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { applyAudioTranslations } from '@/lib/speechTranslations'
+import { authHeader } from '@/services/authToken'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -36,7 +37,7 @@ export function useDIdAvatar(): UseDIdAvatarReturn {
       try {
         await fetch(`${API_URL}/api/did/streams/${streamIdRef.current}`, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
           body: JSON.stringify({ sessionId: sessionIdRef.current }),
         })
       } catch {
@@ -60,7 +61,7 @@ export function useDIdAvatar(): UseDIdAvatarReturn {
     try {
       const res = await fetch(`${API_URL}/api/did/streams`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
         body: JSON.stringify({ sourceUrl }),
       })
       if (!res.ok) {
@@ -86,7 +87,7 @@ export function useDIdAvatar(): UseDIdAvatarReturn {
         const c = candidate.toJSON()
         await fetch(`${API_URL}/api/did/streams/${streamIdRef.current}/ice`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
           body: JSON.stringify({
             candidate: c.candidate,
             sdpMid: c.sdpMid ?? '0',
@@ -141,7 +142,7 @@ export function useDIdAvatar(): UseDIdAvatarReturn {
 
       await fetch(`${API_URL}/api/did/streams/${stream.id}/sdp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
         body: JSON.stringify({ answer: pc.localDescription, sessionId: stream.session_id }),
       })
 
@@ -162,7 +163,7 @@ export function useDIdAvatar(): UseDIdAvatarReturn {
     const translated = applyAudioTranslations(text)
     const res = await fetch(`${API_URL}/api/did/streams/${streamIdRef.current}/talk`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
       body: JSON.stringify({
         text: translated,
         voiceId,
