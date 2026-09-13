@@ -105,7 +105,7 @@ export function AssessmentAttemptPage() {
         setSubmitting(false)
       }
     },
-    [submitting, getToken, attemptId, answers, navigate],
+    [submitting, getToken, attemptId, answers, navigate, paper],
   )
 
   // ── Deadline countdown → auto-submit ──
