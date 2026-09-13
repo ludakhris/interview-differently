@@ -5,6 +5,7 @@ import { downloadCsv } from '@/lib/csv'
 import { listCohortOptions, type CohortOption } from '@/services/datasetsService'
 import {
   createDelivery,
+  createInvite,
   deleteAssessment,
   deleteDelivery,
   getAssessment,
@@ -12,6 +13,7 @@ import {
   importAssessment,
   listAssessments,
   previewAssessment,
+  revokeInvite,
   type AssessmentDetail,
   type AssessmentSummary,
   type DeliveryResults,
@@ -406,6 +408,7 @@ function DetailPanel({
                     {d.opensAt || d.closesAt ? `${fmt(d.opensAt)} → ${fmt(d.closesAt)}` : 'always open'}
                     {d.timeLimitMinutes && ` · ${d.timeLimitMinutes} min`} · {d.submittedCount}/{d.startedCount} submitted
                   </p>
+                  <InviteLink getToken={getToken} deliveryId={d.id} code={d.inviteCode} onChange={onChange} />
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <button
@@ -433,6 +436,85 @@ function DetailPanel({
       </div>
 
       {resultsFor && <ResultsPanel key={resultsFor} getToken={getToken} deliveryId={resultsFor} />}
+    </div>
+  )
+}
+
+/**
+ * Invite link controls for one delivery. The link joins whoever opens it to
+ * the cohort and starts their paper — treat it like a join key.
+ */
+function InviteLink({
+  getToken,
+  deliveryId,
+  code,
+  onChange,
+}: {
+  getToken: GetToken
+  deliveryId: string
+  code: string | null
+  onChange: () => Promise<void>
+}) {
+  const [busy, setBusy] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const url = code ? `${window.location.origin}/a/${code}` : null
+
+  const copy = async () => {
+    if (!url) return
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1500)
+    } catch {
+      prompt('Copy the invite link:', url)
+    }
+  }
+
+  return (
+    <div className="mt-1.5 flex items-center gap-3 text-[11px]">
+      {url ? (
+        <>
+          <span className="font-mono text-white/50 truncate max-w-[260px]" title={url}>
+            {url}
+          </span>
+          <button onClick={copy} className="font-semibold text-green-light hover:text-green transition-colors flex-shrink-0">
+            {copied ? 'Copied ✓' : 'Copy link'}
+          </button>
+          <button
+            disabled={busy}
+            onClick={async () => {
+              if (!confirm('Revoke this invite link? Anyone who already joined keeps their attempt.')) return
+              setBusy(true)
+              try {
+                await revokeInvite(getToken, deliveryId)
+                await onChange()
+              } finally {
+                setBusy(false)
+              }
+            }}
+            className="text-slate-mid hover:text-red-400 disabled:opacity-50 transition-colors flex-shrink-0"
+          >
+            Revoke
+          </button>
+        </>
+      ) : (
+        <button
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true)
+            try {
+              await createInvite(getToken, deliveryId)
+              await onChange()
+            } finally {
+              setBusy(false)
+            }
+          }}
+          className="font-semibold text-green-light hover:text-green disabled:opacity-50 transition-colors"
+          title="Anyone with the link signs in, joins this cohort, and starts the paper"
+        >
+          {busy ? 'Creating…' : '+ Create invite link'}
+        </button>
+      )}
     </div>
   )
 }

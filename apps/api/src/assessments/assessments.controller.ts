@@ -53,6 +53,39 @@ export class AssessmentsAdminController {
   results(@Param('id') id: string) {
     return this.service.deliveryResults(id)
   }
+
+  @Post('deliveries/:id/invite')
+  createInvite(@Param('id') id: string) {
+    return this.service.createInvite(id)
+  }
+
+  @Delete('deliveries/:id/invite')
+  @HttpCode(204)
+  async revokeInvite(@Param('id') id: string): Promise<void> {
+    await this.service.revokeInvite(id)
+  }
+}
+
+/** Public landing info for /a/<code>. No guard — the code is the secret. */
+@Controller('invites')
+export class InvitesPublicController {
+  constructor(private readonly service: AssessmentsService) {}
+
+  @Get(':code')
+  info(@Param('code') code: string) {
+    return this.service.inviteInfo(code)
+  }
+}
+
+@Controller('invites')
+@UseGuards(AuthenticatedGuard)
+export class InvitesMeController {
+  constructor(private readonly service: AssessmentsService) {}
+
+  @Post(':code/accept')
+  accept(@Req() req: AuthedRequest, @Param('code') code: string) {
+    return this.service.acceptInvite(req.userId, code)
+  }
 }
 
 @Controller('me')

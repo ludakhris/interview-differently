@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { randomBytes } from 'crypto'
 import { PrismaService } from '../prisma/prisma.service'
 import { ClerkService } from '../auth/clerk.service'
 import { SqlRunnerService, type QueryOutcome } from '../sql-runner/sql-runner.service'
@@ -136,6 +137,7 @@ export class AssessmentsService {
         opensAt: d.opensAt,
         closesAt: d.closesAt,
         timeLimitMinutes: d.timeLimitMinutes,
+        inviteCode: d.inviteCode,
         createdAt: d.createdAt,
         startedCount: d.attempts.length,
         submittedCount: d.attempts.filter((x) => x.submittedAt).length,
@@ -183,6 +185,91 @@ export class AssessmentsService {
       if ((err as { code?: string }).code === 'P2025') throw new NotFoundException(`Delivery ${id} not found`)
       throw err
     }
+  }
+
+  // ── Invite links ─────────────────────────────────────────────────────────
+  //
+  // /a/<code> lets anyone with the link sign in, get added to the delivery's
+  // cohort, and start the paper — no admin-add or join key needed. Same
+  // trust model as a cohort joinKey; regenerate or revoke to cut it off.
+
+  /** Creates (or rotates) the delivery's invite code and switches the assessments tool on for its cohort. */
+  async createInvite(deliveryId: string) {
+    const d = await this.prisma.assessmentDelivery.findUnique({ where: { id: deliveryId } })
+    if (!d) throw new NotFoundException(`Delivery ${deliveryId} not found`)
+    const inviteCode = randomBytes(12).toString('base64url')
+    await this.prisma.$transaction([
+      this.prisma.assessmentDelivery.update({ where: { id: deliveryId }, data: { inviteCode } }),
+      this.prisma.cohortToolConfig.upsert({
+        where: { cohortId_toolKey: { cohortId: d.cohortId, toolKey: 'assessments' } },
+        update: { enabled: true },
+        create: { cohortId: d.cohortId, toolKey: 'assessments', enabled: true },
+      }),
+    ])
+    return { inviteCode }
+  }
+
+  async revokeInvite(deliveryId: string): Promise<void> {
+    try {
+      await this.prisma.assessmentDelivery.update({ where: { id: deliveryId }, data: { inviteCode: null } })
+    } catch (err) {
+      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException(`Delivery ${deliveryId} not found`)
+      throw err
+    }
+  }
+
+  /** Public: what the invite landing page shows before sign-in. */
+  async inviteInfo(code: string) {
+    const d = await this.loadInvite(code)
+    const sections = d.assessment.sections as unknown as AssessmentSection[]
+    return {
+      title: d.assessment.title,
+      label: d.label,
+      cohortName: d.cohort.name,
+      institutionName: d.cohort.institution.name,
+      opensAt: d.opensAt,
+      closesAt: d.closesAt,
+      timeLimitMinutes: d.timeLimitMinutes,
+      questionCount: sections.reduce((n, s) => n + Math.min(s.draw ?? s.questions.length, s.questions.length), 0),
+      isOpen: this.isOpen(d, Date.now()),
+    }
+  }
+
+  /** Signed-in user follows an invite: join the cohort (idempotent), then start or resume the attempt. */
+  async acceptInvite(userId: string, code: string) {
+    const d = await this.loadInvite(code)
+    await this.ensureMembership(userId, d.cohort.institutionId, d.cohortId)
+    const existing = await this.prisma.assessmentAttempt.findUnique({
+      where: { deliveryId_userId: { deliveryId: d.id, userId } },
+      select: { id: true, submittedAt: true },
+    })
+    if (existing) return { attemptId: existing.id, submitted: !!existing.submittedAt }
+    const { id } = await this.startAttempt(userId, d.id)
+    return { attemptId: id, submitted: false }
+  }
+
+  private async loadInvite(code: string) {
+    const d = await this.prisma.assessmentDelivery.findUnique({
+      where: { inviteCode: code },
+      include: {
+        assessment: { select: { title: true, sections: true } },
+        cohort: { select: { name: true, institutionId: true, institution: { select: { name: true } } } },
+      },
+    })
+    if (!d) throw new NotFoundException('This invite link is no longer valid')
+    return d
+  }
+
+  /** Mirrors MeService.join for the invite path: User row first (FK), then Membership if missing. */
+  private async ensureMembership(userId: string, institutionId: string, cohortId: string) {
+    const profile = await this.clerk.getUserProfile(userId)
+    await this.prisma.user.upsert({
+      where: { id: userId },
+      update: { email: profile?.email ?? undefined, displayName: profile?.displayName ?? undefined },
+      create: { id: userId, email: profile?.email ?? null, displayName: profile?.displayName ?? null },
+    })
+    const existing = await this.prisma.membership.findFirst({ where: { userId, cohortId } })
+    if (!existing) await this.prisma.membership.create({ data: { userId, institutionId, cohortId } })
   }
 
   /** Every attempt on a delivery with per-section scores — the admin results table. */

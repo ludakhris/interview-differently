@@ -56,6 +56,7 @@ export interface DeliverySummary {
   opensAt: string | null
   closesAt: string | null
   timeLimitMinutes: number | null
+  inviteCode: string | null
   createdAt: string
   startedCount: number
   submittedCount: number
@@ -137,6 +138,15 @@ export async function deleteDelivery(getToken: GetToken, id: string): Promise<vo
   await authedFetch(getToken, `/admin/deliveries/${id}`, { method: 'DELETE' })
 }
 
+export async function createInvite(getToken: GetToken, deliveryId: string): Promise<{ inviteCode: string }> {
+  const res = await authedFetch(getToken, `/admin/deliveries/${deliveryId}/invite`, { method: 'POST' })
+  return res.json() as Promise<{ inviteCode: string }>
+}
+
+export async function revokeInvite(getToken: GetToken, deliveryId: string): Promise<void> {
+  await authedFetch(getToken, `/admin/deliveries/${deliveryId}/invite`, { method: 'DELETE' })
+}
+
 export async function getDeliveryResults(getToken: GetToken, id: string): Promise<DeliveryResults> {
   const res = await authedFetch(getToken, `/admin/deliveries/${id}/results`)
   return res.json() as Promise<DeliveryResults>
@@ -204,4 +214,30 @@ export async function submitAttempt(getToken: GetToken, attemptId: string, answe
 export async function fetchAttemptResult(getToken: GetToken, attemptId: string): Promise<StudentResult> {
   const res = await authedFetch(getToken, `/me/attempts/${attemptId}/result`)
   return res.json() as Promise<StudentResult>
+}
+
+// ── Invite links (/a/<code>) ───────────────────────────────────────────────
+
+export interface InviteInfo {
+  title: string
+  label: string
+  cohortName: string
+  institutionName: string
+  opensAt: string | null
+  closesAt: string | null
+  timeLimitMinutes: number | null
+  questionCount: number
+  isOpen: boolean
+}
+
+/** Public — no token. */
+export async function fetchInviteInfo(code: string): Promise<InviteInfo> {
+  const res = await fetch(`${API_URL}/api/invites/${encodeURIComponent(code)}`)
+  if (!res.ok) throw new Error(res.status === 404 ? 'This invite link is no longer valid.' : `${res.status} ${res.statusText}`)
+  return res.json() as Promise<InviteInfo>
+}
+
+export async function acceptInvite(getToken: GetToken, code: string): Promise<{ attemptId: string; submitted: boolean }> {
+  const res = await authedFetch(getToken, `/invites/${encodeURIComponent(code)}/accept`, { method: 'POST' })
+  return res.json() as Promise<{ attemptId: string; submitted: boolean }>
 }

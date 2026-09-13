@@ -24,6 +24,7 @@ import { AssessmentsPage } from '@/pages/AssessmentsPage'
 import { AssessmentAttemptPage } from '@/pages/AssessmentAttemptPage'
 import { AssessmentResultPage } from '@/pages/AssessmentResultPage'
 import { AdminAssessmentsPage } from '@/pages/AdminAssessmentsPage'
+import { InvitePage } from '@/pages/InvitePage'
 import { RequestScenarioPage } from '@/pages/RequestScenarioPage'
 import { ExhibitGalleryPage } from '@/pages/dev/ExhibitGalleryPage'
 import { QuantGalleryPage } from '@/pages/dev/QuantGalleryPage'
@@ -38,8 +39,11 @@ function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   // Route brand-new sign-ups through /welcome so they get the institution
   // self-join flow before landing on the dashboard. Pass `next` so the
   // welcome page can forward them to wherever they were originally headed.
-  const signUpRedirect =
-    redirectUrl === '/dashboard'
+  // Assessment invite links (/a/<code>) do their own cohort join, so a
+  // sign-up that came from one goes straight back rather than via /welcome.
+  const signUpRedirect = redirectUrl.startsWith('/a/')
+    ? redirectUrl
+    : redirectUrl === '/dashboard'
       ? '/welcome'
       : `/welcome?next=${encodeURIComponent(redirectUrl)}`
 
@@ -63,6 +67,7 @@ export default function App() {
       <Route path="/scenario/:scenarioId/briefing" element={<BriefingPage />} />
       <Route path="/scenario/:scenarioId/play" element={<SimulationPage />} />
       <Route path="/request-scenario" element={<RequestScenarioPage />} />
+      <Route path="/a/:code" element={<InvitePage />} />
 
       {/* Internal showcase pages — visual reference for authors. */}
       <Route path="/dev/quant" element={<QuantGalleryPage />} />
