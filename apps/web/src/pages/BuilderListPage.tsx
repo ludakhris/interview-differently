@@ -603,9 +603,15 @@ export function BuilderListPage() {
                           <td className="px-3 py-2.5 text-right text-[11px] text-white/40 tabular-nums whitespace-nowrap">{lastEdited ? formatDate(lastEdited) : '—'}</td>
                           <td className="px-3 py-2.5">
                             {confirmDelete === scenario.scenarioId ? (
-                              <div className="flex items-center gap-1 justify-end">
-                                <button onClick={() => handleDelete(scenario.scenarioId)} className="text-[11px] text-red-400 hover:text-red-300 bg-red-400/10 border border-red-400/20 rounded-md px-2 py-1 whitespace-nowrap transition-all">Confirm</button>
-                                <button onClick={() => setConfirmDelete(null)} className="text-[11px] text-white/30 hover:text-white/50 px-1 py-1">Cancel</button>
+                              <div className="relative flex justify-end">
+                                <button onClick={() => setConfirmDelete(null)} className="text-[13px] text-white/40 rounded-md w-7 h-7 flex items-center justify-center">···</button>
+                                <div className="absolute right-0 top-full mt-1 z-20 w-56 bg-[#1a1a1a] border border-red-400/30 rounded-xl shadow-xl p-3">
+                                  <p className="text-[12px] text-white/80 mb-2">Delete <span className="font-semibold">{scenario.title || 'this scenario'}</span>? This can't be undone.</p>
+                                  <div className="flex gap-2 justify-end">
+                                    <button onClick={() => setConfirmDelete(null)} className="text-[11px] text-white/40 hover:text-white/70 px-2 py-1">Cancel</button>
+                                    <button onClick={() => handleDelete(scenario.scenarioId)} className="text-[11px] font-semibold text-red-300 hover:text-white bg-red-500/20 hover:bg-red-500/40 border border-red-400/30 rounded-md px-2.5 py-1 transition-colors">Delete</button>
+                                  </div>
+                                </div>
                               </div>
                             ) : (
                               <div className="flex justify-end">
