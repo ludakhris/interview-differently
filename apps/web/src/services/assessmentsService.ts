@@ -73,7 +73,7 @@ export interface AssessmentDetail {
   dataset: { slug: string; name: string }
   institutionId: string | null
   institutionName: string | null
-  defaultDraw: number | null
+  defaultDraw: number | Record<string, number> | null
   sections: AssessmentSection[]
   sourceMarkdown: string
   updatedAt: string
@@ -81,7 +81,7 @@ export interface AssessmentDetail {
 }
 
 export interface PreviewResult {
-  parsed: { slug: string; title: string; dataset: string; defaultDraw: number | null; sections: AssessmentSection[]; warnings: string[] }
+  parsed: { slug: string; title: string; dataset: string; defaultDraw: number | Record<string, number> | null; sections: AssessmentSection[]; warnings: string[] }
   datasetId: string
   datasetName: string
   sqlErrors: { questionId: string; error: string }[]

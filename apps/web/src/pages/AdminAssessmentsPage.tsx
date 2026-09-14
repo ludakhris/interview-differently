@@ -35,6 +35,13 @@ type GetToken = () => Promise<string | null>
 const inputCls =
   'w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-[#f5f3ee] placeholder:text-white/25 focus:outline-none focus:border-white/30'
 
+/** `draw` spec → "all" | "4" | "mc 3, sql 1" — mirrors formatDrawSpec in the API. */
+function formatDraw(spec: number | Record<string, number> | null): string {
+  if (spec == null) return 'all'
+  if (typeof spec === 'number') return String(spec)
+  return Object.entries(spec).map(([t, n]) => `${t} ${n}`).join(', ')
+}
+
 function fmt(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—'
 }
@@ -281,7 +288,7 @@ function ImportPanel({
                 {preview.parsed.title} <span className="font-mono text-[11px] text-white/40 ml-2">{preview.parsed.slug}</span>
               </p>
               <p className="text-[11px] text-slate-mid">
-                dataset <span className="font-mono">{preview.parsed.dataset}</span> · default draw {preview.parsed.defaultDraw ?? 'all'}
+                dataset <span className="font-mono">{preview.parsed.dataset}</span> · default draw {formatDraw(preview.parsed.defaultDraw)}
               </p>
             </div>
             <ul className="space-y-1">
@@ -294,7 +301,7 @@ function ImportPanel({
                       {s.number}. {s.title}
                     </span>
                     <span className="text-white/40">
-                      {mc} mc · {sqlN} sql · draw {s.draw ?? 'all'}
+                      {mc} mc · {sqlN} sql · draw {formatDraw(s.draw)}
                     </span>
                   </li>
                 )
@@ -414,7 +421,7 @@ function DetailPanel({
                   {s.number}. {s.title}
                 </p>
                 <p className="font-mono text-[10px] text-white/40">
-                  {mc} mc · {s.questions.length - mc} sql · draw {s.draw ?? 'all'}
+                  {mc} mc · {s.questions.length - mc} sql · draw {formatDraw(s.draw)}
                 </p>
               </li>
             )

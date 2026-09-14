@@ -306,7 +306,7 @@ model Assessment {
   datasetId      String
   sourceMarkdown String                                   // last imported markdown, re-import replaces
   sections       Json                                     // ParsedSection[] — see assessments/parse-markdown.ts
-  defaultDraw    Int?                                     // frontmatter `draw`; null = every question
+  defaultDraw    Json?                                    // frontmatter `draw`: total or per-type map (DrawSpec); null = every question
   institutionId  String?                                  // null = platform-wide; see Dataset.institutionId
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt

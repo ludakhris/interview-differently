@@ -28,11 +28,14 @@ export interface SqlQuestion {
 
 export type AssessmentQuestion = McQuestion | SqlQuestion
 
+/** Questions drawn per section: a total of any type, or per-type counts keyed by AssessmentQuestion.type. */
+export type DrawSpec = number | Record<string, number>
+
 export interface AssessmentSection {
   id: string // 's1'
   number: number
   title: string
-  draw: number | null // questions to draw per delivery; null = all
+  draw: DrawSpec | null // questions to draw per delivery; null = all
   questions: AssessmentQuestion[]
 }
 
@@ -40,7 +43,7 @@ export interface ParsedAssessment {
   slug: string
   title: string
   dataset: string // Dataset.slug
-  defaultDraw: number | null
+  defaultDraw: DrawSpec | null
   sections: AssessmentSection[]
   warnings: string[]
 }

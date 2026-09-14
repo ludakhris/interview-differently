@@ -1,10 +1,12 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { randomBytes } from 'crypto'
+import { Prisma } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { ClerkService } from '../auth/clerk.service'
 import { SqlRunnerService, type QueryOutcome } from '../sql-runner/sql-runner.service'
 import { AssessmentParseError, parseAssessmentMarkdown, questionIndex } from './parse-markdown'
 import { compareResults } from './grade'
+import { drawCount, drawSection } from './draw'
 import type { AssessmentQuestion, AssessmentSection, ParsedAssessment, SectionScore } from './assessment.types'
 import type { ContentWhere } from '../datasets/datasets.service'
 
@@ -69,7 +71,7 @@ export class AssessmentsService {
       datasetId,
       sourceMarkdown: markdown,
       sections: parsed.sections as unknown as object[],
-      defaultDraw: parsed.defaultDraw,
+      defaultDraw: parsed.defaultDraw ?? Prisma.DbNull,
     }
     const row = await this.prisma.assessment.upsert({
       where: { slug: parsed.slug },
@@ -257,7 +259,7 @@ export class AssessmentsService {
       opensAt: d.opensAt,
       closesAt: d.closesAt,
       timeLimitMinutes: d.timeLimitMinutes,
-      questionCount: sections.reduce((n, s) => n + Math.min(s.draw ?? s.questions.length, s.questions.length), 0),
+      questionCount: sections.reduce((n, s) => n + drawCount(s), 0),
       isOpen: this.isOpen(d, Date.now()),
     }
   }
@@ -465,7 +467,7 @@ export class AssessmentsService {
         opensAt: d.opensAt,
         closesAt: d.closesAt,
         timeLimitMinutes: d.timeLimitMinutes,
-        questionCount: sections.reduce((n, s) => n + Math.min(s.draw ?? s.questions.length, s.questions.length), 0),
+        questionCount: sections.reduce((n, s) => n + drawCount(s), 0),
         isOpen: this.isOpen(d, now),
         attempt: attempt && {
           id: attempt.id,
@@ -491,7 +493,7 @@ export class AssessmentsService {
     if (!this.isOpen(d, Date.now())) throw new ForbiddenException('This assessment is not open right now')
 
     const sections = d.assessment.sections as unknown as AssessmentSection[]
-    const drawnQuestionIds = sections.flatMap((s) => draw(s.questions, s.draw).map((q) => q.id))
+    const drawnQuestionIds = sections.flatMap((s) => drawSection(s).map((q) => q.id))
     const row = await this.prisma.assessmentAttempt.create({
       data: { deliveryId, userId, datasetHash: d.assessment.dataset.setupHash, drawnQuestionIds, answers: {} },
     })
@@ -655,16 +657,6 @@ function overall(scores: SectionScore[]) {
   const correct = scores.reduce((n, s) => n + s.correct, 0)
   const total = scores.reduce((n, s) => n + s.total, 0)
   return { correct, total, percent: total ? Math.round((correct / total) * 100) : 0 }
-}
-
-/** Random subset of `n` questions (all when n is null or ≥ length), in random order. */
-function draw<T>(items: T[], n: number | null): T[] {
-  const arr = [...items]
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return n === null ? arr : arr.slice(0, n)
 }
 
 function stripAnswer(q: AssessmentQuestion) {

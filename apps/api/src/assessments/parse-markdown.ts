@@ -1,5 +1,6 @@
 import * as yaml from 'js-yaml'
 import type { AssessmentQuestion, AssessmentSection, McOption, ParsedAssessment } from './assessment.types'
+import { drawSpecFromYaml, parseDrawSpec } from './draw'
 
 /**
  * Parses the assessment markdown format — see docs/assessment-format.md.
@@ -14,7 +15,7 @@ import type { AssessmentQuestion, AssessmentSection, McOption, ParsedAssessment 
 
 const SECTION_RE = /^##\s+Section\s+(\d+)\s*[:—–-]\s*(.+?)\s*$/
 const QUESTION_RE = /^\*\*(\d+\.\d+)\s*\(([^)]+)\)\*\*\s*(.*)$/
-const DRAW_RE = /^>\s*draw:\s*(\d+)\s*$/i
+const DRAW_RE = /^>\s*draw:\s*(.+?)\s*$/i
 const FLAG_RE = /^>\s*(ordered|strictColumns)\s*$/i
 const MC_ANSWER_RE = /^\*\*Answer:\s*([A-Z])\b/
 const SQL_ANSWER_RE = /^\*\*Answer:\*\*\s*$/
@@ -45,9 +46,9 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
   const title = String(fm.title ?? '').trim()
   const dataset = String(fm.dataset ?? '').trim()
   if (!slug || !title || !dataset) throw new AssessmentParseError('Frontmatter needs slug, title and dataset')
-  const defaultDraw = fm.draw == null ? null : Number(fm.draw)
-  if (defaultDraw !== null && !(Number.isInteger(defaultDraw) && defaultDraw > 0)) {
-    throw new AssessmentParseError('Frontmatter draw must be a positive integer')
+  const defaultDraw = fm.draw == null ? null : drawSpecFromYaml(fm.draw)
+  if (fm.draw != null && defaultDraw === null) {
+    throw new AssessmentParseError('Frontmatter draw must be a positive integer or a per-type map like { mc: 3, sql: 1 }')
   }
 
   // ── Body ──
@@ -137,7 +138,9 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
 
     const draw = DRAW_RE.exec(line)
     if (draw && !q) {
-      section.draw = Number(draw[1])
+      const spec = parseDrawSpec(draw[1])
+      if (spec === null) warnings.push(`Section ${section.number}: cannot read "> draw: ${draw[1]}" — ignored`)
+      else section.draw = spec
       continue
     }
 
@@ -198,9 +201,23 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
 
   if (sections.length === 0) throw new AssessmentParseError('No "## Section N: Title" headings found')
   for (const s of sections) {
-    if (s.draw !== null && s.draw > s.questions.length && s.questions.length > 0) {
-      warnings.push(`Section ${s.number} draws ${s.draw} but only has ${s.questions.length} questions — all will be used`)
-      s.draw = s.questions.length
+    if (s.draw === null || s.questions.length === 0) continue
+    if (typeof s.draw === 'number') {
+      if (s.draw > s.questions.length) {
+        warnings.push(`Section ${s.number} draws ${s.draw} but only has ${s.questions.length} questions — all will be used`)
+        s.draw = s.questions.length
+      }
+      continue
+    }
+    // Per-type: clamp each type to what the section has. No substitution
+    // from other types — a short section yields fewer questions, not a
+    // different mix.
+    for (const [type, want] of Object.entries(s.draw)) {
+      const have = s.questions.filter((q) => q.type === type).length
+      if (want > have) {
+        warnings.push(`Section ${s.number} draws ${want} ${type} but only has ${have} — all will be used`)
+        s.draw[type] = have
+      }
     }
   }
 

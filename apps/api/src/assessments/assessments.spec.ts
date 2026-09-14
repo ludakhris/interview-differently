@@ -1,5 +1,6 @@
 import { parseAssessmentMarkdown, AssessmentParseError } from './parse-markdown'
 import { compareResults } from './grade'
+import { drawCount, drawSection, formatDrawSpec, parseDrawSpec } from './draw'
 import type { QueryResult } from '../sql-runner/sql-runner.service'
 
 const BANK = `---
@@ -124,6 +125,103 @@ SELECT state, COUNT(*) AS n FROM customers GROUP BY state;
     expect(() => parseAssessmentMarkdown('no frontmatter')).toThrow(AssessmentParseError)
     expect(() => parseAssessmentMarkdown(BANK.replace('**Answer: B**', ''))).toThrow(/1\.1: missing/)
     expect(() => parseAssessmentMarkdown(BANK.replace('**Answer: B**', '**Answer: Z**'))).toThrow(/not one of the options/)
+  })
+})
+
+const TYPED_BANK = `---
+slug: typed
+title: Typed draw
+dataset: demo
+draw: { mc: 2, sql: 1 }
+---
+
+## Section 1: Mixed
+
+**1.1 (MC)** a?
+A) x  B) y
+**Answer: A**
+
+**1.2 (MC)** b?
+A) x  B) y
+**Answer: B**
+
+**1.3 (MC)** c?
+A) x  B) y
+**Answer: A**
+
+**1.4 (Hands-On SQL)** q1
+**Answer:**
+\`\`\`sql
+SELECT 1;
+\`\`\`
+
+**1.5 (Hands-On SQL)** q2
+**Answer:**
+\`\`\`sql
+SELECT 2;
+\`\`\`
+
+## Section 2: Short on sql
+> draw: mc 1, sql 2
+
+**2.1 (MC)** a?
+A) x  B) y
+**Answer: A**
+
+**2.2 (Hands-On SQL)** q
+**Answer:**
+\`\`\`sql
+SELECT 1;
+\`\`\`
+
+## Section 3: Plain total still works
+> draw: 1
+
+**3.1 (MC)** a?
+A) x  B) y
+**Answer: A**
+
+**3.2 (MC)** b?
+A) x  B) y
+**Answer: B**
+`
+
+describe('per-type draw', () => {
+  const parsed = parseAssessmentMarkdown(TYPED_BANK)
+
+  it('parses draw specs in every accepted spelling', () => {
+    expect(parseDrawSpec('4')).toBe(4)
+    expect(parseDrawSpec('mc 3, sql 1')).toEqual({ mc: 3, sql: 1 })
+    expect(parseDrawSpec('MC: 3, SQL: 1')).toEqual({ mc: 3, sql: 1 })
+    expect(parseDrawSpec('three')).toBeNull()
+    expect(formatDrawSpec({ mc: 3, sql: 1 })).toBe('mc 3, sql 1')
+  })
+
+  it('reads the frontmatter map, per-section overrides, and clamps per type', () => {
+    expect(parsed.defaultDraw).toEqual({ mc: 2, sql: 1 })
+    expect(parsed.sections.map((s) => s.draw)).toEqual([{ mc: 2, sql: 1 }, { mc: 1, sql: 1 }, 1])
+    expect(parsed.warnings).toEqual(['Section 2 draws 2 sql but only has 1 — all will be used'])
+    expect(parsed.sections.map(drawCount)).toEqual([3, 2, 1])
+  })
+
+  it('draws exactly the per-type counts, every time', () => {
+    const s = parsed.sections[0]
+    for (let i = 0; i < 50; i++) {
+      const paper = drawSection(s)
+      expect(paper.filter((q) => q.type === 'mc')).toHaveLength(2)
+      expect(paper.filter((q) => q.type === 'sql')).toHaveLength(1)
+    }
+  })
+
+  it('a plain total stays type-blind', () => {
+    const s = { ...parsed.sections[0], draw: 3 }
+    const seen = new Set<number>()
+    for (let i = 0; i < 100; i++) seen.add(drawSection(s).filter((q) => q.type === 'sql').length)
+    expect(seen.size).toBeGreaterThan(1)
+  })
+
+  it('rejects a malformed frontmatter draw', () => {
+    expect(() => parseAssessmentMarkdown(TYPED_BANK.replace('draw: { mc: 2, sql: 1 }', 'draw: lots'))).toThrow(AssessmentParseError)
   })
 })
 

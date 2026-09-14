@@ -744,7 +744,8 @@ export interface AssessmentSection {
   id: string
   number: number
   title: string
-  draw: number | null
+  /** Questions drawn per attempt: a total of any type, per-type counts keyed by question type, or null = all. */
+  draw: number | Record<string, number> | null
   questions: AssessmentQuestion[]
 }
 

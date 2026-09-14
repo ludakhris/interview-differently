@@ -13,11 +13,16 @@ The format is defined in [assessment-format.md](./assessment-format.md); this do
 One markdown file:
 
 - YAML frontmatter: `slug`, `title`, `dataset`, optional `draw`.
-- One or more `## Section N: Title` headings. Optional `> draw: N` right under the heading.
+- One or more `## Section N: Title` headings. Optional `> draw: …` right under the heading.
 - Questions numbered `**N.M (Type)**` where Type is `MC` or `Hands-On SQL`. (`Scenario` is parsed and skipped — don't emit it.)
 - Every question ends with its answer. Nothing else is required.
 
-The platform draws `draw` questions per section at random for each student, separately for the pre and the post delivery. So a section with 8 questions and `draw: 4` gives every student a different 4. **Write more questions than you draw** — that's the whole point.
+The platform draws questions per section at random for each student, separately for the pre and the post delivery. `draw` is either:
+
+- a plain total — `draw: 4` — four questions of any type, or
+- per-type counts — `draw: { mc: 3, sql: 1 }` (frontmatter) / `> draw: mc 3, sql 1` (section) — exactly three MC and one Hands-On SQL, shuffled together. A type you don't list draws zero.
+
+**Use per-type counts.** A plain total can hand one student three SQL questions in a section and another none, which wrecks pre/post comparability. So a section with 6 MC + 4 SQL and `draw: { mc: 3, sql: 1 }` gives every student a different 3 + 1 with the same shape. **Write more questions of each type than you draw** — that's the whole point.
 
 ## 2. Exact grammar
 
@@ -26,11 +31,11 @@ The platform draws `draw` questions per section at random for each student, sepa
 slug: sql-fundamentals-v1
 title: SQL Fundamentals Pre/Post
 dataset: sql-fundamentals
-draw: 4
+draw: { mc: 3, sql: 1 }
 ---
 
 ## Section 1: Querying Basics
-> draw: 3
+> draw: mc 2, sql 0
 
 **1.1 (MC)** One-line question text.
 A) option  B) option  C) option  D) option
@@ -58,7 +63,7 @@ SELECT … ;
 
 Rules the parser enforces (import fails otherwise):
 
-- Frontmatter must have `slug`, `title`, `dataset`. `dataset` must be an existing Dataset slug.
+- Frontmatter must have `slug`, `title`, `dataset`. `dataset` must be an existing Dataset slug. `draw` is a positive integer or a map of type → non-negative integer (`mc`, `sql`).
 - Question ids must be unique across the whole file. Use `section.number`.
 - MC: at least two options `A)`…; `**Answer: X**` must be one of them.
 - SQL: `**Answer:**` on its own line followed by a ```` ```sql ```` fence containing the reference query. Every reference query is **executed on import** — one error and the import is rejected with the question id.
@@ -134,16 +139,16 @@ If you're authoring for a different dataset, ask for its schema summary first (A
 
 The same bank serves both deliveries with a different random draw, so:
 
-- Every section needs at least `draw + 3` questions of comparable difficulty, or the pre and post papers won't be comparable.
+- Every section needs, **per type**, at least the drawn count + 2 questions of comparable difficulty (e.g. `mc 3, sql 1` → ≥ 5 MC and ≥ 3 SQL), or the pre and post papers won't be comparable. A section short on a type gives students fewer questions, not a substitute.
 - Order sections easy → hard; the platform reports per-section scores, and cohort admins read "% improvement" per section.
-- Mix: roughly 60% MC (fast, broad coverage) / 40% Hands-On SQL (the skill). A 45-minute paper is ~24 drawn questions with ~8 SQL.
+- Mix: roughly 60% MC (fast, broad coverage) / 40% Hands-On SQL (the skill). A 45-minute paper is ~24 drawn questions with ~8 SQL — express that in the per-type `draw` counts rather than hoping the random draw lands there. Concept-only sections can be `> draw: mc 4, sql 0`.
 - Each SQL question should be answerable in ≤ 5 minutes by someone who has the skill. If the reference needs a CTE plus two joins plus a window function, split it.
 - Prompts must be unambiguous about the output: which columns, which filter, which order, rounding. Anything you'd have to explain to a human grader must be in the prompt, because there is no human grader.
 
 ## 7. Checklist before handing the file over
 
 - [ ] Frontmatter has `slug`, `title`, `dataset`; `dataset` slug exists.
-- [ ] Every section has ≥ `draw + 3` questions.
+- [ ] `draw` uses per-type counts, and every section has ≥ drawn + 2 questions **of each type it draws**.
 - [ ] Every MC has 2–4 options and an `**Answer: X**` that's one of them.
 - [ ] Every SQL question has a ```` ```sql ```` reference under `**Answer:**` that runs without error.
 - [ ] No reference uses `SELECT *`, `LIMIT` without `ORDER BY`, `RANDOM()`, or `NOW()`.
@@ -160,7 +165,7 @@ The same bank serves both deliveries with a different random draw, so:
 slug: sql-fundamentals-mini
 title: SQL Fundamentals — mini bank
 dataset: sql-fundamentals
-draw: 2
+draw: { mc: 1, sql: 1 }
 ---
 
 ## Section 1: Filtering & sorting

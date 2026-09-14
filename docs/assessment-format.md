@@ -11,11 +11,11 @@ Keep the source file out of the repo — it contains the answers.
 slug: sql-fundamentals-v1          # stable id; re-import replaces by slug
 title: SQL Fundamentals Pre/Post
 dataset: sql-fundamentals          # Dataset.slug (Admin → Datasets)
-draw: 4                            # default questions drawn per section; omit for "all"
+draw: { mc: 3, sql: 1 }            # default per section: 3 MC + 1 SQL; a plain number (draw: 4) is any-type; omit for "all"
 ---
 
 ## Section 1: Querying Basics
-> draw: 5                          # optional per-section override
+> draw: mc 4, sql 1                # optional per-section override (or a plain total: > draw: 5)
 
 **1.1 (MC)** Which clause is used to filter individual rows before any grouping happens?
 A) SELECT  B) WHERE  C) HAVING  D) ORDER BY
@@ -45,9 +45,9 @@ LIMIT 5;
 
 ## Rules
 
-**Frontmatter** — required: `slug`, `title`, `dataset`. Optional: `draw` (positive integer). Anything between the frontmatter and the first section heading is ignored, so delivery notes can stay at the top of the file.
+**Frontmatter** — required: `slug`, `title`, `dataset`. Optional: `draw` — either a positive integer (questions of any type) or a per-type map `{ mc: 3, sql: 1 }` keyed by question type (`mc`, `sql`; a type not listed draws 0). Anything between the frontmatter and the first section heading is ignored, so delivery notes can stay at the top of the file.
 
-**Sections** — `## Section N: Title` (also accepts `—` or `-` as the separator). An optional `> draw: N` line directly under the heading overrides the frontmatter default. A section that draws more questions than it has uses all of them and reports a warning.
+**Sections** — `## Section N: Title` (also accepts `—` or `-` as the separator). An optional `> draw: …` line directly under the heading overrides the frontmatter default — a plain total (`> draw: 5`) or per-type counts (`> draw: mc 4, sql 1`; `mc: 4, sql: 1` also accepted). With per-type counts every student's paper has the same shape per section; each type is drawn from its own pool and the picks are shuffled together. A section that draws more than it has (overall, or of one type) uses all it has and reports a warning — it never substitutes another type.
 
 **Questions** start with `**N.N (Type)**` followed by the prompt. `N.N` must be unique across the whole file. Backticked spans in prompts and options render as inline code.
 
