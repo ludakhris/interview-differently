@@ -15,3 +15,6 @@ coverage
 
 # Proprietary research notes — never commit
 docs/business-cases-research.md
+
+# Assessment banks contain answers — never commit (repo is public)
+docs/private/

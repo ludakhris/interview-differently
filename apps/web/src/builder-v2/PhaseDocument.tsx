@@ -12,6 +12,7 @@ import type { EntityKind } from './registry'
 import { ExhibitBlock, NodeBlock, SetupBlock, SidebarBlock } from './DocBlock'
 import { SetupEditor } from './editors/SetupEditor'
 import type { ScenarioMeta } from '@/hooks/useBuilderDoc'
+import { useConfirm } from '@/components/ConfirmDialog'
 import { BlockPicker } from './BlockPicker'
 
 interface Props {
@@ -222,6 +223,7 @@ interface PhaseSectionProps {
 
 function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNodes, allDimensions, editingBlockId, onEditRequest, onExhibitUpdate, onNodeUpdate, onInsertRequest, onPhaseUpdate, onToggleExhibitShared, onVisible, onMoveBlock, onRemoveBlock, onRemovePhase }: PhaseSectionProps) {
   const [editingDescription, setEditingDescription] = useState(false)
+  const confirm = useConfirm()
   const headerRef = useRef<HTMLDivElement>(null)
   void onVisible // intersection observer wired in Phase D
 
@@ -313,9 +315,9 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
         </div>
         <button
           type="button"
-          onClick={() => {
+          onClick={async () => {
             const n = phase.nodeIds.length
-            if (confirm(`Delete phase "${phase.label}"${n ? ` and its ${n} question block${n === 1 ? '' : 's'}` : ''}? Exhibits shown in other phases are kept.`)) onRemovePhase()
+            if (await confirm({ title: `Delete phase "${phase.label}"?`, body: `${n ? `Its ${n} question block${n === 1 ? '' : 's'} go with it. ` : ''}Exhibits shown in other phases are kept.`, confirmLabel: 'Delete phase', danger: true })) onRemovePhase()
           }}
           title="Delete this phase"
           className="text-[11px] text-white/25 hover:text-red-400/80 transition-colors mt-1"
@@ -336,9 +338,9 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
                 canDown={block.kind === 'exhibit' ? blockIdx < blocks.filter(b => b.kind === 'exhibit').length - 1 : blockIdx < blocks.length - 1}
                 onUp={() => onMoveBlock(block.kind, block.id, -1)}
                 onDown={() => onMoveBlock(block.kind, block.id, 1)}
-                onRemove={() => {
+                onRemove={async () => {
                   const what = block.kind === 'exhibit' ? 'this exhibit' : 'this block'
-                  if (confirm(`Remove ${what} from the scenario? Options pointing at it will fall back to "continue".`)) onRemoveBlock(block.kind, block.id)
+                  if (await confirm({ title: `Remove ${what}?`, body: 'Options pointing at it will fall back to "continue".', confirmLabel: 'Remove', danger: true })) onRemoveBlock(block.kind, block.id)
                 }}
               />
               {block.kind === 'exhibit' ? (

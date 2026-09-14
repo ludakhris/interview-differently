@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { useRole } from '@/hooks/useRole'
+import { useConfirm, useNotify } from '@/components/ConfirmDialog'
 import {
   addCohortMember,
   createCohort,
@@ -280,6 +281,8 @@ function InstitutionDetailView({
   onDeleted: () => Promise<void>
 }) {
   const navigate = useNavigate()
+  const confirm = useConfirm()
+  const notify = useNotify()
   const [showNewCohort, setShowNewCohort] = useState(false)
   const [expandedCohort, setExpandedCohort] = useState<string | null>(null)
 
@@ -303,12 +306,12 @@ function InstitutionDetailView({
           {isAdmin && (
             <button
               onClick={async () => {
-                if (!confirm(`Delete "${detail.name}" and all its cohorts? This cannot be undone.`)) return
+                if (!(await confirm({ title: `Delete "${detail.name}"?`, body: 'All of its cohorts go with it. This cannot be undone.', confirmLabel: 'Delete institution', danger: true }))) return
                 try {
                   await deleteInstitution(getToken, detail.id)
                   await onDeleted()
                 } catch (e) {
-                  alert(e instanceof Error ? e.message : 'Failed to delete')
+                  await notify(e instanceof Error ? e.message : 'Failed to delete')
                 }
               }}
               className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors"
@@ -450,6 +453,8 @@ function CohortRow({
   onChange: () => Promise<void>
 }) {
   const navigate = useNavigate()
+  const confirm = useConfirm()
+  const notify = useNotify()
   const [members, setMembers] = useState<CohortMember[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -534,15 +539,16 @@ function CohortRow({
                       <button
                         onClick={async () => {
                           const promote = m.role !== 'institution-admin'
-                          const msg = promote
-                            ? `Make ${m.displayName ?? m.email ?? m.userId} a cohort admin? They will be able to manage cohorts, members, tools, and assessments for every institution they belong to.`
-                            : `Remove cohort admin from ${m.displayName ?? m.email ?? m.userId}?`
-                          if (!confirm(msg)) return
+                          const who = m.displayName ?? m.email ?? m.userId
+                          const ok = promote
+                            ? await confirm({ title: `Make ${who} a cohort admin?`, body: 'They will be able to manage cohorts, members, tools, datasets, assessments and scenarios for every institution they belong to.', confirmLabel: 'Make cohort admin' })
+                            : await confirm({ title: `Remove cohort admin from ${who}?`, body: 'They keep their cohort membership and become a regular member.', confirmLabel: 'Remove admin', danger: true })
+                          if (!ok) return
                           try {
                             await setMemberRole(getToken, m.userId, promote ? 'institution-admin' : null)
                             await refreshMembers()
                           } catch (e) {
-                            alert(e instanceof Error ? e.message : 'Failed to update role')
+                            await notify(e instanceof Error ? e.message : 'Failed to update role')
                           }
                         }}
                         className="text-[11px] text-slate-mid hover:text-green-light transition-colors"
@@ -560,13 +566,13 @@ function CohortRow({
                     </button>
                     <button
                       onClick={async () => {
-                        if (!confirm('Remove this member from the cohort?')) return
+                        if (!(await confirm({ title: `Remove ${m.displayName ?? m.email ?? m.userId} from this cohort?`, body: 'Their account and results are kept; they just lose the cohort tag.', confirmLabel: 'Remove', danger: true }))) return
                         try {
                           await removeCohortMember(getToken, cohort.id, m.membershipId)
                           await refreshMembers()
                           await onChange()
                         } catch (e) {
-                          alert(e instanceof Error ? e.message : 'Failed to remove')
+                          await notify(e instanceof Error ? e.message : 'Failed to remove')
                         }
                       }}
                       className="text-[11px] text-slate-mid hover:text-red-400 transition-colors"
@@ -582,12 +588,12 @@ function CohortRow({
           <div className="mt-4 pt-3 border-t border-white/5 flex justify-end">
             <button
               onClick={async () => {
-                if (!confirm(`Delete cohort "${cohort.name}"? Members will lose this cohort tag (the users themselves are not deleted).`)) return
+                if (!(await confirm({ title: `Delete cohort "${cohort.name}"?`, body: 'Members lose the cohort tag but keep their accounts. Assessment deliveries and results are kept.', confirmLabel: 'Delete cohort', danger: true }))) return
                 try {
                   await deleteCohort(getToken, cohort.id)
                   await onChange()
                 } catch (e) {
-                  alert(e instanceof Error ? e.message : 'Failed to delete')
+                  await notify(e instanceof Error ? e.message : 'Failed to delete')
                 }
               }}
               className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors"

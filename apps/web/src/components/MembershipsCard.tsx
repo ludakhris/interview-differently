@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
+import { useConfirm, useNotify } from '@/components/ConfirmDialog'
 import {
   fetchInstitutionSuggestion,
   fetchMyMemberships,
@@ -30,6 +31,8 @@ export interface MembershipsCardProps {
 
 export function MembershipsCard({ variant = 'settings', onJoined, onSkip }: MembershipsCardProps) {
   const { getToken, isSignedIn } = useAuth()
+  const confirm = useConfirm()
+  const notify = useNotify()
   const [memberships, setMemberships] = useState<MyMembership[] | null>(null)
   const [suggestion, setSuggestion] = useState<InstitutionSuggestion | null>(null)
   const [loading, setLoading] = useState(true)
@@ -85,12 +88,12 @@ export function MembershipsCard({ variant = 'settings', onJoined, onSkip }: Memb
               </div>
               <button
                 onClick={async () => {
-                  if (!confirm(`Leave ${m.institution.name}? You can rejoin later if you have a join key.`)) return
+                  if (!(await confirm({ title: `Leave ${m.institution.name}?`, body: 'You can rejoin later with a join key or invite link. Your results are kept.', confirmLabel: 'Leave', danger: true }))) return
                   try {
                     await leaveMembership(getToken, m.membershipId)
                     await refresh()
                   } catch (e) {
-                    alert(e instanceof Error ? e.message : 'Failed to leave')
+                    await notify(e instanceof Error ? e.message : 'Failed to leave')
                   }
                 }}
                 className="text-[11px] text-slate-mid hover:text-red-400 transition-colors"

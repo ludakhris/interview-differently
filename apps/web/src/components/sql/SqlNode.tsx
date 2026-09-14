@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
+import { useConfirm } from '@/components/ConfirmDialog'
 import type { ScenarioNode, SqlSpec } from '@id/types'
 import { SqlWorkbench } from './SqlWorkbench'
 import { ResultsGrid } from './ResultsGrid'
@@ -33,6 +34,7 @@ interface Props {
 export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
   const spec = node.sql as SqlSpec
   const { getToken } = useAuth()
+  const confirm = useConfirm()
   const [dataset, setDataset] = useState<DatasetDetail | null>(null)
   const [db, setDb] = useState<SandboxDb | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -114,8 +116,8 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
               ) : (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!confirm('Show the hint? Your highest possible score on this question drops from Strong to Proficient.')) return
+                  onClick={async () => {
+                    if (!(await confirm({ title: 'Show the hint?', body: 'Your highest possible score on this question drops from Strong to Proficient.', confirmLabel: 'Show hint' }))) return
                     setHintShown(true)
                     onHintUsed?.(node.nodeId)
                   }}

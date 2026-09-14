@@ -5,6 +5,7 @@ import CodeMirror from '@uiw/react-codemirror'
 import { PostgreSQL, sql } from '@codemirror/lang-sql'
 import { Nav } from '@/components/Nav'
 import { useRole } from '@/hooks/useRole'
+import { useConfirm } from '@/components/ConfirmDialog'
 import { useOwnerOptions, type OwnerOption } from '@/hooks/useOwnerOptions'
 import { sandboxEditorTheme } from '@/lib/sql/editorTheme'
 import {
@@ -209,6 +210,7 @@ function DatasetEditor({
   onDeleted?: () => Promise<void>
 }) {
   const navigate = useNavigate()
+  const confirm = useConfirm()
   const [ownerId, setOwnerId] = useState<string | null>(owners[0]?.id ?? null)
   useEffect(() => {
     if (!owners.some((o) => o.id === ownerId)) setOwnerId(owners[0]?.id ?? null)
@@ -421,7 +423,7 @@ function DatasetEditor({
           {initial && onDeleted && !readOnly && (
             <button
               onClick={async () => {
-                if (!confirm(`Delete dataset "${initial.name}"? Cohorts will lose access.`)) return
+                if (!(await confirm({ title: `Delete dataset "${initial.name}"?`, body: 'Cohorts lose access and any assessment built on it must be re-pointed. This cannot be undone.', confirmLabel: 'Delete dataset', danger: true }))) return
                 try {
                   await deleteDataset(getToken, initial.id)
                   await onDeleted()

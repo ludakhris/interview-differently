@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { useRole } from '@/hooks/useRole'
+import { useConfirm, useNotify } from '@/components/ConfirmDialog'
 import { MobileWarning } from '@/components/builder/MobileWarning'
 import {
   listScenarios,
@@ -125,6 +126,8 @@ export function BuilderListPage() {
   const navigate = useNavigate()
   const { getToken } = useAuth()
   const { isAdmin } = useRole()
+  const confirm = useConfirm()
+  const notify = useNotify()
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -159,17 +162,14 @@ export function BuilderListPage() {
         0,
       )
     if (totalNodes === 0) {
-      alert('No published immersive scenarios with renderable nodes.')
+      await notify('No published immersive scenarios with renderable nodes.', 'Nothing to render')
       return
     }
-    if (
-      !confirm(
-        `Re-render media for ${totalNodes} node${totalNodes === 1 ? '' : 's'}? ` +
-          `Each render takes 30-180 seconds via D-ID. Already-current nodes are skipped automatically.`,
-      )
-    ) {
-      return
-    }
+    if (!(await confirm({
+      title: `Re-render media for ${totalNodes} node${totalNodes === 1 ? '' : 's'}?`,
+      body: 'Each render takes 30–180 seconds via D-ID and costs credits. Already-current nodes are skipped automatically.',
+      confirmLabel: 'Re-render',
+    }))) return
 
     setIsRendering(true)
     setRenderSummary(null)
@@ -313,7 +313,7 @@ export function BuilderListPage() {
   // Rows are stripped summaries — fetch the full document before exporting.
   async function handleExport(id: string, format: 'yaml' | 'json') {
     const full = await getScenario(id)
-    if (!full) { alert('Could not load the scenario to export.'); return }
+    if (!full) { await notify('Could not load the scenario to export.'); return }
     if (format === 'yaml') downloadScenarioYaml(full)
     else downloadScenarioJson(full)
   }

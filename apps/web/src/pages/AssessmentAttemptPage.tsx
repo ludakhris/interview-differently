@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
+import { useConfirm } from '@/components/ConfirmDialog'
 import { Clock } from 'lucide-react'
 import type { StudentQuestion } from '@id/types'
 import { Nav } from '@/components/Nav'
@@ -22,6 +23,7 @@ export function AssessmentAttemptPage() {
   const { attemptId = '' } = useParams()
   const { getToken } = useAuth()
   const navigate = useNavigate()
+  const confirm = useConfirm()
 
   const [paper, setPaper] = useState<AttemptPaper | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -87,7 +89,7 @@ export function AssessmentAttemptPage() {
   const submit = useCallback(
     async (auto = false) => {
       if (submitting) return
-      if (!auto && !confirm('Submit your answers? You cannot change them afterwards.')) return
+      if (!auto && !(await confirm({ title: 'Submit your answers?', body: 'You cannot change them afterwards. Unanswered questions score zero.', confirmLabel: 'Submit' }))) return
       setSubmitting(true)
       if (timerRef.current) window.clearTimeout(timerRef.current)
       try {
@@ -105,7 +107,7 @@ export function AssessmentAttemptPage() {
         setSubmitting(false)
       }
     },
-    [submitting, getToken, attemptId, answers, navigate, paper],
+    [submitting, getToken, attemptId, answers, navigate, paper, confirm],
   )
 
   // ── Deadline countdown → auto-submit ──

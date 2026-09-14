@@ -33,6 +33,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
 import { useUserSync } from '@/hooks/useUserSync'
 import { useRegisterToken } from '@/hooks/useRegisterToken'
+import { ConfirmProvider } from '@/components/ConfirmDialog'
 
 function BuilderV2Redirect() {
   const { scenarioId } = useParams()
@@ -69,6 +70,7 @@ export default function App() {
   useUserSync()
   useRegisterToken()
   return (
+    <ConfirmProvider>
     <Routes>
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
@@ -119,5 +121,6 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </ConfirmProvider>
   )
 }

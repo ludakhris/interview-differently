@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { useRole } from '@/hooks/useRole'
+import { useConfirm } from '@/components/ConfirmDialog'
 import { useOwnerOptions, type OwnerOption } from '@/hooks/useOwnerOptions'
 import { OwnerBadge } from './AdminDatasetsPage'
 import { downloadCsv } from '@/lib/csv'
@@ -369,6 +370,7 @@ function DetailPanel({
 }) {
   const [showNew, setShowNew] = useState(false)
   const [resultsFor, setResultsFor] = useState<string | null>(null)
+  const confirm = useConfirm()
   const totalQ = detail.sections.reduce((n, s) => n + s.questions.length, 0)
 
   return (
@@ -392,7 +394,7 @@ function DetailPanel({
               </button>
               <button
                 onClick={async () => {
-                  if (!confirm(`Delete "${detail.title}"? All deliveries and attempts go with it.`)) return
+                  if (!(await confirm({ title: `Delete "${detail.title}"?`, body: 'Every delivery and every student attempt on it goes with it.', confirmLabel: 'Delete', danger: true }))) return
                   await deleteAssessment(getToken, detail.id)
                   await onDeleted()
                 }}
@@ -470,7 +472,7 @@ function DetailPanel({
                   </button>
                   <button
                     onClick={async () => {
-                      if (!confirm('Delete this delivery and every attempt on it?')) return
+                      if (!(await confirm({ title: `Delete the "${d.label}" delivery?`, body: `${d.startedCount} attempt${d.startedCount === 1 ? '' : 's'} on it will be deleted too.`, confirmLabel: 'Delete', danger: true }))) return
                       await deleteDelivery(getToken, d.id)
                       if (resultsFor === d.id) setResultsFor(null)
                       await onChange()
@@ -508,6 +510,7 @@ function InviteLink({
 }) {
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
+  const confirm = useConfirm()
   const url = code ? `${window.location.origin}/a/${code}` : null
 
   const copy = async () => {
@@ -534,7 +537,7 @@ function InviteLink({
           <button
             disabled={busy}
             onClick={async () => {
-              if (!confirm('Revoke this invite link? Anyone who already joined keeps their attempt.')) return
+              if (!(await confirm({ title: 'Revoke this invite link?', body: 'Anyone who already joined keeps their attempt. You can create a new link afterwards.', confirmLabel: 'Revoke', danger: true }))) return
               setBusy(true)
               try {
                 await revokeInvite(getToken, deliveryId)
