@@ -102,7 +102,15 @@ export function AdminAssessmentsPage() {
           <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">Assessments</h1>
           <p className="text-[13px] text-slate-mid mt-1">
             Question banks imported from markdown, scheduled to cohorts as pre/post deliveries. Format:{' '}
-            <span className="font-mono">docs/assessment-format.md</span>.
+            <a
+              href="https://github.com/ludakhris/interview-differently/blob/main/docs/assessment-format.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono underline hover:text-[#f5f3ee] transition-colors"
+            >
+              docs/assessment-format.md
+            </a>
+            .
           </p>
         </div>
 
