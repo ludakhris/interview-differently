@@ -42,6 +42,8 @@ jobs:
     needs: [ci]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    # A normal deploy takes ~2 min; `railway up` has hung for hours before.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
