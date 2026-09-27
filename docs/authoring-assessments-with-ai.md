@@ -12,9 +12,9 @@ The format is defined in [assessment-format.md](./assessment-format.md); this do
 
 One markdown file:
 
-- YAML frontmatter: `slug`, `title`, `dataset`, optional `draw`.
+- YAML frontmatter: `slug`, `title`, optional `draw`; `dataset` only when the bank has Hands-On SQL questions.
 - One or more `## Section N: Title` headings. Optional `> draw: …` right under the heading.
-- Questions numbered `**N.M (Type)**` where Type is `MC` or `Hands-On SQL`. (`Scenario` is parsed and skipped — don't emit it.)
+- Questions numbered `**N.M (Type)**` where Type is `MC`, `Scenario` or `Hands-On SQL`. `Scenario` is MC with a longer setup — paragraphs, markdown tables (data) and ```` ```sql ````/```` ```dax ```` blocks are allowed in the prompt; options and answer as MC. No free-text answers.
 - Every question ends with its answer. Nothing else is required.
 
 The platform draws questions per section at random for each student, separately for the pre and the post delivery. `draw` is either:
@@ -35,7 +35,7 @@ draw: { mc: 3, sql: 1 }
 ---
 
 ## Section 1: Querying Basics
-> draw: mc 2, sql 0
+> draw: mc 2, scenario 1, sql 0
 
 **1.1 (MC)** One-line question text.
 A) option  B) option  C) option  D) option
@@ -59,13 +59,33 @@ FROM …
 ```sql
 SELECT … ;
 ```
+
+**1.4 (Scenario)** Setup in a paragraph or two. Markdown works here — tables for data:
+
+| month | revenue |
+|---|---:|
+| Jan 2024 | 1,284,310 |
+
+and highlighted code:
+
+```dax
+Avg Revenue =
+// Average revenue per order in the current filter context
+AVERAGEX(orders, [Total Revenue])
+```
+
+Then the question?
+A) option, one line
+B) option, one line
+C) option, one line
+**Answer: C**
 ````
 
 Rules the parser enforces (import fails otherwise):
 
-- Frontmatter must have `slug`, `title`, `dataset`. `dataset` must be an existing Dataset slug. `draw` is a positive integer or a map of type → non-negative integer (`mc`, `sql`).
+- Frontmatter must have `slug`, `title`, and — if any question is Hands-On SQL — `dataset`, an existing Dataset slug. `draw` is a positive integer or a map of type → non-negative integer (`mc`, `scenario`, `sql`).
 - Question ids must be unique across the whole file. Use `section.number`.
-- MC: at least two options `A)`…; `**Answer: X**` must be one of them.
+- MC and Scenario: at least two options `A)`…; `**Answer: X**` must be one of them. Keep each option on one line; a wrapped line is joined onto the option above it.
 - SQL: `**Answer:**` on its own line followed by a ```` ```sql ```` fence containing the reference query. Every reference query is **executed on import** — one error and the import is rejected with the question id.
 - `**Starter:**` + fence is optional and must come **before** `**Answer:**`. Flags (`> ordered`, `> strictColumns`) go between the prompt and the first `**Starter:**`/`**Answer:**`.
 - Prompt text is everything between the question header and the first option / flag / Starter / Answer. Keep it to a few lines.
@@ -107,7 +127,19 @@ MC grading is the letter only. Distractors should be the *plausible* wrong belie
 
 Don't use one when the skill is *composing* from scratch, and never make the starter already correct.
 
-## 5. The `sql-fundamentals` dataset (the one the CD cohort uses)
+## 5. Scenario questions — when and how
+
+A Scenario is a judgment call or a diagnosis, graded as MC. If it can be answered by recalling one sentence from the course material, it belongs in the MC pool instead.
+
+- **Show, don't describe.** Put the evidence in the prompt: the chart's output as a table, the measure or query as a fenced block, the error message verbatim. The student diagnoses what's on screen. Only Scenario prompts render markdown (tables, bold, lists, ```` ```sql ````/```` ```dax ```` highlighting); MC and SQL prompts are plain text.
+- **Ask one decision.** "What do you check first?", "Which plan is right?", "What do you tell them?" A rubric with several points becomes options that each bundle a full plan — the right plan vs plans with a wrong first step, a wrong order, or a step that treats the wrong layer (e.g. rewriting a measure for a relationship problem).
+- **Options must not give the answer away.** Test-wise students pick the longest, most hedged option. Keep every option within roughly ±20% of the same length, give every distractor the same structure and confidence as the key (a reason, a fix), and never make the key the only one with "it depends" nuance.
+- **Distractors are real misconceptions**, each one a mistake a learner at this level actually makes — not nonsense, and never a second defensible answer.
+- **Verify the technical claim.** A scenario that describes behaviour the tool doesn't have (a symptom that wouldn't occur, a function signature that errors) is worse than no question. Check it in the tool before shipping.
+- **DAX blocks follow the course convention:** `Name =` on line 1, a `//` comment stating the intent on line 2, the expression below. In a flawed measure the comment states what the author *meant*, never the bug — the gap between comment and code is part of what the student reads.
+- **Draw them separately:** `scenario` is its own draw key, e.g. `draw: { mc: 3, scenario: 1 }`. They take longer to read, so one per section is usually enough.
+
+## 6. The `sql-fundamentals` dataset (the one the CD cohort uses)
 
 Deterministic, ~80 customers / ~190 orders / ~420 line items / 24 products. Order dates are relative to `CURRENT_DATE`, so "last 30 days" questions keep working.
 
@@ -135,7 +167,7 @@ Facts you can build questions on (verified 2026-09-13):
 
 If you're authoring for a different dataset, ask for its schema summary first (Admin → Datasets shows tables, columns, row counts) and load it in the sandbox to check every reference query and cut-off.
 
-## 6. Question design for pre/post
+## 7. Question design for pre/post
 
 The same bank serves both deliveries with a different random draw, so:
 
@@ -145,11 +177,13 @@ The same bank serves both deliveries with a different random draw, so:
 - Each SQL question should be answerable in ≤ 5 minutes by someone who has the skill. If the reference needs a CTE plus two joins plus a window function, split it.
 - Prompts must be unambiguous about the output: which columns, which filter, which order, rounding. Anything you'd have to explain to a human grader must be in the prompt, because there is no human grader.
 
-## 7. Checklist before handing the file over
+## 8. Checklist before handing the file over
 
-- [ ] Frontmatter has `slug`, `title`, `dataset`; `dataset` slug exists.
+- [ ] Frontmatter has `slug`, `title`; `dataset` (an existing slug) if there are Hands-On SQL questions.
 - [ ] `draw` uses per-type counts, and every section has ≥ drawn + 2 questions **of each type it draws**.
 - [ ] Every MC has 2–4 options and an `**Answer: X**` that's one of them.
+- [ ] Every Scenario shows its evidence (table / code block), asks one decision, has one-line options of similar length, and its technical claim is verified.
+- [ ] Answer letters are spread across A–D, not clustered.
 - [ ] Every SQL question has a ```` ```sql ```` reference under `**Answer:**` that runs without error.
 - [ ] No reference uses `SELECT *`, `LIMIT` without `ORDER BY`, `RANDOM()`, or `NOW()`.
 - [ ] `> ordered` only where order is the skill; tie-breaks stated in the prompt.
@@ -158,7 +192,7 @@ The same bank serves both deliveries with a different random draw, so:
 - [ ] Starters (if any) are not already correct.
 - [ ] Question ids unique; sections numbered from 1.
 
-## 8. Worked example (a complete, importable bank)
+## 9. Worked example (a complete, importable bank)
 
 ````markdown
 ---

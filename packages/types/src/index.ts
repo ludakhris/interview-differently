@@ -714,7 +714,7 @@ export interface McOption {
 
 export interface StudentMcQuestion {
   id: string
-  type: 'mc'
+  type: 'mc' | 'scenario' // scenario: graded like MC; prompt may span paragraphs and ``` blocks
   prompt: string
   options: McOption[]
 }
@@ -757,7 +757,7 @@ export interface SectionScoreSummary {
 }
 
 export interface SectionScore extends SectionScoreSummary {
-  questions: { id: string; type: 'mc' | 'sql'; correct: boolean; error?: string }[]
+  questions: { id: string; type: AssessmentQuestion['type']; correct: boolean; error?: string }[]
 }
 
 export interface OverallScore {

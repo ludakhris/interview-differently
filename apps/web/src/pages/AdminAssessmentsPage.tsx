@@ -296,20 +296,21 @@ function ImportPanel({
                 {preview.parsed.title} <span className="font-mono text-[11px] text-white/40 ml-2">{preview.parsed.slug}</span>
               </p>
               <p className="text-[11px] text-slate-mid">
-                dataset <span className="font-mono">{preview.parsed.dataset}</span> · default draw {formatDraw(preview.parsed.defaultDraw)}
+                dataset <span className="font-mono">{preview.parsed.dataset ?? 'none'}</span> · default draw {formatDraw(preview.parsed.defaultDraw)}
               </p>
             </div>
             <ul className="space-y-1">
               {preview.parsed.sections.map((s) => {
                 const mc = s.questions.filter((q) => q.type === 'mc').length
-                const sqlN = s.questions.length - mc
+                const scen = s.questions.filter((q) => q.type === 'scenario').length
+                const sqlN = s.questions.length - mc - scen
                 return (
                   <li key={s.id} className="flex items-baseline justify-between font-mono text-[11px]">
                     <span className="text-[#f5f3ee]/85">
                       {s.number}. {s.title}
                     </span>
                     <span className="text-white/40">
-                      {mc} mc · {sqlN} sql · draw {formatDraw(s.draw)}
+                      {mc} mc · {scen ? `${scen} scenario · ` : ''}{sqlN} sql · draw {formatDraw(s.draw)}
                     </span>
                   </li>
                 )
@@ -398,7 +399,7 @@ function DetailPanel({
               <OwnerBadge institutionName={detail.institutionName} />
             </h2>
             <p className="text-[12px] text-slate-mid mt-0.5">
-              <span className="font-mono">{detail.slug}</span> · dataset {detail.dataset.name} · {totalQ} questions · imported{' '}
+              <span className="font-mono">{detail.slug}</span> · dataset {detail.dataset?.name ?? 'none'} · {totalQ} questions · imported{' '}
               {fmt(detail.updatedAt)}
             </p>
           </div>
@@ -423,13 +424,14 @@ function DetailPanel({
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {detail.sections.map((s) => {
             const mc = s.questions.filter((q) => q.type === 'mc').length
+            const scen = s.questions.filter((q) => q.type === 'scenario').length
             return (
               <li key={s.id} className="bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2">
                 <p className="text-[12px] font-semibold text-[#f5f3ee]">
                   {s.number}. {s.title}
                 </p>
                 <p className="font-mono text-[10px] text-white/40">
-                  {mc} mc · {s.questions.length - mc} sql · draw {formatDraw(s.draw)}
+                  {mc} mc · {scen ? `${scen} scenario · ` : ''}{s.questions.length - mc - scen} sql · draw {formatDraw(s.draw)}
                 </p>
               </li>
             )

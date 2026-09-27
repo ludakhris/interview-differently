@@ -35,9 +35,11 @@ export class AssessmentsService {
   /**
    * Parses the markdown and runs every reference query against the dataset.
    * Returns the parsed bank plus per-question SQL errors. Nothing is saved.
+   * A bank without Hands-On SQL may omit the dataset (the parser enforces it).
    */
   async preview(markdown: string, datasetWhere: ContentWhere) {
     const parsed = this.parse(markdown)
+    if (!parsed.dataset) return { parsed, datasetId: null, datasetName: null, sqlErrors: [] }
     const dataset = await this.prisma.dataset.findFirst({ where: { slug: parsed.dataset, ...(datasetWhere ?? {}) } })
     if (!dataset) throw new BadRequestException(`Dataset "${parsed.dataset}" not found — create it under Admin → Datasets first`)
     const sqlErrors = await this.checkReferenceQueries(dataset.setupSql, parsed.sections)
@@ -495,7 +497,7 @@ export class AssessmentsService {
     const sections = d.assessment.sections as unknown as AssessmentSection[]
     const drawnQuestionIds = sections.flatMap((s) => drawSection(s).map((q) => q.id))
     const row = await this.prisma.assessmentAttempt.create({
-      data: { deliveryId, userId, datasetHash: d.assessment.dataset.setupHash, drawnQuestionIds, answers: {} },
+      data: { deliveryId, userId, datasetHash: d.assessment.dataset?.setupHash ?? null, drawnQuestionIds, answers: {} },
     })
     return { id: row.id }
   }
@@ -504,6 +506,7 @@ export class AssessmentsService {
   async getAttempt(userId: string, attemptId: string) {
     const a = await this.loadOwnAttempt(userId, attemptId)
     const sections = a.delivery.assessment.sections as unknown as AssessmentSection[]
+    const ds = a.delivery.assessment.dataset
     const drawn = new Set(a.drawnQuestionIds as string[])
     const order = new Map((a.drawnQuestionIds as string[]).map((id, i) => [id, i]))
     return {
@@ -513,11 +516,11 @@ export class AssessmentsService {
       startedAt: a.startedAt,
       submittedAt: a.submittedAt,
       deadlineAt: this.deadline(a.delivery, a.startedAt),
-      dataset: {
-        slug: a.delivery.assessment.dataset.slug,
-        name: a.delivery.assessment.dataset.name,
-        setupSql: a.delivery.assessment.dataset.setupSql,
-        schemaSummary: a.delivery.assessment.dataset.schemaSummary,
+      dataset: ds && {
+        slug: ds.slug,
+        name: ds.name,
+        setupSql: ds.setupSql,
+        schemaSummary: ds.schemaSummary,
       },
       sections: sections
         .map((s) => ({
@@ -561,7 +564,8 @@ export class AssessmentsService {
     // Run every SQL pair (student, reference) on one fresh instance.
     const sqlIds = drawnIds.filter((id) => index.get(id)?.type === 'sql')
     const queries = sqlIds.flatMap((id) => [saved[id] ?? '', (index.get(id) as { referenceSql: string }).referenceSql])
-    const outcomes = queries.length ? await this.runner.executeMany(a.delivery.assessment.dataset.setupSql, queries) : []
+    // SQL questions imply a dataset — the parser refuses a bank with SQL and no dataset.
+    const outcomes = queries.length ? await this.runner.executeMany(a.delivery.assessment.dataset!.setupSql, queries) : []
     const sqlOutcome = new Map<string, { student: QueryOutcome; reference: QueryOutcome }>()
     sqlIds.forEach((id, i) => sqlOutcome.set(id, { student: outcomes[i * 2], reference: outcomes[i * 2 + 1] }))
 
@@ -570,8 +574,8 @@ export class AssessmentsService {
         const qs = drawnIds.filter((id) => index.get(id)?.sectionId === s.id)
         const graded = qs.map((id) => {
           const q = index.get(id)!
-          if (q.type === 'mc') {
-            return { id, type: 'mc' as const, correct: (saved[id] ?? '').trim().toUpperCase() === q.answer }
+          if (q.type !== 'sql') {
+            return { id, type: q.type, correct: (saved[id] ?? '').trim().toUpperCase() === q.answer }
           }
           const o = sqlOutcome.get(id)!
           if (!saved[id]?.trim()) return { id, type: 'sql' as const, correct: false, error: 'no answer' }
@@ -660,7 +664,7 @@ function overall(scores: SectionScore[]) {
 }
 
 function stripAnswer(q: AssessmentQuestion) {
-  if (q.type === 'mc') return { id: q.id, type: 'mc' as const, prompt: q.prompt, options: q.options }
+  if (q.type !== 'sql') return { id: q.id, type: q.type, prompt: q.prompt, options: q.options }
   return { id: q.id, type: 'sql' as const, prompt: q.prompt, ordered: q.ordered, strictColumns: q.strictColumns, ...(q.starterSql ? { starterSql: q.starterSql } : {}) }
 }
 

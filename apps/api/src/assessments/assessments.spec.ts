@@ -24,8 +24,18 @@ A) Ascending
 B) Descending
 **Answer: A. ASC is the default when nothing is specified.**
 
-**1.3 (Scenario)** Explain NULL in your own words.
-**Answer: model answer here**
+**1.3 (Scenario)** A teammate runs this query to find customers with no phone number:
+
+\`\`\`sql
+SELECT * FROM customers WHERE phone = NULL;
+-- A) looks like an option but is code
+\`\`\`
+
+It returns zero rows. Why?
+A) \`= NULL\` is never true; use \`IS NULL\`
+B) Every customer has a phone number
+C) \`SELECT *\` hides NULL columns
+**Answer: A**
 
 **1.4 (Hands-On SQL)** Return the 5 newest customers.
 > ordered
@@ -71,13 +81,26 @@ describe('parseAssessmentMarkdown', () => {
     expect((q2 as { options: { text: string }[] }).options.map((o) => o.text)).toEqual(['Ascending', 'Descending'])
   })
 
-  it('skips Scenario questions with a warning', () => {
-    expect(parsed.sections[0].questions.map((q) => q.id)).toEqual(['1.1', '1.2', '1.4'])
-    expect(parsed.warnings).toContain('Question 1.3 skipped — only MC and Hands-On SQL are supported in v1')
+  it('parses Scenario questions as MC with a multi-paragraph setup and code blocks kept verbatim', () => {
+    const q = parsed.sections[0].questions[2] as { id: string; type: string; prompt: string; options: { key: string }[]; answer: string }
+    expect(q).toMatchObject({ id: '1.3', type: 'scenario', answer: 'A' })
+    expect(q.options.map((o) => o.key)).toEqual(['A', 'B', 'C'])
+    expect(q.prompt).toBe(
+      'A teammate runs this query to find customers with no phone number:\n\n' +
+        '```sql\nSELECT * FROM customers WHERE phone = NULL;\n-- A) looks like an option but is code\n```\n\n' +
+        'It returns zero rows. Why?',
+    )
+  })
+
+  it('skips unknown question types with a warning', () => {
+    const md = BANK.replace('**1.2 (MC)**', '**1.2 (Essay)**')
+    const p = parseAssessmentMarkdown(md)
+    expect(p.sections[0].questions.map((q) => q.id)).toEqual(['1.1', '1.3', '1.4'])
+    expect(p.warnings).toContain('Question 1.2 skipped — only MC, Scenario and Hands-On SQL are supported')
   })
 
   it('captures SQL reference queries and flags', () => {
-    expect(parsed.sections[0].questions[2]).toMatchObject({
+    expect(parsed.sections[0].questions[3]).toMatchObject({
       id: '1.4',
       type: 'sql',
       ordered: true,
@@ -118,13 +141,25 @@ SELECT state, COUNT(*) AS n FROM customers GROUP BY state;
       referenceSql: 'SELECT state, COUNT(*) AS n FROM customers GROUP BY state;',
     })
     // no starter → no key at all (keeps stored JSON tidy)
-    expect('starterSql' in parsed.sections[0].questions[2]).toBe(false)
+    expect('starterSql' in parsed.sections[0].questions[3]).toBe(false)
   })
 
   it('rejects structural problems', () => {
     expect(() => parseAssessmentMarkdown('no frontmatter')).toThrow(AssessmentParseError)
     expect(() => parseAssessmentMarkdown(BANK.replace('**Answer: B**', ''))).toThrow(/1\.1: missing/)
     expect(() => parseAssessmentMarkdown(BANK.replace('**Answer: B**', '**Answer: Z**'))).toThrow(/not one of the options/)
+  })
+
+  it('joins an option that wraps onto the next line instead of dropping the rest', () => {
+    const md = BANK.replace('B) Descending\n', 'B) Descending, unless the column\nhas an index on it\n')
+    const q = parseAssessmentMarkdown(md).sections[0].questions[1] as { options: { text: string }[] }
+    expect(q.options.map((o) => o.text)).toEqual(['Ascending', 'Descending, unless the column has an index on it'])
+  })
+
+  it('makes dataset optional unless the bank has Hands-On SQL', () => {
+    const noSql = BANK.replace('dataset: demo\n', '').replace(/\*\*1\.4 \(Hands-On SQL\)[\s\S]*$/, '')
+    expect(parseAssessmentMarkdown(noSql).dataset).toBeNull()
+    expect(() => parseAssessmentMarkdown(BANK.replace('dataset: demo\n', ''))).toThrow(/needs a dataset/)
   })
 })
 

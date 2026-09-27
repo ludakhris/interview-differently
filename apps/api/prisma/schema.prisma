@@ -303,14 +303,14 @@ model Assessment {
   id             String               @id @default(uuid())
   slug           String               @unique
   title          String
-  datasetId      String
+  datasetId      String?                                  // null = no Hands-On SQL questions, so no dataset
   sourceMarkdown String                                   // last imported markdown, re-import replaces
   sections       Json                                     // ParsedSection[] — see assessments/parse-markdown.ts
   defaultDraw    Json?                                    // frontmatter `draw`: total or per-type map (DrawSpec); null = every question
   institutionId  String?                                  // null = platform-wide; see Dataset.institutionId
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
-  dataset        Dataset              @relation(fields: [datasetId], references: [id], onDelete: Restrict)
+  dataset        Dataset?             @relation(fields: [datasetId], references: [id], onDelete: Restrict)
   institution    Institution?         @relation(fields: [institutionId], references: [id], onDelete: Restrict)
   deliveries     AssessmentDelivery[]
 
@@ -340,7 +340,7 @@ model AssessmentAttempt {
   id               String             @id @default(uuid())
   deliveryId       String
   userId           String
-  datasetHash      String                                 // Dataset.setupHash at start — grading pins to this script
+  datasetHash      String?                                // Dataset.setupHash at start — grading pins to this script; null = no dataset
   drawnQuestionIds Json                                   // string[] in paper order
   answers          Json                                   // Record<questionId, string> — MC letter or SQL text
   sectionScores    Json?                                  // SectionScore[] once submitted

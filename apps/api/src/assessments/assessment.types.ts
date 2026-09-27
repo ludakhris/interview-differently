@@ -10,7 +10,7 @@ export interface McOption {
 
 export interface McQuestion {
   id: string // '1.1' — unique within the assessment
-  type: 'mc'
+  type: 'mc' | 'scenario' // scenario: graded like MC; prompt may span paragraphs and ``` blocks
   prompt: string
   options: McOption[]
   answer: string // option key
@@ -42,7 +42,7 @@ export interface AssessmentSection {
 export interface ParsedAssessment {
   slug: string
   title: string
-  dataset: string // Dataset.slug
+  dataset: string | null // Dataset.slug; null when the bank has no Hands-On SQL questions
   defaultDraw: DrawSpec | null
   sections: AssessmentSection[]
   warnings: string[]
@@ -55,5 +55,5 @@ export interface SectionScore {
   total: number
   // Per-question outcome, in paper order. Kept for the admin view; the
   // student result endpoint strips it so the bank isn't revealed.
-  questions: { id: string; type: 'mc' | 'sql'; correct: boolean; error?: string }[]
+  questions: { id: string; type: AssessmentQuestion['type']; correct: boolean; error?: string }[]
 }

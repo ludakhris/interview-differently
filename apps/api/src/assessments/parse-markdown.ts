@@ -22,11 +22,12 @@ const SQL_ANSWER_RE = /^\*\*Answer:\*\*\s*$/
 const SQL_STARTER_RE = /^\*\*Starter:\*\*\s*$/
 const OPTION_SPLIT_RE = /(?:^|\s{2,}|\t)([A-Z])\)\s*/
 
-type Kind = 'mc' | 'sql' | 'skip'
+type Kind = 'mc' | 'scenario' | 'sql' | 'skip'
 
 function kindOf(raw: string): Kind {
   const k = raw.trim().toLowerCase()
   if (k === 'mc' || k === 'multiple choice') return 'mc'
+  if (k === 'scenario') return 'scenario'
   if (k.includes('sql')) return 'sql'
   return 'skip'
 }
@@ -44,8 +45,8 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
   const fm = (yaml.load(lines.slice(1, fmEnd).join('\n')) ?? {}) as Record<string, unknown>
   const slug = String(fm.slug ?? '').trim()
   const title = String(fm.title ?? '').trim()
-  const dataset = String(fm.dataset ?? '').trim()
-  if (!slug || !title || !dataset) throw new AssessmentParseError('Frontmatter needs slug, title and dataset')
+  const dataset = String(fm.dataset ?? '').trim() || null
+  if (!slug || !title) throw new AssessmentParseError('Frontmatter needs slug and title')
   const defaultDraw = fm.draw == null ? null : drawSpecFromYaml(fm.draw)
   if (fm.draw != null && defaultDraw === null) {
     throw new AssessmentParseError('Frontmatter draw must be a positive integer or a per-type map like { mc: 3, sql: 1 }')
@@ -67,6 +68,7 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
     starter: string[] | null // non-null once **Starter:** is seen; its fence fills it
     starterDone: boolean
     fenceTarget: 'starter' | 'answer' | null // which array the open fence writes to
+    promptFence: boolean // inside a ``` block in a scenario setup
   } | null = null
   let inFence = false
 
@@ -74,15 +76,15 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
     if (!q || !section) return
     const prompt = q.promptLines.join('\n').trim()
     if (q.kind === 'skip') {
-      warnings.push(`Question ${q.id} skipped — only MC and Hands-On SQL are supported in v1`)
-    } else if (q.kind === 'mc') {
+      warnings.push(`Question ${q.id} skipped — only MC, Scenario and Hands-On SQL are supported`)
+    } else if (q.kind === 'mc' || q.kind === 'scenario') {
       const options = parseOptions(q.optionText.join('  '))
       if (options.length < 2) throw new AssessmentParseError(`Question ${q.id}: expected at least two A) B) options`)
       if (!q.answer) throw new AssessmentParseError(`Question ${q.id}: missing **Answer: X**`)
       if (!options.find((o) => o.key === q!.answer)) {
         throw new AssessmentParseError(`Question ${q.id}: answer ${q.answer} is not one of the options`)
       }
-      section.questions.push({ id: q.id, type: 'mc', prompt, options, answer: q.answer })
+      section.questions.push({ id: q.id, type: q.kind, prompt, options, answer: q.answer })
     } else {
       const referenceSql = (q.sql ?? []).join('\n').trim()
       if (!referenceSql) throw new AssessmentParseError(`Question ${q.id}: missing \`\`\`sql reference query under **Answer:**`)
@@ -152,11 +154,29 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
       if (sections.some((s) => s.questions.some((x) => x.id === id))) {
         throw new AssessmentParseError(`Duplicate question id ${id}`)
       }
-      q = { id, kind, promptLines: qm[3] ? [qm[3]] : [], optionText: [], answer: null, flags: new Set(), sql: null, sqlDone: false, starter: null, starterDone: false, fenceTarget: null }
+      q = { id, kind, promptLines: qm[3] ? [qm[3]] : [], optionText: [], answer: null, flags: new Set(), sql: null, sqlDone: false, starter: null, starterDone: false, fenceTarget: null, promptFence: false }
       continue
     }
 
     if (!q) continue
+
+    // Scenario setup: keep paragraph breaks and ``` blocks (a table, a query)
+    // verbatim, so option-like or answer-like lines inside a block aren't read.
+    if (q.kind === 'scenario' && q.optionText.length === 0) {
+      if (line.trim().startsWith('```')) {
+        q.promptFence = !q.promptFence
+        q.promptLines.push(line.trim())
+        continue
+      }
+      if (q.promptFence) {
+        q.promptLines.push(line)
+        continue
+      }
+      if (!line.trim()) {
+        q.promptLines.push('')
+        continue
+      }
+    }
 
     const flag = FLAG_RE.exec(line)
     if (flag) {
@@ -164,7 +184,7 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
       continue
     }
 
-    if (q.kind === 'mc') {
+    if (q.kind === 'mc' || q.kind === 'scenario') {
       const ans = MC_ANSWER_RE.exec(line)
       if (ans) {
         q.answer = ans[1]
@@ -174,7 +194,10 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
         q.optionText.push(line.trim())
         continue
       }
-      if (q.optionText.length === 0 && line.trim()) q.promptLines.push(line.trim())
+      if (!line.trim()) continue
+      if (q.optionText.length === 0) q.promptLines.push(line.trim())
+      // A line under an option that isn't a new option wraps it — join it on, don't drop it.
+      else if (!q.answer) q.optionText[q.optionText.length - 1] += ` ${line.trim()}`
       continue
     }
 
@@ -200,6 +223,9 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
   finishSection()
 
   if (sections.length === 0) throw new AssessmentParseError('No "## Section N: Title" headings found')
+  if (!dataset && sections.some((s) => s.questions.some((qq) => qq.type === 'sql'))) {
+    throw new AssessmentParseError('Frontmatter needs a dataset — Hands-On SQL questions run against it')
+  }
   for (const s of sections) {
     if (s.draw === null || s.questions.length === 0) continue
     if (typeof s.draw === 'number') {

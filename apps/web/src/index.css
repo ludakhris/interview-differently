@@ -140,3 +140,13 @@
     margin: 0.5in;
   }
 }
+
+/* Syntax tokens in assessment prompts (PromptMarkdown) */
+.prompt-md .token.comment { color: rgb(255 255 255 / 0.4); font-style: italic; }
+.prompt-md .token.keyword { color: #7cc4ff; }
+.prompt-md .token.function { color: #e5c07b; }
+.prompt-md .token.string { color: #98c379; }
+.prompt-md .token.number, .prompt-md .token.boolean { color: #d19a66; }
+.prompt-md .token.operator, .prompt-md .token.punctuation { color: rgb(245 243 238 / 0.6); }
+.prompt-md .token.symbol, .prompt-md .token.data-field { color: #c792ea; }
+.prompt-md .token.constant, .prompt-md .token.measure { color: #56d4bc; }

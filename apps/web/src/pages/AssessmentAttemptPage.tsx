@@ -6,6 +6,7 @@ import { Clock } from 'lucide-react'
 import type { StudentQuestion } from '@id/types'
 import { Nav } from '@/components/Nav'
 import { SqlWorkbench } from '@/components/sql/SqlWorkbench'
+import { PromptMarkdown } from '@/components/PromptMarkdown'
 import { SandboxDb } from '@/lib/sql/sandboxDb'
 import { fetchAttempt, saveAnswers, submitAttempt, type AttemptPaper } from '@/services/assessmentsService'
 
@@ -48,6 +49,7 @@ export function AssessmentAttemptPage() {
         }
         setPaper(p)
         setAnswers(p.answers)
+        if (!p.dataset) return // no Hands-On SQL on this bank
         instance = new SandboxDb(p.dataset.setupSql)
         await instance.load()
         if (!cancelled) setDb(instance)
@@ -129,6 +131,7 @@ export function AssessmentAttemptPage() {
     [paper, answers],
   )
   const totalCount = paper?.sections.reduce((n, s) => n + s.questions.length, 0) ?? 0
+  const hasSql = paper?.sections.some((s) => s.questions.some((q) => q.type === 'sql')) ?? false
   const hasStarters = paper?.sections.some((s) => s.questions.some((q) => q.type === 'sql' && !!q.starterSql)) ?? false
 
   const goTo = (ix: number) => {
@@ -230,12 +233,16 @@ export function AssessmentAttemptPage() {
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40 mb-2">How this works</p>
               <ul className="text-[13px] text-[#f5f3ee]/80 leading-relaxed space-y-1 list-disc pl-5">
                 <li>Answers save as you go. Submit when you're done{paper.deadlineAt ? ' — or when the timer runs out' : ''}.</li>
-                <li>
-                  On SQL questions, press <span className="font-semibold text-[#f5f3ee]">Run</span> (⌘↵) to see your query's output before moving on. Only the query left in the editor is graded.
-                </li>
-                <li>
-                  Click <span className="font-semibold text-[#f5f3ee]">Schema</span> to open the table and column list beside the editor; clicking a name inserts it at the cursor.
-                </li>
+                {hasSql && (
+                  <>
+                    <li>
+                      On SQL questions, press <span className="font-semibold text-[#f5f3ee]">Run</span> (⌘↵) to see your query's output before moving on. Only the query left in the editor is graded.
+                    </li>
+                    <li>
+                      Click <span className="font-semibold text-[#f5f3ee]">Schema</span> to open the table and column list beside the editor; clicking a name inserts it at the cursor.
+                    </li>
+                  </>
+                )}
                 {hasStarters && <li>Some questions start you off with an example query — edit it or replace it entirely.</li>}
               </ul>
             </div>
@@ -254,9 +261,15 @@ export function AssessmentAttemptPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40 mb-1">
-                      {q.type === 'mc' ? 'Multiple choice' : 'Hands-on SQL'}
+                      {q.type === 'mc' ? 'Multiple choice' : q.type === 'scenario' ? 'Scenario' : 'Hands-on SQL'}
                     </p>
-                    <p className="text-[15px] text-[#f5f3ee] leading-relaxed">{renderPrompt(q.prompt)}</p>
+                    {q.type === 'scenario' ? (
+                      <div className="text-[15px] text-[#f5f3ee] leading-relaxed">
+                        <PromptMarkdown text={q.prompt} />
+                      </div>
+                    ) : (
+                      <p className="text-[15px] text-[#f5f3ee] leading-relaxed">{renderPrompt(q.prompt)}</p>
+                    )}
                   </div>
                 </div>
                 <QuestionBody
@@ -264,7 +277,7 @@ export function AssessmentAttemptPage() {
                   value={answers[q.id] ?? (q.type === 'sql' ? q.starterSql ?? '' : '')}
                   onChange={(v) => setAnswer(q.id, v)}
                   db={db}
-                  tables={paper.dataset.schemaSummary}
+                  tables={paper.dataset?.schemaSummary ?? []}
                 />
               </li>
             ))}
@@ -314,9 +327,9 @@ function QuestionBody({
   value: string
   onChange: (v: string) => void
   db: SandboxDb | null
-  tables: AttemptPaper['dataset']['schemaSummary']
+  tables: NonNullable<AttemptPaper['dataset']>['schemaSummary']
 }) {
-  if (q.type === 'mc') {
+  if (q.type !== 'sql') {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 ml-10">
         {q.options.map((o) => {
@@ -336,7 +349,7 @@ function QuestionBody({
               >
                 {o.key}
               </span>
-              <span className="text-[13px] text-[#f5f3ee]/90 leading-snug pt-0.5">{renderPrompt(o.text)}</span>
+              <span className="min-w-0 [overflow-wrap:anywhere] text-[13px] text-[#f5f3ee]/90 leading-snug pt-0.5">{renderPrompt(o.text)}</span>
             </button>
           )
         })}

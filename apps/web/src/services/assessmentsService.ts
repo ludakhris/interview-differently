@@ -42,7 +42,7 @@ export interface AssessmentSummary {
   id: string
   slug: string
   title: string
-  dataset: { slug: string; name: string }
+  dataset: { slug: string; name: string } | null // null = no Hands-On SQL questions
   /** null = platform-wide (read-only for institution-admins) */
   institutionId: string | null
   institutionName: string | null
@@ -70,7 +70,7 @@ export interface AssessmentDetail {
   id: string
   slug: string
   title: string
-  dataset: { slug: string; name: string }
+  dataset: { slug: string; name: string } | null // null = no Hands-On SQL questions
   institutionId: string | null
   institutionName: string | null
   defaultDraw: number | Record<string, number> | null
@@ -81,9 +81,9 @@ export interface AssessmentDetail {
 }
 
 export interface PreviewResult {
-  parsed: { slug: string; title: string; dataset: string; defaultDraw: number | Record<string, number> | null; sections: AssessmentSection[]; warnings: string[] }
-  datasetId: string
-  datasetName: string
+  parsed: { slug: string; title: string; dataset: string | null; defaultDraw: number | Record<string, number> | null; sections: AssessmentSection[]; warnings: string[] }
+  datasetId: string | null
+  datasetName: string | null
   sqlErrors: { questionId: string; error: string }[]
 }
 
@@ -184,7 +184,7 @@ export interface AttemptPaper {
   startedAt: string
   submittedAt: string | null
   deadlineAt: string | null
-  dataset: { slug: string; name: string; setupSql: string; schemaSummary: SchemaTable[] }
+  dataset: { slug: string; name: string; setupSql: string; schemaSummary: SchemaTable[] } | null
   sections: { id: string; title: string; questions: StudentQuestion[] }[]
   answers: Record<string, string>
 }
