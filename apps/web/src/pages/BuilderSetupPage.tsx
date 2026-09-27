@@ -6,6 +6,7 @@ import { createScenario, createScenarioFromImport, duplicateScenario, listScenar
 import { yamlToScenario } from '@/lib/yamlScenario'
 import type { Scenario } from '@id/types'
 import { useOwnerOptions } from '@/hooks/useOwnerOptions'
+import { OwnerSelect, resolveOwner, type OwnerChoice } from '@/components/OwnerSelect'
 import { RUBRIC_TEMPLATES, TRACK_LABELS } from '@/lib/builderTemplates'
 import { BUSINESS_CASE_SUBCATEGORIES, BUSINESS_CASE_SUBCATEGORY_LABELS } from '@id/types'
 
@@ -73,7 +74,7 @@ export function BuilderSetupPage() {
   const [title, setTitle] = useState('')
   const [track, setTrack] = useState<string>('')
   const owners = useOwnerOptions()
-  const [ownerId, setOwnerId] = useState<string | null | undefined>(undefined) // undefined = use first option
+  const [ownerId, setOwnerId] = useState<OwnerChoice>(undefined) // undefined = not chosen yet
   const [subcategory, setSubcategory] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
 
@@ -93,7 +94,9 @@ export function BuilderSetupPage() {
   const showSubcategory = track === 'business case'
 
   async function handleCreate() {
-    const owner = ownerId === undefined ? (owners[0]?.id ?? null) : ownerId
+    const owner = resolveOwner(owners, ownerId)
+    // The API reads a missing owner as public, so never guess.
+    if (owner === undefined) { setError('Choose who can see this scenario.'); return }
     if (startFrom === 'clone') {
       if (!cloneId) { setError('Pick a scenario to clone.'); return }
       setBusy(true)
@@ -264,17 +267,13 @@ export function BuilderSetupPage() {
             <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
               Visible to
             </label>
-            <select
-              value={(ownerId === undefined ? owners[0]?.id : ownerId) ?? ''}
-              onChange={(e) => setOwnerId(e.target.value || null)}
+            <OwnerSelect
+              owners={owners}
+              value={ownerId}
+              onChange={setOwnerId}
               className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[15px] text-[#f5f3ee] focus:outline-none focus:border-white/30 transition-colors"
-            >
-              {owners.map((o) => (
-                <option key={o.id ?? 'public'} value={o.id ?? ''}>
-                  {o.id === null ? 'Everyone (public)' : `${o.label} members only`}
-                </option>
-              ))}
-            </select>
+              optionLabel={(o) => (o.id === null ? 'Everyone (public)' : `${o.label} members only`)}
+            />
           </div>
         )}
 

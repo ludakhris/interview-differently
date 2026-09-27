@@ -7,6 +7,7 @@ import { Nav } from '@/components/Nav'
 import { useRole } from '@/hooks/useRole'
 import { useConfirm } from '@/components/ConfirmDialog'
 import { useOwnerOptions, type OwnerOption } from '@/hooks/useOwnerOptions'
+import { OwnerSelect, resolveOwner, type OwnerChoice } from '@/components/OwnerSelect'
 import { sandboxEditorTheme } from '@/lib/sql/editorTheme'
 import {
   createDataset,
@@ -211,10 +212,8 @@ function DatasetEditor({
 }) {
   const navigate = useNavigate()
   const confirm = useConfirm()
-  const [ownerId, setOwnerId] = useState<string | null>(owners[0]?.id ?? null)
-  useEffect(() => {
-    if (!owners.some((o) => o.id === ownerId)) setOwnerId(owners[0]?.id ?? null)
-  }, [owners, ownerId])
+  const [ownerChoice, setOwnerChoice] = useState<OwnerChoice>(undefined)
+  const ownerId = resolveOwner(owners, ownerChoice) // create only — the API keeps the owner on update
   const [slug, setSlug] = useState(initial?.slug ?? '')
   const [name, setName] = useState(initial?.name ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
@@ -248,7 +247,7 @@ function DatasetEditor({
       if (readOnly && initial) {
         saved = initial
       } else {
-        const payload = { slug, name, description: description.trim() || null, setupSql, institutionId: ownerId }
+        const payload = { slug, name, description: description.trim() || null, setupSql, institutionId: ownerId ?? null }
         saved = initial ? await updateDataset(getToken, initial.id, payload) : await createDataset(getToken, payload)
       }
       await setDatasetCohorts(getToken, saved.id, cohortIds)
@@ -282,13 +281,7 @@ function DatasetEditor({
           {!initial && owners.length > 1 && (
             <label className="block">
               <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Owner</span>
-              <select value={ownerId ?? ''} onChange={(e) => setOwnerId(e.target.value || null)} className={`${inputCls} mt-1`}>
-                {owners.map((o) => (
-                  <option key={o.id ?? 'platform'} value={o.id ?? ''}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+              <OwnerSelect owners={owners} value={ownerChoice} onChange={setOwnerChoice} className={`${inputCls} mt-1`} />
             </label>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-3">
@@ -462,7 +455,7 @@ function DatasetEditor({
           )}
           <button
             onClick={save}
-            disabled={saving || !slug.trim() || !name.trim() || !setupSql.trim()}
+            disabled={saving || !slug.trim() || !name.trim() || !setupSql.trim() || (!initial && ownerId === undefined)}
             className="px-3 py-1.5 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white disabled:opacity-50 transition-colors"
           >
             {saving ? 'Saving…' : readOnly ? 'Save cohort access' : initial ? 'Save' : 'Create'}

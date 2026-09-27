@@ -202,6 +202,10 @@ export class AssessmentsService {
     ])
     if (!assessment) throw new NotFoundException(`Assessment ${assessmentId} not found`)
     if (!cohort) throw new NotFoundException(`Cohort ${input.cohortId} not found`)
+    // An institution's bank goes only to that institution's cohorts; platform banks go anywhere.
+    if (assessment.institutionId && assessment.institutionId !== cohort.institutionId) {
+      throw new BadRequestException("This assessment belongs to another institution — pick one of its own cohorts")
+    }
     return this.prisma.assessmentDelivery.create({
       data: { assessmentId, cohortId: input.cohortId, label, opensAt, closesAt, timeLimitMinutes },
     })

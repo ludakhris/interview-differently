@@ -59,6 +59,7 @@ export interface DatasetInput {
 export interface CohortOption {
   id: string
   name: string
+  institutionId: string
   institutionName: string
 }
 

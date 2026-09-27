@@ -1,3 +1,4 @@
+import { AssessmentsService } from './assessments.service'
 import { parseAssessmentMarkdown, AssessmentParseError } from './parse-markdown'
 import { compareResults } from './grade'
 import { drawCount, drawSection, formatDrawSpec, parseDrawSpec } from './draw'
@@ -292,5 +293,32 @@ describe('compareResults', () => {
     const ref = r(['e'], [[null]])
     expect(compareResults(r(['e'], [['NULL']]), ref, loose).match).toBe(false)
     expect(compareResults(r(['e'], [[null]]), ref, loose).match).toBe(true)
+  })
+})
+
+describe('createDelivery institution guard', () => {
+  // Stub Prisma: one bank, cohorts in two institutions. No database.
+  const make = (assessmentInstitutionId: string | null) => {
+    const created: unknown[] = []
+    const prisma = {
+      assessment: { findUnique: async () => ({ id: 'a1', institutionId: assessmentInstitutionId }) },
+      cohort: {
+        findUnique: async ({ where }: { where: { id: string } }) =>
+          ({ own: { id: 'own', institutionId: 'inst-a' }, other: { id: 'other', institutionId: 'inst-b' } })[where.id] ?? null,
+      },
+      assessmentDelivery: { create: async (args: unknown) => (created.push(args), { id: 'd1' }) },
+    }
+    return { service: new AssessmentsService(prisma as never, {} as never, {} as never), created }
+  }
+
+  it("rejects delivering an institution's bank to another institution's cohort", async () => {
+    const { service, created } = make('inst-a')
+    await expect(service.createDelivery('a1', { cohortId: 'other', label: 'pre' })).rejects.toThrow(/another institution/)
+    expect(created).toHaveLength(0)
+  })
+
+  it("allows the bank's own cohorts, and platform banks anywhere", async () => {
+    await expect(make('inst-a').service.createDelivery('a1', { cohortId: 'own', label: 'pre' })).resolves.toEqual({ id: 'd1' })
+    await expect(make(null).service.createDelivery('a1', { cohortId: 'other', label: 'pre' })).resolves.toEqual({ id: 'd1' })
   })
 })

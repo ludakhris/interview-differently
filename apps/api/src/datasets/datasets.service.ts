@@ -146,7 +146,7 @@ export class DatasetsService {
       orderBy: [{ institution: { name: 'asc' } }, { name: 'asc' }],
       include: { institution: { select: { name: true } } },
     })
-    return rows.map((c) => ({ id: c.id, name: c.name, institutionName: c.institution.name }))
+    return rows.map((c) => ({ id: c.id, name: c.name, institutionId: c.institutionId, institutionName: c.institution.name }))
   }
 
   private async prepare(input: DatasetInput) {

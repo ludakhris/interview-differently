@@ -4,6 +4,7 @@ import { Nav } from '@/components/Nav'
 import { useRole } from '@/hooks/useRole'
 import { useConfirm } from '@/components/ConfirmDialog'
 import { useOwnerOptions, type OwnerOption } from '@/hooks/useOwnerOptions'
+import { OwnerSelect, resolveOwner, type OwnerChoice } from '@/components/OwnerSelect'
 import { OwnerBadge } from './AdminDatasetsPage'
 import { downloadCsv } from '@/lib/csv'
 import { listCohortOptions, type CohortOption } from '@/services/datasetsService'
@@ -220,10 +221,8 @@ function ImportPanel({
   onImported: (id: string) => Promise<void>
 }) {
   const [markdown, setMarkdown] = useState(seed)
-  const [ownerId, setOwnerId] = useState<string | null>(owners[0]?.id ?? null)
-  useEffect(() => {
-    if (!owners.some((o) => o.id === ownerId)) setOwnerId(owners[0]?.id ?? null)
-  }, [owners, ownerId])
+  const [ownerChoice, setOwnerChoice] = useState<OwnerChoice>(undefined)
+  const ownerId = resolveOwner(owners, ownerChoice)
   const [preview, setPreview] = useState<PreviewResult | null>(null)
   const [busy, setBusy] = useState<'preview' | 'import' | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -245,7 +244,7 @@ function ImportPanel({
     setBusy('import')
     setErr(null)
     try {
-      const r = await importAssessment(getToken, markdown, ownerId)
+      const r = await importAssessment(getToken, markdown, ownerId ?? null)
       await onImported(r.id)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Import failed')
@@ -253,7 +252,7 @@ function ImportPanel({
     }
   }
 
-  const canImport = !!preview && preview.sqlErrors.length === 0
+  const canImport = !!preview && preview.sqlErrors.length === 0 && ownerId !== undefined
 
   return (
     <div className="bg-[#111111] rounded-xl border border-white/10 overflow-hidden">
@@ -261,13 +260,7 @@ function ImportPanel({
         {owners.length > 1 && (
           <label className="block">
             <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Owner</span>
-            <select value={ownerId ?? ''} onChange={(e) => setOwnerId(e.target.value || null)} className={`${inputCls} mt-1`}>
-              {owners.map((o) => (
-                <option key={o.id ?? 'platform'} value={o.id ?? ''}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+            <OwnerSelect owners={owners} value={ownerChoice} onChange={setOwnerChoice} className={`${inputCls} mt-1`} />
             <p className="text-[11px] text-white/40 mt-1">Only applies to a new slug — re-importing keeps the existing owner.</p>
           </label>
         )}
@@ -354,7 +347,7 @@ function ImportPanel({
         <button
           onClick={doImport}
           disabled={busy !== null || !canImport}
-          title={canImport ? undefined : 'Preview first — every reference query must run cleanly'}
+          title={canImport ? undefined : ownerId === undefined ? 'Choose an owner first' : 'Preview first — every reference query must run cleanly'}
           className="px-3 py-1.5 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white disabled:opacity-50 transition-colors"
         >
           {busy === 'import' ? 'Importing…' : 'Import'}
@@ -450,7 +443,8 @@ function DetailPanel({
           <NewDeliveryForm
             getToken={getToken}
             assessmentId={detail.id}
-            cohorts={cohorts}
+            // An institution's bank goes only to its own cohorts (the API enforces this too).
+            cohorts={detail.institutionId ? cohorts.filter((c) => c.institutionId === detail.institutionId) : cohorts}
             onCreated={async () => {
               setShowNew(false)
               await onChange()
@@ -601,7 +595,7 @@ function NewDeliveryForm({
   cohorts: CohortOption[]
   onCreated: () => Promise<void>
 }) {
-  const [cohortId, setCohortId] = useState(cohorts[0]?.id ?? '')
+  const [cohortId, setCohortId] = useState('') // no default — delivering to students must be a deliberate choice
   const [label, setLabel] = useState('pre')
   const [opensAt, setOpensAt] = useState('')
   const [closesAt, setClosesAt] = useState('')
@@ -635,6 +629,9 @@ function NewDeliveryForm({
       <label className="block sm:col-span-2">
         <span className="text-[11px] text-white/40">Cohort</span>
         <select value={cohortId} onChange={(e) => setCohortId(e.target.value)} className={`${inputCls} mt-1`} required>
+          <option value="" disabled>
+            Choose a cohort…
+          </option>
           {cohorts.map((c) => (
             <option key={c.id} value={c.id}>
               {c.institutionName} — {c.name}
