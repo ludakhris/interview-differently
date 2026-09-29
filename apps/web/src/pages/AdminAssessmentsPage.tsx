@@ -188,6 +188,7 @@ export function AdminAssessmentsPage() {
                 getToken={getToken}
                 seed={importSeed}
                 owners={owners}
+                existing={items}
                 onImported={async (id) => {
                   await refresh()
                   setSelectedId(id)
@@ -234,16 +235,22 @@ function ImportPanel({
   getToken,
   seed,
   owners,
+  existing,
   onImported,
 }: {
   getToken: GetToken
   seed: string
   owners: OwnerOption[]
+  existing: AssessmentSummary[]
   onImported: (id: string) => Promise<void>
 }) {
   const [markdown, setMarkdown] = useState(seed)
   const [ownerChoice, setOwnerChoice] = useState<OwnerChoice>(undefined)
-  const ownerId = resolveOwner(owners, ownerChoice)
+  // Re-importing an existing slug keeps its owner (the API ignores the field on
+  // update), so don't make the admin pick one again.
+  const slug = /^slug:\s*(\S+)\s*$/m.exec(markdown)?.[1]
+  const updating = existing.find((a) => a.slug === slug)
+  const ownerId = updating ? updating.institutionId : resolveOwner(owners, ownerChoice)
   const [preview, setPreview] = useState<PreviewResult | null>(null)
   const [busy, setBusy] = useState<'preview' | 'import' | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -278,21 +285,28 @@ function ImportPanel({
   return (
     <div className="bg-[#111111] rounded-xl border border-white/10 overflow-hidden">
       <div className="p-6 space-y-4">
-        {owners.length > 1 && (
-          <label className="block">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
-              Owner
-            </span>
-            <OwnerSelect
-              owners={owners}
-              value={ownerChoice}
-              onChange={setOwnerChoice}
-              className={`${inputCls} mt-1`}
-            />
-            <p className="text-[11px] text-white/40 mt-1">
-              Only applies to a new slug — re-importing keeps the existing owner.
-            </p>
-          </label>
+        {updating ? (
+          <p className="text-[12px] text-white/50 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+            Updating <span className="text-[#f5f3ee]">{updating.title}</span> — owner stays{' '}
+            {updating.institutionName ?? 'platform-wide'}.
+          </p>
+        ) : (
+          owners.length > 1 && (
+            <label className="block">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+                Owner
+              </span>
+              <OwnerSelect
+                owners={owners}
+                value={ownerChoice}
+                onChange={setOwnerChoice}
+                className={`${inputCls} mt-1`}
+              />
+              <p className="text-[11px] text-white/40 mt-1">
+                Only applies to a new slug — re-importing keeps the existing owner.
+              </p>
+            </label>
+          )
         )}
         <div>
           <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
