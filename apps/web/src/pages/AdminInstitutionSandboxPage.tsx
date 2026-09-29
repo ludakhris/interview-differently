@@ -8,6 +8,7 @@ import {
   fetchSandboxActivity,
   listCohortTools,
   type SandboxActivity,
+  type SandboxStudent,
 } from '@/services/toolsService'
 
 /**
@@ -138,71 +139,85 @@ export function AdminInstitutionSandboxPage() {
             </p>
             <div className="space-y-3">
               {data.students.map((s) => (
-                <details
-                  key={s.userId}
-                  open={s.queryCount > 0}
-                  className="bg-[#111111] rounded-xl border border-white/10"
-                >
-                  <summary className="cursor-pointer px-5 py-3 flex items-center justify-between gap-4">
-                    <span className="text-[14px] font-semibold text-[#f5f3ee]">
-                      {s.name}
-                      {s.email && s.email !== s.name && (
-                        <span className="ml-2 text-[12px] font-normal text-slate-mid">
-                          {s.email}
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-[12px] text-slate-mid whitespace-nowrap">
-                      {s.queryCount} {s.queryCount === 1 ? 'query' : 'queries'}
-                      {s.errorCount > 0 && (
-                        <span className="text-red-400">
-                          {' '}
-                          · {s.errorCount} {s.errorCount === 1 ? 'error' : 'errors'}
-                        </span>
-                      )}
-                      {s.lastQueryAt && <> · last {new Date(s.lastQueryAt).toLocaleString()}</>}
-                    </span>
-                  </summary>
-                  {s.queries.length === 0 ? (
-                    <p className="px-5 pb-4 text-[12px] text-slate-mid">No queries yet.</p>
-                  ) : (
-                    <ul className="border-t border-white/10 divide-y divide-white/5">
-                      {s.queries.map((q) => (
-                        <li key={q.id} className="px-5 py-3">
-                          <div className="flex items-center gap-2 text-[11px] text-slate-mid mb-1.5">
-                            <span className={q.ok ? 'text-green' : 'text-red-400'}>
-                              {q.ok ? '● ok' : '● error'}
-                            </span>
-                            <span>{new Date(q.createdAt).toLocaleString()}</span>
-                            <span>· {q.datasetSlug}</span>
-                            {q.ok && q.rowCount != null && (
-                              <span>
-                                · {q.rowCount} {q.rowCount === 1 ? 'row' : 'rows'}
-                              </span>
-                            )}
-                            {q.durationMs != null && <span>· {q.durationMs} ms</span>}
-                          </div>
-                          <pre className="text-[12px] text-[#f5f3ee] font-mono whitespace-pre-wrap break-words">
-                            {q.queryText}
-                          </pre>
-                          {q.errorMessage && (
-                            <p className="mt-1 text-[12px] text-red-400 font-mono">
-                              {q.errorMessage}
-                            </p>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </details>
+                <StudentCard key={s.userId} s={s} />
               ))}
               {data.students.length === 0 && (
                 <p className="text-[13px] text-slate-mid">No students in this cohort.</p>
               )}
             </div>
+            {data.unassigned.length > 0 && (
+              <div className="mt-8">
+                <h2 className="text-[11px] font-bold uppercase tracking-widest text-amber-400 mb-1">
+                  Not in a cohort
+                </h2>
+                <p className="text-[12px] text-slate-mid mb-3">
+                  These institution members ran queries but have no cohort, so they belong to no
+                  cohort roster. Add them to a cohort to see them above.
+                </p>
+                <div className="space-y-3">
+                  {data.unassigned.map((s) => (
+                    <StudentCard key={s.userId} s={s} />
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
     </div>
+  )
+}
+
+function StudentCard({ s }: { s: SandboxStudent }) {
+  return (
+    <details open={s.queryCount > 0} className="bg-[#111111] rounded-xl border border-white/10">
+      <summary className="cursor-pointer px-5 py-3 flex items-center justify-between gap-4">
+        <span className="text-[14px] font-semibold text-[#f5f3ee]">
+          {s.name}
+          {s.email && s.email !== s.name && (
+            <span className="ml-2 text-[12px] font-normal text-slate-mid">{s.email}</span>
+          )}
+        </span>
+        <span className="text-[12px] text-slate-mid whitespace-nowrap">
+          {s.queryCount} {s.queryCount === 1 ? 'query' : 'queries'}
+          {s.errorCount > 0 && (
+            <span className="text-red-400">
+              {' '}
+              · {s.errorCount} {s.errorCount === 1 ? 'error' : 'errors'}
+            </span>
+          )}
+          {s.lastQueryAt && <> · last {new Date(s.lastQueryAt).toLocaleString()}</>}
+        </span>
+      </summary>
+      {s.queries.length === 0 ? (
+        <p className="px-5 pb-4 text-[12px] text-slate-mid">No queries yet.</p>
+      ) : (
+        <ul className="border-t border-white/10 divide-y divide-white/5">
+          {s.queries.map((q) => (
+            <li key={q.id} className="px-5 py-3">
+              <div className="flex items-center gap-2 text-[11px] text-slate-mid mb-1.5">
+                <span className={q.ok ? 'text-green' : 'text-red-400'}>
+                  {q.ok ? '● ok' : '● error'}
+                </span>
+                <span>{new Date(q.createdAt).toLocaleString()}</span>
+                <span>· {q.datasetSlug}</span>
+                {q.ok && q.rowCount != null && (
+                  <span>
+                    · {q.rowCount} {q.rowCount === 1 ? 'row' : 'rows'}
+                  </span>
+                )}
+                {q.durationMs != null && <span>· {q.durationMs} ms</span>}
+              </div>
+              <pre className="text-[12px] text-[#f5f3ee] font-mono whitespace-pre-wrap break-words">
+                {q.queryText}
+              </pre>
+              {q.errorMessage && (
+                <p className="mt-1 text-[12px] text-red-400 font-mono">{q.errorMessage}</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </details>
   )
 }

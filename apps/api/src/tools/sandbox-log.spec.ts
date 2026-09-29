@@ -14,18 +14,27 @@ const row = (id: string, userId: string, ageMin: number, ok = true) => ({
   createdAt: new Date(NOW - ageMin * 60_000),
 })
 
-function make(logs: ReturnType<typeof row>[]) {
+type Log = ReturnType<typeof row>
+
+function make(logs: Log[], loose: { id: string; email: string }[] = []) {
   const prisma = {
     cohort: {
       findUnique: async () => ({
         id: 'c1',
         name: 'Cohort',
+        institutionId: 'i1',
         memberships: [
           { user: { id: 'a', email: 'a@x.com', displayName: 'Alice' } },
           { user: { id: 'b', email: 'b@x.com', displayName: null } },
           { user: { id: 'a', email: 'a@x.com', displayName: 'Alice' } }, // duplicate membership row
         ],
       }),
+    },
+    // institution members with no cohort
+    membership: {
+      findMany: jest.fn(async () =>
+        loose.map((u) => ({ user: { id: u.id, email: u.email, displayName: null } }))
+      ),
     },
     sqlQueryLog: { findMany: jest.fn(async () => logs) },
   }
@@ -53,5 +62,31 @@ describe('sandboxActivity', () => {
     const days = (Date.now() - where.createdAt.gte.getTime()) / 86_400_000
     expect(days).toBeGreaterThan(89.9)
     expect(days).toBeLessThan(90.1)
+  })
+
+  it('matches rows by user, not by the log cohortId (misfiled rows still show)', async () => {
+    const { svc, prisma } = make([{ ...row('q1', 'b', 1), cohortId: 'other-cohort' }])
+    const r = await svc.sandboxActivity('c1')
+    expect(r.students.find((s) => s.userId === 'b')?.queryCount).toBe(1)
+    const where = (
+      prisma.sqlQueryLog.findMany.mock.calls[0] as unknown as [
+        { where: { userId: { in: string[] } } },
+      ]
+    )[0].where
+    expect(where.userId.in.sort()).toEqual(['a', 'b'])
+  })
+
+  it('lists institution members without a cohort as unassigned, only if they queried', async () => {
+    const { svc } = make(
+      [row('q1', 'x', 1)],
+      [
+        { id: 'x', email: 'x@x.com' },
+        { id: 'y', email: 'y@x.com' }, // never queried → omitted
+        { id: 'a', email: 'a@x.com' }, // already on the cohort roster → not duplicated
+      ]
+    )
+    const r = await svc.sandboxActivity('c1')
+    expect(r.unassigned.map((s) => s.userId)).toEqual(['x'])
+    expect(r.students.map((s) => s.userId).sort()).toEqual(['a', 'b'])
   })
 })

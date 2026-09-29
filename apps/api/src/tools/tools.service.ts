@@ -92,63 +92,87 @@ export class ToolsService {
     }
   }
 
-  /** Every student in a cohort with their recent sandbox queries (newest first). */
+  /**
+   * Every student in a cohort with their recent sandbox queries (newest first).
+   * Rows are matched by *who* ran them, not by the log's cohortId: that column is
+   * a best guess made at write time (a student in two cohorts, or one who joined
+   * a cohort after querying, would otherwise be misfiled). `unassigned` lists
+   * institution members with no cohort who have queried — invisible otherwise.
+   */
   async sandboxActivity(cohortId: string, perStudentLimit = 100): Promise<SandboxActivity> {
     const cohort = await this.prisma.cohort.findUnique({
       where: { id: cohortId },
       select: {
         id: true,
         name: true,
+        institutionId: true,
         memberships: { select: { user: { select: { id: true, email: true, displayName: true } } } },
       },
     })
     if (!cohort) throw new NotFoundException(`Cohort ${cohortId} not found`)
 
-    const since = retentionCutoff()
+    const cohortUsers = dedupeUsers(cohort.memberships.map((m) => m.user))
+    const cohortIds = new Set(cohortUsers.map((u) => u.id))
+    const loose = await this.prisma.membership.findMany({
+      where: { institutionId: cohort.institutionId, cohortId: null },
+      select: { user: { select: { id: true, email: true, displayName: true } } },
+    })
+    const looseUsers = dedupeUsers(loose.map((m) => m.user)).filter((u) => !cohortIds.has(u.id))
+
     const logs = await this.prisma.sqlQueryLog.findMany({
-      where: { cohortId, createdAt: { gte: since } },
+      where: {
+        userId: { in: [...cohortUsers, ...looseUsers].map((u) => u.id) },
+        createdAt: { gte: retentionCutoff() },
+      },
       orderBy: { createdAt: 'desc' },
       take: 5000,
     })
     const byUser = new Map<string, typeof logs>()
     for (const l of logs) byUser.set(l.userId, [...(byUser.get(l.userId) ?? []), l])
 
-    const seen = new Set<string>()
-    const students = cohort.memberships
-      .map((m) => m.user)
-      .filter((u) => !seen.has(u.id) && !!seen.add(u.id))
-      .map((u) => {
-        const rows = byUser.get(u.id) ?? []
-        return {
-          userId: u.id,
-          name: u.displayName ?? u.email ?? u.id,
-          email: u.email,
-          queryCount: rows.length,
-          errorCount: rows.filter((r) => !r.ok).length,
-          lastQueryAt: rows[0]?.createdAt.toISOString() ?? null,
-          queries: rows.slice(0, perStudentLimit).map((r) => ({
-            id: r.id,
-            datasetSlug: r.datasetSlug,
-            queryText: r.queryText,
-            ok: r.ok,
-            errorMessage: r.errorMessage,
-            rowCount: r.rowCount,
-            durationMs: r.durationMs,
-            createdAt: r.createdAt.toISOString(),
-          })),
-        }
-      })
-      // Most recently active first; silent students at the bottom.
-      .sort((a, b) => (b.lastQueryAt ?? '').localeCompare(a.lastQueryAt ?? ''))
+    const toStudent = (u: UserRow) => {
+      const rows = byUser.get(u.id) ?? []
+      return {
+        userId: u.id,
+        name: u.displayName ?? u.email ?? u.id,
+        email: u.email,
+        queryCount: rows.length,
+        errorCount: rows.filter((r) => !r.ok).length,
+        lastQueryAt: rows[0]?.createdAt.toISOString() ?? null,
+        queries: rows.slice(0, perStudentLimit).map((r) => ({
+          id: r.id,
+          datasetSlug: r.datasetSlug,
+          queryText: r.queryText,
+          ok: r.ok,
+          errorMessage: r.errorMessage,
+          rowCount: r.rowCount,
+          durationMs: r.durationMs,
+          createdAt: r.createdAt.toISOString(),
+        })),
+      }
+    }
+    // Most recently active first; silent students at the bottom.
+    const byRecent = (a: { lastQueryAt: string | null }, b: { lastQueryAt: string | null }) =>
+      (b.lastQueryAt ?? '').localeCompare(a.lastQueryAt ?? '')
 
     return {
       cohort: { id: cohort.id, name: cohort.name },
       retentionDays: RETENTION_DAYS,
       generatedAt: new Date().toISOString(),
-      students,
+      students: cohortUsers.map(toStudent).sort(byRecent),
+      // Only members who actually queried — silent ones are just not-yet-in-a-cohort noise.
+      unassigned: looseUsers
+        .map(toStudent)
+        .filter((s) => s.queryCount > 0)
+        .sort(byRecent),
     }
   }
 }
+
+type UserRow = { id: string; email: string | null; displayName: string | null }
+const dedupeUsers = (users: UserRow[]): UserRow[] => [
+  ...new Map(users.map((u) => [u.id, u])).values(),
+]
 
 const RETENTION_DAYS = 90
 const MAX_QUERY_CHARS = 5000
@@ -163,26 +187,30 @@ export interface SandboxQueryInput {
   durationMs?: number
 }
 
+export type SandboxStudent = {
+  userId: string
+  name: string
+  email: string | null
+  queryCount: number
+  errorCount: number
+  lastQueryAt: string | null
+  queries: Array<{
+    id: string
+    datasetSlug: string
+    queryText: string
+    ok: boolean
+    errorMessage: string | null
+    rowCount: number | null
+    durationMs: number | null
+    createdAt: string
+  }>
+}
+
 export interface SandboxActivity {
   cohort: { id: string; name: string }
   retentionDays: number
   generatedAt: string
-  students: Array<{
-    userId: string
-    name: string
-    email: string | null
-    queryCount: number
-    errorCount: number
-    lastQueryAt: string | null
-    queries: Array<{
-      id: string
-      datasetSlug: string
-      queryText: string
-      ok: boolean
-      errorMessage: string | null
-      rowCount: number | null
-      durationMs: number | null
-      createdAt: string
-    }>
-  }>
+  students: SandboxStudent[]
+  /** Institution members with no cohort who have run queries. */
+  unassigned: SandboxStudent[]
 }

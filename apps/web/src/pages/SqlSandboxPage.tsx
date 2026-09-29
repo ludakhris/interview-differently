@@ -7,6 +7,7 @@ import { Nav } from '@/components/Nav'
 import { SqlEditor } from '@/components/sql/SqlEditor'
 import { SchemaTree } from '@/components/sql/SchemaTree'
 import { ResultsGrid } from '@/components/sql/ResultsGrid'
+import { useNewBuildAvailable } from '@/hooks/useNewBuildAvailable'
 import { logSandboxQuery } from '@/services/toolsService'
 import { ResultActions } from '@/components/sql/ResultActions'
 import { SandboxDb, type SandboxResult } from '@/lib/sql/sandboxDb'
@@ -77,6 +78,7 @@ export function SqlSandboxPage() {
 
   const [datasets, setDatasets] = useState<DatasetSummary[] | null>(null)
   const [listError, setListError] = useState<string | null>(null)
+  const newBuild = useNewBuildAvailable()
   const [dataset, setDataset] = useState<DatasetDetail | null>(null)
   const [dbState, setDbState] = useState<DbState>({ status: 'idle' })
   const dbRef = useRef<SandboxDb | null>(null)
@@ -232,6 +234,21 @@ export function SqlSandboxPage() {
   return (
     <div className="h-screen bg-[#0a0a0a] flex flex-col overflow-hidden">
       <Nav trackLabel="SQL Sandbox" stepLabel={dataset?.name} />
+
+      {newBuild && (
+        <div className="mx-6 mt-4 rounded-xl bg-amber-500/10 border border-amber-500/40 px-4 py-3 flex items-center gap-3 flex-wrap">
+          <p className="text-[13px] text-[#f5f3ee]">
+            <span className="font-semibold">A new version is available.</span> Reload so your
+            queries are saved for your instructor.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="rounded-full border border-amber-500/50 hover:bg-amber-500/20 px-3 py-1 text-[12px] font-semibold text-[#f5f3ee] transition-colors"
+          >
+            Reload
+          </button>
+        </div>
+      )}
 
       {needsPick && (
         <div className="mx-6 mt-4 rounded-xl bg-[#2d9e5f]/10 border border-[#2d9e5f]/40 px-4 py-3 flex items-center gap-3 flex-wrap">

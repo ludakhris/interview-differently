@@ -80,36 +80,49 @@ export interface SandboxQueryEvent {
   durationMs?: number
 }
 
-/** Fire-and-forget: monitoring must never break or slow the sandbox. */
+/**
+ * Fire-and-forget: monitoring must never break or slow the sandbox.
+ * `keepalive` lets the request survive a tab close/navigation; one delayed
+ * retry (fresh token) covers an expired token or a network blip.
+ */
 export function logSandboxQuery(getToken: GetToken, event: SandboxQueryEvent): void {
-  authedFetch(getToken, '/me/tools/sandbox-queries', {
-    method: 'POST',
-    body: JSON.stringify(event),
-  }).catch(() => {})
+  const send = () =>
+    authedFetch(getToken, '/me/tools/sandbox-queries', {
+      method: 'POST',
+      body: JSON.stringify(event),
+      keepalive: true,
+    })
+  send().catch(() => {
+    setTimeout(() => send().catch(() => {}), 3000)
+  })
+}
+
+export interface SandboxStudent {
+  userId: string
+  name: string
+  email: string | null
+  queryCount: number
+  errorCount: number
+  lastQueryAt: string | null
+  queries: Array<{
+    id: string
+    datasetSlug: string
+    queryText: string
+    ok: boolean
+    errorMessage: string | null
+    rowCount: number | null
+    durationMs: number | null
+    createdAt: string
+  }>
 }
 
 export interface SandboxActivity {
   cohort: { id: string; name: string }
   retentionDays: number
   generatedAt: string
-  students: Array<{
-    userId: string
-    name: string
-    email: string | null
-    queryCount: number
-    errorCount: number
-    lastQueryAt: string | null
-    queries: Array<{
-      id: string
-      datasetSlug: string
-      queryText: string
-      ok: boolean
-      errorMessage: string | null
-      rowCount: number | null
-      durationMs: number | null
-      createdAt: string
-    }>
-  }>
+  students: SandboxStudent[]
+  /** Institution members with no cohort who have run queries. */
+  unassigned: SandboxStudent[]
 }
 
 export async function fetchSandboxActivity(
