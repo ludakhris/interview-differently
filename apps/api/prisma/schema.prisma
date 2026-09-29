@@ -348,6 +348,7 @@ model AssessmentAttempt {
   startedAt        DateTime           @default(now())
   submittedAt      DateTime?
   submittedLate    Boolean            @default(false)
+  updatedAt        DateTime           @default(now()) @updatedAt // last autosave/submit — live progress (#40)
   delivery         AssessmentDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
 
   @@unique([deliveryId, userId])

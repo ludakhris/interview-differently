@@ -358,3 +358,37 @@ describe('completion times (#39)', () => {
     expect(r.attempts.map((a) => a.minutes)).toEqual([20, 34, 90, null])
   })
 })
+
+describe('live progress (#40)', () => {
+  it('counts answered questions and lists cohort members who have not started', async () => {
+    const t = new Date('2026-09-29T10:00:00Z')
+    const prisma = {
+      assessmentDelivery: {
+        findUnique: async () => ({
+          id: 'd1',
+          label: 'pre',
+          cohortId: 'c1',
+          cohort: { name: 'C' },
+          assessment: { id: 'x', title: 'T', sections: [], expectedMinutes: null },
+          attempts: [
+            {
+              id: 'a', userId: 'u1', startedAt: t, submittedAt: null, submittedLate: false, sectionScores: null, updatedAt: t,
+              drawnQuestionIds: ['q1', 'q2', 'q3', 'q4'], answers: { q1: 'B', q2: '  ', q3: 'SELECT 1', stale: 'A' },
+            },
+          ],
+        }),
+      },
+      user: { findMany: async () => [] },
+      membership: {
+        findMany: async () => [
+          { userId: 'u1', user: { email: 'one@x', displayName: 'One' } },
+          { userId: 'u2', user: { email: 'two@x', displayName: 'Two' } },
+          { userId: 'u2', user: { email: 'two@x', displayName: 'Two' } },
+        ],
+      },
+    }
+    const r = await new AssessmentsService(prisma as never, {} as never, {} as never).deliveryResults('d1')
+    expect(r.attempts[0]).toMatchObject({ answeredCount: 2, questionCount: 4, lastActivityAt: t })
+    expect(r.notStarted).toEqual([{ userId: 'u2', email: 'two@x', displayName: 'Two' }])
+  })
+})

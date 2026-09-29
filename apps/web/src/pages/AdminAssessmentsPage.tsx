@@ -673,15 +673,30 @@ function NewDeliveryForm({
 function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId: string }) {
   const [data, setData] = useState<DeliveryResults | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
-  useEffect(() => {
+  // Manual refresh only — no polling (#40).
+  const load = useCallback(() => {
+    setRefreshing(true)
     getDeliveryResults(getToken, deliveryId)
-      .then(setData)
+      .then((d) => {
+        setData(d)
+        setErr(null)
+        setLoadedAt(new Date())
+      })
       .catch((e) => setErr(e instanceof Error ? e.message : 'Failed to load results'))
+      .finally(() => setRefreshing(false))
   }, [getToken, deliveryId])
+
+  useEffect(load, [load])
 
   if (err) return <p className="text-[12px] text-red-400">{err}</p>
   if (!data) return <p className="text-[13px] text-slate-mid">Loading results…</p>
+
+  const submittedN = data.attempts.filter((a) => a.submittedAt).length
+  const inProgressN = data.attempts.length - submittedN
+  const time = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 
   const exportCsv = () => {
     downloadCsv({
@@ -721,11 +736,21 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
             </p>
           )}
         </div>
-        <button onClick={exportCsv} disabled={data.attempts.length === 0} className="text-[12px] font-semibold text-green-light hover:text-green disabled:opacity-40 transition-colors">
-          Export CSV
-        </button>
+        <div className="flex items-center gap-4">
+          {loadedAt && <span className="text-[11px] text-white/30">updated {loadedAt.toLocaleTimeString()}</span>}
+          <button onClick={load} disabled={refreshing} className="text-[12px] font-semibold text-slate-mid hover:text-[#f5f3ee] disabled:opacity-40 transition-colors">
+            {refreshing ? 'Refreshing…' : '↻ Refresh'}
+          </button>
+          <button onClick={exportCsv} disabled={data.attempts.length === 0} className="text-[12px] font-semibold text-green-light hover:text-green disabled:opacity-40 transition-colors">
+            Export CSV
+          </button>
+        </div>
       </div>
-      {data.attempts.length === 0 ? (
+      <p className="text-[12px] text-slate-mid mb-3">
+        <span className="text-[#2d9e5f]">{submittedN} submitted</span> · <span className="text-[#d4830a]">{inProgressN} in progress</span> ·{' '}
+        {data.notStarted.length} not started
+      </p>
+      {data.attempts.length === 0 && data.notStarted.length === 0 ? (
         <p className="text-[13px] text-slate-mid">No attempts yet.</p>
       ) : (
         <div className="overflow-x-auto">
@@ -748,7 +773,9 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
                   <td className="py-2 pr-4">
                     <p className="text-[#f5f3ee]">{a.displayName ?? a.email ?? a.userId}</p>
                     <p className="text-[11px] text-white/40">
-                      {a.submittedAt ? `submitted ${fmt(a.submittedAt)}${a.submittedLate ? ' · late' : ''}` : 'in progress'}
+                      {a.submittedAt
+                        ? `submitted ${fmt(a.submittedAt)}${a.submittedLate ? ' · late' : ''}`
+                        : `in progress · ${a.answeredCount} of ${a.questionCount} answered · last saved ${time(a.lastActivityAt)}`}
                     </p>
                   </td>
                   <td className="text-right py-2 px-2 font-mono text-slate-light whitespace-nowrap">{a.minutes != null ? `${a.minutes} min` : '—'}</td>
@@ -763,6 +790,15 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
                   <td className="text-right py-2 pl-4 font-mono font-semibold text-[#f5f3ee]">
                     {a.overall ? `${a.overall.percent}%` : '—'}
                   </td>
+                </tr>
+              ))}
+              {data.notStarted.map((u) => (
+                <tr key={u.userId} className="border-t border-white/5">
+                  <td className="py-2 pr-4">
+                    <p className="text-white/50">{u.displayName ?? u.email ?? u.userId}</p>
+                    <p className="text-[11px] text-white/30">not started</p>
+                  </td>
+                  <td colSpan={data.sections.length + 2} />
                 </tr>
               ))}
             </tbody>

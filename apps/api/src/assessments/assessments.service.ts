@@ -327,6 +327,19 @@ export class AssessmentsService {
     })
     const byId = new Map(users.map((u) => [u.id, u]))
     const sections = (d.assessment.sections as unknown as AssessmentSection[]).map((s) => ({ id: s.id, title: s.title }))
+    // Cohort members who haven't opened it yet, so a live class shows who's missing (#40).
+    const started = new Set(d.attempts.map((a) => a.userId))
+    const members = d.cohortId
+      ? await this.prisma.membership.findMany({
+          where: { cohortId: d.cohortId },
+          select: { userId: true, user: { select: { email: true, displayName: true } } },
+        })
+      : []
+    const notStarted = [...new Map(members.filter((m) => !started.has(m.userId)).map((m) => [m.userId, m])).values()].map((m) => ({
+      userId: m.userId,
+      email: m.user.email,
+      displayName: m.user.displayName,
+    }))
     return {
       delivery: {
         id: d.id,
@@ -348,10 +361,13 @@ export class AssessmentsService {
           submittedAt: a.submittedAt,
           submittedLate: a.submittedLate,
           minutes: minutesTaken(a),
+          ...progress(a),
+          lastActivityAt: a.updatedAt,
           sectionScores: scores,
           overall: scores ? overall(scores) : null,
         }
       }),
+      notStarted,
     }
   }
 
@@ -701,6 +717,13 @@ function stripAnswer(q: AssessmentQuestion) {
  */
 function minutesTaken(a: { startedAt: Date; submittedAt: Date | null }): number | null {
   return a.submittedAt ? Math.round((a.submittedAt.getTime() - a.startedAt.getTime()) / 60000) : null
+}
+
+/** Questions with a non-blank saved answer, out of those drawn for this attempt (#40). */
+function progress(a: { drawnQuestionIds: unknown; answers: unknown }) {
+  const drawn = (a.drawnQuestionIds as string[]) ?? []
+  const answers = (a.answers as Record<string, string> | null) ?? {}
+  return { answeredCount: drawn.filter((q) => answers[q]?.trim()).length, questionCount: drawn.length }
 }
 
 function median(values: (number | null)[]): number | null {

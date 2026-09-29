@@ -125,9 +125,16 @@ export interface DeliveryResults {
     submittedLate: boolean
     /** Start→submit wall-clock minutes; null until submitted. */
     minutes: number | null
+    /** Live progress (#40): non-blank saved answers out of questions drawn. */
+    answeredCount: number
+    questionCount: number
+    /** Last autosave or submit. */
+    lastActivityAt: string
     sectionScores: SectionScore[] | null
     overall: OverallScore | null
   }[]
+  /** Cohort members with no attempt yet. */
+  notStarted: { userId: string; email: string | null; displayName: string | null }[]
 }
 
 export async function listAssessments(getToken: GetToken): Promise<AssessmentSummary[]> {
