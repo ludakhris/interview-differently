@@ -115,6 +115,15 @@ Without flags, grading ignores row order and column names but still requires the
 
 Import runs every reference query first and refuses the file if any fail, so a typo in an answer key never reaches students.
 
+## Updating an existing assessment
+
+Open it under **Tools ▾ → Admin → Assessments**, click **Edit markdown →**, change the file, then **Preview** and **Import**. The panel shows `Updating <title> — owner stays …`; the owner can't be changed this way. Keep the `slug` the same — a new slug imports a separate assessment.
+
+- **Frontmatter-only changes are safe at any time** — e.g. adding `expected_minutes: 30`. The new value shows for past and future deliveries.
+- **Submitted attempts keep their scores.** They're stored at submission and never regraded.
+- **Attempts still in progress are graded against the file as it is when the student submits**, so avoid editing questions or answers while a delivery is running. Removed questions drop out of their score.
+- **Don't renumber or remove sections once a delivery has run.** Per-section scores are stored by section number, so past results would show under the wrong section or disappear. For bigger rewrites, import a new assessment with a new `slug`.
+
 ## Deliveries
 
 A delivery schedules the bank to one cohort with a label (`pre`, `post`, …), an optional open/close window, and an optional time limit. Each student gets one attempt per delivery; the questions are drawn at random when they start, so pre and post papers differ while keeping the same per-section counts. Answers save as the student works; submission is graded server-side.

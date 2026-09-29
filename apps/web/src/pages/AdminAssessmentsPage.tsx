@@ -123,6 +123,15 @@ export function AdminAssessmentsPage() {
             >
               docs/assessment-format.md
             </a>
+            . Running a class:{' '}
+            <a
+              href="https://github.com/ludakhris/interview-differently/blob/main/docs/instructor-guide.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono underline hover:text-[#f5f3ee] transition-colors"
+            >
+              docs/instructor-guide.md
+            </a>
             .
           </p>
         </div>
