@@ -7,6 +7,7 @@ import { Nav } from '@/components/Nav'
 import { SqlEditor } from '@/components/sql/SqlEditor'
 import { SchemaTree } from '@/components/sql/SchemaTree'
 import { ResultsGrid } from '@/components/sql/ResultsGrid'
+import { logSandboxQuery } from '@/services/toolsService'
 import { ResultActions } from '@/components/sql/ResultActions'
 import { SandboxDb, type SandboxResult } from '@/lib/sql/sandboxDb'
 import {
@@ -147,13 +148,27 @@ export function SqlSandboxPage() {
       const r = await db.run(text)
       setResult(r)
       setHistory(pushHistory(slug, text))
+      logSandboxQuery(getToken, {
+        datasetSlug: slug,
+        queryText: text,
+        ok: true,
+        rowCount: r.rowCount,
+        durationMs: r.durationMs,
+      })
     } catch (e) {
       // Keep the last good result visible under the error banner.
-      setQueryError(e instanceof Error ? e.message : 'Query failed')
+      const message = e instanceof Error ? e.message : 'Query failed'
+      setQueryError(message)
+      logSandboxQuery(getToken, {
+        datasetSlug: slug,
+        queryText: text,
+        ok: false,
+        errorMessage: message,
+      })
     } finally {
       setRunning(false)
     }
-  }, [query, slug, running])
+  }, [query, slug, running, getToken])
 
   const tables = useMemo(() => dataset?.schemaSummary ?? [], [dataset?.schemaSummary])
 

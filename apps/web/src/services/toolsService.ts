@@ -68,3 +68,54 @@ export async function setCohortTool(
     body: JSON.stringify({ enabled }),
   })
 }
+
+// ── SQL sandbox activity (query log) ───────────────────────────────────────
+
+export interface SandboxQueryEvent {
+  datasetSlug: string
+  queryText: string
+  ok: boolean
+  errorMessage?: string
+  rowCount?: number
+  durationMs?: number
+}
+
+/** Fire-and-forget: monitoring must never break or slow the sandbox. */
+export function logSandboxQuery(getToken: GetToken, event: SandboxQueryEvent): void {
+  authedFetch(getToken, '/me/tools/sandbox-queries', {
+    method: 'POST',
+    body: JSON.stringify(event),
+  }).catch(() => {})
+}
+
+export interface SandboxActivity {
+  cohort: { id: string; name: string }
+  retentionDays: number
+  generatedAt: string
+  students: Array<{
+    userId: string
+    name: string
+    email: string | null
+    queryCount: number
+    errorCount: number
+    lastQueryAt: string | null
+    queries: Array<{
+      id: string
+      datasetSlug: string
+      queryText: string
+      ok: boolean
+      errorMessage: string | null
+      rowCount: number | null
+      durationMs: number | null
+      createdAt: string
+    }>
+  }>
+}
+
+export async function fetchSandboxActivity(
+  getToken: GetToken,
+  cohortId: string
+): Promise<SandboxActivity> {
+  const res = await authedFetch(getToken, `/admin/cohorts/${cohortId}/sandbox-activity`)
+  return res.json() as Promise<SandboxActivity>
+}

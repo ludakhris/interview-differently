@@ -20,6 +20,7 @@ import { AdminInstitutionAssessmentsPage } from '@/pages/AdminInstitutionAssessm
 import { AdminInstitutionStudentsPage } from '@/pages/AdminInstitutionStudentsPage'
 import { AdminStudentDetailPage } from '@/pages/AdminStudentDetailPage'
 import { AdminDatasetsPage } from '@/pages/AdminDatasetsPage'
+import { AdminInstitutionSandboxPage } from '@/pages/AdminInstitutionSandboxPage'
 import { SqlSandboxPage } from '@/pages/SqlSandboxPage'
 import { AssessmentsPage } from '@/pages/AssessmentsPage'
 import { AssessmentAttemptPage } from '@/pages/AssessmentAttemptPage'
@@ -253,6 +254,14 @@ export default function App() {
           element={
             <AdminRoute>
               <AdminInstitutionAssessmentsPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/institutions/:institutionId/sandbox"
+          element={
+            <AdminRoute>
+              <AdminInstitutionSandboxPage />
             </AdminRoute>
           }
         />

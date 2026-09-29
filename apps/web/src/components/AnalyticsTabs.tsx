@@ -13,7 +13,13 @@ import { useLocation, useNavigate } from 'react-router-dom'
  * so the layout stays stable as those pages land. Pass `available` from
  * the parent — caller knows what's shipped.
  */
-export type AnalyticsTab = 'overview' | 'engagement' | 'heatmap' | 'assessments' | 'students'
+export type AnalyticsTab =
+  | 'overview'
+  | 'engagement'
+  | 'heatmap'
+  | 'assessments'
+  | 'students'
+  | 'sandbox'
 
 const ALL_TABS: Array<{ key: AnalyticsTab; label: string; suffix: string }> = [
   { key: 'overview', label: 'Overview', suffix: '/analytics' },
@@ -21,6 +27,7 @@ const ALL_TABS: Array<{ key: AnalyticsTab; label: string; suffix: string }> = [
   { key: 'heatmap', label: 'Heatmap', suffix: '/heatmap' },
   { key: 'assessments', label: 'Assessments', suffix: '/assessments' },
   { key: 'students', label: 'Students', suffix: '/students' },
+  { key: 'sandbox', label: 'SQL Activity', suffix: '/sandbox' },
 ]
 
 export interface AnalyticsTabsProps {

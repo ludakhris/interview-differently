@@ -354,3 +354,26 @@ model AssessmentAttempt {
   @@unique([deliveryId, userId])
   @@index([userId])
 }
+
+// ── Tools: SQL sandbox query log ────────────────────────────────────────────
+//
+// One row per query a student runs in the browser sandbox (PGlite runs
+// client-side, so the client reports it). Lets admins monitor a cohort live.
+// Stores raw student SQL — purged after 90 days (see ToolsService.logSandboxQuery).
+// `userId` has no FK on purpose: log rows are independent of User lifecycle.
+
+model SqlQueryLog {
+  id           String   @id @default(uuid())
+  userId       String
+  cohortId     String?  // resolved server-side from the user's memberships
+  datasetSlug  String
+  queryText    String
+  ok           Boolean
+  errorMessage String?
+  rowCount     Int?
+  durationMs   Int?
+  createdAt    DateTime @default(now())
+
+  @@index([cohortId, createdAt])
+  @@index([createdAt])
+}
