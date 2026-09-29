@@ -40,19 +40,15 @@ function TreeNode({ node, depth }: TreeNodeProps) {
       <button
         type="button"
         className={`group flex items-baseline gap-2 w-full text-left py-1.5 rounded hover:bg-white/3 px-1 -mx-1 ${hasChildren ? 'cursor-pointer' : 'cursor-default'}`}
-        onClick={() => hasChildren && setOpen(o => !o)}
+        onClick={() => hasChildren && setOpen((o) => !o)}
         aria-expanded={hasChildren ? open : undefined}
       >
         {hasChildren ? (
-          <span className="text-[10px] text-white/40 w-3 flex-shrink-0">
-            {open ? '▾' : '▸'}
-          </span>
+          <span className="text-[10px] text-white/40 w-3 flex-shrink-0">{open ? '▾' : '▸'}</span>
         ) : (
           <span className="w-3 flex-shrink-0 text-white/20 text-[10px]">·</span>
         )}
-        <span className={`text-[14px] font-medium ${toneText[tone]} flex-1`}>
-          {node.label}
-        </span>
+        <span className={`text-[14px] font-medium ${toneText[tone]} flex-1`}>{node.label}</span>
         {node.value && (
           <span className={`text-[15px] font-display font-bold ${toneText[tone]}`}>
             {node.value}

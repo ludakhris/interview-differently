@@ -10,7 +10,12 @@ interface PrerenderedAvatarPlayerProps {
   className?: string
 }
 
-export function PrerenderedAvatarPlayer({ mediaUrl, isPlaying, onDone, className }: PrerenderedAvatarPlayerProps) {
+export function PrerenderedAvatarPlayer({
+  mediaUrl,
+  isPlaying,
+  onDone,
+  className,
+}: PrerenderedAvatarPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isPaused, setIsPaused] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -24,7 +29,7 @@ export function PrerenderedAvatarPlayer({ mediaUrl, isPlaying, onDone, className
     const video = videoRef.current
     if (!video) return
     video.currentTime = 0
-    video.play().catch(err => setError(err instanceof Error ? err.message : 'Playback blocked'))
+    video.play().catch((err) => setError(err instanceof Error ? err.message : 'Playback blocked'))
   }, [mediaUrl])
 
   // External pause control (e.g. parent transitions away from "narrating").

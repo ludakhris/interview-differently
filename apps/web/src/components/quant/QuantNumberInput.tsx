@@ -17,7 +17,7 @@ interface Props {
   placeholder?: string
   disabled?: boolean
   size?: 'md' | 'lg'
-  hint?: string                        // small line below input, e.g. "Carried from Sizing step"
+  hint?: string // small line below input, e.g. "Carried from Sizing step"
 }
 
 export function QuantNumberInput({
@@ -39,14 +39,21 @@ export function QuantNumberInput({
   return (
     <div>
       {label && (
-        <label htmlFor={id} className="block text-[11px] font-semibold uppercase tracking-widest text-white/55 mb-1">
+        <label
+          htmlFor={id}
+          className="block text-[11px] font-semibold uppercase tracking-widest text-white/55 mb-1"
+        >
           {label}
         </label>
       )}
       {prompt && <p className="text-[12px] text-white/55 mb-2 leading-snug">{prompt}</p>}
       <div className="relative flex items-baseline">
         {isCurrency && (
-          <span className={`absolute left-3 text-white/55 ${size === 'lg' ? 'text-[20px]' : 'text-[14px]'}`}>$</span>
+          <span
+            className={`absolute left-3 text-white/55 ${size === 'lg' ? 'text-[20px]' : 'text-[14px]'}`}
+          >
+            $
+          </span>
         )}
         <input
           id={id}
@@ -80,7 +87,9 @@ export function QuantNumberInput({
           `}
         />
         {unit && (
-          <span className={`absolute right-3 text-white/50 ${size === 'lg' ? 'text-[14px]' : 'text-[12px]'} pointer-events-none`}>
+          <span
+            className={`absolute right-3 text-white/50 ${size === 'lg' ? 'text-[14px]' : 'text-[12px]'} pointer-events-none`}
+          >
             {unit}
           </span>
         )}

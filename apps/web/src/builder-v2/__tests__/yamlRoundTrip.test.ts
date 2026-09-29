@@ -11,7 +11,7 @@ import { yamlToScenario, scenarioToYaml } from '@/lib/yamlScenario'
 import { validateScenarioDoc } from '../validate'
 
 const dir = join(__dirname, '../../lib/scenarios')
-const files = readdirSync(dir).filter(f => f.endsWith('.yaml'))
+const files = readdirSync(dir).filter((f) => f.endsWith('.yaml'))
 
 describe('YAML round-trip', () => {
   it.each(files)('%s is stable across export → import', (file) => {
@@ -23,10 +23,20 @@ describe('YAML round-trip', () => {
   it.each(files)('%s has no blocking validation issues', (file) => {
     const scenario = yamlToScenario(readFileSync(join(dir, file), 'utf8'))
     // Immersive seeds need rendered media, which only exists on the server — stub a ready asset per decision.
-    const assets = scenario.mode === 'immersive'
-      ? scenario.nodes.filter(n => n.type === 'decision').map(n => ({ nodeId: n.nodeId, scenarioId: scenario.scenarioId, status: 'ready' as const, mediaUrl: 'x', scriptHash: '', renderedAt: '' }))
-      : []
-    const errors = validateScenarioDoc(scenario, assets as never).filter(i => i.level === 'error')
-    expect(errors.map(e => e.message)).toEqual([])
+    const assets =
+      scenario.mode === 'immersive'
+        ? scenario.nodes
+            .filter((n) => n.type === 'decision')
+            .map((n) => ({
+              nodeId: n.nodeId,
+              scenarioId: scenario.scenarioId,
+              status: 'ready' as const,
+              mediaUrl: 'x',
+              scriptHash: '',
+              renderedAt: '',
+            }))
+        : []
+    const errors = validateScenarioDoc(scenario, assets as never).filter((i) => i.level === 'error')
+    expect(errors.map((e) => e.message)).toEqual([])
   })
 })

@@ -1,15 +1,11 @@
-import type {
-  ImmersiveSession,
-  ImmersiveResponse,
-  ImmersiveSummary,
-} from '@id/types'
+import type { ImmersiveSession, ImmersiveResponse, ImmersiveSummary } from '@id/types'
 import { authHeader } from './authToken'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 export async function createImmersiveSession(
   scenarioId: string,
-  userId: string,
+  userId: string
 ): Promise<ImmersiveSession> {
   const res = await fetch(`${API_URL}/api/immersive-sessions`, {
     method: 'POST',
@@ -30,13 +26,14 @@ export interface SubmitResponsePayload {
 
 export async function submitImmersiveResponse(
   sessionId: string,
-  payload: SubmitResponsePayload,
+  payload: SubmitResponsePayload
 ): Promise<ImmersiveResponse> {
   const form = new FormData()
   form.append('nodeId', payload.nodeId)
   form.append('questionText', payload.questionText)
   if (payload.transcript) form.append('transcript', payload.transcript)
-  if (payload.durationSeconds != null) form.append('durationSeconds', String(payload.durationSeconds))
+  if (payload.durationSeconds != null)
+    form.append('durationSeconds', String(payload.durationSeconds))
   if (payload.audioBlob) form.append('file', payload.audioBlob, 'response.webm')
 
   const res = await fetch(`${API_URL}/api/immersive-sessions/${sessionId}/responses`, {
@@ -50,23 +47,30 @@ export async function submitImmersiveResponse(
 
 export async function fetchImmersiveResponse(
   sessionId: string,
-  responseId: string,
+  responseId: string
 ): Promise<ImmersiveResponse> {
-  const res = await fetch(`${API_URL}/api/immersive-sessions/${sessionId}/responses/${responseId}`, {
-    headers: await authHeader(),
-  })
+  const res = await fetch(
+    `${API_URL}/api/immersive-sessions/${sessionId}/responses/${responseId}`,
+    {
+      headers: await authHeader(),
+    }
+  )
   if (!res.ok) throw new Error(`Failed to fetch response: ${res.status}`)
   return res.json() as Promise<ImmersiveResponse>
 }
 
 export async function fetchImmersiveSession(sessionId: string): Promise<ImmersiveSession> {
-  const res = await fetch(`${API_URL}/api/immersive-sessions/${sessionId}`, { headers: await authHeader() })
+  const res = await fetch(`${API_URL}/api/immersive-sessions/${sessionId}`, {
+    headers: await authHeader(),
+  })
   if (!res.ok) throw new Error(`Failed to fetch session: ${res.status}`)
   return res.json() as Promise<ImmersiveSession>
 }
 
 export async function fetchImmersiveSummary(sessionId: string): Promise<ImmersiveSummary> {
-  const res = await fetch(`${API_URL}/api/immersive-sessions/${sessionId}/summary`, { headers: await authHeader() })
+  const res = await fetch(`${API_URL}/api/immersive-sessions/${sessionId}/summary`, {
+    headers: await authHeader(),
+  })
   if (!res.ok) throw new Error(`Failed to fetch session summary: ${res.status}`)
   return res.json() as Promise<ImmersiveSummary>
 }
@@ -80,9 +84,11 @@ export interface ImmersiveSessionSummary {
 }
 
 export async function fetchImmersiveSessionsForUser(
-  userId: string,
+  userId: string
 ): Promise<ImmersiveSessionSummary[]> {
-  const res = await fetch(`${API_URL}/api/immersive-sessions/user/${userId}`, { headers: await authHeader() })
+  const res = await fetch(`${API_URL}/api/immersive-sessions/user/${userId}`, {
+    headers: await authHeader(),
+  })
   if (!res.ok) throw new Error(`Failed to fetch immersive sessions: ${res.status}`)
   return res.json() as Promise<ImmersiveSessionSummary[]>
 }
@@ -101,15 +107,16 @@ export interface SignedMediaUrl {
 export async function fetchResponseMediaUrl(
   sessionId: string,
   responseId: string,
-  token: string,
+  token: string
 ): Promise<SignedMediaUrl> {
   const res = await fetch(
     `${API_URL}/api/immersive-sessions/${sessionId}/responses/${responseId}/media-url`,
-    { headers: { Authorization: `Bearer ${token}` } },
+    { headers: { Authorization: `Bearer ${token}` } }
   )
   if (!res.ok) {
     if (res.status === 404) throw new Error('Recording not yet uploaded')
-    if (res.status === 401 || res.status === 403) throw new Error('Not authorised to play this recording')
+    if (res.status === 401 || res.status === 403)
+      throw new Error('Not authorised to play this recording')
     throw new Error(`Failed to load recording: ${res.status}`)
   }
   return res.json() as Promise<SignedMediaUrl>

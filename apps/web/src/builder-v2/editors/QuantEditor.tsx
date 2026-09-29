@@ -2,9 +2,26 @@
 // Includes: prompt, per-field bands, formula tokenizer, hint, footnote.
 
 import { useState } from 'react'
-import type { ScenarioNode, QuantSpec, QuantFieldSpec, QuantFormula, QuantVariable, QuantNumberFormat, QuantBand, StructuredQuant } from '@id/types'
+import type {
+  ScenarioNode,
+  QuantSpec,
+  QuantFieldSpec,
+  QuantFormula,
+  QuantVariable,
+  QuantNumberFormat,
+  QuantBand,
+  StructuredQuant,
+} from '@id/types'
 import {
-  EditShell, Field, TextInput, Textarea, NumberInput, SelectInput, SectionLabel, AddButton, RemoveButton,
+  EditShell,
+  Field,
+  TextInput,
+  Textarea,
+  NumberInput,
+  SelectInput,
+  SectionLabel,
+  AddButton,
+  RemoveButton,
 } from './shared'
 
 const FORMAT_OPTIONS: { value: QuantNumberFormat; label: string }[] = [
@@ -17,12 +34,15 @@ const FORMAT_OPTIONS: { value: QuantNumberFormat; label: string }[] = [
 // ── Formula tokenizer ─────────────────────────────────────────────────────────
 
 function tokenizeExpression(expression: string, existing: QuantVariable[]): QuantVariable[] {
-  const names = [...new Set([...expression.matchAll(/\{(\w+)\}/g)].map(m => m[1]))]
-  return names.map(name => existing.find(v => v.name === name) ?? {
-    name,
-    label: name,
-    format: 'decimal' as QuantNumberFormat,
-  })
+  const names = [...new Set([...expression.matchAll(/\{(\w+)\}/g)].map((m) => m[1]))]
+  return names.map(
+    (name) =>
+      existing.find((v) => v.name === name) ?? {
+        name,
+        label: name,
+        format: 'decimal' as QuantNumberFormat,
+      }
+  )
 }
 
 // ── Field band editor ─────────────────────────────────────────────────────────
@@ -36,41 +56,59 @@ function FieldEditor({
   onChange: (updated: QuantFieldSpec) => void
   onRemove?: () => void
 }) {
-  function patch(p: Partial<QuantFieldSpec>) { onChange({ ...field, ...p }) }
-  function patchBand(p: Partial<QuantBand>) { onChange({ ...field, acceptedRange: { ...field.acceptedRange, ...p } }) }
+  function patch(p: Partial<QuantFieldSpec>) {
+    onChange({ ...field, ...p })
+  }
+  function patchBand(p: Partial<QuantBand>) {
+    onChange({ ...field, acceptedRange: { ...field.acceptedRange, ...p } })
+  }
 
   return (
     <div className="flex flex-col gap-3 p-3 border border-white/[0.06] rounded-xl bg-white/[0.01]">
       <div className="flex items-center gap-2">
         <Field label="Field label">
-          <TextInput value={field.label} onChange={e => patch({ label: e.target.value })} placeholder="e.g. Rural families" />
+          <TextInput
+            value={field.label}
+            onChange={(e) => patch({ label: e.target.value })}
+            placeholder="e.g. Rural families"
+          />
         </Field>
         <Field label="Unit">
-          <TextInput value={field.unit ?? ''} onChange={e => patch({ unit: e.target.value || undefined })} placeholder="e.g. M" />
+          <TextInput
+            value={field.unit ?? ''}
+            onChange={(e) => patch({ unit: e.target.value || undefined })}
+            placeholder="e.g. M"
+          />
         </Field>
         <Field label="Format">
           <SelectInput
             value={field.format ?? 'decimal'}
-            onChange={e => patch({ format: e.target.value as QuantNumberFormat })}
+            onChange={(e) => patch({ format: e.target.value as QuantNumberFormat })}
             options={FORMAT_OPTIONS}
           />
         </Field>
-        {onRemove && <div className="pt-5"><RemoveButton onClick={onRemove} /></div>}
+        {onRemove && (
+          <div className="pt-5">
+            <RemoveButton onClick={onRemove} />
+          </div>
+        )}
       </div>
 
       <div>
         <SectionLabel label="Accepted band" />
         <div className="grid grid-cols-4 gap-2 mt-2">
-          {([
-            { key: 'min', label: 'Min' },
-            { key: 'idealMin', label: 'Ideal min' },
-            { key: 'idealMax', label: 'Ideal max' },
-            { key: 'max', label: 'Max' },
-          ] as { key: keyof QuantBand; label: string }[]).map(({ key, label }) => (
+          {(
+            [
+              { key: 'min', label: 'Min' },
+              { key: 'idealMin', label: 'Ideal min' },
+              { key: 'idealMax', label: 'Ideal max' },
+              { key: 'max', label: 'Max' },
+            ] as { key: keyof QuantBand; label: string }[]
+          ).map(({ key, label }) => (
             <Field key={key} label={label}>
               <NumberInput
                 value={field.acceptedRange[key] ?? ''}
-                onChange={e => patchBand({ [key]: e.target.value ? Number(e.target.value) : 0 })}
+                onChange={(e) => patchBand({ [key]: e.target.value ? Number(e.target.value) : 0 })}
               />
             </Field>
           ))}
@@ -79,10 +117,17 @@ function FieldEditor({
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Model answer">
-          <NumberInput value={field.modelAnswer ?? ''} onChange={e => patch({ modelAnswer: Number(e.target.value) })} />
+          <NumberInput
+            value={field.modelAnswer ?? ''}
+            onChange={(e) => patch({ modelAnswer: Number(e.target.value) })}
+          />
         </Field>
         <Field label="Derivation (shown on submit)">
-          <TextInput value={field.derivation ?? ''} onChange={e => patch({ derivation: e.target.value || undefined })} placeholder="Brief explanation" />
+          <TextInput
+            value={field.derivation ?? ''}
+            onChange={(e) => patch({ derivation: e.target.value || undefined })}
+            placeholder="Brief explanation"
+          />
         </Field>
       </div>
     </div>
@@ -113,7 +158,7 @@ function FormulaSection({
   }
 
   function updateVar(idx: number, patch: Partial<QuantVariable>) {
-    const updated = variables.map((v, i) => i === idx ? { ...v, ...patch } : v)
+    const updated = variables.map((v, i) => (i === idx ? { ...v, ...patch } : v))
     setVariables(updated)
     onChange({ expression, variables: updated, display: display || undefined })
   }
@@ -127,7 +172,12 @@ function FormulaSection({
   return (
     <div className="flex flex-col gap-3">
       <label className="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox" checked={enabled} onChange={e => toggleEnabled(e.target.checked)} className="accent-emerald-400" />
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => toggleEnabled(e.target.checked)}
+          className="accent-emerald-400"
+        />
         <span className="text-[12px] text-white/60 font-medium">Enable formula</span>
       </label>
 
@@ -136,14 +186,14 @@ function FormulaSection({
           <Field label="Expression  (wrap variable names in { })">
             <TextInput
               value={expression}
-              onChange={e => handleExpressionChange(e.target.value)}
+              onChange={(e) => handleExpressionChange(e.target.value)}
               placeholder="e.g. {families} * {monthly_cost} * 12"
             />
           </Field>
           <Field label="Display formula (human-readable, shown as hint)">
             <TextInput
               value={display}
-              onChange={e => {
+              onChange={(e) => {
                 setDisplay(e.target.value)
                 onChange({ expression, variables, display: e.target.value || undefined })
               }}
@@ -155,27 +205,30 @@ function FormulaSection({
             <div className="flex flex-col gap-2">
               <SectionLabel label="Variables" />
               {variables.map((v, i) => {
-                const sourceNode = priorQuantNodes?.find(n => n.nodeId === v.source?.nodeId)
-                const sourceFields = sourceNode?.quant?.variant === 'structured-quant'
-                  ? (sourceNode.quant as StructuredQuant).fields
-                  : undefined
+                const sourceNode = priorQuantNodes?.find((n) => n.nodeId === v.source?.nodeId)
+                const sourceFields =
+                  sourceNode?.quant?.variant === 'structured-quant'
+                    ? (sourceNode.quant as StructuredQuant).fields
+                    : undefined
                 return (
                   <div key={v.name} className="flex flex-wrap gap-2 items-center">
                     <span className="text-[12px] font-mono text-emerald-300/70 w-24 flex-none">{`{${v.name}}`}</span>
                     <TextInput
                       value={v.label}
-                      onChange={e => updateVar(i, { label: e.target.value })}
+                      onChange={(e) => updateVar(i, { label: e.target.value })}
                       placeholder="Label"
                     />
                     <TextInput
                       value={v.unit ?? ''}
-                      onChange={e => updateVar(i, { unit: e.target.value || undefined })}
+                      onChange={(e) => updateVar(i, { unit: e.target.value || undefined })}
                       placeholder="Unit"
                     />
                     <div className="w-28 flex-none">
                       <SelectInput
                         value={v.format ?? 'decimal'}
-                        onChange={e => updateVar(i, { format: e.target.value as QuantNumberFormat })}
+                        onChange={(e) =>
+                          updateVar(i, { format: e.target.value as QuantNumberFormat })
+                        }
                         options={FORMAT_OPTIONS}
                       />
                     </div>
@@ -184,13 +237,13 @@ function FormulaSection({
                       <div className="w-52 flex-none">
                         <SelectInput
                           value={v.source?.nodeId ?? ''}
-                          onChange={e => {
+                          onChange={(e) => {
                             const nodeId = e.target.value
                             updateVar(i, { source: nodeId ? { nodeId } : undefined })
                           }}
                           options={[
                             { value: '', label: '← carry fwd: none' },
-                            ...priorQuantNodes.map(n => ({
+                            ...priorQuantNodes.map((n) => ({
                               value: n.nodeId,
                               label: `← ${n.quant?.prompt?.slice(0, 28) ?? n.nodeId}`,
                             })),
@@ -203,10 +256,14 @@ function FormulaSection({
                       <div className="w-36 flex-none">
                         <SelectInput
                           value={v.source?.fieldId ?? ''}
-                          onChange={e => updateVar(i, { source: { ...v.source!, fieldId: e.target.value || undefined } })}
+                          onChange={(e) =>
+                            updateVar(i, {
+                              source: { ...v.source!, fieldId: e.target.value || undefined },
+                            })
+                          }
                           options={[
                             { value: '', label: 'Any field' },
-                            ...sourceFields.map(f => ({ value: f.id, label: f.label })),
+                            ...sourceFields.map((f) => ({ value: f.id, label: f.label })),
                           ]}
                         />
                       </div>
@@ -234,8 +291,10 @@ export function QuantEditor({ node, allNodes, onDone }: Props) {
   const spec = node.quant!
   // Quant nodes that appear before this one — used for carry-forward dropdowns
   const nodeList = allNodes ?? []
-  const currentIdx = nodeList.findIndex(n => n.nodeId === node.nodeId)
-  const priorQuantNodes = nodeList.slice(0, currentIdx < 0 ? 0 : currentIdx).filter(n => n.type === 'quant' && n.quant)
+  const currentIdx = nodeList.findIndex((n) => n.nodeId === node.nodeId)
+  const priorQuantNodes = nodeList
+    .slice(0, currentIdx < 0 ? 0 : currentIdx)
+    .filter((n) => n.type === 'quant' && n.quant)
 
   const [narrative, setNarrative] = useState(node.narrative ?? '')
   const [prompt, setPrompt] = useState(spec.prompt ?? '')
@@ -249,25 +308,33 @@ export function QuantEditor({ node, allNodes, onDone }: Props) {
   )
 
   function updateField(idx: number, updated: QuantFieldSpec) {
-    setFields(prev => prev.map((f, i) => i === idx ? updated : f))
+    setFields((prev) => prev.map((f, i) => (i === idx ? updated : f)))
   }
 
   function addField() {
-    setFields(prev => [...prev, {
-      id: `field-${Date.now()}`,
-      label: '',
-      format: 'decimal',
-      acceptedRange: { min: 0, max: 100, idealMin: 40, idealMax: 60 },
-      modelAnswer: 50,
-    }])
+    setFields((prev) => [
+      ...prev,
+      {
+        id: `field-${Date.now()}`,
+        label: '',
+        format: 'decimal',
+        acceptedRange: { min: 0, max: 100, idealMin: 40, idealMax: 60 },
+        modelAnswer: 50,
+      },
+    ])
   }
 
   function removeField(idx: number) {
-    setFields(prev => prev.filter((_, i) => i !== idx))
+    setFields((prev) => prev.filter((_, i) => i !== idx))
   }
 
   function handleDone() {
-    const base = { prompt, hint: hint || undefined, hintFootnote: hintFootnote || undefined, formula }
+    const base = {
+      prompt,
+      hint: hint || undefined,
+      hintFootnote: hintFootnote || undefined,
+      formula,
+    }
     let updatedSpec: QuantSpec
     if (spec.variant === 'numeric-range') {
       updatedSpec = { ...spec, ...base, field: fields[0] ?? spec.field }
@@ -278,12 +345,26 @@ export function QuantEditor({ node, allNodes, onDone }: Props) {
   }
 
   return (
-    <EditShell emoji="🔢" kindLabel={spec.variant === 'structured-quant' ? 'Structured Quant' : 'Numeric Range'} onDone={handleDone}>
+    <EditShell
+      emoji="🔢"
+      kindLabel={spec.variant === 'structured-quant' ? 'Structured Quant' : 'Numeric Range'}
+      onDone={handleDone}
+    >
       <Field label="Narrative (framing above the prompt)">
-        <Textarea value={narrative} onChange={e => setNarrative(e.target.value)} rows={2} placeholder="Context sentence shown above the question." />
+        <Textarea
+          value={narrative}
+          onChange={(e) => setNarrative(e.target.value)}
+          rows={2}
+          placeholder="Context sentence shown above the question."
+        />
       </Field>
       <Field label="Prompt (the question)">
-        <Textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={2} placeholder="What is your estimate?" />
+        <Textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          rows={2}
+          placeholder="What is your estimate?"
+        />
       </Field>
 
       {/* Fields / bands */}
@@ -293,29 +374,45 @@ export function QuantEditor({ node, allNodes, onDone }: Props) {
           <FieldEditor
             key={f.id}
             field={f}
-            onChange={updated => updateField(i, updated)}
-            onRemove={spec.variant === 'structured-quant' && fields.length > 1 ? () => removeField(i) : undefined}
+            onChange={(updated) => updateField(i, updated)}
+            onRemove={
+              spec.variant === 'structured-quant' && fields.length > 1
+                ? () => removeField(i)
+                : undefined
+            }
           />
         ))}
-        {spec.variant === 'structured-quant' && (
-          <AddButton onClick={addField} label="Add field" />
-        )}
+        {spec.variant === 'structured-quant' && <AddButton onClick={addField} label="Add field" />}
       </div>
 
       {/* Formula */}
       <div className="flex flex-col gap-2">
         <SectionLabel label="Formula (optional)" />
-        <FormulaSection formula={formula} onChange={setFormula} priorQuantNodes={priorQuantNodes.length ? priorQuantNodes : undefined} />
+        <FormulaSection
+          formula={formula}
+          onChange={setFormula}
+          priorQuantNodes={priorQuantNodes.length ? priorQuantNodes : undefined}
+        />
       </div>
 
       {/* Hint */}
       <div className="flex flex-col gap-3">
         <SectionLabel label="Hint (optional — caps score at Proficient)" />
         <Field label="Hint text">
-          <Textarea value={hint} onChange={e => setHint(e.target.value)} rows={2} placeholder="Approach or formula revealed when candidate asks for a hint." />
+          <Textarea
+            value={hint}
+            onChange={(e) => setHint(e.target.value)}
+            rows={2}
+            placeholder="Approach or formula revealed when candidate asks for a hint."
+          />
         </Field>
         <Field label="Hint footnote (jargon glossary)">
-          <Textarea value={hintFootnote} onChange={e => setHintFootnote(e.target.value)} rows={2} placeholder="e.g. TAM = Total Addressable Market, SAM = Serviceable…" />
+          <Textarea
+            value={hintFootnote}
+            onChange={(e) => setHintFootnote(e.target.value)}
+            rows={2}
+            placeholder="e.g. TAM = Total Addressable Market, SAM = Serviceable…"
+          />
         </Field>
       </div>
     </EditShell>

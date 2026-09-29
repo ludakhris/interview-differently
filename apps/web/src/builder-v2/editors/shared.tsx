@@ -1,6 +1,11 @@
 // Shared form primitives + EditShell chrome for all Phase C inline editors.
 
-import type { ReactNode, InputHTMLAttributes, TextareaHTMLAttributes, SelectHTMLAttributes } from 'react'
+import type {
+  ReactNode,
+  InputHTMLAttributes,
+  TextareaHTMLAttributes,
+  SelectHTMLAttributes,
+} from 'react'
 
 // ── Base input styles ─────────────────────────────────────────────────────────
 
@@ -12,7 +17,9 @@ export const inputCls =
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-[10px] font-bold uppercase tracking-widest text-white/30">{label}</label>
+      <label className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+        {label}
+      </label>
       {children}
     </div>
   )
@@ -39,14 +46,15 @@ export function NumberInput(props: InputHTMLAttributes<HTMLInputElement>) {
 export function SelectInput({
   options,
   ...rest
-}: SelectHTMLAttributes<HTMLSelectElement> & { options: { value: string; label: string; disabled?: boolean }[] }) {
+}: SelectHTMLAttributes<HTMLSelectElement> & {
+  options: { value: string; label: string; disabled?: boolean }[]
+}) {
   return (
-    <select
-      {...rest}
-      className={`${inputCls} cursor-pointer`}
-    >
-      {options.map(o => (
-        <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>
+    <select {...rest} className={`${inputCls} cursor-pointer`}>
+      {options.map((o) => (
+        <option key={o.value} value={o.value} disabled={o.disabled}>
+          {o.label}
+        </option>
       ))}
     </select>
   )
@@ -73,7 +81,13 @@ export function AddButton({ onClick, label }: { onClick: () => void; label: stri
   )
 }
 
-export function RemoveButton({ onClick, title = 'Remove' }: { onClick: () => void; title?: string }) {
+export function RemoveButton({
+  onClick,
+  title = 'Remove',
+}: {
+  onClick: () => void
+  title?: string
+}) {
   return (
     <button
       type="button"
@@ -117,9 +131,7 @@ export function EditShell({
         </button>
       </div>
       {/* Body */}
-      <div className="p-4 flex flex-col gap-4">
-        {children}
-      </div>
+      <div className="p-4 flex flex-col gap-4">{children}</div>
     </div>
   )
 }

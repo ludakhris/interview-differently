@@ -10,7 +10,9 @@ export class PlatformConfigService {
   constructor(private prisma: PrismaService) {}
 
   async getPublic(): Promise<PublicConfig> {
-    const row = await this.prisma.platformConfig.findUnique({ where: { key: 'ai_feedback_enabled' } })
+    const row = await this.prisma.platformConfig.findUnique({
+      where: { key: 'ai_feedback_enabled' },
+    })
     return { aiFeedbackEnabled: row?.value === 'true' }
   }
 

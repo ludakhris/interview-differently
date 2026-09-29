@@ -25,12 +25,16 @@ export default {
           (d) =>
             d.expression.type === 'CallExpression' &&
             d.expression.callee.type === 'Identifier' &&
-            d.expression.callee.name === 'InstitutionAdminAllowed',
+            d.expression.callee.name === 'InstitutionAdminAllowed'
         )
         if (!allowed) return
         const body = sourceCode.getText(node.value.body)
         if (!/\bthis\.scope\.\w+\(/.test(body)) {
-          context.report({ node: node.key, messageId: 'missingScope', data: { name: node.key.name } })
+          context.report({
+            node: node.key,
+            messageId: 'missingScope',
+            data: { name: node.key.name },
+          })
         }
       },
     }

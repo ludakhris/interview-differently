@@ -1,30 +1,37 @@
-export const TRACK_META: Record<string, {
-  label: string
-  description: string
-  color: string
-  icon: string
-}> = {
+export const TRACK_META: Record<
+  string,
+  {
+    label: string
+    description: string
+    color: string
+    icon: string
+  }
+> = {
   operations: {
     label: 'Incident Response',
-    description: 'A critical, customer-impacting issue surfaces. Monitors are alerting across payment processing and authentication. Your SLA breach window is 13 minutes. You\'re the on-call engineer. What\'s your first move?',
+    description:
+      "A critical, customer-impacting issue surfaces. Monitors are alerting across payment processing and authentication. Your SLA breach window is 13 minutes. You're the on-call engineer. What's your first move?",
     color: '#1a6b3c',
     icon: 'AlertTriangle',
   },
   business: {
     label: 'Business Decisions',
-    description: 'You\'re evaluating whether to launch a new print magazine. Each decision unlocks a new constraint — distribution costs, content overhead, a marketing spend that eliminates your margin entirely. Getting the numbers right is the floor. Questioning your own conclusion is the ceiling.',
+    description:
+      "You're evaluating whether to launch a new print magazine. Each decision unlocks a new constraint — distribution costs, content overhead, a marketing spend that eliminates your margin entirely. Getting the numbers right is the floor. Questioning your own conclusion is the ceiling.",
     color: '#d4830a',
     icon: 'BarChart3',
   },
   'business case': {
     label: 'Business Cases',
-    description: 'Real consulting-style case interviews. A client walks in with a profitability drop, a market-entry question, an acquisition target, or a pricing puzzle — and a stack of exhibits. Read the data, structure your hypotheses, run the math, and defend a recommendation. Modeled on top-tier strategy consulting interview patterns.',
+    description:
+      'Real consulting-style case interviews. A client walks in with a profitability drop, a market-entry question, an acquisition target, or a pricing puzzle — and a stack of exhibits. Read the data, structure your hypotheses, run the math, and defend a recommendation. Modeled on top-tier strategy consulting interview patterns.',
     color: '#0f5b89',
     icon: 'Briefcase',
   },
   risk: {
     label: 'Risk & Compliance',
-    description: 'During a routine review, you discover employee passwords stored in plain text in a shared internal document. No incident has occurred. No one flagged it. The scenario doesn\'t tell you what to do — it asks you. Who do you notify first, and how?',
+    description:
+      "During a routine review, you discover employee passwords stored in plain text in a shared internal document. No incident has occurred. No one flagged it. The scenario doesn't tell you what to do — it asks you. Who do you notify first, and how?",
     color: '#7b3fa0',
     icon: 'Scale',
   },
@@ -36,7 +43,8 @@ export const TRACK_META: Record<string, {
   },
   'data-analytics': {
     label: 'Data Analytics',
-    description: 'A stakeholder asks a business question; the answer is in the database. Scope the ask, check the data before you trust it, build the query in verified steps, and hand back a number leadership can act on — with the caveats that matter. Live SQL against a real dataset.',
+    description:
+      'A stakeholder asks a business question; the answer is in the database. Scope the ask, check the data before you trust it, build the query in verified steps, and hand back a number leadership can act on — with the caveats that matter. Live SQL against a real dataset.',
     color: '#0a9396',
     icon: 'Database',
   },

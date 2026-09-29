@@ -9,7 +9,10 @@ export async function listScenarioMedia(scenarioId: string): Promise<ScenarioMed
   return res.json()
 }
 
-export async function renderNodeMedia(scenarioId: string, nodeId: string): Promise<ScenarioMediaAsset> {
+export async function renderNodeMedia(
+  scenarioId: string,
+  nodeId: string
+): Promise<ScenarioMediaAsset> {
   const res = await fetch(`${API_URL}/api/scenario-media/render/${scenarioId}/${nodeId}`, {
     method: 'POST',
     headers: await authHeader(),
@@ -36,7 +39,7 @@ export async function sha256Hex(input: string): Promise<string> {
   const enc = new TextEncoder().encode(input)
   const buf = await crypto.subtle.digest('SHA-256', enc)
   return Array.from(new Uint8Array(buf))
-    .map(b => b.toString(16).padStart(2, '0'))
+    .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
 }
 
@@ -97,7 +100,7 @@ export async function bulkRenderAllMedia(
   callbacks: {
     onBeforeRender?: (p: BulkRenderProgress) => void
     onAfterRender?: (p: BulkRenderProgress, ok: boolean, error?: string) => void
-  } = {},
+  } = {}
 ): Promise<BulkRenderSummary> {
   const summary: BulkRenderSummary = {
     rendered: 0,

@@ -1,4 +1,15 @@
-import { Controller, Post, Get, Body, Param, HttpCode, HttpException, HttpStatus, Req, UseGuards } from '@nestjs/common'
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  HttpCode,
+  HttpException,
+  HttpStatus,
+  Req,
+  UseGuards,
+} from '@nestjs/common'
 import { ResultsService } from './results.service'
 import type { CreateResultDto } from './results.types'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
@@ -15,7 +26,7 @@ import { assertOwnerOrAdmin, type AuthedRequest } from '../auth/owner'
 export class ResultsController {
   constructor(
     private readonly resultsService: ResultsService,
-    private readonly clerk: ClerkService,
+    private readonly clerk: ClerkService
   ) {}
 
   @Post()
@@ -31,7 +42,11 @@ export class ResultsController {
   @Post('attempts')
   @HttpCode(201)
   createAttempt(@Req() req: AuthedRequest, @Body() body: { scenarioId: string; track: string }) {
-    return this.resultsService.createAttempt({ userId: req.userId, scenarioId: body.scenarioId, track: body.track })
+    return this.resultsService.createAttempt({
+      userId: req.userId,
+      scenarioId: body.scenarioId,
+      track: body.track,
+    })
   }
 
   @Get('profile/:userId')

@@ -8,7 +8,12 @@ import { Nav } from '@/components/Nav'
 import { SqlWorkbench } from '@/components/sql/SqlWorkbench'
 import { PromptMarkdown } from '@/components/PromptMarkdown'
 import { SandboxDb } from '@/lib/sql/sandboxDb'
-import { fetchAttempt, saveAnswers, submitAttempt, type AttemptPaper } from '@/services/assessmentsService'
+import {
+  fetchAttempt,
+  saveAnswers,
+  submitAttempt,
+  type AttemptPaper,
+} from '@/services/assessmentsService'
 
 /**
  * Take an assessment (#25). One section at a time; every question in the
@@ -84,14 +89,22 @@ export function AssessmentAttemptPage() {
       if (timerRef.current) window.clearTimeout(timerRef.current)
       timerRef.current = window.setTimeout(() => void flush(), AUTOSAVE_MS)
     },
-    [flush],
+    [flush]
   )
 
   // ── Submit ──
   const submit = useCallback(
     async (auto = false) => {
       if (submitting) return
-      if (!auto && !(await confirm({ title: 'Submit your answers?', body: 'You cannot change them afterwards. Unanswered questions score zero.', confirmLabel: 'Submit' }))) return
+      if (
+        !auto &&
+        !(await confirm({
+          title: 'Submit your answers?',
+          body: 'You cannot change them afterwards. Unanswered questions score zero.',
+          confirmLabel: 'Submit',
+        }))
+      )
+        return
       setSubmitting(true)
       if (timerRef.current) window.clearTimeout(timerRef.current)
       try {
@@ -99,7 +112,12 @@ export function AssessmentAttemptPage() {
         const starters: Record<string, string> = {}
         for (const sec of paper?.sections ?? []) {
           for (const q of sec.questions) {
-            if (q.type === 'sql' && q.starterSql && !(answers[q.id] ?? dirtyRef.current[q.id])?.trim()) starters[q.id] = q.starterSql
+            if (
+              q.type === 'sql' &&
+              q.starterSql &&
+              !(answers[q.id] ?? dirtyRef.current[q.id])?.trim()
+            )
+              starters[q.id] = q.starterSql
           }
         }
         await submitAttempt(getToken, attemptId, { ...starters, ...answers, ...dirtyRef.current })
@@ -109,7 +127,7 @@ export function AssessmentAttemptPage() {
         setSubmitting(false)
       }
     },
-    [submitting, getToken, attemptId, answers, navigate, paper, confirm],
+    [submitting, getToken, attemptId, answers, navigate, paper, confirm]
   )
 
   // ── Deadline countdown → auto-submit ──
@@ -127,12 +145,15 @@ export function AssessmentAttemptPage() {
 
   const section = paper?.sections[sectionIx]
   const answeredCount = useMemo(
-    () => paper?.sections.flatMap((s) => s.questions).filter((q) => answers[q.id]?.trim()).length ?? 0,
-    [paper, answers],
+    () =>
+      paper?.sections.flatMap((s) => s.questions).filter((q) => answers[q.id]?.trim()).length ?? 0,
+    [paper, answers]
   )
   const totalCount = paper?.sections.reduce((n, s) => n + s.questions.length, 0) ?? 0
   const hasSql = paper?.sections.some((s) => s.questions.some((q) => q.type === 'sql')) ?? false
-  const hasStarters = paper?.sections.some((s) => s.questions.some((q) => q.type === 'sql' && !!q.starterSql)) ?? false
+  const hasStarters =
+    paper?.sections.some((s) => s.questions.some((q) => q.type === 'sql' && !!q.starterSql)) ??
+    false
 
   const goTo = (ix: number) => {
     void flush()
@@ -163,13 +184,21 @@ export function AssessmentAttemptPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
-      <Nav trackLabel={paper.label} stepLabel={`Section ${sectionIx + 1} of ${paper.sections.length}`} />
+      <Nav
+        trackLabel={paper.label}
+        stepLabel={`Section ${sectionIx + 1} of ${paper.sections.length}`}
+      />
       <div className="flex flex-1" style={{ minHeight: `calc(100vh - ${NAV_HEIGHT}px)` }}>
         {/* ── Sidebar ── */}
-        <aside className="flex flex-col w-[240px] flex-shrink-0 bg-[#0d0d0d] border-r border-white/8 sticky top-[57px] self-start" style={{ height: `calc(100vh - ${NAV_HEIGHT}px)` }}>
+        <aside
+          className="flex flex-col w-[240px] flex-shrink-0 bg-[#0d0d0d] border-r border-white/8 sticky top-[57px] self-start"
+          style={{ height: `calc(100vh - ${NAV_HEIGHT}px)` }}
+        >
           <div className="h-[3px] w-full flex-shrink-0 bg-[#2d9e5f]" />
           <div className="px-5 pt-5 pb-3">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#2d9e5f]">{paper.title}</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#2d9e5f]">
+              {paper.title}
+            </p>
             {remainingMs !== null && (
               <p
                 className={`mt-2 inline-flex items-center gap-1.5 font-mono text-[13px] ${
@@ -213,7 +242,13 @@ export function AssessmentAttemptPage() {
             <p className="font-mono text-[11px] text-white/40 mb-2">
               {answeredCount}/{totalCount} answered ·{' '}
               <span className={saveState === 'error' ? 'text-red-400' : undefined}>
-                {saveState === 'saving' ? 'saving…' : saveState === 'dirty' ? 'unsaved' : saveState === 'error' ? 'save failed' : 'saved'}
+                {saveState === 'saving'
+                  ? 'saving…'
+                  : saveState === 'dirty'
+                    ? 'unsaved'
+                    : saveState === 'error'
+                      ? 'save failed'
+                      : 'saved'}
               </span>
             </p>
             <button
@@ -230,27 +265,43 @@ export function AssessmentAttemptPage() {
         <main className="flex-1 min-w-0 max-w-4xl px-8 py-8">
           {sectionIx === 0 && (
             <div className="mb-6 rounded-xl border border-white/10 bg-[#0d0d0d] px-5 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40 mb-2">How this works</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40 mb-2">
+                How this works
+              </p>
               <ul className="text-[13px] text-[#f5f3ee]/80 leading-relaxed space-y-1 list-disc pl-5">
-                <li>Answers save as you go. Submit when you're done{paper.deadlineAt ? ' — or when the timer runs out' : ''}.</li>
+                <li>
+                  Answers save as you go. Submit when you're done
+                  {paper.deadlineAt ? ' — or when the timer runs out' : ''}.
+                </li>
                 {hasSql && (
                   <>
                     <li>
-                      On SQL questions, press <span className="font-semibold text-[#f5f3ee]">Run</span> (⌘↵) to see your query's output before moving on. Only the query left in the editor is graded.
+                      On SQL questions, press{' '}
+                      <span className="font-semibold text-[#f5f3ee]">Run</span> (⌘↵) to see your
+                      query's output before moving on. Only the query left in the editor is graded.
                     </li>
                     <li>
-                      Click <span className="font-semibold text-[#f5f3ee]">Schema</span> to open the table and column list beside the editor; clicking a name inserts it at the cursor.
+                      Click <span className="font-semibold text-[#f5f3ee]">Schema</span> to open the
+                      table and column list beside the editor; clicking a name inserts it at the
+                      cursor.
                     </li>
                   </>
                 )}
-                {hasStarters && <li>Some questions start you off with an example query — edit it or replace it entirely.</li>}
+                {hasStarters && (
+                  <li>
+                    Some questions start you off with an example query — edit it or replace it
+                    entirely.
+                  </li>
+                )}
               </ul>
             </div>
           )}
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-1">
             Section {sectionIx + 1} of {paper.sections.length}
           </p>
-          <h2 className="font-display font-extrabold text-[22px] text-[#f5f3ee] tracking-tight mb-6">{section.title}</h2>
+          <h2 className="font-display font-extrabold text-[22px] text-[#f5f3ee] tracking-tight mb-6">
+            {section.title}
+          </h2>
 
           <ol className="space-y-8">
             {section.questions.map((q, i) => (
@@ -261,20 +312,26 @@ export function AssessmentAttemptPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40 mb-1">
-                      {q.type === 'mc' ? 'Multiple choice' : q.type === 'scenario' ? 'Scenario' : 'Hands-on SQL'}
+                      {q.type === 'mc'
+                        ? 'Multiple choice'
+                        : q.type === 'scenario'
+                          ? 'Scenario'
+                          : 'Hands-on SQL'}
                     </p>
                     {q.type === 'scenario' ? (
                       <div className="text-[15px] text-[#f5f3ee] leading-relaxed">
                         <PromptMarkdown text={q.prompt} />
                       </div>
                     ) : (
-                      <p className="text-[15px] text-[#f5f3ee] leading-relaxed">{renderPrompt(q.prompt)}</p>
+                      <p className="text-[15px] text-[#f5f3ee] leading-relaxed">
+                        {renderPrompt(q.prompt)}
+                      </p>
                     )}
                   </div>
                 </div>
                 <QuestionBody
                   q={q}
-                  value={answers[q.id] ?? (q.type === 'sql' ? q.starterSql ?? '' : '')}
+                  value={answers[q.id] ?? (q.type === 'sql' ? (q.starterSql ?? '') : '')}
                   onChange={(v) => setAnswer(q.id, v)}
                   db={db}
                   tables={paper.dataset?.schemaSummary ?? []}
@@ -339,7 +396,9 @@ function QuestionBody({
               key={o.key}
               onClick={() => onChange(o.key)}
               className={`flex items-start gap-3 text-left px-4 py-3 rounded-xl border transition-colors ${
-                on ? 'border-[#2d9e5f]/70 bg-[#1a6b3c]/20' : 'border-white/10 hover:border-white/25 bg-[#0d0d0d]'
+                on
+                  ? 'border-[#2d9e5f]/70 bg-[#1a6b3c]/20'
+                  : 'border-white/10 hover:border-white/25 bg-[#0d0d0d]'
               }`}
             >
               <span
@@ -349,7 +408,9 @@ function QuestionBody({
               >
                 {o.key}
               </span>
-              <span className="min-w-0 [overflow-wrap:anywhere] text-[13px] text-[#f5f3ee]/90 leading-snug pt-0.5">{renderPrompt(o.text)}</span>
+              <span className="min-w-0 [overflow-wrap:anywhere] text-[13px] text-[#f5f3ee]/90 leading-snug pt-0.5">
+                {renderPrompt(o.text)}
+              </span>
             </button>
           )
         })}
@@ -358,10 +419,17 @@ function QuestionBody({
   }
   return (
     <div className="ml-10">
-      <SqlWorkbench db={db} tables={tables} value={value} onChange={onChange} autoRun={!!q.starterSql} />
+      <SqlWorkbench
+        db={db}
+        tables={tables}
+        value={value}
+        onChange={onChange}
+        autoRun={!!q.starterSql}
+      />
       {q.starterSql && value === q.starterSql && (
         <p className="text-[11px] text-amber-200/80 mt-2">
-          We've started you off with an example query — edit it or replace it entirely. It's graded as-is if you leave it unchanged.
+          We've started you off with an example query — edit it or replace it entirely. It's graded
+          as-is if you leave it unchanged.
         </p>
       )}
       {(q.ordered || q.strictColumns) && (
@@ -379,12 +447,15 @@ function renderPrompt(text: string): React.ReactNode {
   const parts = text.split(/(`[^`]+`)/g)
   return parts.map((p, i) =>
     p.startsWith('`') && p.endsWith('`') ? (
-      <code key={i} className="font-mono text-[13px] bg-white/8 px-1.5 py-0.5 rounded text-[#f5f3ee]">
+      <code
+        key={i}
+        className="font-mono text-[13px] bg-white/8 px-1.5 py-0.5 rounded text-[#f5f3ee]"
+      >
         {p.slice(1, -1)}
       </code>
     ) : (
       <span key={i}>{p}</span>
-    ),
+    )
   )
 }
 
@@ -393,5 +464,7 @@ function formatRemaining(ms: number): string {
   const h = Math.floor(s / 3600)
   const m = Math.floor((s % 3600) / 60)
   const sec = s % 60
-  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`
+  return h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+    : `${m}:${String(sec).padStart(2, '0')}`
 }

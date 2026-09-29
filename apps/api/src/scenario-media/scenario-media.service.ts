@@ -12,8 +12,8 @@ import { PrismaService } from '../prisma/prisma.service'
 import { DidService } from '../did/did.service'
 import { PUBLIC_MEDIA_STORAGE, type PublicMediaStorage } from '../storage/media-storage.interface'
 
-const RENDER_TIMEOUT_MS = 300_000   // 300s — D-ID renders typically take 30–180s; longest observed was 158s on a near-full 1200-char script. 5min gives ~2x headroom; bump again if scripts grow.
-const POLL_INTERVAL_MS = 2_000      // 2s
+const RENDER_TIMEOUT_MS = 300_000 // 300s — D-ID renders typically take 30–180s; longest observed was 158s on a near-full 1200-char script. 5min gives ~2x headroom; bump again if scripts grow.
+const POLL_INTERVAL_MS = 2_000 // 2s
 
 interface ScenarioNodeShape {
   nodeId: string
@@ -36,7 +36,7 @@ export class ScenarioMediaService {
   constructor(
     private prisma: PrismaService,
     private didService: DidService,
-    @Inject(PUBLIC_MEDIA_STORAGE) private storage: PublicMediaStorage,
+    @Inject(PUBLIC_MEDIA_STORAGE) private storage: PublicMediaStorage
   ) {}
 
   async listForScenario(scenarioId: string): Promise<ScenarioMediaAsset[]> {
@@ -54,7 +54,9 @@ export class ScenarioMediaService {
     if (existing.mediaUrl) {
       // Best-effort: derive storage key from the URL pattern we control.
       const key = this.keyForAsset(scenarioId, nodeId, existing.scriptHash)
-      await this.storage.delete(key).catch(() => {/* ignore */})
+      await this.storage.delete(key).catch(() => {
+        /* ignore */
+      })
     }
     await this.prisma.scenarioMediaAsset.delete({
       where: { scenarioId_nodeId: { scenarioId, nodeId } },
@@ -73,10 +75,10 @@ export class ScenarioMediaService {
     }
     if (!scenario.interviewer?.presenterId || !scenario.interviewer?.voiceId) {
       throw new BadRequestException(
-        `Scenario ${scenarioId} has no interviewer persona — set presenter and voice in the briefing first`,
+        `Scenario ${scenarioId} has no interviewer persona — set presenter and voice in the briefing first`
       )
     }
-    const node = scenario.nodes.find(n => n.nodeId === nodeId)
+    const node = scenario.nodes.find((n) => n.nodeId === nodeId)
     if (!node) throw new NotFoundException(`Node ${nodeId} not found in scenario ${scenarioId}`)
     const script = node.audioScript?.trim() || node.narrative?.trim()
     if (!script) {
@@ -103,11 +105,17 @@ export class ScenarioMediaService {
     const row = await this.prisma.scenarioMediaAsset.upsert({
       where: { scenarioId_nodeId: { scenarioId, nodeId } },
       create: {
-        scenarioId, nodeId, scriptHash, presenterId, voiceId,
+        scenarioId,
+        nodeId,
+        scriptHash,
+        presenterId,
+        voiceId,
         status: 'rendering',
       },
       update: {
-        scriptHash, presenterId, voiceId,
+        scriptHash,
+        presenterId,
+        voiceId,
         status: 'rendering',
         errorMessage: null,
       },
@@ -164,7 +172,8 @@ export class ScenarioMediaService {
       await sleep(POLL_INTERVAL_MS)
       const talk = await this.didService.getTalk(talkId)
       if (talk.status === 'done') {
-        if (!talk.result_url) throw new Error(`D-ID returned done with no result_url for talk ${talkId}`)
+        if (!talk.result_url)
+          throw new Error(`D-ID returned done with no result_url for talk ${talkId}`)
         return { result_url: talk.result_url, duration: talk.duration }
       }
       if (talk.status === 'error' || talk.status === 'rejected') {
@@ -173,7 +182,7 @@ export class ScenarioMediaService {
       }
     }
     throw new ServiceUnavailableException(
-      `D-ID render timed out after ${RENDER_TIMEOUT_MS / 1000}s for talk ${talkId}`,
+      `D-ID render timed out after ${RENDER_TIMEOUT_MS / 1000}s for talk ${talkId}`
     )
   }
 
@@ -191,5 +200,5 @@ export class ScenarioMediaService {
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }

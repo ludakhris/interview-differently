@@ -73,7 +73,9 @@ export function AdminInstitutionAssessmentsPage() {
 
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">Analytics</p>
+            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+              Analytics
+            </p>
             <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
               {detail?.name ?? 'Institution analytics'}
             </h1>
@@ -105,7 +107,11 @@ export function AdminInstitutionAssessmentsPage() {
           )}
         </div>
 
-        <AnalyticsTabs institutionId={institutionId} active="assessments" available={['overview', 'engagement', 'heatmap', 'assessments', 'students']} />
+        <AnalyticsTabs
+          institutionId={institutionId}
+          active="assessments"
+          available={['overview', 'engagement', 'heatmap', 'assessments', 'students']}
+        />
 
         {error && (
           <div className="rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 mb-4">
@@ -118,7 +124,8 @@ export function AdminInstitutionAssessmentsPage() {
         ) : !data || data.pairs.length === 0 ? (
           <div className="bg-[#111111] rounded-xl border border-white/10 px-6 py-12 text-center">
             <p className="text-[13px] text-slate-mid">
-              No assessment deliveries for {data?.cohort ? 'this cohort' : 'this institution'} yet. Schedule one under Tools ▾ → Assessments.
+              No assessment deliveries for {data?.cohort ? 'this cohort' : 'this institution'} yet.
+              Schedule one under Tools ▾ → Assessments.
             </p>
           </div>
         ) : (
@@ -134,7 +141,12 @@ export function AdminInstitutionAssessmentsPage() {
             </label>
             <div className="space-y-6">
               {data.pairs.map((pair) => (
-                <PairCard key={`${pair.assessmentId}:${pair.cohort.id}`} pair={pair} showNames={showNames} institutionName={data.institution.name} />
+                <PairCard
+                  key={`${pair.assessmentId}:${pair.cohort.id}`}
+                  pair={pair}
+                  showNames={showNames}
+                  institutionName={data.institution.name}
+                />
               ))}
             </div>
           </>
@@ -146,9 +158,18 @@ export function AdminInstitutionAssessmentsPage() {
 
 // ── Pair card ──────────────────────────────────────────────────────────────
 
-function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; showNames: boolean; institutionName: string }) {
+function PairCard({
+  pair,
+  showNames,
+  institutionName,
+}: {
+  pair: PrePostPair
+  showNames: boolean
+  institutionName: string
+}) {
   const keys = [{ id: 'overall', title: 'Overall' }, ...pair.sections]
-  const label = (s: PrePostPair['students'][number]) => (showNames ? (s.displayName ?? s.email ?? s.anonymousLabel) : s.anonymousLabel)
+  const label = (s: PrePostPair['students'][number]) =>
+    showNames ? (s.displayName ?? s.email ?? s.anonymousLabel) : s.anonymousLabel
   // Pre/post bars only compare once someone has both scores; alone, a pre bar reads like an improvement chart.
   const showBars = pair.averages.pairedCount > 0
 
@@ -181,10 +202,15 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
       <div className="p-6">
         <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#2d9e5f]">{pair.cohort.name}</p>
-            <h2 className="font-display font-bold text-[18px] text-[#f5f3ee] mt-0.5">{pair.assessmentTitle}</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#2d9e5f]">
+              {pair.cohort.name}
+            </p>
+            <h2 className="font-display font-bold text-[18px] text-[#f5f3ee] mt-0.5">
+              {pair.assessmentTitle}
+            </h2>
             <p className="text-[12px] text-slate-mid mt-1">
-              {pair.pre ? `${pair.pre.submittedCount} pre` : 'no pre delivery'} · {pair.post ? `${pair.post.submittedCount} post` : 'no post delivery'} ·{' '}
+              {pair.pre ? `${pair.pre.submittedCount} pre` : 'no pre delivery'} ·{' '}
+              {pair.post ? `${pair.post.submittedCount} post` : 'no post delivery'} ·{' '}
               {pair.averages.pairedCount} completed both
               {pair.expectedMinutes != null && ` · expected ${pair.expectedMinutes} min`}
               {pair.pre?.medianMinutes != null && ` · pre median ${pair.pre.medianMinutes} min`}
@@ -199,10 +225,15 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
         </div>
 
         <p className="text-[11px] text-white/40 mb-4">
-          % Improvement = post score − pre score, in percentage points, averaged over the {pair.averages.pairedCount} student
+          % Improvement = post score − pre score, in percentage points, averaged over the{' '}
+          {pair.averages.pairedCount} student
           {pair.averages.pairedCount === 1 ? '' : 's'} who completed both.
-          <span className="ml-3 inline-flex items-center gap-1.5"><span className="inline-block w-3 h-1.5 rounded-full bg-[#d4830a]" /> pre</span>
-          <span className="ml-2 inline-flex items-center gap-1.5"><span className="inline-block w-3 h-1.5 rounded-full bg-[#2d9e5f]" /> post</span>
+          <span className="ml-3 inline-flex items-center gap-1.5">
+            <span className="inline-block w-3 h-1.5 rounded-full bg-[#d4830a]" /> pre
+          </span>
+          <span className="ml-2 inline-flex items-center gap-1.5">
+            <span className="inline-block w-3 h-1.5 rounded-full bg-[#2d9e5f]" /> post
+          </span>
         </p>
 
         {/* Section averages */}
@@ -227,7 +258,9 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
                     <td className="py-2 pr-4 text-[#f5f3ee]">{s.title}</td>
                     <td className="text-right py-2 px-3 font-mono text-[#d4830a]">{pct(p)}</td>
                     <td className="text-right py-2 px-3 font-mono text-[#2d9e5f]">{pct(q)}</td>
-                    <td className={`text-right py-2 pl-3 font-mono font-semibold ${deltaCls(d)}`}>{signed(d)}</td>
+                    <td className={`text-right py-2 pl-3 font-mono font-semibold ${deltaCls(d)}`}>
+                      {signed(d)}
+                    </td>
                     {showBars && (
                       <td className="py-2 pl-4">
                         <Bars pre={p} post={q} />
@@ -243,7 +276,10 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
         {/* Students */}
         <div className="flex items-center justify-between mb-2">
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Students</p>
-          <button onClick={exportCsv} className="text-[11px] font-semibold text-slate-mid hover:text-[#f5f3ee] transition-colors">
+          <button
+            onClick={exportCsv}
+            className="text-[11px] font-semibold text-slate-mid hover:text-[#f5f3ee] transition-colors"
+          >
             ↓ CSV
           </button>
         </div>
@@ -256,7 +292,11 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
                 <tr className="text-[10px] uppercase tracking-widest text-slate-mid">
                   <th className="text-left py-2 pr-4 font-bold">Student</th>
                   {keys.map((k) => (
-                    <th key={k.id} className="text-right py-2 px-2 font-bold whitespace-nowrap" title={k.title}>
+                    <th
+                      key={k.id}
+                      className="text-right py-2 px-2 font-bold whitespace-nowrap"
+                      title={k.title}
+                    >
                       {k.title.length > 14 ? `${k.title.slice(0, 13)}…` : k.title}
                     </th>
                   ))}
@@ -269,20 +309,38 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
                   <tr key={s.userId} className="border-t border-white/5">
                     <td className="py-2 pr-4">
                       <p className="text-[#f5f3ee]">{label(s)}</p>
-                      {showNames && s.displayName && s.email && <p className="text-[11px] text-white/40">{s.email}</p>}
+                      {showNames && s.displayName && s.email && (
+                        <p className="text-[11px] text-white/40">{s.email}</p>
+                      )}
                     </td>
                     {keys.map((k) => (
                       <td key={k.id} className="text-right py-2 px-2 font-mono whitespace-nowrap">
-                        <span className={s.pre?.[k.id] == null ? 'text-white/25' : 'text-[#d4830a]'}>{pct(s.pre?.[k.id] ?? null)}</span>
+                        <span
+                          className={s.pre?.[k.id] == null ? 'text-white/25' : 'text-[#d4830a]'}
+                        >
+                          {pct(s.pre?.[k.id] ?? null)}
+                        </span>
                         <span className="text-white/25"> → </span>
-                        <span className={s.post?.[k.id] == null ? 'text-white/25' : 'text-[#2d9e5f]'}>{pct(s.post?.[k.id] ?? null)}</span>
+                        <span
+                          className={s.post?.[k.id] == null ? 'text-white/25' : 'text-[#2d9e5f]'}
+                        >
+                          {pct(s.post?.[k.id] ?? null)}
+                        </span>
                       </td>
                     ))}
-                    <td className={`text-right py-2 pl-3 font-mono font-semibold ${deltaCls(s.delta)}`}>{signed(s.delta)}</td>
+                    <td
+                      className={`text-right py-2 pl-3 font-mono font-semibold ${deltaCls(s.delta)}`}
+                    >
+                      {signed(s.delta)}
+                    </td>
                     <td className="text-right py-2 pl-3 font-mono whitespace-nowrap">
-                      <span className={s.preMinutes == null ? 'text-white/25' : 'text-[#d4830a]'}>{s.preMinutes ?? '—'}</span>
+                      <span className={s.preMinutes == null ? 'text-white/25' : 'text-[#d4830a]'}>
+                        {s.preMinutes ?? '—'}
+                      </span>
                       <span className="text-white/25"> → </span>
-                      <span className={s.postMinutes == null ? 'text-white/25' : 'text-[#2d9e5f]'}>{s.postMinutes ?? '—'}</span>
+                      <span className={s.postMinutes == null ? 'text-white/25' : 'text-[#2d9e5f]'}>
+                        {s.postMinutes ?? '—'}
+                      </span>
                       <span className="text-white/40"> min</span>
                     </td>
                   </tr>
@@ -296,11 +354,23 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
   )
 }
 
-function Stat({ label, value, delta, tone }: { label: string; value: number | null; delta?: boolean; tone?: string }) {
+function Stat({
+  label,
+  value,
+  delta,
+  tone,
+}: {
+  label: string
+  value: number | null
+  delta?: boolean
+  tone?: string
+}) {
   return (
     <div className="text-right">
       <p className="text-[10px] uppercase tracking-widest text-white/40">{label}</p>
-      <p className={`font-display font-extrabold text-[22px] leading-none mt-0.5 ${delta ? deltaCls(value) : (tone ?? 'text-[#f5f3ee]')}`}>
+      <p
+        className={`font-display font-extrabold text-[22px] leading-none mt-0.5 ${delta ? deltaCls(value) : (tone ?? 'text-[#f5f3ee]')}`}
+      >
         {delta ? (value == null ? '—' : `${value > 0 ? '+' : ''}${value}%`) : pct(value)}
       </p>
     </div>

@@ -67,7 +67,7 @@ export function AdminInstitutionsPage() {
         setError(e instanceof Error ? e.message : 'Failed to load institution')
       }
     },
-    [getToken],
+    [getToken]
   )
 
   useEffect(() => {
@@ -88,7 +88,9 @@ export function AdminInstitutionsPage() {
       <Nav />
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="mb-8">
-          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">Admin</p>
+          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+            Admin
+          </p>
           <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
             Institutions &amp; Cohorts
           </h1>
@@ -138,7 +140,9 @@ export function AdminInstitutionsPage() {
               <p className="text-[13px] text-slate-mid">Loading…</p>
             ) : institutions.length === 0 ? (
               <p className="text-[13px] text-slate-mid">
-                {isAdmin ? 'No institutions yet. Create one to get started.' : 'You are not an admin of any institution yet.'}
+                {isAdmin
+                  ? 'No institutions yet. Create one to get started.'
+                  : 'You are not an admin of any institution yet.'}
               </p>
             ) : (
               <ul className="space-y-1">
@@ -169,7 +173,9 @@ export function AdminInstitutionsPage() {
           <div>
             {!selectedId ? (
               <div className="bg-[#111111] rounded-xl border border-white/10 px-6 py-12 text-center">
-                <p className="text-[13px] text-slate-mid">Select an institution to manage its cohorts.</p>
+                <p className="text-[13px] text-slate-mid">
+                  Select an institution to manage its cohorts.
+                </p>
               </div>
             ) : !detail ? (
               <p className="text-[13px] text-slate-mid">Loading…</p>
@@ -248,11 +254,16 @@ function NewInstitutionForm({
         className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-[#f5f3ee] placeholder:text-white/25 focus:outline-none focus:border-white/30"
       />
       <p className="text-[11px] text-white/40 leading-relaxed px-1">
-        Leave blank if students don't share an email domain — they'll join via the cohort key instead.
+        Leave blank if students don't share an email domain — they'll join via the cohort key
+        instead.
       </p>
       {err && <p className="text-[12px] text-red-400">{err}</p>}
       <div className="flex items-center justify-end gap-2 pt-1">
-        <button type="button" onClick={onCancel} className="text-[12px] text-slate-mid hover:text-[#f5f3ee]">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-[12px] text-slate-mid hover:text-[#f5f3ee]"
+        >
           Cancel
         </button>
         <button
@@ -292,7 +303,11 @@ function InstitutionDetailView({
         <div>
           <h2 className="font-display font-bold text-[18px] text-[#f5f3ee]">{detail.name}</h2>
           <p className="text-[12px] text-slate-mid">
-            {detail.emailDomain ? <>{detail.emailDomain} · </> : <span className="italic">no email domain · </span>}
+            {detail.emailDomain ? (
+              <>{detail.emailDomain} · </>
+            ) : (
+              <span className="italic">no email domain · </span>
+            )}
             {detail.memberCount} member{detail.memberCount !== 1 ? 's' : ''} total
           </p>
         </div>
@@ -306,7 +321,15 @@ function InstitutionDetailView({
           {isAdmin && (
             <button
               onClick={async () => {
-                if (!(await confirm({ title: `Delete "${detail.name}"?`, body: 'All of its cohorts go with it. This cannot be undone.', confirmLabel: 'Delete institution', danger: true }))) return
+                if (
+                  !(await confirm({
+                    title: `Delete "${detail.name}"?`,
+                    body: 'All of its cohorts go with it. This cannot be undone.',
+                    confirmLabel: 'Delete institution',
+                    danger: true,
+                  }))
+                )
+                  return
                 try {
                   await deleteInstitution(getToken, detail.id)
                   await onDeleted()
@@ -420,7 +443,11 @@ function NewCohortForm({
       </p>
       {err && <p className="text-[12px] text-red-400">{err}</p>}
       <div className="flex items-center justify-end gap-2 pt-1">
-        <button type="button" onClick={onCancel} className="text-[12px] text-slate-mid hover:text-[#f5f3ee]">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-[12px] text-slate-mid hover:text-[#f5f3ee]"
+        >
           Cancel
         </button>
         <button
@@ -486,7 +513,12 @@ function CohortRow({
           <p className="text-[13px] font-semibold text-[#f5f3ee]">{cohort.name}</p>
           <p className="text-[11px] text-slate-mid">
             {cohort.memberCount} member{cohort.memberCount !== 1 ? 's' : ''}
-            {cohort.joinKey && <> · join key: <span className="font-mono">{cohort.joinKey}</span></>}
+            {cohort.joinKey && (
+              <>
+                {' '}
+                · join key: <span className="font-mono">{cohort.joinKey}</span>
+              </>
+            )}
           </p>
         </div>
         <span className="text-[12px] text-slate-mid">{expanded ? '▾' : '▸'}</span>
@@ -532,7 +564,9 @@ function CohortRow({
                         </span>
                       )}
                     </p>
-                    {m.email && m.displayName && <p className="text-[11px] text-slate-mid">{m.email}</p>}
+                    {m.email && m.displayName && (
+                      <p className="text-[11px] text-slate-mid">{m.email}</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     {isAdmin && m.role !== 'admin' && (
@@ -541,11 +575,24 @@ function CohortRow({
                           const promote = m.role !== 'institution-admin'
                           const who = m.displayName ?? m.email ?? m.userId
                           const ok = promote
-                            ? await confirm({ title: `Make ${who} a cohort admin?`, body: 'They will be able to manage cohorts, members, tools, datasets, assessments and scenarios for every institution they belong to.', confirmLabel: 'Make cohort admin' })
-                            : await confirm({ title: `Remove cohort admin from ${who}?`, body: 'They keep their cohort membership and become a regular member.', confirmLabel: 'Remove admin', danger: true })
+                            ? await confirm({
+                                title: `Make ${who} a cohort admin?`,
+                                body: 'They will be able to manage cohorts, members, tools, datasets, assessments and scenarios for every institution they belong to.',
+                                confirmLabel: 'Make cohort admin',
+                              })
+                            : await confirm({
+                                title: `Remove cohort admin from ${who}?`,
+                                body: 'They keep their cohort membership and become a regular member.',
+                                confirmLabel: 'Remove admin',
+                                danger: true,
+                              })
                           if (!ok) return
                           try {
-                            await setMemberRole(getToken, m.userId, promote ? 'institution-admin' : null)
+                            await setMemberRole(
+                              getToken,
+                              m.userId,
+                              promote ? 'institution-admin' : null
+                            )
                             await refreshMembers()
                           } catch (e) {
                             await notify(e instanceof Error ? e.message : 'Failed to update role')
@@ -558,7 +605,9 @@ function CohortRow({
                     )}
                     <button
                       onClick={() =>
-                        navigate(`/admin/institutions/${institutionId}/students/${encodeURIComponent(m.userId)}`)
+                        navigate(
+                          `/admin/institutions/${institutionId}/students/${encodeURIComponent(m.userId)}`
+                        )
                       }
                       className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
                     >
@@ -566,7 +615,15 @@ function CohortRow({
                     </button>
                     <button
                       onClick={async () => {
-                        if (!(await confirm({ title: `Remove ${m.displayName ?? m.email ?? m.userId} from this cohort?`, body: 'Their account and results are kept; they just lose the cohort tag.', confirmLabel: 'Remove', danger: true }))) return
+                        if (
+                          !(await confirm({
+                            title: `Remove ${m.displayName ?? m.email ?? m.userId} from this cohort?`,
+                            body: 'Their account and results are kept; they just lose the cohort tag.',
+                            confirmLabel: 'Remove',
+                            danger: true,
+                          }))
+                        )
+                          return
                         try {
                           await removeCohortMember(getToken, cohort.id, m.membershipId)
                           await refreshMembers()
@@ -588,7 +645,15 @@ function CohortRow({
           <div className="mt-4 pt-3 border-t border-white/5 flex justify-end">
             <button
               onClick={async () => {
-                if (!(await confirm({ title: `Delete cohort "${cohort.name}"?`, body: 'Members lose the cohort tag but keep their accounts. Assessment deliveries and results are kept.', confirmLabel: 'Delete cohort', danger: true }))) return
+                if (
+                  !(await confirm({
+                    title: `Delete cohort "${cohort.name}"?`,
+                    body: 'Members lose the cohort tag but keep their accounts. Assessment deliveries and results are kept.',
+                    confirmLabel: 'Delete cohort',
+                    danger: true,
+                  }))
+                )
+                  return
                 try {
                   await deleteCohort(getToken, cohort.id)
                   await onChange()
@@ -611,7 +676,13 @@ function CohortRow({
  * One switch per known tool (#25). Enabling a tool is what makes it appear
  * under "Tools" on members' dashboards — assigning datasets alone doesn't.
  */
-function CohortToolsToggles({ cohortId, getToken }: { cohortId: string; getToken: () => Promise<string | null> }) {
+function CohortToolsToggles({
+  cohortId,
+  getToken,
+}: {
+  cohortId: string
+  getToken: () => Promise<string | null>
+}) {
   const [tools, setTools] = useState<CohortToolState[] | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
@@ -636,11 +707,17 @@ function CohortToolsToggles({ cohortId, getToken }: { cohortId: string; getToken
               title={TOOL_META[t.toolKey].description}
               onClick={async () => {
                 const next = !t.enabled
-                setTools((ts) => ts && ts.map((x) => (x.toolKey === t.toolKey ? { ...x, enabled: next } : x)))
+                setTools(
+                  (ts) =>
+                    ts && ts.map((x) => (x.toolKey === t.toolKey ? { ...x, enabled: next } : x))
+                )
                 try {
                   await setCohortTool(getToken, cohortId, t.toolKey, next)
                 } catch (e) {
-                  setTools((ts) => ts && ts.map((x) => (x.toolKey === t.toolKey ? { ...x, enabled: !next } : x)))
+                  setTools(
+                    (ts) =>
+                      ts && ts.map((x) => (x.toolKey === t.toolKey ? { ...x, enabled: !next } : x))
+                  )
                   setErr(e instanceof Error ? e.message : 'Failed to update tool')
                 }
               }}
@@ -650,7 +727,9 @@ function CohortToolsToggles({ cohortId, getToken }: { cohortId: string; getToken
                   : 'border-white/10 text-slate-mid hover:border-white/30'
               }`}
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${t.enabled ? 'bg-[#2d9e5f]' : 'bg-white/20'}`} />
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${t.enabled ? 'bg-[#2d9e5f]' : 'bg-white/20'}`}
+              />
               {TOOL_META[t.toolKey].label}
               <span className="text-[10px] text-white/40">{t.enabled ? 'on' : 'off'}</span>
             </button>

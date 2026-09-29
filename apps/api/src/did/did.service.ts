@@ -7,8 +7,8 @@ const DID_BASE_URL = 'https://api.d-id.com'
 // (Amy, Noelle, Amber, Natasha, William, Ryan, Davis, Marcus), only Amber and
 // William remain available. Update this set when D-ID adds presenters back.
 const CURATED_PRESENTER_NAMES = new Set([
-  'Amber',     // female (12 variants currently)
-  'William',   // male (4 variants currently)
+  'Amber', // female (12 variants currently)
+  'William', // male (4 variants currently)
 ])
 
 interface DIdPresenter {
@@ -63,15 +63,15 @@ export class DidService {
     const data = await this.request<{ presenters?: DIdPresenter[] }>('/clips/presenters')
     const all: DIdPresenter[] = data.presenters ?? []
     const curated = all
-      .filter(p => CURATED_PRESENTER_NAMES.has(p.name))
-      .filter(p => !(p.presenter_id ?? p.id ?? '').includes('GreenScreen'))
-      .map(p => ({
+      .filter((p) => CURATED_PRESENTER_NAMES.has(p.name))
+      .filter((p) => !(p.presenter_id ?? p.id ?? '').includes('GreenScreen'))
+      .map((p) => ({
         id: p.presenter_id ?? p.id ?? '',
         name: p.name,
         gender: (p.gender === 'male' ? 'male' : 'female') as 'male' | 'female',
         image_url: p.image_url ?? p.preview_url ?? p.thumbnail_url ?? '',
       }))
-      .filter(p => p.image_url !== '')
+      .filter((p) => p.image_url !== '')
 
     // Multiple variants share the same `name` (e.g. 12 "Amber"s). Sort by id for
     // deterministic ordering, then suffix duplicates as "Amber 1", "Amber 2"… so
@@ -95,7 +95,7 @@ export class DidService {
   /** Look up a curated presenter by id; used by the pre-render pipeline to resolve source_url. */
   async getPresenterById(presenterId: string): Promise<CuratedPresenter | null> {
     const all = await this.getPresenters()
-    return all.find(p => p.id === presenterId) ?? null
+    return all.find((p) => p.id === presenterId) ?? null
   }
 
   /**
@@ -147,7 +147,7 @@ export class DidService {
   async sendAnswer(
     streamId: string,
     answer: RTCSessionDescriptionInit,
-    sessionId: string,
+    sessionId: string
   ): Promise<unknown> {
     return this.request(`/talks/streams/${streamId}/sdp`, {
       method: 'POST',
@@ -161,7 +161,7 @@ export class DidService {
     candidate: string,
     sdpMid: string,
     sdpMLineIndex: number,
-    sessionId: string,
+    sessionId: string
   ): Promise<unknown> {
     return this.request(`/talks/streams/${streamId}/ice`, {
       method: 'POST',
@@ -170,7 +170,12 @@ export class DidService {
   }
 
   /** Send text for the avatar to speak. Uses Microsoft Azure TTS via D-ID. */
-  async sendTalk(streamId: string, text: string, voiceId: string, sessionId: string): Promise<unknown> {
+  async sendTalk(
+    streamId: string,
+    text: string,
+    voiceId: string,
+    sessionId: string
+  ): Promise<unknown> {
     return this.request(`/talks/streams/${streamId}`, {
       method: 'POST',
       body: JSON.stringify({

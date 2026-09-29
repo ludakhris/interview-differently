@@ -72,7 +72,12 @@ function escapeCell(value: CsvCell): string {
 export function filenameSlug(...parts: Array<string | null | undefined>): string {
   return parts
     .filter((p): p is string => Boolean(p && p.trim()))
-    .map((p) => p.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''))
+    .map((p) =>
+      p
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+    )
     .filter(Boolean)
     .join('-')
 }

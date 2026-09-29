@@ -38,9 +38,15 @@ export function AssessmentResultPage() {
             <div className="mb-8">
               <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
                 {result.label} · submitted{' '}
-                {result.submittedAt && new Date(result.submittedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                {result.submittedAt &&
+                  new Date(result.submittedAt).toLocaleString(undefined, {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
               </p>
-              <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">{result.title}</h1>
+              <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
+                {result.title}
+              </h1>
             </div>
 
             <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 flex items-center gap-6 mb-6">
@@ -55,7 +61,9 @@ export function AssessmentResultPage() {
             </div>
 
             <div className="bg-[#111111] rounded-2xl border border-white/10 p-6">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">By section</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
+                By section
+              </p>
               <ul className="space-y-4">
                 {result.sections.map((s) => {
                   const pct = s.total ? Math.round((s.correct / s.total) * 100) : 0
@@ -70,7 +78,11 @@ export function AssessmentResultPage() {
                       <div className="h-2 rounded-full bg-white/8 overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all"
-                          style={{ width: `${pct}%`, backgroundColor: pct >= 70 ? '#2d9e5f' : pct >= 40 ? '#d4830a' : '#ef4444' }}
+                          style={{
+                            width: `${pct}%`,
+                            backgroundColor:
+                              pct >= 70 ? '#2d9e5f' : pct >= 40 ? '#d4830a' : '#ef4444',
+                          }}
                         />
                       </div>
                     </li>
@@ -80,7 +92,10 @@ export function AssessmentResultPage() {
             </div>
 
             <div className="mt-6">
-              <button onClick={() => navigate('/tools/assessments')} className="text-[12px] text-slate-mid hover:text-[#f5f3ee] transition-colors">
+              <button
+                onClick={() => navigate('/tools/assessments')}
+                className="text-[12px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+              >
                 ← Back to assessments
               </button>
             </div>

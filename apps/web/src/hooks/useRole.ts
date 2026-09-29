@@ -11,5 +11,10 @@ export function useRole() {
   const { user } = useUser()
   const raw = user?.publicMetadata?.role
   const role: Role = raw === 'admin' || raw === 'institution-admin' ? raw : null
-  return { role, isAdmin: role === 'admin', isInstitutionAdmin: role === 'institution-admin', isAnyAdmin: role !== null }
+  return {
+    role,
+    isAdmin: role === 'admin',
+    isInstitutionAdmin: role === 'institution-admin',
+    isAnyAdmin: role !== null,
+  }
 }

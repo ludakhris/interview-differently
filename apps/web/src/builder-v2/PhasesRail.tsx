@@ -39,8 +39,12 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
     if (e.key === 'Escape') setEditingId(null)
   }
 
-  function handleDragStart(idx: number) { setDragging(idx) }
-  function handleDragEnter(idx: number) { setDragOver(idx) }
+  function handleDragStart(idx: number) {
+    setDragging(idx)
+  }
+  function handleDragEnter(idx: number) {
+    setDragOver(idx)
+  }
   function handleDragEnd() {
     if (dragging !== null && dragOver !== null && dragging !== dragOver) {
       onReorder(dragging, dragOver)
@@ -64,51 +68,61 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
           return (
             <div
               key={phase.id}
-              ref={el => { itemsRef.current[idx] = el }}
+              ref={(el) => {
+                itemsRef.current[idx] = el
+              }}
               draggable={editingId !== phase.id}
               onDragStart={() => handleDragStart(idx)}
               onDragEnter={() => handleDragEnter(idx)}
               onDragEnd={handleDragEnd}
-              onDragOver={e => e.preventDefault()}
+              onDragOver={(e) => e.preventDefault()}
               onClick={() => onSelect(phase.id)}
               className={[
                 'group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer select-none transition-all',
-                isActive ? 'bg-emerald-400/10 border border-emerald-400/30' : 'border border-transparent hover:bg-white/[0.04]',
+                isActive
+                  ? 'bg-emerald-400/10 border border-emerald-400/30'
+                  : 'border border-transparent hover:bg-white/[0.04]',
                 isDragging ? 'opacity-40' : '',
                 isDragOver ? 'border-t-2 border-t-emerald-400/60' : '',
               ].join(' ')}
             >
               {/* drag grip */}
-              <span className="text-[11px] text-white/20 cursor-grab active:cursor-grabbing">⋮⋮</span>
+              <span className="text-[11px] text-white/20 cursor-grab active:cursor-grabbing">
+                ⋮⋮
+              </span>
               {/* status dot */}
-              <span className={[
-                'w-1.5 h-1.5 rounded-full flex-none',
-                hasContent(phase) ? 'bg-emerald-400' : 'bg-white/20',
-              ].join(' ')} />
+              <span
+                className={[
+                  'w-1.5 h-1.5 rounded-full flex-none',
+                  hasContent(phase) ? 'bg-emerald-400' : 'bg-white/20',
+                ].join(' ')}
+              />
               {/* label or inline editor */}
               {editingId === phase.id ? (
                 <input
                   ref={inputRef}
                   value={editValue}
-                  onChange={e => setEditValue(e.target.value)}
+                  onChange={(e) => setEditValue(e.target.value)}
                   onBlur={commitEdit}
                   onKeyDown={handleEditKey}
-                  onClick={e => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   className="flex-1 text-[13px] font-semibold bg-transparent border-b border-emerald-400/60 text-white outline-none min-w-0"
                   autoFocus
                 />
               ) : (
-                <span className={[
-                  'flex-1 text-[13px] font-semibold truncate',
-                  isActive ? 'text-white' : 'text-white/65',
-                ].join(' ')}>
+                <span
+                  className={[
+                    'flex-1 text-[13px] font-semibold truncate',
+                    isActive ? 'text-white' : 'text-white/65',
+                  ].join(' ')}
+                >
                   {phase.label}
                 </span>
               )}
               {/* pencil — visible on hover when not editing */}
               {editingId !== phase.id && (
                 <button
-                  onClick={e => startEdit(phase, e)}
+                  onClick={(e) => startEdit(phase, e)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-white/35 hover:text-white/70 px-0.5 flex-none"
                   title="Rename phase"
                 >
@@ -135,7 +149,8 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
 
       <div className="px-4 py-4 border-t border-white/[0.06]">
         <p className="text-[11px] text-white/25 leading-relaxed">
-          Drag <span className="text-white/40">⋮⋮</span> to reorder. Phase order = the order the candidate walks the case.
+          Drag <span className="text-white/40">⋮⋮</span> to reorder. Phase order = the order the
+          candidate walks the case.
         </p>
       </div>
     </div>

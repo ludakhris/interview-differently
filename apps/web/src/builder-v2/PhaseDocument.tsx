@@ -43,11 +43,26 @@ export interface JumpTarget {
   nonce: number
 }
 
-export function PhaseDocument({ scenario, activePhaseId, onInsert, onMetaUpdate, onExhibitUpdate, onNodeUpdate, onPhaseUpdate, onToggleExhibitShared, onPhaseVisible, onMoveBlock, onRemoveExhibit, onRemoveNode, onRemovePhase, jumpTarget }: Props) {
+export function PhaseDocument({
+  scenario,
+  activePhaseId,
+  onInsert,
+  onMetaUpdate,
+  onExhibitUpdate,
+  onNodeUpdate,
+  onPhaseUpdate,
+  onToggleExhibitShared,
+  onPhaseVisible,
+  onMoveBlock,
+  onRemoveExhibit,
+  onRemoveNode,
+  onRemovePhase,
+  jumpTarget,
+}: Props) {
   const { phases = [], exhibits = [], nodes = [] } = scenario
-  const exhibitMap = Object.fromEntries(exhibits.map(e => [e.id, e]))
-  const nodeMap = Object.fromEntries(nodes.map(n => [n.nodeId, n]))
-  const allDimensions = (scenario.rubric?.dimensions ?? []).map(d => d.name)
+  const exhibitMap = Object.fromEntries(exhibits.map((e) => [e.id, e]))
+  const nodeMap = Object.fromEntries(nodes.map((n) => [n.nodeId, n]))
+  const allDimensions = (scenario.rubric?.dimensions ?? []).map((d) => d.name)
 
   // Which phase currently has the picker open
   const [pickerPhaseId, setPickerPhaseId] = useState<string | null>(null)
@@ -65,12 +80,18 @@ export function PhaseDocument({ scenario, activePhaseId, onInsert, onMetaUpdate,
   // Jump from the Issues panel: scroll the target into view and flash it
   useEffect(() => {
     if (!jumpTarget) return
-    const sel = jumpTarget.kind === 'phase' ? `[data-phase-id="${jumpTarget.id}"]` : `[data-block-id="${jumpTarget.id}"]`
+    const sel =
+      jumpTarget.kind === 'phase'
+        ? `[data-phase-id="${jumpTarget.id}"]`
+        : `[data-block-id="${jumpTarget.id}"]`
     const el = (scrollRef.current ?? document).querySelector<HTMLElement>(sel)
     if (!el) return
     el.scrollIntoView({ behavior: 'smooth', block: 'center' })
     el.classList.add('ring-2', 'ring-amber-400/70', 'rounded-[14px]')
-    const t = setTimeout(() => el.classList.remove('ring-2', 'ring-amber-400/70', 'rounded-[14px]'), 1800)
+    const t = setTimeout(
+      () => el.classList.remove('ring-2', 'ring-amber-400/70', 'rounded-[14px]'),
+      1800
+    )
     return () => clearTimeout(t)
   }, [jumpTarget])
 
@@ -80,8 +101,8 @@ export function PhaseDocument({ scenario, activePhaseId, onInsert, onMetaUpdate,
   }
 
   // Feedback nodes not assigned to any phase — shown in Wrap-up
-  const phaseNodeIds = new Set(phases.flatMap(p => p.nodeIds ?? []))
-  const wrapUpNodes = nodes.filter(n => n.type === 'feedback' && !phaseNodeIds.has(n.nodeId))
+  const phaseNodeIds = new Set(phases.flatMap((p) => p.nodeIds ?? []))
+  const wrapUpNodes = nodes.filter((n) => n.type === 'feedback' && !phaseNodeIds.has(n.nodeId))
 
   // If no phases declared, show all nodes sequentially as a single implicit phase
   if (phases.length === 0) {
@@ -90,23 +111,36 @@ export function PhaseDocument({ scenario, activePhaseId, onInsert, onMetaUpdate,
         <div className="max-w-[820px] mx-auto flex flex-col gap-3">
           <div data-block-id={SETUP_BLOCK_ID}>
             {editingBlockId === SETUP_BLOCK_ID ? (
-              <SetupEditor scenario={scenario} onDone={(updates) => { onMetaUpdate(updates); setEditingBlockId(null) }} />
+              <SetupEditor
+                scenario={scenario}
+                onDone={(updates) => {
+                  onMetaUpdate(updates)
+                  setEditingBlockId(null)
+                }}
+              />
             ) : (
-              <SetupBlock scenario={scenario} onEditRequest={() => setEditingBlockId(SETUP_BLOCK_ID)} />
+              <SetupBlock
+                scenario={scenario}
+                onEditRequest={() => setEditingBlockId(SETUP_BLOCK_ID)}
+              />
             )}
           </div>
           <p className="text-[12px] text-white/30 italic mb-2">
-            No phases declared — the candidate walks these steps in order. Add a phase in the left rail to group them.
+            No phases declared — the candidate walks these steps in order. Add a phase in the left
+            rail to group them.
           </p>
-          {nodes.map(node => (
+          {nodes.map((node) => (
             <div key={node.nodeId} data-block-id={node.nodeId}>
-            <NodeBlock
-              node={node}
-              allNodes={nodes}
-              isEditing={editingBlockId === node.nodeId}
-              onEditRequest={() => setEditingBlockId(node.nodeId)}
-              onUpdate={(n) => { onNodeUpdate(n); setEditingBlockId(null) }}
-            />
+              <NodeBlock
+                node={node}
+                allNodes={nodes}
+                isEditing={editingBlockId === node.nodeId}
+                onEditRequest={() => setEditingBlockId(node.nodeId)}
+                onUpdate={(n) => {
+                  onNodeUpdate(n)
+                  setEditingBlockId(null)
+                }}
+              />
             </div>
           ))}
         </div>
@@ -123,11 +157,17 @@ export function PhaseDocument({ scenario, activePhaseId, onInsert, onMetaUpdate,
             {editingBlockId === SETUP_BLOCK_ID ? (
               <SetupEditor
                 scenario={scenario}
-                onDone={(updates) => { onMetaUpdate(updates); setEditingBlockId(null) }}
+                onDone={(updates) => {
+                  onMetaUpdate(updates)
+                  setEditingBlockId(null)
+                }}
               />
             ) : (
               <>
-                <SetupBlock scenario={scenario} onEditRequest={() => setEditingBlockId(SETUP_BLOCK_ID)} />
+                <SetupBlock
+                  scenario={scenario}
+                  onEditRequest={() => setEditingBlockId(SETUP_BLOCK_ID)}
+                />
                 {scenario.display?.sidebar && scenario.display.sidebar.length > 0 && (
                   <SidebarBlock sidebar={scenario.display.sidebar} />
                 )}
@@ -147,14 +187,23 @@ export function PhaseDocument({ scenario, activePhaseId, onInsert, onMetaUpdate,
               allDimensions={allDimensions}
               editingBlockId={editingBlockId}
               onEditRequest={setEditingBlockId}
-              onExhibitUpdate={(e) => { onExhibitUpdate(e); setEditingBlockId(null) }}
-              onNodeUpdate={(n) => { onNodeUpdate(n); setEditingBlockId(null) }}
+              onExhibitUpdate={(e) => {
+                onExhibitUpdate(e)
+                setEditingBlockId(null)
+              }}
+              onNodeUpdate={(n) => {
+                onNodeUpdate(n)
+                setEditingBlockId(null)
+              }}
               onInsertRequest={() => setPickerPhaseId(phase.id)}
               onPhaseUpdate={onPhaseUpdate}
               onToggleExhibitShared={onToggleExhibitShared}
               onVisible={onPhaseVisible}
               onMoveBlock={(kind, id, dir) => onMoveBlock(phase.id, kind, id, dir)}
-              onRemoveBlock={(kind, id) => { if (kind === 'exhibit') onRemoveExhibit(id); else onRemoveNode(id) }}
+              onRemoveBlock={(kind, id) => {
+                if (kind === 'exhibit') onRemoveExhibit(id)
+                else onRemoveNode(id)
+              }}
               onRemovePhase={() => onRemovePhase(phase.id)}
             />
           ))}
@@ -165,21 +214,29 @@ export function PhaseDocument({ scenario, activePhaseId, onInsert, onMetaUpdate,
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-1 self-stretch bg-amber-500/70 rounded-full flex-none mt-1" />
                 <div>
-                  <h2 className="text-[22px] font-bold tracking-tight text-white" style={{ fontFamily: 'Syne, sans-serif' }}>
+                  <h2
+                    className="text-[22px] font-bold tracking-tight text-white"
+                    style={{ fontFamily: 'Syne, sans-serif' }}
+                  >
                     Wrap-up
                   </h2>
-                  <p className="text-[13px] text-white/45 mt-0.5">Endings — referenced by decision option targets above</p>
+                  <p className="text-[13px] text-white/45 mt-0.5">
+                    Endings — referenced by decision option targets above
+                  </p>
                 </div>
               </div>
               <div className="flex flex-col gap-3">
-                {wrapUpNodes.map(node => (
+                {wrapUpNodes.map((node) => (
                   <NodeBlock
                     key={node.nodeId}
                     node={node}
                     allNodes={nodes}
                     isEditing={editingBlockId === node.nodeId}
                     onEditRequest={() => setEditingBlockId(node.nodeId)}
-                    onUpdate={n => { onNodeUpdate(n); setEditingBlockId(null) }}
+                    onUpdate={(n) => {
+                      onNodeUpdate(n)
+                      setEditingBlockId(null)
+                    }}
                   />
                 ))}
               </div>
@@ -188,12 +245,7 @@ export function PhaseDocument({ scenario, activePhaseId, onInsert, onMetaUpdate,
         </div>
       </div>
 
-      {pickerPhaseId && (
-        <BlockPicker
-          onPick={handlePick}
-          onClose={() => setPickerPhaseId(null)}
-        />
-      )}
+      {pickerPhaseId && <BlockPicker onPick={handlePick} onClose={() => setPickerPhaseId(null)} />}
     </>
   )
 }
@@ -221,7 +273,26 @@ interface PhaseSectionProps {
   onRemovePhase: () => void
 }
 
-function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNodes, allDimensions, editingBlockId, onEditRequest, onExhibitUpdate, onNodeUpdate, onInsertRequest, onPhaseUpdate, onToggleExhibitShared, onVisible, onMoveBlock, onRemoveBlock, onRemovePhase }: PhaseSectionProps) {
+function PhaseSection({
+  phase,
+  phaseIdx,
+  allPhases,
+  exhibitMap,
+  nodeMap,
+  allNodes,
+  allDimensions,
+  editingBlockId,
+  onEditRequest,
+  onExhibitUpdate,
+  onNodeUpdate,
+  onInsertRequest,
+  onPhaseUpdate,
+  onToggleExhibitShared,
+  onVisible,
+  onMoveBlock,
+  onRemoveBlock,
+  onRemovePhase,
+}: PhaseSectionProps) {
   const [editingDescription, setEditingDescription] = useState(false)
   const confirm = useConfirm()
   const headerRef = useRef<HTMLDivElement>(null)
@@ -233,11 +304,11 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
     | { kind: 'node'; id: string; node: ScenarioNode }
 
   const blocks: Block[] = [
-    ...(phase.exhibitIds ?? []).flatMap(id => {
+    ...(phase.exhibitIds ?? []).flatMap((id) => {
       const exhibit = exhibitMap[id]
       return exhibit ? [{ kind: 'exhibit' as const, id, exhibit }] : []
     }),
-    ...(phase.nodeIds ?? []).flatMap(id => {
+    ...(phase.nodeIds ?? []).flatMap((id) => {
       const node = nodeMap[id]
       return node ? [{ kind: 'node' as const, id, node }] : []
     }),
@@ -247,15 +318,13 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
   function toggleDimension(dim: string) {
     if (!onPhaseUpdate) return
     const current = phase.rubricDimensions ?? []
-    const next = current.includes(dim)
-      ? current.filter(d => d !== dim)
-      : [...current, dim]
+    const next = current.includes(dim) ? current.filter((d) => d !== dim) : [...current, dim]
     onPhaseUpdate(phase.id, { rubricDimensions: next.length ? next : undefined })
   }
 
   // Exhibit shared = appears in any phase after this one
   function isExhibitShared(exhibitId: string): boolean {
-    return allPhases.slice(phaseIdx + 1).some(p => (p.exhibitIds ?? []).includes(exhibitId))
+    return allPhases.slice(phaseIdx + 1).some((p) => (p.exhibitIds ?? []).includes(exhibitId))
   }
 
   return (
@@ -264,7 +333,10 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
       <div ref={headerRef} className="flex items-start gap-3 mb-4">
         <div className="w-1 self-stretch bg-emerald-500/70 rounded-full flex-none mt-1" />
         <div className="flex-1">
-          <h2 className="text-[22px] font-bold tracking-tight text-white" style={{ fontFamily: 'Syne, sans-serif' }}>
+          <h2
+            className="text-[22px] font-bold tracking-tight text-white"
+            style={{ fontFamily: 'Syne, sans-serif' }}
+          >
             {phase.label}
           </h2>
           {editingDescription ? (
@@ -272,8 +344,11 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
               autoFocus
               defaultValue={phase.description ?? ''}
               placeholder="One line on what this phase is for (shown to the candidate)"
-              onBlur={e => { onPhaseUpdate?.(phase.id, { description: e.target.value.trim() || undefined }); setEditingDescription(false) }}
-              onKeyDown={e => {
+              onBlur={(e) => {
+                onPhaseUpdate?.(phase.id, { description: e.target.value.trim() || undefined })
+                setEditingDescription(false)
+              }}
+              onKeyDown={(e) => {
                 if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                 if (e.key === 'Escape') setEditingDescription(false)
               }}
@@ -285,13 +360,15 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
               title="Click to edit the phase description"
               onClick={() => onPhaseUpdate && setEditingDescription(true)}
             >
-              {phase.description || <span className="italic text-white/25">Add a phase description…</span>}
+              {phase.description || (
+                <span className="italic text-white/25">Add a phase description…</span>
+              )}
             </p>
           )}
           {/* Rubric dimension chips — clickable toggles */}
           {allDimensions.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
-              {allDimensions.map(dim => {
+              {allDimensions.map((dim) => {
                 const active = (phase.rubricDimensions ?? []).includes(dim)
                 return (
                   <button
@@ -317,7 +394,15 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
           type="button"
           onClick={async () => {
             const n = phase.nodeIds.length
-            if (await confirm({ title: `Delete phase "${phase.label}"?`, body: `${n ? `Its ${n} question block${n === 1 ? '' : 's'} go with it. ` : ''}Exhibits shown in other phases are kept.`, confirmLabel: 'Delete phase', danger: true })) onRemovePhase()
+            if (
+              await confirm({
+                title: `Delete phase "${phase.label}"?`,
+                body: `${n ? `Its ${n} question block${n === 1 ? '' : 's'} go with it. ` : ''}Exhibits shown in other phases are kept.`,
+                confirmLabel: 'Delete phase',
+                danger: true,
+              })
+            )
+              onRemovePhase()
           }}
           title="Delete this phase"
           className="text-[11px] text-white/25 hover:text-red-400/80 transition-colors mt-1"
@@ -334,13 +419,29 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
           {blocks.map((block, blockIdx) => (
             <div key={block.id} className="relative group/blk" data-block-id={block.id}>
               <BlockGutter
-                canUp={block.kind === 'exhibit' ? blockIdx > 0 : blockIdx > blocks.findIndex(b => b.kind === 'node')}
-                canDown={block.kind === 'exhibit' ? blockIdx < blocks.filter(b => b.kind === 'exhibit').length - 1 : blockIdx < blocks.length - 1}
+                canUp={
+                  block.kind === 'exhibit'
+                    ? blockIdx > 0
+                    : blockIdx > blocks.findIndex((b) => b.kind === 'node')
+                }
+                canDown={
+                  block.kind === 'exhibit'
+                    ? blockIdx < blocks.filter((b) => b.kind === 'exhibit').length - 1
+                    : blockIdx < blocks.length - 1
+                }
                 onUp={() => onMoveBlock(block.kind, block.id, -1)}
                 onDown={() => onMoveBlock(block.kind, block.id, 1)}
                 onRemove={async () => {
                   const what = block.kind === 'exhibit' ? 'this exhibit' : 'this block'
-                  if (await confirm({ title: `Remove ${what}?`, body: 'Options pointing at it will fall back to "continue".', confirmLabel: 'Remove', danger: true })) onRemoveBlock(block.kind, block.id)
+                  if (
+                    await confirm({
+                      title: `Remove ${what}?`,
+                      body: 'Options pointing at it will fall back to "continue".',
+                      confirmLabel: 'Remove',
+                      danger: true,
+                    })
+                  )
+                    onRemoveBlock(block.kind, block.id)
                 }}
               />
               {block.kind === 'exhibit' ? (
@@ -350,9 +451,11 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
                   isShared={isExhibitShared(block.exhibit.id)}
                   onEditRequest={() => onEditRequest(block.exhibit.id)}
                   onUpdate={onExhibitUpdate}
-                  onToggleShared={onToggleExhibitShared
-                    ? () => onToggleExhibitShared(block.exhibit.id, phase.id)
-                    : undefined}
+                  onToggleShared={
+                    onToggleExhibitShared
+                      ? () => onToggleExhibitShared(block.exhibit.id, phase.id)
+                      : undefined
+                  }
                 />
               ) : (
                 <NodeBlock
@@ -373,13 +476,37 @@ function PhaseSection({ phase, phaseIdx, allPhases, exhibitMap, nodeMap, allNode
 }
 
 /** Hover controls in the left gutter of each block: move up / down within its list, remove. */
-function BlockGutter({ canUp, canDown, onUp, onDown, onRemove }: { canUp: boolean; canDown: boolean; onUp: () => void; onDown: () => void; onRemove: () => void }) {
-  const btn = 'w-6 h-6 flex items-center justify-center rounded-md text-[11px] border border-white/10 bg-[#111] text-white/40 hover:text-white/85 hover:border-white/25 disabled:opacity-25 disabled:hover:text-white/40 transition-colors'
+function BlockGutter({
+  canUp,
+  canDown,
+  onUp,
+  onDown,
+  onRemove,
+}: {
+  canUp: boolean
+  canDown: boolean
+  onUp: () => void
+  onDown: () => void
+  onRemove: () => void
+}) {
+  const btn =
+    'w-6 h-6 flex items-center justify-center rounded-md text-[11px] border border-white/10 bg-[#111] text-white/40 hover:text-white/85 hover:border-white/25 disabled:opacity-25 disabled:hover:text-white/40 transition-colors'
   return (
     <div className="absolute -left-9 top-2 flex flex-col gap-1 opacity-0 group-hover/blk:opacity-100 focus-within:opacity-100 transition-opacity">
-      <button type="button" onClick={onUp} disabled={!canUp} title="Move up" className={btn}>▲</button>
-      <button type="button" onClick={onDown} disabled={!canDown} title="Move down" className={btn}>▼</button>
-      <button type="button" onClick={onRemove} title="Remove block" className={`${btn} hover:text-red-400 hover:border-red-400/40`}>✕</button>
+      <button type="button" onClick={onUp} disabled={!canUp} title="Move up" className={btn}>
+        ▲
+      </button>
+      <button type="button" onClick={onDown} disabled={!canDown} title="Move down" className={btn}>
+        ▼
+      </button>
+      <button
+        type="button"
+        onClick={onRemove}
+        title="Remove block"
+        className={`${btn} hover:text-red-400 hover:border-red-400/40`}
+      >
+        ✕
+      </button>
     </div>
   )
 }

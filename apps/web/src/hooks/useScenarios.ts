@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@clerk/clerk-react'
-import { fetchScenarios, fetchScenario, type ScenariosData, type TrackMeta } from '@/services/scenariosService'
+import {
+  fetchScenarios,
+  fetchScenario,
+  type ScenariosData,
+  type TrackMeta,
+} from '@/services/scenariosService'
 import type { Scenario } from '@id/types'
 
 export type { TrackMeta }

@@ -1,45 +1,133 @@
 export const RUBRIC_TEMPLATES: Record<string, { name: string; description: string }[]> = {
   'data-analytics': [
-    { name: 'Scoping the Ask', description: 'Does the candidate turn a vague stakeholder request into a precise, answerable question before writing SQL?' },
-    { name: 'Data Judgment', description: 'Does the candidate check the data before trusting it — statuses, NULLs, duplicates, fan-out — and handle what they find?' },
-    { name: 'Technical Accuracy', description: 'Do the queries return the right result sets, built in verified steps?' },
-    { name: 'Communicating Findings', description: 'Does the candidate hand back a number leadership can act on, with the caveats that matter?' },
+    {
+      name: 'Scoping the Ask',
+      description:
+        'Does the candidate turn a vague stakeholder request into a precise, answerable question before writing SQL?',
+    },
+    {
+      name: 'Data Judgment',
+      description:
+        'Does the candidate check the data before trusting it — statuses, NULLs, duplicates, fan-out — and handle what they find?',
+    },
+    {
+      name: 'Technical Accuracy',
+      description: 'Do the queries return the right result sets, built in verified steps?',
+    },
+    {
+      name: 'Communicating Findings',
+      description:
+        'Does the candidate hand back a number leadership can act on, with the caveats that matter?',
+    },
   ],
   operations: [
-    { name: 'Prioritization Logic', description: 'Does the candidate identify the highest-impact issue first?' },
-    { name: 'Stakeholder Communication', description: 'Does the candidate communicate to the right people at the right time?' },
-    { name: 'Root Cause Reasoning', description: 'Does the candidate think systematically about underlying causes?' },
-    { name: 'Confidence Under Pressure', description: 'Does the candidate act decisively without overclaiming certainty?' },
+    {
+      name: 'Prioritization Logic',
+      description: 'Does the candidate identify the highest-impact issue first?',
+    },
+    {
+      name: 'Stakeholder Communication',
+      description: 'Does the candidate communicate to the right people at the right time?',
+    },
+    {
+      name: 'Root Cause Reasoning',
+      description: 'Does the candidate think systematically about underlying causes?',
+    },
+    {
+      name: 'Confidence Under Pressure',
+      description: 'Does the candidate act decisively without overclaiming certainty?',
+    },
   ],
   business: [
-    { name: 'Quantitative Accuracy', description: 'Does the candidate use numbers correctly and identify missing data?' },
-    { name: 'Structured Reasoning', description: 'Does the candidate frame the problem before jumping to conclusions?' },
-    { name: 'Challenging Assumptions', description: 'Does the candidate identify and question baked-in assumptions?' },
-    { name: 'Communication Clarity', description: 'Does the candidate communicate findings clearly to non-technical stakeholders?' },
+    {
+      name: 'Quantitative Accuracy',
+      description: 'Does the candidate use numbers correctly and identify missing data?',
+    },
+    {
+      name: 'Structured Reasoning',
+      description: 'Does the candidate frame the problem before jumping to conclusions?',
+    },
+    {
+      name: 'Challenging Assumptions',
+      description: 'Does the candidate identify and question baked-in assumptions?',
+    },
+    {
+      name: 'Communication Clarity',
+      description: 'Does the candidate communicate findings clearly to non-technical stakeholders?',
+    },
   ],
   'business case': [
-    { name: 'Framework Structuring', description: 'Does the candidate establish a logical framework (profit tree, issue tree, MECE buckets) before diving in?' },
-    { name: 'Quantitative Accuracy', description: 'Are the calculations correct, with clearly stated assumptions and reasonable ranges?' },
-    { name: 'Data Interpretation', description: 'Does the candidate draw the right insights from exhibits — and notice what is missing?' },
-    { name: 'Synthesis & Recommendation', description: 'Does the candidate translate analysis into a defended recommendation with risks and next steps?' },
+    {
+      name: 'Framework Structuring',
+      description:
+        'Does the candidate establish a logical framework (profit tree, issue tree, MECE buckets) before diving in?',
+    },
+    {
+      name: 'Quantitative Accuracy',
+      description:
+        'Are the calculations correct, with clearly stated assumptions and reasonable ranges?',
+    },
+    {
+      name: 'Data Interpretation',
+      description:
+        'Does the candidate draw the right insights from exhibits — and notice what is missing?',
+    },
+    {
+      name: 'Synthesis & Recommendation',
+      description:
+        'Does the candidate translate analysis into a defended recommendation with risks and next steps?',
+    },
   ],
   risk: [
-    { name: 'Escalation Path', description: 'Does the candidate notify the right stakeholders in the right order?' },
+    {
+      name: 'Escalation Path',
+      description: 'Does the candidate notify the right stakeholders in the right order?',
+    },
     { name: 'Risk Calibration', description: 'Does the candidate accurately assess severity?' },
-    { name: 'Regulatory Awareness', description: 'Does the candidate recognise regulatory implications?' },
-    { name: 'Communication Clarity', description: 'Does the candidate communicate technical risk clearly?' },
+    {
+      name: 'Regulatory Awareness',
+      description: 'Does the candidate recognise regulatory implications?',
+    },
+    {
+      name: 'Communication Clarity',
+      description: 'Does the candidate communicate technical risk clearly?',
+    },
   ],
   'customer-success': [
-    { name: 'Empathy', description: 'Does the candidate demonstrate genuine understanding of customer concerns?' },
-    { name: 'Problem Resolution', description: 'Does the candidate identify and address root causes effectively?' },
-    { name: 'Escalation Judgment', description: 'Does the candidate know when and how to escalate?' },
-    { name: 'Communication', description: 'Is communication clear, professional, and appropriately toned?' },
+    {
+      name: 'Empathy',
+      description: 'Does the candidate demonstrate genuine understanding of customer concerns?',
+    },
+    {
+      name: 'Problem Resolution',
+      description: 'Does the candidate identify and address root causes effectively?',
+    },
+    {
+      name: 'Escalation Judgment',
+      description: 'Does the candidate know when and how to escalate?',
+    },
+    {
+      name: 'Communication',
+      description: 'Is communication clear, professional, and appropriately toned?',
+    },
   ],
   general: [
-    { name: 'Critical Thinking', description: 'Does the candidate analyse situations before acting?' },
-    { name: 'Prioritization', description: 'Does the candidate focus on the highest-impact action first?' },
-    { name: 'Communication', description: 'Does the candidate communicate effectively under pressure?' },
-    { name: 'Composure', description: 'Does the candidate remain calm and structured in ambiguous situations?' },
+    {
+      name: 'Critical Thinking',
+      description: 'Does the candidate analyse situations before acting?',
+    },
+    {
+      name: 'Prioritization',
+      description: 'Does the candidate focus on the highest-impact action first?',
+    },
+    {
+      name: 'Communication',
+      description: 'Does the candidate communicate effectively under pressure?',
+    },
+    {
+      name: 'Composure',
+      description: 'Does the candidate remain calm and structured in ambiguous situations?',
+    },
   ],
   custom: [],
 }

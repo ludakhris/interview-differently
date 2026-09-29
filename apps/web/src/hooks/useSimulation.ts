@@ -79,8 +79,9 @@ export function useSimulation(scenario: Scenario) {
   const nodes = useMemo(() => scenario.nodes ?? [], [scenario.nodes])
   const firstNode = useMemo(
     () =>
-      nodes.find((n) => n.type === 'decision' || n.type === 'quant' || n.type === 'sql') ?? nodes[0],
-    [nodes],
+      nodes.find((n) => n.type === 'decision' || n.type === 'quant' || n.type === 'sql') ??
+      nodes[0],
+    [nodes]
   )
 
   const [state, setState] = useState<SimulationState>({
@@ -104,7 +105,7 @@ export function useSimulation(scenario: Scenario) {
       nodes.find((n) => n.nodeId === state.currentNodeId) ??
       firstNode ??
       ({ nodeId: '', type: 'decision', narrative: '' } as Scenario['nodes'][number]),
-    [nodes, state.currentNodeId, firstNode],
+    [nodes, state.currentNodeId, firstNode]
   )
 
   const submitChoice = useCallback(
@@ -140,11 +141,7 @@ export function useSimulation(scenario: Scenario) {
   // nodes always have a single linear next pointer — there's no branching
   // off a numeric answer (different bands resolve to the same downstream).
   const submitQuant = useCallback(
-    (payload: {
-      answer: QuantAnswer
-      results: QuantFieldResult[]
-      signals: QualitySignal[]
-    }) => {
+    (payload: { answer: QuantAnswer; results: QuantFieldResult[]; signals: QualitySignal[] }) => {
       setState((prev) => ({
         ...prev,
         quantAnswers: { ...prev.quantAnswers, [currentNode.nodeId]: payload.answer },
@@ -152,7 +149,7 @@ export function useSimulation(scenario: Scenario) {
         quantSignals: [...prev.quantSignals, ...payload.signals],
       }))
     },
-    [currentNode],
+    [currentNode]
   )
 
   // Advance off a quant node after the candidate has reviewed the band
@@ -172,9 +169,12 @@ export function useSimulation(scenario: Scenario) {
   // hint caps at proficient) so the hint dock rule lives in one place.
   const submitSql = useCallback(
     (payload: { sql: string; correct: boolean; reason?: string }) => {
-      setState((prev) => ({ ...prev, sqlAnswers: { ...prev.sqlAnswers, [currentNode.nodeId]: payload } }))
+      setState((prev) => ({
+        ...prev,
+        sqlAnswers: { ...prev.sqlAnswers, [currentNode.nodeId]: payload },
+      }))
     },
-    [currentNode],
+    [currentNode]
   )
 
   const advanceSql = useCallback(() => {
@@ -190,18 +190,14 @@ export function useSimulation(scenario: Scenario) {
   // hint open/closed doesn't double-flag the candidate.
   const markHintUsed = useCallback((nodeId: string) => {
     setState((prev) =>
-      prev.hintsUsed.includes(nodeId)
-        ? prev
-        : { ...prev, hintsUsed: [...prev.hintsUsed, nodeId] },
+      prev.hintsUsed.includes(nodeId) ? prev : { ...prev, hintsUsed: [...prev.hintsUsed, nodeId] }
     )
   }, [])
 
   // Build the carry-forward map for a node: for each formula variable that
   // declares a `source`, look up the prior quant answer and surface it.
   const buildCarryForward = useCallback(
-    (
-      nodeId: string,
-    ): Record<string, { value: number; from: string }> => {
+    (nodeId: string): Record<string, { value: number; from: string }> => {
       const node = scenario.nodes.find((n) => n.nodeId === nodeId)
       const formula = node?.quant?.formula
       if (!formula) return {}
@@ -222,7 +218,7 @@ export function useSimulation(scenario: Scenario) {
       }
       return out
     },
-    [scenario.nodes, state.quantAnswers],
+    [scenario.nodes, state.quantAnswers]
   )
 
   const computeResult = useCallback((): ScenarioResult => {
@@ -275,10 +271,10 @@ export function useSimulation(scenario: Scenario) {
 
     // ── Overall dimension scores (existing behaviour) ───────────────────────
     const dimensionScores: DimensionScore[] = scenario.rubric.dimensions.map((dim) =>
-      buildDimensionScore(dim.name, signalMap[dim.name] ?? []),
+      buildDimensionScore(dim.name, signalMap[dim.name] ?? [])
     )
     const overallScore = Math.round(
-      dimensionScores.reduce((sum, d) => sum + d.score, 0) / dimensionScores.length,
+      dimensionScores.reduce((sum, d) => sum + d.score, 0) / dimensionScores.length
     )
 
     // ── Quant results catalogue (top-level, for "what to work on") ──────────
@@ -338,12 +334,12 @@ export function useSimulation(scenario: Scenario) {
           ? phase.rubricDimensions
           : Object.keys(localSignals)
         const phaseDimensionScores = dimensions.map((dimName) =>
-          buildDimensionScore(dimName, localSignals[dimName] ?? []),
+          buildDimensionScore(dimName, localSignals[dimName] ?? [])
         )
         const phaseOverall = phaseDimensionScores.length
           ? Math.round(
               phaseDimensionScores.reduce((sum, d) => sum + d.score, 0) /
-                phaseDimensionScores.length,
+                phaseDimensionScores.length
             )
           : 0
         // Phase quant results (catalogue filtered by phase membership).
@@ -374,7 +370,15 @@ export function useSimulation(scenario: Scenario) {
       ...(quantResults.length ? { quantResults } : {}),
       ...(sqlResults.length ? { sqlResults } : {}),
     }
-  }, [scenario, state.choicesMade, state.quantResults, state.quantAnswers, state.sqlAnswers, state.hintsUsed, userId])
+  }, [
+    scenario,
+    state.choicesMade,
+    state.quantResults,
+    state.quantAnswers,
+    state.sqlAnswers,
+    state.hintsUsed,
+    userId,
+  ])
 
   const isComplete = currentNode?.type === 'feedback'
   // Step counter counts decision *and* quant submissions — both are
@@ -385,7 +389,7 @@ export function useSimulation(scenario: Scenario) {
     Object.keys(state.sqlAnswers).length +
     1
   const totalInteractiveNodes = scenario.nodes.filter(
-    (n) => n.type === 'decision' || n.type === 'quant' || n.type === 'sql',
+    (n) => n.type === 'decision' || n.type === 'quant' || n.type === 'sql'
   ).length
 
   return {

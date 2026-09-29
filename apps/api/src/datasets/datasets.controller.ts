@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Req, UseGuards } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common'
 import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
 import { InstitutionScope, type AdminRequest } from '../auth/scope'
@@ -17,7 +28,7 @@ interface AuthedRequest {
 export class DatasetsAdminController {
   constructor(
     private readonly service: DatasetsService,
-    private readonly scope: InstitutionScope,
+    private readonly scope: InstitutionScope
   ) {}
 
   @Get()
@@ -73,7 +84,11 @@ export class DatasetsAdminController {
   @Put(':id/cohorts')
   @HttpCode(204)
   @InstitutionAdminAllowed()
-  async setCohorts(@Req() req: AdminRequest, @Param('id') id: string, @Body() body: { cohortIds: string[] }): Promise<void> {
+  async setCohorts(
+    @Req() req: AdminRequest,
+    @Param('id') id: string,
+    @Body() body: { cohortIds: string[] }
+  ): Promise<void> {
     this.scope.assertReadable(req, (await this.service.get(id)).institutionId)
     await this.service.setCohorts(id, body.cohortIds ?? [], this.scope.visible(req))
   }

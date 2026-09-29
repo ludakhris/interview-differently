@@ -14,7 +14,9 @@ import { fetchMyAssessments, startAttempt, type MyDelivery } from '@/services/as
 const ACCENT = '#2d9e5f'
 
 function fmt(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : ''
+  return iso
+    ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+    : ''
 }
 
 export function AssessmentsPage() {
@@ -47,10 +49,15 @@ export function AssessmentsPage() {
       <Nav trackLabel="Assessments" />
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-8">
-          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">Tools</p>
-          <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">Assessments</h1>
+          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+            Tools
+          </p>
+          <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
+            Assessments
+          </h1>
           <p className="text-[13px] text-slate-mid mt-1">
-            One attempt per assessment. Answers save as you go; submit when you're done or when the timer runs out.
+            One attempt per assessment. Answers save as you go; submit when you're done or when the
+            timer runs out.
           </p>
         </div>
 
@@ -74,7 +81,10 @@ export function AssessmentsPage() {
               const now = Date.now()
               const notYet = d.opensAt && now < new Date(d.opensAt).getTime()
               return (
-                <li key={d.id} className="bg-[#111111] rounded-2xl border border-white/10 overflow-hidden">
+                <li
+                  key={d.id}
+                  className="bg-[#111111] rounded-2xl border border-white/10 overflow-hidden"
+                >
                   <div className="h-1.5 w-full" style={{ backgroundColor: ACCENT }} />
                   <div className="p-5 flex items-start gap-4">
                     <div
@@ -84,10 +94,15 @@ export function AssessmentsPage() {
                       <ClipboardCheck size={20} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: ACCENT }}>
-                        {d.label} · {d.cohortName ?? "cohort removed"}
+                      <p
+                        className="text-[10px] font-bold uppercase tracking-[0.18em]"
+                        style={{ color: ACCENT }}
+                      >
+                        {d.label} · {d.cohortName ?? 'cohort removed'}
                       </p>
-                      <h3 className="mt-0.5 font-display font-bold text-[16px] text-[#f5f3ee] leading-snug">{d.title}</h3>
+                      <h3 className="mt-0.5 font-display font-bold text-[16px] text-[#f5f3ee] leading-snug">
+                        {d.title}
+                      </h3>
                       <p className="text-[12px] text-slate-mid mt-1">
                         {d.questionCount} questions
                         {d.timeLimitMinutes && <> · {d.timeLimitMinutes} min limit</>}
@@ -95,13 +110,17 @@ export function AssessmentsPage() {
                         {d.closesAt && <> · closes {fmt(d.closesAt)}</>}
                       </p>
                       {submitted && (
-                        <p className="text-[12px] text-white/40 mt-1">Submitted {fmt(d.attempt!.submittedAt)}</p>
+                        <p className="text-[12px] text-white/40 mt-1">
+                          Submitted {fmt(d.attempt!.submittedAt)}
+                        </p>
                       )}
                     </div>
                     <div className="flex-shrink-0">
                       {submitted ? (
                         <button
-                          onClick={() => navigate(`/tools/assessments/attempt/${d.attempt!.id}/result`)}
+                          onClick={() =>
+                            navigate(`/tools/assessments/attempt/${d.attempt!.id}/result`)
+                          }
                           className="px-3 py-1.5 rounded-md border border-white/15 hover:border-white/30 text-[12px] font-semibold text-[#f5f3ee] transition-colors"
                         >
                           View result
@@ -122,7 +141,9 @@ export function AssessmentsPage() {
                           {starting === d.id ? 'Starting…' : 'Start'}
                         </button>
                       ) : (
-                        <span className="text-[11px] uppercase tracking-widest text-white/30">{notYet ? 'Not open yet' : 'Closed'}</span>
+                        <span className="text-[11px] uppercase tracking-widest text-white/30">
+                          {notYet ? 'Not open yet' : 'Closed'}
+                        </span>
                       )}
                     </div>
                   </div>

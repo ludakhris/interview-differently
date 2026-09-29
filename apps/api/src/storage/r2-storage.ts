@@ -1,5 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import type { PublicMediaStorage, PrivateMediaStorage } from './media-storage.interface'
 
@@ -48,15 +53,17 @@ export class R2PublicStorage implements PublicMediaStorage {
 
   async upload(key: string, buffer: Buffer, contentType: string): Promise<string> {
     if (!this.s3) throw new Error('R2PublicStorage instantiated without R2_BUCKET set')
-    await this.s3.send(new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: key,
-      Body: buffer,
-      ContentType: contentType,
-      // 1-year immutable cache — keys include a content hash, so any change
-      // produces a new key. Safe to cache forever at the edge.
-      CacheControl: 'public, max-age=31536000, immutable',
-    }))
+    await this.s3.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+        // 1-year immutable cache — keys include a content hash, so any change
+        // produces a new key. Safe to cache forever at the edge.
+        CacheControl: 'public, max-age=31536000, immutable',
+      })
+    )
     return `${this.publicBase}/${key}`
   }
 
@@ -84,7 +91,8 @@ export class R2PrivateStorage implements PrivateMediaStorage {
     // Allow per-bucket creds; fall back to the main R2 creds (option (a)
     // in the provisioning walkthrough — same token scoped to both buckets).
     const accessKeyId = process.env.R2_RESPONSES_ACCESS_KEY_ID ?? required('R2_ACCESS_KEY_ID')
-    const secretAccessKey = process.env.R2_RESPONSES_SECRET_ACCESS_KEY ?? required('R2_SECRET_ACCESS_KEY')
+    const secretAccessKey =
+      process.env.R2_RESPONSES_SECRET_ACCESS_KEY ?? required('R2_SECRET_ACCESS_KEY')
     this.bucket = bucket
     this.s3 = makeR2Client(accessKeyId, secretAccessKey)
     this.logger.log(`R2 private storage configured for bucket "${this.bucket}"`)
@@ -92,12 +100,14 @@ export class R2PrivateStorage implements PrivateMediaStorage {
 
   async upload(key: string, buffer: Buffer, contentType: string): Promise<void> {
     if (!this.s3) throw new Error('R2PrivateStorage instantiated without R2_RESPONSES_BUCKET set')
-    await this.s3.send(new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: key,
-      Body: buffer,
-      ContentType: contentType,
-    }))
+    await this.s3.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+      })
+    )
   }
 
   async delete(key: string): Promise<void> {
@@ -107,11 +117,9 @@ export class R2PrivateStorage implements PrivateMediaStorage {
 
   async getSignedUrl(key: string, expiresInSeconds: number): Promise<string> {
     if (!this.s3) throw new Error('R2PrivateStorage instantiated without R2_RESPONSES_BUCKET set')
-    return getSignedUrl(
-      this.s3,
-      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
-      { expiresIn: expiresInSeconds },
-    )
+    return getSignedUrl(this.s3, new GetObjectCommand({ Bucket: this.bucket, Key: key }), {
+      expiresIn: expiresInSeconds,
+    })
   }
 }
 

@@ -1,5 +1,14 @@
 import jsYaml from 'js-yaml'
-import type { Scenario, ScenarioNode, ScenarioPhase, Exhibit, Choice, ScoreQuality, QuantSpec, SqlSpec } from '@id/types'
+import type {
+  Scenario,
+  ScenarioNode,
+  ScenarioPhase,
+  Exhibit,
+  Choice,
+  ScoreQuality,
+  QuantSpec,
+  SqlSpec,
+} from '@id/types'
 
 // ── YAML schema types ─────────────────────────────────────────────────────────
 
@@ -66,8 +75,8 @@ interface YamlScenario {
 export function yamlToScenario(yamlStr: string): Scenario {
   const raw = jsYaml.load(yamlStr) as YamlScenario
 
-  const nodes: ScenarioNode[] = raw.nodes.map(n => {
-    const choices: Choice[] | undefined = n.choices?.map(c => ({
+  const nodes: ScenarioNode[] = raw.nodes.map((n) => {
+    const choices: Choice[] | undefined = n.choices?.map((c) => ({
       id: c.id,
       text: c.text,
       nextNodeId: c.next ?? '',
@@ -95,7 +104,7 @@ export function yamlToScenario(yamlStr: string): Scenario {
     }
   })
 
-  const phases: ScenarioPhase[] | undefined = raw.phases?.map(p => ({
+  const phases: ScenarioPhase[] | undefined = raw.phases?.map((p) => ({
     id: p.id,
     label: p.label,
     ...(p.description ? { description: p.description } : {}),
@@ -122,7 +131,7 @@ export function yamlToScenario(yamlStr: string): Scenario {
     },
     ...(raw.display ? { display: raw.display } : {}),
     rubric: {
-      dimensions: raw.rubric.map(d => ({ name: d.name, description: d.description })),
+      dimensions: raw.rubric.map((d) => ({ name: d.name, description: d.description })),
     },
     ...(phases?.length ? { phases } : {}),
     ...(raw.exhibits?.length ? { exhibits: raw.exhibits } : {}),
@@ -147,7 +156,7 @@ export function scenarioToYaml(scenario: Scenario): string {
     rubric: scenario.rubric.dimensions,
     ...(scenario.phases?.length
       ? {
-          phases: scenario.phases.map(p => ({
+          phases: scenario.phases.map((p) => ({
             id: p.id,
             label: p.label,
             ...(p.description ? { description: p.description } : {}),
@@ -158,16 +167,14 @@ export function scenarioToYaml(scenario: Scenario): string {
         }
       : {}),
     ...(scenario.exhibits?.length ? { exhibits: scenario.exhibits } : {}),
-    nodes: scenario.nodes.map(n => {
-      const choices = n.choices?.map(c => ({
+    nodes: scenario.nodes.map((n) => {
+      const choices = n.choices?.map((c) => ({
         id: c.id,
         text: c.text,
         next: c.nextNodeId,
         ...(c.qualitySignals.length > 0
           ? {
-              signals: Object.fromEntries(
-                c.qualitySignals.map(s => [s.dimension, s.quality])
-              ),
+              signals: Object.fromEntries(c.qualitySignals.map((s) => [s.dimension, s.quality])),
             }
           : {}),
       }))

@@ -1,5 +1,10 @@
 import * as yaml from 'js-yaml'
-import type { AssessmentQuestion, AssessmentSection, McOption, ParsedAssessment } from './assessment.types'
+import type {
+  AssessmentQuestion,
+  AssessmentSection,
+  McOption,
+  ParsedAssessment,
+} from './assessment.types'
 import { drawSpecFromYaml, parseDrawSpec } from './draw'
 
 /**
@@ -39,7 +44,8 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
   const warnings: string[] = []
 
   // ── Frontmatter ──
-  if (lines[0]?.trim() !== '---') throw new AssessmentParseError('Missing frontmatter block (--- at line 1)')
+  if (lines[0]?.trim() !== '---')
+    throw new AssessmentParseError('Missing frontmatter block (--- at line 1)')
   const fmEnd = lines.indexOf('---', 1)
   if (fmEnd === -1) throw new AssessmentParseError('Unterminated frontmatter block')
   const fm = (yaml.load(lines.slice(1, fmEnd).join('\n')) ?? {}) as Record<string, unknown>
@@ -49,11 +55,15 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
   if (!slug || !title) throw new AssessmentParseError('Frontmatter needs slug and title')
   const defaultDraw = fm.draw == null ? null : drawSpecFromYaml(fm.draw)
   if (fm.draw != null && defaultDraw === null) {
-    throw new AssessmentParseError('Frontmatter draw must be a positive integer or a per-type map like { mc: 3, sql: 1 }')
+    throw new AssessmentParseError(
+      'Frontmatter draw must be a positive integer or a per-type map like { mc: 3, sql: 1 }'
+    )
   }
   const expectedMinutes = fm.expected_minutes == null ? null : Number(fm.expected_minutes)
   if (expectedMinutes !== null && !(Number.isInteger(expectedMinutes) && expectedMinutes > 0)) {
-    throw new AssessmentParseError('Frontmatter expected_minutes must be a positive whole number of minutes')
+    throw new AssessmentParseError(
+      'Frontmatter expected_minutes must be a positive whole number of minutes'
+    )
   }
 
   // ── Body ──
@@ -83,15 +93,21 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
       warnings.push(`Question ${q.id} skipped — only MC, Scenario and Hands-On SQL are supported`)
     } else if (q.kind === 'mc' || q.kind === 'scenario') {
       const options = parseOptions(q.optionText.join('  '))
-      if (options.length < 2) throw new AssessmentParseError(`Question ${q.id}: expected at least two A) B) options`)
+      if (options.length < 2)
+        throw new AssessmentParseError(`Question ${q.id}: expected at least two A) B) options`)
       if (!q.answer) throw new AssessmentParseError(`Question ${q.id}: missing **Answer: X**`)
       if (!options.find((o) => o.key === q!.answer)) {
-        throw new AssessmentParseError(`Question ${q.id}: answer ${q.answer} is not one of the options`)
+        throw new AssessmentParseError(
+          `Question ${q.id}: answer ${q.answer} is not one of the options`
+        )
       }
       section.questions.push({ id: q.id, type: q.kind, prompt, options, answer: q.answer })
     } else {
       const referenceSql = (q.sql ?? []).join('\n').trim()
-      if (!referenceSql) throw new AssessmentParseError(`Question ${q.id}: missing \`\`\`sql reference query under **Answer:**`)
+      if (!referenceSql)
+        throw new AssessmentParseError(
+          `Question ${q.id}: missing \`\`\`sql reference query under **Answer:**`
+        )
       const starterSql = (q.starter ?? []).join('\n').trim()
       section.questions.push({
         id: q.id,
@@ -135,7 +151,13 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
     const sec = SECTION_RE.exec(line)
     if (sec) {
       finishSection()
-      section = { id: `s${sec[1]}`, number: Number(sec[1]), title: sec[2], draw: defaultDraw, questions: [] }
+      section = {
+        id: `s${sec[1]}`,
+        number: Number(sec[1]),
+        title: sec[2],
+        draw: defaultDraw,
+        questions: [],
+      }
       sections.push(section)
       continue
     }
@@ -145,7 +167,8 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
     const draw = DRAW_RE.exec(line)
     if (draw && !q) {
       const spec = parseDrawSpec(draw[1])
-      if (spec === null) warnings.push(`Section ${section.number}: cannot read "> draw: ${draw[1]}" — ignored`)
+      if (spec === null)
+        warnings.push(`Section ${section.number}: cannot read "> draw: ${draw[1]}" — ignored`)
       else section.draw = spec
       continue
     }
@@ -158,7 +181,20 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
       if (sections.some((s) => s.questions.some((x) => x.id === id))) {
         throw new AssessmentParseError(`Duplicate question id ${id}`)
       }
-      q = { id, kind, promptLines: qm[3] ? [qm[3]] : [], optionText: [], answer: null, flags: new Set(), sql: null, sqlDone: false, starter: null, starterDone: false, fenceTarget: null, promptFence: false }
+      q = {
+        id,
+        kind,
+        promptLines: qm[3] ? [qm[3]] : [],
+        optionText: [],
+        answer: null,
+        flags: new Set(),
+        sql: null,
+        sqlDone: false,
+        starter: null,
+        starterDone: false,
+        fenceTarget: null,
+        promptFence: false,
+      }
       continue
     }
 
@@ -215,8 +251,16 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
         continue
       }
       if (line.trim().startsWith('```')) {
-        if (q.sql && !q.sqlDone) { inFence = true; q.fenceTarget = 'answer'; continue }
-        if (q.starter && !q.starterDone) { inFence = true; q.fenceTarget = 'starter'; continue }
+        if (q.sql && !q.sqlDone) {
+          inFence = true
+          q.fenceTarget = 'answer'
+          continue
+        }
+        if (q.starter && !q.starterDone) {
+          inFence = true
+          q.fenceTarget = 'starter'
+          continue
+        }
       }
       if (q.sql === null && q.starter === null && line.trim()) q.promptLines.push(line.trim())
       continue
@@ -226,15 +270,20 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
   }
   finishSection()
 
-  if (sections.length === 0) throw new AssessmentParseError('No "## Section N: Title" headings found')
+  if (sections.length === 0)
+    throw new AssessmentParseError('No "## Section N: Title" headings found')
   if (!dataset && sections.some((s) => s.questions.some((qq) => qq.type === 'sql'))) {
-    throw new AssessmentParseError('Frontmatter needs a dataset — Hands-On SQL questions run against it')
+    throw new AssessmentParseError(
+      'Frontmatter needs a dataset — Hands-On SQL questions run against it'
+    )
   }
   for (const s of sections) {
     if (s.draw === null || s.questions.length === 0) continue
     if (typeof s.draw === 'number') {
       if (s.draw > s.questions.length) {
-        warnings.push(`Section ${s.number} draws ${s.draw} but only has ${s.questions.length} questions — all will be used`)
+        warnings.push(
+          `Section ${s.number} draws ${s.draw} but only has ${s.questions.length} questions — all will be used`
+        )
         s.draw = s.questions.length
       }
       continue
@@ -245,7 +294,9 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
     for (const [type, want] of Object.entries(s.draw)) {
       const have = s.questions.filter((q) => q.type === type).length
       if (want > have) {
-        warnings.push(`Section ${s.number} draws ${want} ${type} but only has ${have} — all will be used`)
+        warnings.push(
+          `Section ${s.number} draws ${want} ${type} but only has ${have} — all will be used`
+        )
         s.draw[type] = have
       }
     }
@@ -267,7 +318,9 @@ function parseOptions(text: string): McOption[] {
 }
 
 /** Every question in the bank, flattened, keyed by id. */
-export function questionIndex(sections: AssessmentSection[]): Map<string, AssessmentQuestion & { sectionId: string }> {
+export function questionIndex(
+  sections: AssessmentSection[]
+): Map<string, AssessmentQuestion & { sectionId: string }> {
   const m = new Map<string, AssessmentQuestion & { sectionId: string }>()
   for (const s of sections) for (const qq of s.questions) m.set(qq.id, { ...qq, sectionId: s.id })
   return m

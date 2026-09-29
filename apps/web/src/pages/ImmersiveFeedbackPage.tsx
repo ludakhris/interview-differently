@@ -43,46 +43,63 @@ export function ImmersiveFeedbackPage() {
   const [mediaByResponse, setMediaByResponse] = useState<Record<string, MediaState>>({})
 
   useEffect(() => {
-    if (!sessionId) { navigate('/dashboard'); return }
+    if (!sessionId) {
+      navigate('/dashboard')
+      return
+    }
 
     // Fetch session (gives us response list) and summary in parallel
     Promise.all([
-      fetchImmersiveSession(sessionId).then(s => setResponses(s.responses ?? [])),
-      fetchImmersiveSummary(sessionId).then(s => { setSummary(s); setSummaryStatus('ready') }),
+      fetchImmersiveSession(sessionId).then((s) => setResponses(s.responses ?? [])),
+      fetchImmersiveSummary(sessionId).then((s) => {
+        setSummary(s)
+        setSummaryStatus('ready')
+      }),
     ]).catch(() => setSummaryStatus('failed'))
   }, [sessionId, navigate])
 
   function toggleExpand(id: string) {
-    setExpandedIds(prev => {
+    setExpandedIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) {
         next.delete(id)
       } else {
         next.add(id)
         // If not yet fetched, try to fetch feedback for this response
-        const existing = responses.find(r => r.id === id)
+        const existing = responses.find((r) => r.id === id)
         if ((!existing || !existing.aiFeedback) && sessionId) {
           fetchImmersiveResponse(sessionId, id)
-            .then(r => setResponses(prev => {
-              const exists = prev.find(x => x.id === r.id)
-              return exists ? prev.map(x => x.id === r.id ? r : x) : [...prev, r]
-            }))
-            .catch(() => {/* graceful — accordion content will show loading state */})
+            .then((r) =>
+              setResponses((prev) => {
+                const exists = prev.find((x) => x.id === r.id)
+                return exists ? prev.map((x) => (x.id === r.id ? r : x)) : [...prev, r]
+              })
+            )
+            .catch(() => {
+              /* graceful — accordion content will show loading state */
+            })
         }
         // Fetch a signed playback URL for this response if it has audio. Skip
         // if we've already loaded it (state cached) or if there's no media key.
         if (sessionId && existing?.mediaUrl && !mediaByResponse[id]) {
-          setMediaByResponse(prev => ({ ...prev, [id]: { status: 'loading' } }))
+          setMediaByResponse((prev) => ({ ...prev, [id]: { status: 'loading' } }))
           getToken()
-            .then(token => {
+            .then((token) => {
               if (!token) throw new Error('Not signed in')
               return fetchResponseMediaUrl(sessionId, id, token)
             })
-            .then(({ url }) => setMediaByResponse(prev => ({ ...prev, [id]: { status: 'ready', url } })))
-            .catch(err => setMediaByResponse(prev => ({
-              ...prev,
-              [id]: { status: 'error', message: err instanceof Error ? err.message : 'Playback unavailable' },
-            })))
+            .then(({ url }) =>
+              setMediaByResponse((prev) => ({ ...prev, [id]: { status: 'ready', url } }))
+            )
+            .catch((err) =>
+              setMediaByResponse((prev) => ({
+                ...prev,
+                [id]: {
+                  status: 'error',
+                  message: err instanceof Error ? err.message : 'Playback unavailable',
+                },
+              }))
+            )
         }
       }
       return next
@@ -110,7 +127,6 @@ export function ImmersiveFeedbackPage() {
       <Nav trackLabel={scenario?.title} />
 
       <div className="max-w-2xl mx-auto px-6 py-10 space-y-8 w-full">
-
         {/* Header */}
         <div className="animate-fade-in">
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
@@ -129,7 +145,9 @@ export function ImmersiveFeedbackPage() {
               <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
                 Hiring Recommendation
               </p>
-              <span className={`text-[13px] font-semibold px-3 py-1 rounded-full border ${recClass}`}>
+              <span
+                className={`text-[13px] font-semibold px-3 py-1 rounded-full border ${recClass}`}
+              >
                 {recommendationLabel[rec] ?? rec}
               </span>
             </div>
@@ -198,7 +216,9 @@ export function ImmersiveFeedbackPage() {
                     <p className="text-[14px] text-[#f5f3ee] leading-snug flex-1">
                       {resp.questionText}
                     </p>
-                    <span className={`text-slate-mid text-[18px] mt-0.5 flex-shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`}>
+                    <span
+                      className={`text-slate-mid text-[18px] mt-0.5 flex-shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                    >
                       ›
                     </span>
                   </button>
@@ -206,36 +226,37 @@ export function ImmersiveFeedbackPage() {
                   {isOpen && (
                     <div className="px-5 pb-5 space-y-3 border-t border-white/10 pt-4 animate-fade-in">
                       {/* Recording playback (private — signed URL fetched on expand) */}
-                      {resp.mediaUrl && (() => {
-                        const m = mediaByResponse[resp.id]
-                        if (!m || m.status === 'loading') {
+                      {resp.mediaUrl &&
+                        (() => {
+                          const m = mediaByResponse[resp.id]
+                          if (!m || m.status === 'loading') {
+                            return (
+                              <div className="rounded-lg bg-white/5 border border-white/10 px-3 py-2.5">
+                                <p className="text-[11px] text-slate-mid">Loading recording…</p>
+                              </div>
+                            )
+                          }
+                          if (m.status === 'error') {
+                            return (
+                              <div className="rounded-lg bg-red-500/5 border border-red-500/20 px-3 py-2.5">
+                                <p className="text-[11px] text-red-400">{m.message}</p>
+                              </div>
+                            )
+                          }
                           return (
-                            <div className="rounded-lg bg-white/5 border border-white/10 px-3 py-2.5">
-                              <p className="text-[11px] text-slate-mid">Loading recording…</p>
+                            <div>
+                              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+                                Your Recording
+                              </p>
+                              <video
+                                src={m.url}
+                                controls
+                                playsInline
+                                className="w-full rounded-lg bg-black/50 max-h-72"
+                              />
                             </div>
                           )
-                        }
-                        if (m.status === 'error') {
-                          return (
-                            <div className="rounded-lg bg-red-500/5 border border-red-500/20 px-3 py-2.5">
-                              <p className="text-[11px] text-red-400">{m.message}</p>
-                            </div>
-                          )
-                        }
-                        return (
-                          <div>
-                            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
-                              Your Recording
-                            </p>
-                            <video
-                              src={m.url}
-                              controls
-                              playsInline
-                              className="w-full rounded-lg bg-black/50 max-h-72"
-                            />
-                          </div>
-                        )
-                      })()}
+                        })()}
 
                       {/* Transcript */}
                       {resp.transcript && (
@@ -252,14 +273,20 @@ export function ImmersiveFeedbackPage() {
                       {/* AI feedback */}
                       {fb ? (
                         <div className="space-y-2">
-                          <p className="text-[13px] text-[#f5f3ee] leading-relaxed">{fb.feedback}</p>
+                          <p className="text-[13px] text-[#f5f3ee] leading-relaxed">
+                            {fb.feedback}
+                          </p>
                           <div className="grid grid-cols-2 gap-3 pt-1">
                             <div className="rounded-lg bg-green/5 border border-green/20 px-3 py-2">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-green mb-1">What worked</p>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-green mb-1">
+                                What worked
+                              </p>
                               <p className="text-[12px] text-[#f5f3ee]/80">{fb.strengths}</p>
                             </div>
                             <div className="rounded-lg bg-amber-400/5 border border-amber-400/20 px-3 py-2">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">To improve</p>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">
+                                To improve
+                              </p>
                               <p className="text-[12px] text-[#f5f3ee]/80">{fb.development}</p>
                             </div>
                           </div>
@@ -290,7 +317,6 @@ export function ImmersiveFeedbackPage() {
             Back to dashboard
           </button>
         </div>
-
       </div>
     </div>
   )

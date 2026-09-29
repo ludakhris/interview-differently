@@ -37,8 +37,6 @@ export const toneBorder: Record<'accent' | 'danger' | 'neutral', string> = {
   neutral: 'border-white/10',
 }
 
-export const panelBase =
-  'bg-[#0d0d0d] border rounded-2xl p-5 transition-colors'
+export const panelBase = 'bg-[#0d0d0d] border rounded-2xl p-5 transition-colors'
 
-export const eyebrow =
-  'text-[10px] font-bold uppercase tracking-[0.18em] text-white/40'
+export const eyebrow = 'text-[10px] font-bold uppercase tracking-[0.18em] text-white/40'

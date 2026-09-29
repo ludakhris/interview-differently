@@ -52,7 +52,7 @@ export interface CohortMember {
 async function authedFetch(
   getToken: GetToken,
   path: string,
-  init: RequestInit = {},
+  init: RequestInit = {}
 ): Promise<Response> {
   const token = await getToken()
   if (!token) throw new Error('Not signed in')
@@ -68,7 +68,8 @@ async function authedFetch(
     let message = `${res.status} ${res.statusText}`
     try {
       const body = (await res.json()) as { message?: string | string[] }
-      if (body.message) message = Array.isArray(body.message) ? body.message.join(', ') : body.message
+      if (body.message)
+        message = Array.isArray(body.message) ? body.message.join(', ') : body.message
     } catch {
       // body wasn't json — keep status text
     }
@@ -91,7 +92,7 @@ export async function getInstitution(getToken: GetToken, id: string): Promise<In
 
 export async function createInstitution(
   getToken: GetToken,
-  payload: { name: string; emailDomain?: string | null },
+  payload: { name: string; emailDomain?: string | null }
 ): Promise<Institution> {
   const res = await authedFetch(getToken, '/admin/institutions', {
     method: 'POST',
@@ -103,7 +104,7 @@ export async function createInstitution(
 export async function updateInstitution(
   getToken: GetToken,
   id: string,
-  payload: { name?: string; emailDomain?: string | null },
+  payload: { name?: string; emailDomain?: string | null }
 ): Promise<Institution> {
   const res = await authedFetch(getToken, `/admin/institutions/${id}`, {
     method: 'PUT',
@@ -121,7 +122,7 @@ export async function deleteInstitution(getToken: GetToken, id: string): Promise
 export async function createCohort(
   getToken: GetToken,
   institutionId: string,
-  payload: { name: string; joinKey?: string | null },
+  payload: { name: string; joinKey?: string | null }
 ): Promise<Cohort> {
   const res = await authedFetch(getToken, `/admin/institutions/${institutionId}/cohorts`, {
     method: 'POST',
@@ -133,7 +134,7 @@ export async function createCohort(
 export async function updateCohort(
   getToken: GetToken,
   cohortId: string,
-  payload: { name?: string; joinKey?: string | null },
+  payload: { name?: string; joinKey?: string | null }
 ): Promise<Cohort> {
   const res = await authedFetch(getToken, `/admin/cohorts/${cohortId}`, {
     method: 'PUT',
@@ -146,7 +147,10 @@ export async function deleteCohort(getToken: GetToken, cohortId: string): Promis
   await authedFetch(getToken, `/admin/cohorts/${cohortId}`, { method: 'DELETE' })
 }
 
-export async function listCohortMembers(getToken: GetToken, cohortId: string): Promise<CohortMember[]> {
+export async function listCohortMembers(
+  getToken: GetToken,
+  cohortId: string
+): Promise<CohortMember[]> {
   const res = await authedFetch(getToken, `/admin/cohorts/${cohortId}/members`)
   return res.json() as Promise<CohortMember[]>
 }
@@ -154,7 +158,7 @@ export async function listCohortMembers(getToken: GetToken, cohortId: string): P
 export async function addCohortMember(
   getToken: GetToken,
   cohortId: string,
-  payload: { email?: string; userId?: string },
+  payload: { email?: string; userId?: string }
 ): Promise<{ membershipId: string; userId: string }> {
   const res = await authedFetch(getToken, `/admin/cohorts/${cohortId}/members`, {
     method: 'POST',
@@ -166,7 +170,7 @@ export async function addCohortMember(
 export async function removeCohortMember(
   getToken: GetToken,
   cohortId: string,
-  membershipId: string,
+  membershipId: string
 ): Promise<void> {
   await authedFetch(getToken, `/admin/cohorts/${cohortId}/members/${membershipId}`, {
     method: 'DELETE',
@@ -174,7 +178,11 @@ export async function removeCohortMember(
 }
 
 /** Full-admin only. Promote a member to institution-admin (role) or demote (null). */
-export async function setMemberRole(getToken: GetToken, userId: string, role: 'institution-admin' | null): Promise<void> {
+export async function setMemberRole(
+  getToken: GetToken,
+  userId: string,
+  role: 'institution-admin' | null
+): Promise<void> {
   await authedFetch(getToken, `/admin/users/${encodeURIComponent(userId)}/role`, {
     method: 'PUT',
     body: JSON.stringify({ role }),

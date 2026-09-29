@@ -18,7 +18,9 @@ export type ScenariosData = {
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 /** Pass `getToken` when signed in — members then also get their institutions' private scenarios. */
-export async function fetchScenarios(getToken?: () => Promise<string | null>): Promise<ScenariosData> {
+export async function fetchScenarios(
+  getToken?: () => Promise<string | null>
+): Promise<ScenariosData> {
   const headers: HeadersInit = {}
   if (getToken) {
     const token = await getToken()
@@ -38,7 +40,7 @@ export async function fetchScenarios(getToken?: () => Promise<string | null>): P
  */
 export async function fetchScenario(
   id: string,
-  getToken?: () => Promise<string | null>,
+  getToken?: () => Promise<string | null>
 ): Promise<Scenario | null> {
   const headers: HeadersInit = {}
   if (getToken) {

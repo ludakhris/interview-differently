@@ -14,7 +14,16 @@ export interface DimensionTrendChartProps {
   height?: number
 }
 
-const PALETTE = ['#2d9e5f', '#d4830a', '#5b8def', '#b67edb', '#c0392b', '#16a085', '#e67e22', '#7f8c8d']
+const PALETTE = [
+  '#2d9e5f',
+  '#d4830a',
+  '#5b8def',
+  '#b67edb',
+  '#c0392b',
+  '#16a085',
+  '#e67e22',
+  '#7f8c8d',
+]
 
 export function DimensionTrendChart({ series, height = 220 }: DimensionTrendChartProps) {
   const [focused, setFocused] = useState<string | null>(null)
@@ -30,13 +39,18 @@ export function DimensionTrendChart({ series, height = 220 }: DimensionTrendChar
   const allPoints = useMemo(() => {
     const pts: Array<{ dim: string; t: number; score: number }> = []
     for (const [dim, points] of Object.entries(series)) {
-      for (const p of points) pts.push({ dim, t: new Date(p.completedAt).getTime(), score: p.score })
+      for (const p of points)
+        pts.push({ dim, t: new Date(p.completedAt).getTime(), score: p.score })
     }
     return pts.sort((a, b) => a.t - b.t)
   }, [series])
 
   if (allPoints.length === 0) {
-    return <p className="text-[13px] text-slate-mid">No completions yet — chart will appear once scores exist.</p>
+    return (
+      <p className="text-[13px] text-slate-mid">
+        No completions yet — chart will appear once scores exist.
+      </p>
+    )
   }
 
   const minT = allPoints[0].t
@@ -82,13 +96,7 @@ export function DimensionTrendChart({ series, height = 220 }: DimensionTrendChar
               stroke="#ffffff14"
               strokeWidth={1}
             />
-            <text
-              x={padL - 6}
-              y={y(tick) + 3}
-              textAnchor="end"
-              fontSize="10"
-              fill="#777"
-            >
+            <text x={padL - 6} y={y(tick) + 3} textAnchor="end" fontSize="10" fill="#777">
               {tick}
             </text>
           </g>
@@ -116,13 +124,7 @@ export function DimensionTrendChart({ series, height = 220 }: DimensionTrendChar
             <g key={dim} opacity={isOther ? 0.15 : 1} style={{ transition: 'opacity 120ms' }}>
               <path d={path} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
               {points.map((p, i) => (
-                <circle
-                  key={i}
-                  cx={x(p.t)}
-                  cy={y(p.score)}
-                  r={3}
-                  fill={color}
-                />
+                <circle key={i} cx={x(p.t)} cy={y(p.score)} r={3} fill={color} />
               ))}
             </g>
           )
@@ -153,5 +155,9 @@ export function DimensionTrendChart({ series, height = 220 }: DimensionTrendChar
 }
 
 function formatShort(ms: number): string {
-  return new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(ms).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
 }

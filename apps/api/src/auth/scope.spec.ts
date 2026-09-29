@@ -37,16 +37,24 @@ describe('InstitutionScope', () => {
   })
 
   it('delivery checks resolve through the cohort', async () => {
-    ;(prisma.assessmentDelivery.findUnique as jest.Mock).mockResolvedValueOnce({ cohort: { institutionId: 'i2' } })
+    ;(prisma.assessmentDelivery.findUnique as jest.Mock).mockResolvedValueOnce({
+      cohort: { institutionId: 'i2' },
+    })
     await expect(scope.assertDelivery(inst, 'd1')).rejects.toThrow(ForbiddenException)
   })
 
   describe('owned content', () => {
-    const multi: AdminRequest = { userId: 'u3', userRole: 'institution-admin', institutionIds: ['i1', 'i2'] }
+    const multi: AdminRequest = {
+      userId: 'u3',
+      userRole: 'institution-admin',
+      institutionIds: ['i1', 'i2'],
+    }
 
     it('platform content is readable by all, editable by full admins only', () => {
       expect(scope.contentWhere(full)).toBeUndefined()
-      expect(scope.contentWhere(inst)).toEqual({ OR: [{ institutionId: null }, { institutionId: { in: ['i1'] } }] })
+      expect(scope.contentWhere(inst)).toEqual({
+        OR: [{ institutionId: null }, { institutionId: { in: ['i1'] } }],
+      })
       expect(() => scope.assertReadable(inst, null)).not.toThrow()
       expect(() => scope.assertOwns(full, null)).not.toThrow()
       expect(() => scope.assertOwns(inst, null)).toThrow(ForbiddenException)

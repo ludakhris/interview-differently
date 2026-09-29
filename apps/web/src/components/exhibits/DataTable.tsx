@@ -3,12 +3,7 @@
 // not persisted to the session, since rerunning a case starts fresh).
 
 import { useMemo, useState } from 'react'
-import type {
-  DataTableExhibit,
-  DataTableRow,
-  DataTableCell,
-  DataTableColumn,
-} from '@id/types'
+import type { DataTableExhibit, DataTableRow, DataTableCell, DataTableColumn } from '@id/types'
 import { ExhibitShell } from './ExhibitShell'
 import { toneText } from './tokens'
 
@@ -24,7 +19,7 @@ export function DataTable({ exhibit }: Props) {
 
   const rows = useMemo(() => {
     if (!sort) return exhibit.rows
-    const col = exhibit.columns.find(c => c.key === sort.key)
+    const col = exhibit.columns.find((c) => c.key === sort.key)
     if (!col) return exhibit.rows
     const sorted = [...exhibit.rows].sort((a, b) => {
       const av = numericValue(a[sort.key])
@@ -49,7 +44,7 @@ export function DataTable({ exhibit }: Props) {
       <table className="w-full text-[14px]">
         <thead>
           <tr className="border-b border-white/10 bg-white/5">
-            {exhibit.columns.map(col => (
+            {exhibit.columns.map((col) => (
               <th
                 key={col.key}
                 className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white/45 ${alignClass(col)} ${col.sortable ? 'cursor-pointer hover:text-white/80 select-none' : ''}`}
@@ -67,7 +62,7 @@ export function DataTable({ exhibit }: Props) {
         <tbody>
           {rows.map((row, i) => (
             <tr key={i} className="border-b border-white/5 last:border-0 hover:bg-white/2">
-              {exhibit.columns.map(col => {
+              {exhibit.columns.map((col) => {
                 const cell = row[col.key]
                 const display = formatValue(cell, col)
                 const cellTone = isCell(cell) ? cell.tone : undefined
@@ -85,7 +80,7 @@ export function DataTable({ exhibit }: Props) {
           ))}
           {exhibit.totalRow && (
             <tr className="bg-white/5 border-t-2 border-white/15">
-              {exhibit.columns.map(col => {
+              {exhibit.columns.map((col) => {
                 const cell = exhibit.totalRow![col.key]
                 const display = formatValue(cell, col)
                 const cellTone = isCell(cell) ? cell.tone : undefined
@@ -147,11 +142,7 @@ function alignClass(col: DataTableColumn): string {
   return 'text-left'
 }
 
-function toggleSort(
-  key: string,
-  current: SortState,
-  setSort: (s: SortState) => void,
-) {
+function toggleSort(key: string, current: SortState, setSort: (s: SortState) => void) {
   if (!current || current.key !== key) {
     setSort({ key, dir: 'desc' })
     return

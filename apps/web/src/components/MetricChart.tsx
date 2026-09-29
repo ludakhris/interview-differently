@@ -39,19 +39,17 @@ export function MetricChart({ config }: Props) {
   const VW = 520
   const VH = 110
   const PAD = { l: 38, r: 14, t: 22, b: 24 }
-  const CW = VW - PAD.l - PAD.r   // chart width
-  const CH = VH - PAD.t - PAD.b   // chart height
+  const CW = VW - PAD.l - PAD.r // chart width
+  const CH = VH - PAD.t - PAD.b // chart height
 
   // ── Scale ─────────────────────────────────────────────────────────────────
   const values = config.series.map((d) => d.v)
   const rawMax = Math.max(...values, config.baseline ?? 0)
-  const maxVal = rawMax * 1.3   // 30% headroom so spike doesn't kiss the top
+  const maxVal = rawMax * 1.3 // 30% headroom so spike doesn't kiss the top
   const minVal = 0
 
-  const cx = (i: number) =>
-    PAD.l + (i / Math.max(values.length - 1, 1)) * CW
-  const cy = (v: number) =>
-    PAD.t + CH - ((v - minVal) / (maxVal - minVal)) * CH
+  const cx = (i: number) => PAD.l + (i / Math.max(values.length - 1, 1)) * CW
+  const cy = (v: number) => PAD.t + CH - ((v - minVal) / (maxVal - minVal)) * CH
 
   // ── Path strings ──────────────────────────────────────────────────────────
   const linePath = values
@@ -80,7 +78,6 @@ export function MetricChart({ config }: Props) {
 
   return (
     <div className="bg-[#0d0d0d] border border-white/10 rounded-xl overflow-hidden mb-3">
-
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-3 pb-1">
         <span className="text-[10px] font-bold uppercase tracking-widest text-white/35">
@@ -89,7 +86,8 @@ export function MetricChart({ config }: Props) {
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
           <span className="font-mono font-bold text-[13px]" style={{ color: c.value }}>
-            {lastVal}{config.unit}
+            {lastVal}
+            {config.unit}
           </span>
           <span className="text-[10px] text-white/30">now</span>
         </div>
@@ -105,8 +103,10 @@ export function MetricChart({ config }: Props) {
         <defs>
           <linearGradient
             id={gradId}
-            x1="0" y1={PAD.t}
-            x2="0" y2={PAD.t + CH}
+            x1="0"
+            y1={PAD.t}
+            x2="0"
+            y2={PAD.t + CH}
             gradientUnits="userSpaceOnUse"
           >
             <stop offset="0%" stopColor={c.gradientStart} />
@@ -118,19 +118,23 @@ export function MetricChart({ config }: Props) {
         {yTicks.map((tick) => (
           <g key={tick}>
             <line
-              x1={PAD.l} y1={cy(tick)}
-              x2={VW - PAD.r} y2={cy(tick)}
+              x1={PAD.l}
+              y1={cy(tick)}
+              x2={VW - PAD.r}
+              y2={cy(tick)}
               stroke="rgba(255,255,255,0.055)"
               strokeWidth="1"
             />
             <text
-              x={PAD.l - 5} y={cy(tick) + 3.5}
+              x={PAD.l - 5}
+              y={cy(tick) + 3.5}
               fill="rgba(255,255,255,0.28)"
               fontSize="7.5"
               textAnchor="end"
               fontFamily="ui-monospace, monospace"
             >
-              {tick}{config.unit}
+              {tick}
+              {config.unit}
             </text>
           </g>
         ))}
@@ -138,8 +142,10 @@ export function MetricChart({ config }: Props) {
         {/* Baseline reference line */}
         {config.baseline !== undefined && (
           <line
-            x1={PAD.l} y1={cy(config.baseline)}
-            x2={VW - PAD.r} y2={cy(config.baseline)}
+            x1={PAD.l}
+            y1={cy(config.baseline)}
+            x2={VW - PAD.r}
+            y2={cy(config.baseline)}
             stroke="rgba(255,255,255,0.18)"
             strokeWidth="1"
             strokeDasharray="3 4"
@@ -202,7 +208,6 @@ export function MetricChart({ config }: Props) {
         <circle cx={lastX} cy={lastY} r="3.5" fill={c.dot} />
         <circle cx={lastX} cy={lastY} r="6" fill={c.dot} opacity="0.18" />
       </svg>
-
     </div>
   )
 }

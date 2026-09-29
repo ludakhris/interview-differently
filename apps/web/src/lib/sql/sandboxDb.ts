@@ -59,7 +59,14 @@ export class SandboxDb {
     const columns = last.fields.map((f) => f.name)
     const all = last.rows as Record<string, unknown>[]
     const allRows = all.map((r) => columns.map((c) => r[c]))
-    return { columns, rows: allRows.slice(0, ROW_CAP), allRows, rowCount: all.length, command: last.command ?? '', durationMs }
+    return {
+      columns,
+      rows: allRows.slice(0, ROW_CAP),
+      allRows,
+      rowCount: all.length,
+      command: last.command ?? '',
+      durationMs,
+    }
   }
 
   /**

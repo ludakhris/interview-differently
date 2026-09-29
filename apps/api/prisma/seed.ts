@@ -32,7 +32,7 @@ interface YamlNode {
   chart?: unknown
   audioScript?: string
   responsePrompt?: string
-  quant?: unknown                      // shape enforced by web-side TS layer
+  quant?: unknown // shape enforced by web-side TS layer
   quantSignalDimensions?: string[]
   sql?: unknown
   sqlSignalDimensions?: string[]
@@ -55,7 +55,7 @@ interface YamlScenario {
   icon?: string
   estimatedMinutes: number
   mode?: 'text' | 'immersive'
-  interviewer?: { presenterId: string; voiceId: string }   // immersive persona — lives in YAML so reseeds keep it
+  interviewer?: { presenterId: string; voiceId: string } // immersive persona — lives in YAML so reseeds keep it
   briefing: {
     situation: string
     role: string
@@ -66,7 +66,7 @@ interface YamlScenario {
   display?: unknown
   rubric: Array<{ name: string; description: string }>
   phases?: YamlPhase[]
-  exhibits?: unknown[]                 // heterogeneous; shape enforced by web-side TS layer
+  exhibits?: unknown[] // heterogeneous; shape enforced by web-side TS layer
   nodes: YamlNode[]
 }
 
@@ -85,12 +85,15 @@ function yamlToScenario(yamlStr: string): Scenario {
     if (n.audioScript) Object.assign(base, { audioScript: n.audioScript })
     if (n.responsePrompt) Object.assign(base, { responsePrompt: n.responsePrompt })
     if (n.quant) Object.assign(base, { quant: n.quant })
-    if (n.quantSignalDimensions?.length) Object.assign(base, { quantSignalDimensions: n.quantSignalDimensions })
+    if (n.quantSignalDimensions?.length)
+      Object.assign(base, { quantSignalDimensions: n.quantSignalDimensions })
     if (n.sql) Object.assign(base, { sql: n.sql })
-    if (n.sqlSignalDimensions?.length) Object.assign(base, { sqlSignalDimensions: n.sqlSignalDimensions })
+    if (n.sqlSignalDimensions?.length)
+      Object.assign(base, { sqlSignalDimensions: n.sqlSignalDimensions })
     // Quant / sql nodes carry their next pointer via `next` (same as
     // transitions); map to nextNodeId in the runtime shape.
-    if ((n.type === 'quant' || n.type === 'sql') && n.next) Object.assign(base, { nextNodeId: n.next })
+    if ((n.type === 'quant' || n.type === 'sql') && n.next)
+      Object.assign(base, { nextNodeId: n.next })
 
     if (n.type === 'decision' && n.choices) {
       const choices: Choice[] = n.choices.map((c) => ({
@@ -178,7 +181,9 @@ async function main() {
     const yamlStr = readFileSync(join(scenariosDir, file), 'utf-8')
     const scenario = yamlToScenario(yamlStr)
 
-    const existing = await prisma.scenario.findUnique({ where: { scenarioId: scenario.scenarioId } })
+    const existing = await prisma.scenario.findUnique({
+      where: { scenarioId: scenario.scenarioId },
+    })
     if (existing) {
       // Refresh the JSON blob so newly-added top-level fields (e.g. phases,
       // subcategory) on the yaml propagate to the DB without a hand-written

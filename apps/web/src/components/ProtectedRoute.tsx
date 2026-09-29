@@ -15,10 +15,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!isSignedIn) {
     return (
-      <Navigate
-        to={`/sign-in?redirect_url=${encodeURIComponent(location.pathname)}`}
-        replace
-      />
+      <Navigate to={`/sign-in?redirect_url=${encodeURIComponent(location.pathname)}`} replace />
     )
   }
 

@@ -16,10 +16,16 @@ interface Props {
   className?: string
 }
 
-export function InlineExhibits({ phase, catalog, accentColor = '#0f5b89', label, className }: Props) {
+export function InlineExhibits({
+  phase,
+  catalog,
+  accentColor = '#0f5b89',
+  label,
+  className,
+}: Props) {
   const ids = phase?.exhibitIds ?? []
   const resolved = ids
-    .map(id => catalog.find(e => e.id === id))
+    .map((id) => catalog.find((e) => e.id === id))
     .filter((e): e is Exhibit => Boolean(e))
   if (resolved.length === 0) return null
 
@@ -44,7 +50,7 @@ export function InlineExhibits({ phase, catalog, accentColor = '#0f5b89', label,
           )}
         </div>
       )}
-      {resolved.map(ex => (
+      {resolved.map((ex) => (
         <ExhibitRenderer key={ex.id} exhibit={ex} />
       ))}
     </div>

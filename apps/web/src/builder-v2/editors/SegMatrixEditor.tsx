@@ -2,9 +2,7 @@
 
 import { useState } from 'react'
 import type { SegmentationMatrixExhibit, SegmentationMatrixItem } from '@id/types'
-import {
-  EditShell, Field, TextInput, SectionLabel, AddButton, RemoveButton,
-} from './shared'
+import { EditShell, Field, TextInput, SectionLabel, AddButton, RemoveButton } from './shared'
 
 type QuadrantKey = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
 const QUADRANTS: { key: QuadrantKey; label: string; position: string }[] = [
@@ -27,7 +25,7 @@ export function SegMatrixEditor({ exhibit, onDone }: Props) {
   const [quadrantLabels, setQuadrantLabels] = useState({ ...(exhibit.quadrantLabels ?? {}) })
 
   function updateQuadrant(key: QuadrantKey, items: SegmentationMatrixItem[]) {
-    setQuadrants(prev => ({ ...prev, [key]: items }))
+    setQuadrants((prev) => ({ ...prev, [key]: items }))
   }
 
   function addItem(key: QuadrantKey) {
@@ -41,7 +39,10 @@ export function SegMatrixEditor({ exhibit, onDone }: Props) {
   }
 
   function removeItem(key: QuadrantKey, idx: number) {
-    updateQuadrant(key, (quadrants[key] ?? []).filter((_, i) => i !== idx))
+    updateQuadrant(
+      key,
+      (quadrants[key] ?? []).filter((_, i) => i !== idx)
+    )
   }
 
   return (
@@ -51,25 +52,53 @@ export function SegMatrixEditor({ exhibit, onDone }: Props) {
       onDone={() => onDone({ ...exhibit, title, xAxis, yAxis, quadrants, quadrantLabels })}
     >
       <Field label="Title">
-        <TextInput value={title} onChange={e => setTitle(e.target.value)} placeholder="Matrix title" />
+        <TextInput
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Matrix title"
+        />
       </Field>
 
       {/* Axes */}
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
           <SectionLabel label="X-axis (horizontal)" />
-          <TextInput value={xAxis.label} onChange={e => setXAxis(p => ({ ...p, label: e.target.value }))} placeholder="Axis label" />
+          <TextInput
+            value={xAxis.label}
+            onChange={(e) => setXAxis((p) => ({ ...p, label: e.target.value }))}
+            placeholder="Axis label"
+          />
           <div className="flex gap-2">
-            <TextInput value={xAxis.lowLabel} onChange={e => setXAxis(p => ({ ...p, lowLabel: e.target.value }))} placeholder="Low label" />
-            <TextInput value={xAxis.highLabel} onChange={e => setXAxis(p => ({ ...p, highLabel: e.target.value }))} placeholder="High label" />
+            <TextInput
+              value={xAxis.lowLabel}
+              onChange={(e) => setXAxis((p) => ({ ...p, lowLabel: e.target.value }))}
+              placeholder="Low label"
+            />
+            <TextInput
+              value={xAxis.highLabel}
+              onChange={(e) => setXAxis((p) => ({ ...p, highLabel: e.target.value }))}
+              placeholder="High label"
+            />
           </div>
         </div>
         <div className="flex flex-col gap-2">
           <SectionLabel label="Y-axis (vertical)" />
-          <TextInput value={yAxis.label} onChange={e => setYAxis(p => ({ ...p, label: e.target.value }))} placeholder="Axis label" />
+          <TextInput
+            value={yAxis.label}
+            onChange={(e) => setYAxis((p) => ({ ...p, label: e.target.value }))}
+            placeholder="Axis label"
+          />
           <div className="flex gap-2">
-            <TextInput value={yAxis.lowLabel} onChange={e => setYAxis(p => ({ ...p, lowLabel: e.target.value }))} placeholder="Low label" />
-            <TextInput value={yAxis.highLabel} onChange={e => setYAxis(p => ({ ...p, highLabel: e.target.value }))} placeholder="High label" />
+            <TextInput
+              value={yAxis.lowLabel}
+              onChange={(e) => setYAxis((p) => ({ ...p, lowLabel: e.target.value }))}
+              placeholder="Low label"
+            />
+            <TextInput
+              value={yAxis.highLabel}
+              onChange={(e) => setYAxis((p) => ({ ...p, highLabel: e.target.value }))}
+              placeholder="High label"
+            />
           </div>
         </div>
       </div>
@@ -79,13 +108,20 @@ export function SegMatrixEditor({ exhibit, onDone }: Props) {
         <SectionLabel label="Quadrant items" />
         <div className="grid grid-cols-2 gap-3 mt-2">
           {QUADRANTS.map(({ key, label }) => (
-            <div key={key} className="flex flex-col gap-1.5 p-3 border border-white/[0.06] rounded-xl bg-white/[0.01]">
+            <div
+              key={key}
+              className="flex flex-col gap-1.5 p-3 border border-white/[0.06] rounded-xl bg-white/[0.01]"
+            >
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-white/30">{label}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-white/30">
+                  {label}
+                </span>
                 <div className="flex-1" />
                 <TextInput
                   value={quadrantLabels[key] ?? ''}
-                  onChange={e => setQuadrantLabels(p => ({ ...p, [key]: e.target.value || undefined }))}
+                  onChange={(e) =>
+                    setQuadrantLabels((p) => ({ ...p, [key]: e.target.value || undefined }))
+                  }
                   placeholder="Header (optional)"
                 />
               </div>
@@ -94,14 +130,14 @@ export function SegMatrixEditor({ exhibit, onDone }: Props) {
                   <div className="flex gap-2 items-center">
                     <TextInput
                       value={item.label}
-                      onChange={e => updateItem(key, idx, { label: e.target.value })}
+                      onChange={(e) => updateItem(key, idx, { label: e.target.value })}
                       placeholder="Label  e.g. Northern Highlands"
                     />
                     <RemoveButton onClick={() => removeItem(key, idx)} />
                   </div>
                   <TextInput
                     value={item.caption ?? ''}
-                    onChange={e => updateItem(key, idx, { caption: e.target.value || undefined })}
+                    onChange={(e) => updateItem(key, idx, { caption: e.target.value || undefined })}
                     placeholder="Caption  e.g. High need, sparse network"
                   />
                 </div>

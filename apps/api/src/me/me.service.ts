@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { ClerkService } from '../auth/clerk.service'
 
@@ -25,7 +31,7 @@ export class MeService {
 
   constructor(
     private prisma: PrismaService,
-    private clerk: ClerkService,
+    private clerk: ClerkService
   ) {}
 
   /**
@@ -120,7 +126,10 @@ export class MeService {
 
     if (input.joinKey?.trim()) {
       const key = input.joinKey.trim()
-      const cohort = await this.prisma.cohort.findUnique({ where: { joinKey: key }, select: { id: true, institutionId: true } })
+      const cohort = await this.prisma.cohort.findUnique({
+        where: { joinKey: key },
+        select: { id: true, institutionId: true },
+      })
       if (!cohort) throw new NotFoundException(`No cohort found for join key "${key}"`)
       institutionId = cohort.institutionId
       cohortId = cohort.id
@@ -168,7 +177,10 @@ function extractDomain(email: string | null | undefined): string | null {
   if (!email) return null
   const at = email.indexOf('@')
   if (at < 0 || at === email.length - 1) return null
-  return email.slice(at + 1).trim().toLowerCase()
+  return email
+    .slice(at + 1)
+    .trim()
+    .toLowerCase()
 }
 
 /**
@@ -198,7 +210,7 @@ function candidateDomains(domain: string): string[] {
  *   2. Among ties on length: most recently created
  */
 function pickBestDomainMatch<T extends { emailDomain: string | null; createdAt: Date }>(
-  matches: T[],
+  matches: T[]
 ): T | null {
   if (matches.length === 0) return null
   return [...matches].sort((a, b) => {

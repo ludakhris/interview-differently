@@ -34,14 +34,39 @@ export function BuilderV2Page() {
   // Load scenario from API — pass Clerk JWT so the API returns the full scenario
   // (unauthenticated GET returns a marketing-safe summary without nodes/phases/exhibits)
   useEffect(() => {
-    if (!scenarioId) { setLoading(false); return }
+    if (!scenarioId) {
+      setLoading(false)
+      return
+    }
     getToken()
-      .then(token => getScenario(scenarioId, token ?? undefined))
-      .then(s => { setInitial(s); setLoading(false) })
+      .then((token) => getScenario(scenarioId, token ?? undefined))
+      .then((s) => {
+        setInitial(s)
+        setLoading(false)
+      })
   }, [scenarioId, getToken])
 
   const doc = useBuilderDoc(initial)
-  const { scenario, saveStatus, setTitle, updateMeta, addPhase, updatePhase, reorderPhases, addExhibit, updateExhibit, removeExhibit, addNode, updateNode, removeNode, moveBlock, removePhase, saveNow, markPublished, toggleExhibitShared } = doc
+  const {
+    scenario,
+    saveStatus,
+    setTitle,
+    updateMeta,
+    addPhase,
+    updatePhase,
+    reorderPhases,
+    addExhibit,
+    updateExhibit,
+    removeExhibit,
+    addNode,
+    updateNode,
+    removeNode,
+    moveBlock,
+    removePhase,
+    saveNow,
+    markPublished,
+    toggleExhibitShared,
+  } = doc
 
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null)
 
@@ -57,12 +82,21 @@ export function BuilderV2Page() {
   useEffect(() => {
     if (!scenarioId || !isImmersive) return
     listScenarioMedia(scenarioId)
-      .then(list => setMediaAssets(Object.fromEntries(list.map(a => [a.nodeId, a]))))
-      .catch(() => {/* status shows "not rendered" */})
+      .then((list) => setMediaAssets(Object.fromEntries(list.map((a) => [a.nodeId, a]))))
+      .catch(() => {
+        /* status shows "not rendered" */
+      })
   }, [scenarioId, isImmersive])
   const immersive = useMemo<ImmersiveState | null>(
-    () => (isImmersive && scenarioId ? { scenarioId, assets: mediaAssets, onRendered: a => setMediaAssets(m => ({ ...m, [a.nodeId]: a })) } : null),
-    [isImmersive, scenarioId, mediaAssets],
+    () =>
+      isImmersive && scenarioId
+        ? {
+            scenarioId,
+            assets: mediaAssets,
+            onRendered: (a) => setMediaAssets((m) => ({ ...m, [a.nodeId]: a })),
+          }
+        : null,
+    [isImmersive, scenarioId, mediaAssets]
   )
 
   // Set initial active phase once scenario loads
@@ -179,10 +213,17 @@ export function BuilderV2Page() {
 
       {issues && (
         <IssuesPanel
-          issues={publishError ? [{ level: 'error', message: `Publish failed: ${publishError}` }, ...issues] : issues}
+          issues={
+            publishError
+              ? [{ level: 'error', message: `Publish failed: ${publishError}` }, ...issues]
+              : issues
+          }
           status={scenario.builderMeta?.status === 'published' ? 'published' : 'draft'}
           publishing={publishing}
-          onJump={(where) => { setIssues(null); setJumpTarget({ ...where, nonce: Date.now() }) }}
+          onJump={(where) => {
+            setIssues(null)
+            setJumpTarget({ ...where, nonce: Date.now() })
+          }}
           onPublish={handlePublish}
           onClose={() => setIssues(null)}
         />

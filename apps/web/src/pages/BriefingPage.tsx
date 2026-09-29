@@ -49,7 +49,9 @@ export function BriefingPage() {
           className="text-[11px] font-bold uppercase tracking-widest mb-3 flex items-center gap-1.5"
           style={{ color: meta?.color }}
         >
-          {meta && <TrackIcon name={meta.icon} size={12} color={meta.color} className="inline -mt-0.5" />}
+          {meta && (
+            <TrackIcon name={meta.icon} size={12} color={meta.color} className="inline -mt-0.5" />
+          )}
           {meta?.label} Track
         </div>
 
@@ -62,7 +64,9 @@ export function BriefingPage() {
             <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-4">
               The Situation
             </h3>
-            <p className="text-[15px] text-[#f5f3ee] leading-relaxed font-light">{briefing.situation}</p>
+            <p className="text-[15px] text-[#f5f3ee] leading-relaxed font-light">
+              {briefing.situation}
+            </p>
           </div>
         )}
 
@@ -100,7 +104,9 @@ export function BriefingPage() {
                 />
                 <div>
                   <div className="text-[14px] font-semibold text-[#f5f3ee]">{dim.name}</div>
-                  <div className="text-[12px] text-slate-mid leading-relaxed">{dim.description}</div>
+                  <div className="text-[12px] text-slate-mid leading-relaxed">
+                    {dim.description}
+                  </div>
                 </div>
               </div>
             ))}
@@ -113,7 +119,7 @@ export function BriefingPage() {
               Presentation Style
             </h3>
             <div className="flex gap-3">
-              {(['voice', 'avatar'] as const).map(mode => (
+              {(['voice', 'avatar'] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setNarrationMode(mode)}
@@ -123,16 +129,16 @@ export function BriefingPage() {
                       : 'border-white/10 hover:border-white/20'
                   }`}
                 >
-                  <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${
-                    narrationMode === mode ? 'border-green bg-green' : 'border-white/30'
-                  }`} />
+                  <span
+                    className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${
+                      narrationMode === mode ? 'border-green bg-green' : 'border-white/30'
+                    }`}
+                  />
                   <div>
                     <div className="text-[13px] font-medium text-[#f5f3ee]">
                       {mode === 'voice' ? 'Voice narration' : 'AI Avatar'}
                     </div>
-                    {mode === 'avatar' && (
-                      <div className="text-[11px] text-amber">Beta</div>
-                    )}
+                    {mode === 'avatar' && <div className="text-[11px] text-amber">Beta</div>}
                   </div>
                 </button>
               ))}
@@ -142,7 +148,9 @@ export function BriefingPage() {
 
         <div className="bg-amber/10 border border-amber/20 rounded-xl p-4 mb-8">
           <p className="text-[13px] text-amber leading-relaxed">
-            <strong>How it works:</strong> You will move through a real workplace scenario and make decisions at each step. There are no trick questions. The AI evaluates the reasoning behind your choices, not just which answer you pick.
+            <strong>How it works:</strong> You will move through a real workplace scenario and make
+            decisions at each step. There are no trick questions. The AI evaluates the reasoning
+            behind your choices, not just which answer you pick.
           </p>
         </div>
 
@@ -171,16 +179,21 @@ export function BriefingPage() {
                 Ready to continue?
               </h2>
               <p className="text-[14px] text-slate-mid leading-relaxed mb-6">
-                Create a free account to complete this interview and receive AI feedback on your responses.
+                Create a free account to complete this interview and receive AI feedback on your
+                responses.
               </p>
               <button
-                onClick={() => navigate(`/sign-up?redirect_url=${encodeURIComponent(immersiveUrl)}`)}
+                onClick={() =>
+                  navigate(`/sign-up?redirect_url=${encodeURIComponent(immersiveUrl)}`)
+                }
                 className="w-full bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] py-3 rounded-lg transition-colors mb-3"
               >
                 Create free account
               </button>
               <button
-                onClick={() => navigate(`/sign-in?redirect_url=${encodeURIComponent(immersiveUrl)}`)}
+                onClick={() =>
+                  navigate(`/sign-in?redirect_url=${encodeURIComponent(immersiveUrl)}`)
+                }
                 className="w-full text-[13px] text-slate-mid hover:text-[#f5f3ee] transition-colors py-1"
               >
                 Already have an account? Sign in

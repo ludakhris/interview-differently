@@ -1,4 +1,17 @@
-import { Controller, Get, Post, Put, Delete, Patch, Param, Body, HttpCode, Headers, Req, UseGuards } from '@nestjs/common'
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Patch,
+  Param,
+  Body,
+  HttpCode,
+  Headers,
+  Req,
+  UseGuards,
+} from '@nestjs/common'
 import { ScenariosService, type Viewer } from './scenarios.service'
 import { ClerkService } from '../auth/clerk.service'
 import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
@@ -16,7 +29,7 @@ export class ScenariosController {
   constructor(
     private readonly scenariosService: ScenariosService,
     private readonly clerk: ClerkService,
-    private readonly scope: InstitutionScope,
+    private readonly scope: InstitutionScope
   ) {}
 
   /**

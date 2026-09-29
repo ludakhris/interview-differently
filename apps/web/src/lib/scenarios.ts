@@ -59,7 +59,7 @@ export const trackMeta: Record<
         {
           label: 'Business Cases',
           description:
-            "Real consulting-style case interviews. A client walks in with a profitability drop, a market-entry question, an acquisition target, or a pricing puzzle — and a stack of exhibits. Read the data, structure your hypotheses, run the math, and defend a recommendation. Modeled on top-tier strategy consulting interview patterns.",
+            'Real consulting-style case interviews. A client walks in with a profitability drop, a market-entry question, an acquisition target, or a pricing puzzle — and a stack of exhibits. Read the data, structure your hypotheses, run the math, and defend a recommendation. Modeled on top-tier strategy consulting interview patterns.',
           icon: 'Briefcase',
         },
       ],
@@ -73,8 +73,5 @@ export const trackMeta: Record<
         },
       ],
     ] as [string, { label: string; description: string; icon: string }][]
-  ).map(([key, meta], i) => [
-    key,
-    { ...meta, color: TRACK_PALETTE[i % TRACK_PALETTE.length] },
-  ])
+  ).map(([key, meta], i) => [key, { ...meta, color: TRACK_PALETTE[i % TRACK_PALETTE.length] }])
 )

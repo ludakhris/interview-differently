@@ -23,11 +23,13 @@ cp apps/api/.env.example apps/api/.env
 The project uses **Railway Postgres** — no local Postgres or Docker needed.
 
 **Get your DATABASE_URL:**
+
 1. Open [railway.app](https://railway.app) → your project → **PostgreSQL** service
 2. Click the **Connect** tab
 3. Copy the **DATABASE_URL** and paste it into `apps/api/.env`
 
 **Run migrations and seed:**
+
 ```bash
 cd apps/api
 npx prisma generate       # generates the Prisma client
@@ -39,6 +41,7 @@ cd ../..
 > **Note:** Run these from inside `apps/api/`, not the monorepo root.
 
 **Start everything:**
+
 ```bash
 npm run dev               # from monorepo root — starts both API and frontend
 ```
@@ -47,6 +50,7 @@ Frontend runs at http://localhost:5173
 API runs at http://localhost:3000/api/health
 
 **Resetting the database** (if scenarios get corrupted or you want a clean slate):
+
 ```bash
 cd apps/api && npm run db:reset
 ```
@@ -69,7 +73,7 @@ This wipes all data and re-seeds from the static YAML files in `apps/web/src/lib
 
 `apps/api/scripts/seed-fake-cohort.ts` is a CLI for spinning up (and tearing down) a complete demo institution so the analytics views (`/admin/institutions/:id/analytics`) have real numbers to render. It creates **real Clerk users** with verified emails so they could in theory sign in too.
 
-> **⚠️ Production caveat.** The `remove` command nukes whatever institution name you pass — including any real users in it and their simulation history. Pick demo institution names that are obviously fake (e.g. *"Demo U"*, *"QA Test School"*) so you don't accidentally type a live one.
+> **⚠️ Production caveat.** The `remove` command nukes whatever institution name you pass — including any real users in it and their simulation history. Pick demo institution names that are obviously fake (e.g. _"Demo U"_, _"QA Test School"_) so you don't accidentally type a live one.
 >
 > **Domain caveat.** Clerk rejects reserved TLDs (`.test`, `.local`, `.invalid`) as invalid email format. Use a real-looking TLD like `.com`, `.dev`, or `.io` even if the domain isn't registered — Clerk doesn't verify deliverability on admin createUser, just the format.
 
@@ -100,6 +104,7 @@ npm run seed:fake -- remove --institution "Demo U" --yes
 ```
 
 **Tips:**
+
 - Pick a domain you don't actually own (e.g. `demouniversity.com`). Clerk only validates format, not deliverability — but never use a domain you'd later want real users to sign up under.
 - The `--join-key` is optional — without it students would have to be admin-added or matched by email domain.
 - Re-running `add` against the same institution name reuses the institution + cohort and just adds more users.
@@ -107,6 +112,7 @@ npm run seed:fake -- remove --institution "Demo U" --yes
 ### Production database (Railway)
 
 On every deploy, Railway automatically runs:
+
 ```
 npx prisma migrate deploy && npm run db:seed && node dist/main.js
 ```
@@ -137,11 +143,13 @@ Before deploying, create accounts at:
 ## First-time deploy setup
 
 **Vercel (frontend)**
+
 1. Go to vercel.com and import this repo
 2. Set the root directory to `apps/web`
 3. Copy the Project ID and Org ID from project settings
 
 **Railway (backend + database)**
+
 1. Go to railway.app and create a new project
 2. Add a Node service pointed at `apps/api`
 3. Add a PostgreSQL plugin and a Redis plugin
@@ -149,18 +157,19 @@ Before deploying, create accounts at:
 
 **GitHub Secrets — add all four**
 
-| Secret | Where to get it |
-|---|---|
-| `VERCEL_TOKEN` | vercel.com → Account → Tokens |
-| `VERCEL_ORG_ID` | vercel.com → Project Settings |
-| `VERCEL_PROJECT_ID` | vercel.com → Project Settings |
-| `RAILWAY_TOKEN` | railway.app → Account Settings |
+| Secret              | Where to get it                |
+| ------------------- | ------------------------------ |
+| `VERCEL_TOKEN`      | vercel.com → Account → Tokens  |
+| `VERCEL_ORG_ID`     | vercel.com → Project Settings  |
+| `VERCEL_PROJECT_ID` | vercel.com → Project Settings  |
+| `RAILWAY_TOKEN`     | railway.app → Account Settings |
 
 ## CI/CD behavior
 
 Every pull request runs lint, typecheck, build, and test.
 
 Merging to `main` triggers automatic deployment:
+
 - Changes to `apps/web` or `packages/types` deploy to Vercel
 - Changes to `apps/api` or `packages/types` deploy to Railway
 
@@ -169,12 +178,14 @@ No manual deploys needed after initial setup.
 ## Environment variables
 
 **apps/web/.env.local**
+
 ```
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_...   # from dashboard.clerk.com
 VITE_API_URL=http://localhost:3000
 ```
 
 **apps/api/.env**
+
 ```
 PORT=3000
 FRONTEND_URL=http://localhost:5173

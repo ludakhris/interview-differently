@@ -24,10 +24,13 @@ export class ScenarioRequestsController {
   async submit(
     @Body() body: ScenarioRequestInput,
     @Ip() ip: string,
-    @Headers('user-agent') userAgent?: string,
+    @Headers('user-agent') userAgent?: string
   ) {
     if (!RATE_LIMITER.allow(ip)) {
-      throw new HttpException('Too many requests — please try again later', HttpStatus.TOO_MANY_REQUESTS)
+      throw new HttpException(
+        'Too many requests — please try again later',
+        HttpStatus.TOO_MANY_REQUESTS
+      )
     }
     return this.service.submit(body, ip, userAgent)
   }

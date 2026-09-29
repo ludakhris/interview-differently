@@ -39,7 +39,9 @@ function MonitorGrid({ panels }: { panels: ContextPanelType[] }) {
           <div key={i} className={`rounded-xl border px-3 py-3 ${s.tile}`}>
             <div className="flex items-center gap-1.5 mb-2">
               <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot}`} />
-              <span className={`text-[9px] font-bold uppercase tracking-widest ${s.val} opacity-80`}>
+              <span
+                className={`text-[9px] font-bold uppercase tracking-widest ${s.val} opacity-80`}
+              >
                 {s.label}
               </span>
             </div>
@@ -116,11 +118,9 @@ function FindingDisplay({
 
   return (
     <div className="bg-red-500/5 border border-red-500/30 rounded-xl overflow-hidden">
-
       {/* ── Incident record header ── */}
       {incidentMeta && (
         <div className="bg-red-500/8 border-b border-red-500/20 px-4 py-4">
-
           {/* ID + status badge */}
           <div className="flex items-center justify-between mb-3">
             <span className="font-display font-bold text-[14px] text-red-400 tracking-wide">
@@ -163,7 +163,9 @@ function FindingDisplay({
               <div className="text-[9px] font-medium uppercase tracking-widest text-white/30 mb-0.5">
                 Assigned To
               </div>
-              <div className="text-[12px] text-white/50 italic">{incidentMeta.assignedTo ?? '—'}</div>
+              <div className="text-[12px] text-white/50 italic">
+                {incidentMeta.assignedTo ?? '—'}
+              </div>
             </div>
           </div>
 
@@ -197,7 +199,6 @@ function FindingDisplay({
           ))}
         </div>
       </div>
-
     </div>
   )
 }
@@ -206,6 +207,7 @@ function FindingDisplay({
 
 export function ContextPanel({ panels, contextStyle = 'monitor', incidentMeta }: Props) {
   if (contextStyle === 'table') return <TableDisplay panels={panels} />
-  if (contextStyle === 'finding') return <FindingDisplay panels={panels} incidentMeta={incidentMeta} />
+  if (contextStyle === 'finding')
+    return <FindingDisplay panels={panels} incidentMeta={incidentMeta} />
   return <MonitorGrid panels={panels} />
 }

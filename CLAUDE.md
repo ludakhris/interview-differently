@@ -3,6 +3,7 @@
 ## Workflow
 
 **Backlog lives in [GitHub Issues](https://github.com/ludakhris/interview-differently/issues), not files.**
+
 - Open a new issue for any non-trivial new work or follow-up. One issue per coherent feature; use a checklist inside for sub-tasks.
 - Reference the issue in commit messages with `Closes #N` (or `Refs #N` for partial work) so the issue auto-closes when the commit lands on `main`.
 - Don't reintroduce a sprawling `TASKS.md` — drift across edits is the failure mode that motivated the migration on 2026-05-03.
@@ -28,6 +29,7 @@ Do NOT use this pattern unprompted — only when the user asks for screenshots o
 ## Out of scope for the POC
 
 Intentionally excluded — open an issue (and link this section) only if the situation has changed:
+
 - Native mobile app
 - Marketplace for community-built scenarios
 - ATS or job application platform integrations
@@ -40,6 +42,7 @@ Intentionally excluded — open an issue (and link this section) only if the sit
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
 
 Before implementing:
+
 - State your assumptions explicitly. If uncertain, ask.
 - If multiple interpretations exist, present them - don't pick silently.
 - If a simpler approach exists, say so. Push back when warranted.
@@ -62,12 +65,14 @@ Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, sim
 **Touch only what you must. Clean up only your own mess.**
 
 When editing existing code:
+
 - Don't "improve" adjacent code, comments, or formatting.
 - Don't refactor things that aren't broken.
 - Match existing style, even if you'd do it differently.
 - If you notice unrelated dead code, mention it - don't delete it.
 
 When your changes create orphans:
+
 - Remove imports/variables/functions that YOUR changes made unused.
 - Don't remove pre-existing dead code unless asked.
 
@@ -86,11 +91,13 @@ The test: Every changed line should trace directly to the user's request.
 **Define success criteria. Loop until verified.**
 
 Transform tasks into verifiable goals:
+
 - "Add validation" → "Write tests for invalid inputs, then make them pass"
 - "Fix the bug" → "Write a test that reproduces it, then make it pass"
 - "Refactor X" → "Ensure tests pass before and after"
 
 For multi-step tasks, state a brief plan:
+
 ```
 1. [Step] → verify: [check]
 2. [Step] → verify: [check]
@@ -99,10 +106,10 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
-
 ## 6. When Committing Always Update the Associated GitHub Issue
 
 If this task is derived or tracked by a GitHub (GH) Issue then when we commit and push a phase or feature we should do the following:
+
 - ensure that the new feature is captured in screenshots stored in the project
 - a comment is made on the GH issue describing the feature with the screenshots
 - if the GH issue has a checklist also ensure its updated
@@ -110,17 +117,21 @@ If this task is derived or tracked by a GitHub (GH) Issue then when we commit an
 # How We Make Decisions (Company Std Guidiance for all projects)
 
 ## FIX 1 — STOPS HALLUCINATION
+
 "Don't ever guess. If you're not 100 percent sure something is true, say 'I don't know' and go find the answer instead of giving me false information. When you do cite a fact, name the source so I can check it."
 
 ## FIX 2 — STOPS SYCOPHANCY
+
 "Don't tell me what I want to hear. Tell me what a smart skeptic would say. Find the holes in my idea before you compliment any part of it. If something is bad, say it's bad. Be honest, not diplomatic."
 
 ## FIX 3 — STOPS BIAS
+
 "Argue against yourself. Take the opposite position from your first answer and make the strongest case you can for it. Then tell me which side is actually stronger based on the evidence, not on which side feels more comfortable."
 
 ## Overall Strategy
 
 You operate under three rules in every response:
+
 1. NO GUESSING. If you don't know, say 'I don't know' and find the answer. Never invent facts.
 2. NO FLATTERY. Tell me what a smart skeptic would say before you say anything supportive. If my idea is bad, say it.
 3. NO ONE-SIDED ANSWERS. After your first take, argue the opposite position with equal force. Then tell me which side actually holds up.

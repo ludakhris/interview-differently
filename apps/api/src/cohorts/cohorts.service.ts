@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { ClerkService } from '../auth/clerk.service'
 
@@ -18,7 +23,7 @@ export interface AddMemberInput {
 export class CohortsService {
   constructor(
     private prisma: PrismaService,
-    private clerk: ClerkService,
+    private clerk: ClerkService
   ) {}
 
   async listForInstitution(institutionId: string) {
@@ -67,7 +72,8 @@ export class CohortsService {
     } catch (err) {
       const code = (err as { code?: string }).code
       if (code === 'P2025') throw new NotFoundException(`Cohort ${cohortId} not found`)
-      if (code === 'P2002') throw new ConflictException(`Join key "${data.joinKey}" is already in use`)
+      if (code === 'P2002')
+        throw new ConflictException(`Join key "${data.joinKey}" is already in use`)
       throw err
     }
   }
@@ -143,7 +149,7 @@ export class CohortsService {
       const user = await this.prisma.user.findUnique({ where: { email: trimmed } })
       if (!user) {
         throw new NotFoundException(
-          `No user with email "${trimmed}" has signed in yet. Ask them to sign in once, then re-add them.`,
+          `No user with email "${trimmed}" has signed in yet. Ask them to sign in once, then re-add them.`
         )
       }
       userId = user.id

@@ -17,7 +17,9 @@ import { acceptInvite, fetchInviteInfo, type InviteInfo } from '@/services/asses
 const ACCENT = '#2d9e5f'
 
 function fmt(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : ''
+  return iso
+    ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+    : ''
 }
 
 export function InvitePage() {
@@ -40,7 +42,9 @@ export function InvitePage() {
     setAccepting(true)
     acceptInvite(getToken, code)
       .then(({ attemptId, submitted }) =>
-        navigate(`/tools/assessments/attempt/${attemptId}${submitted ? '/result' : ''}`, { replace: true }),
+        navigate(`/tools/assessments/attempt/${attemptId}${submitted ? '/result' : ''}`, {
+          replace: true,
+        })
       )
       .catch((e) => {
         setError(e instanceof Error ? e.message : 'Could not start the assessment')
@@ -59,7 +63,9 @@ export function InvitePage() {
           <div className="p-7">
             {error ? (
               <>
-                <p className="text-[12px] font-bold uppercase tracking-widest text-red-400 mb-1">Invite</p>
+                <p className="text-[12px] font-bold uppercase tracking-widest text-red-400 mb-1">
+                  Invite
+                </p>
                 <p className="text-[14px] text-[#f5f3ee]">{error}</p>
               </>
             ) : !info ? (
@@ -74,16 +80,26 @@ export function InvitePage() {
                     <ClipboardCheck size={20} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: ACCENT }}>
+                    <p
+                      className="text-[10px] font-bold uppercase tracking-[0.18em]"
+                      style={{ color: ACCENT }}
+                    >
                       {info.label} · {info.institutionName}
                     </p>
-                    <h1 className="mt-0.5 font-display font-bold text-[18px] text-[#f5f3ee] leading-snug">{info.title}</h1>
+                    <h1 className="mt-0.5 font-display font-bold text-[18px] text-[#f5f3ee] leading-snug">
+                      {info.title}
+                    </h1>
                   </div>
                 </div>
                 <dl className="text-[12px] space-y-1.5 mb-6">
                   <Row k="Cohort" v={info.cohortName} />
                   <Row k="Questions" v={String(info.questionCount)} />
-                  {info.timeLimitMinutes && <Row k="Time limit" v={`${info.timeLimitMinutes} minutes, from when you start`} />}
+                  {info.timeLimitMinutes && (
+                    <Row
+                      k="Time limit"
+                      v={`${info.timeLimitMinutes} minutes, from when you start`}
+                    />
+                  )}
                   {info.opensAt && <Row k="Opens" v={fmt(info.opensAt)} />}
                   {info.closesAt && <Row k="Closes" v={fmt(info.closesAt)} />}
                 </dl>
@@ -91,9 +107,13 @@ export function InvitePage() {
                 {!isLoaded ? (
                   <p className="text-[13px] text-slate-mid">Checking sign-in…</p>
                 ) : isSignedIn ? (
-                  <p className="text-[13px] text-slate-mid">Joining the cohort and opening your paper…</p>
+                  <p className="text-[13px] text-slate-mid">
+                    Joining the cohort and opening your paper…
+                  </p>
                 ) : !info.isOpen ? (
-                  <p className="text-[13px] text-amber-400">This assessment isn't open right now.</p>
+                  <p className="text-[13px] text-amber-400">
+                    This assessment isn't open right now.
+                  </p>
                 ) : (
                   <>
                     <button
@@ -109,7 +129,8 @@ export function InvitePage() {
                       Create an account
                     </button>
                     <p className="text-[11px] text-white/40 mt-3 leading-relaxed">
-                      You'll be added to the {info.cohortName} cohort and the assessment will start right away
+                      You'll be added to the {info.cohortName} cohort and the assessment will start
+                      right away
                       {info.timeLimitMinutes ? ' — the timer begins when your paper opens.' : '.'}
                     </p>
                   </>

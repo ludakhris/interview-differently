@@ -46,9 +46,21 @@ export function QuantNode({ node, carryForward, onSubmit, onHintUsed }: Props) {
   }
 
   return spec.variant === 'numeric-range' ? (
-    <NumericRangeView node={node} spec={spec} carryForward={carryForward} onSubmit={onSubmit} onHintUsed={onHintUsed} />
+    <NumericRangeView
+      node={node}
+      spec={spec}
+      carryForward={carryForward}
+      onSubmit={onSubmit}
+      onHintUsed={onHintUsed}
+    />
   ) : (
-    <StructuredView node={node} spec={spec} carryForward={carryForward} onSubmit={onSubmit} onHintUsed={onHintUsed} />
+    <StructuredView
+      node={node}
+      spec={spec}
+      carryForward={carryForward}
+      onSubmit={onSubmit}
+      onHintUsed={onHintUsed}
+    />
   )
 }
 
@@ -92,7 +104,12 @@ function HintControls({
       </button>
 
       {stage === 'confirming' && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Confirm hint">
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirm hint"
+        >
           <button
             type="button"
             className="absolute inset-0 bg-black/60"
@@ -100,15 +117,17 @@ function HintControls({
             onClick={() => setStage('idle')}
           />
           <div className="relative bg-[#111111] border border-white/15 rounded-2xl p-6 max-w-md w-[88%] mx-4 shadow-2xl animate-fade-in">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">Confirm</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">
+              Confirm
+            </p>
             <h3 className="mt-1 text-[16px] font-display font-bold text-[#f5f3ee]">
               Show the formula for this question?
             </h3>
             <p className="mt-3 text-[14px] text-white/80 leading-relaxed">
-              If you use the hint, your highest possible score on this question
-              drops from <span className="text-emerald-300 font-semibold">Strong</span> to{' '}
-              <span className="text-amber-300 font-semibold">Proficient</span>. It will also
-              show on your results page.
+              If you use the hint, your highest possible score on this question drops from{' '}
+              <span className="text-emerald-300 font-semibold">Strong</span> to{' '}
+              <span className="text-amber-300 font-semibold">Proficient</span>. It will also show on
+              your results page.
             </p>
             <div className="mt-5 flex justify-end gap-2">
               <button
@@ -131,16 +150,25 @@ function HintControls({
       )}
 
       {stage === 'shown' && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Formula hint">
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Formula hint"
+        >
           <button
             type="button"
             className="absolute inset-0 bg-black/60"
             aria-label="Close"
-            onClick={() => { /* dismiss only — already marked used */ }}
+            onClick={() => {
+              /* dismiss only — already marked used */
+            }}
           />
           <div className="relative bg-[#111111] border border-white/15 rounded-2xl p-6 max-w-md w-[88%] mx-4 shadow-2xl animate-fade-in">
             <div className="flex items-start justify-between gap-3 mb-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">Formula</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">
+                Formula
+              </p>
               <button
                 type="button"
                 onClick={() => setStage('idle')}
@@ -150,11 +178,17 @@ function HintControls({
                 ×
               </button>
             </div>
-            <p className="text-[15px] font-mono text-[#f5f3ee] leading-relaxed whitespace-pre-wrap">{hint}</p>
+            <p className="text-[15px] font-mono text-[#f5f3ee] leading-relaxed whitespace-pre-wrap">
+              {hint}
+            </p>
             {footnote && (
               <div className="mt-4 pt-3 border-t border-white/10">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1.5">Glossary</p>
-                <p className="text-[12px] text-white/65 leading-relaxed whitespace-pre-wrap">{footnote}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1.5">
+                  Glossary
+                </p>
+                <p className="text-[12px] text-white/65 leading-relaxed whitespace-pre-wrap">
+                  {footnote}
+                </p>
               </div>
             )}
             <div className="mt-5 flex justify-end">
@@ -190,7 +224,7 @@ function NumericRangeView({
 }) {
   // formula variable state (when present)
   const [vars, setVars] = useState<Record<string, number | ''>>(() =>
-    seedVariables(spec.formula?.variables ?? [], carryForward),
+    seedVariables(spec.formula?.variables ?? [], carryForward)
   )
 
   // direct numeric field state (when no formula, the candidate types the
@@ -240,7 +274,7 @@ function NumericRangeView({
   }
 
   const ready = spec.formula
-    ? spec.formula.variables.every(v => typeof vars[v.name] === 'number')
+    ? spec.formula.variables.every((v) => typeof vars[v.name] === 'number')
     : typeof direct === 'number'
 
   return (
@@ -249,7 +283,16 @@ function NumericRangeView({
         prompt={spec.prompt}
         context={spec.context}
         field={spec.field}
-        hint={spec.hint ? <HintControls hint={spec.hint} footnote={spec.hintFootnote} nodeId={node.nodeId} onHintUsed={onHintUsed} /> : null}
+        hint={
+          spec.hint ? (
+            <HintControls
+              hint={spec.hint}
+              footnote={spec.hintFootnote}
+              nodeId={node.nodeId}
+              onHintUsed={onHintUsed}
+            />
+          ) : null
+        }
       />
 
       {spec.formula ? (
@@ -279,11 +322,7 @@ function NumericRangeView({
       )}
 
       {submitted && (
-        <BandFeedback
-          band={submitted.band}
-          userValue={submitted.value}
-          field={spec.field}
-        />
+        <BandFeedback band={submitted.band} userValue={submitted.value} field={spec.field} />
       )}
 
       {/* Hide the Submit button entirely after submission — SimulationPage
@@ -297,9 +336,11 @@ function NumericRangeView({
             disabled={!ready}
             className={`
               font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
-              ${ready
-                ? 'bg-green hover:bg-green-light text-white cursor-pointer'
-                : 'bg-white/10 text-slate-light cursor-not-allowed'}
+              ${
+                ready
+                  ? 'bg-green hover:bg-green-light text-white cursor-pointer'
+                  : 'bg-white/10 text-slate-light cursor-not-allowed'
+              }
             `}
           >
             Submit answer
@@ -326,10 +367,10 @@ function StructuredView({
   onHintUsed?: (nodeId: string) => void
 }) {
   const [vars, setVars] = useState<Record<string, number | ''>>(() =>
-    seedVariables(spec.formula?.variables ?? [], carryForward),
+    seedVariables(spec.formula?.variables ?? [], carryForward)
   )
-  const [fieldValues, setFieldValues] = useState<Record<string, number | ''>>(
-    () => Object.fromEntries(spec.fields.map(f => [f.id, ''])),
+  const [fieldValues, setFieldValues] = useState<Record<string, number | ''>>(() =>
+    Object.fromEntries(spec.fields.map((f) => [f.id, '']))
   )
   const [submitted, setSubmitted] = useState<QuantFieldResult[] | null>(null)
 
@@ -341,12 +382,12 @@ function StructuredView({
       const band = classifyAnswer(v, f.acceptedRange)
       results.push({ fieldId: f.id, modelAnswer: f.modelAnswer, userAnswer: v, band })
     }
-    const worst = worstBand(results.map(r => r.band))
+    const worst = worstBand(results.map((r) => r.band))
     const signals = signalsFromBand(worst, node.quantSignalDimensions ?? ['Quantitative Accuracy'])
     setSubmitted(results)
     onSubmit({
       answer: {
-        fields: Object.fromEntries(results.map(r => [r.fieldId, r.userAnswer])),
+        fields: Object.fromEntries(results.map((r) => [r.fieldId, r.userAnswer])),
         ...(spec.formula ? { variables: numericVars(vars) } : {}),
       },
       results,
@@ -354,14 +395,23 @@ function StructuredView({
     })
   }
 
-  const ready = spec.fields.every(f => typeof fieldValues[f.id] === 'number')
+  const ready = spec.fields.every((f) => typeof fieldValues[f.id] === 'number')
 
   return (
     <div className="space-y-5">
       <QuestionHeader
         prompt={spec.prompt}
         context={spec.context}
-        hint={spec.hint ? <HintControls hint={spec.hint} footnote={spec.hintFootnote} nodeId={node.nodeId} onHintUsed={onHintUsed} /> : null}
+        hint={
+          spec.hint ? (
+            <HintControls
+              hint={spec.hint}
+              footnote={spec.hintFootnote}
+              nodeId={node.nodeId}
+              onHintUsed={onHintUsed}
+            />
+          ) : null
+        }
       />
 
       {spec.formula && (
@@ -376,7 +426,7 @@ function StructuredView({
       )}
 
       <div className="bg-[#0d0d0d] border border-white/10 rounded-2xl p-5 space-y-4">
-        {spec.fields.map(f => (
+        {spec.fields.map((f) => (
           <QuantNumberInput
             key={f.id}
             id={`${node.nodeId}-${f.id}`}
@@ -385,17 +435,15 @@ function StructuredView({
             unit={f.unit}
             format={f.format}
             value={fieldValues[f.id] ?? ''}
-            onChange={(next) =>
-              setFieldValues((prev) => ({ ...prev, [f.id]: next }))
-            }
+            onChange={(next) => setFieldValues((prev) => ({ ...prev, [f.id]: next }))}
           />
         ))}
       </div>
 
       {submitted && (
         <div className="space-y-2">
-          {submitted.map(r => {
-            const f = spec.fields.find(x => x.id === r.fieldId)!
+          {submitted.map((r) => {
+            const f = spec.fields.find((x) => x.id === r.fieldId)!
             return <BandFeedback key={r.fieldId} band={r.band} userValue={r.userAnswer} field={f} />
           })}
         </div>
@@ -409,9 +457,11 @@ function StructuredView({
             disabled={!ready}
             className={`
               font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
-              ${ready
-                ? 'bg-green hover:bg-green-light text-white cursor-pointer'
-                : 'bg-white/10 text-slate-light cursor-not-allowed'}
+              ${
+                ready
+                  ? 'bg-green hover:bg-green-light text-white cursor-pointer'
+                  : 'bg-white/10 text-slate-light cursor-not-allowed'
+              }
             `}
           >
             Submit answers
@@ -438,17 +488,13 @@ function QuestionHeader({
   return (
     <div className="bg-[#111111] border border-white/10 rounded-2xl p-5">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
-          Quant
-        </p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Quant</p>
         {hint}
       </div>
       <p className="mt-1 text-[16px] font-display font-semibold text-[#f5f3ee] leading-snug">
         {prompt}
       </p>
-      {context && (
-        <p className="mt-2 text-[14px] text-white/70 leading-relaxed">{context}</p>
-      )}
+      {context && <p className="mt-2 text-[14px] text-white/70 leading-relaxed">{context}</p>}
       {field?.unit && (
         <p className="mt-3 text-[11px] text-white/40">
           Answer in <span className="text-white/70">{field.unit}</span>
@@ -485,7 +531,8 @@ function BandFeedback({
             {formatQuantValue(field.modelAnswer, field.format, field.unit)}
           </p>
           <p className="text-[10px] text-white/40 mt-0.5">
-            Accepted band: {formatQuantValue(field.acceptedRange.min, field.format, field.unit)} – {formatQuantValue(field.acceptedRange.max, field.format, field.unit)}
+            Accepted band: {formatQuantValue(field.acceptedRange.min, field.format, field.unit)} –{' '}
+            {formatQuantValue(field.acceptedRange.max, field.format, field.unit)}
           </p>
         </div>
       </div>
@@ -502,7 +549,7 @@ function BandFeedback({
 
 function seedVariables(
   variables: { name: string; defaultValue?: number; source?: { nodeId: string } }[],
-  carryForward: Record<string, { value: number; from: string }>,
+  carryForward: Record<string, { value: number; from: string }>
 ): Record<string, number | ''> {
   const out: Record<string, number | ''> = {}
   for (const v of variables) {
@@ -526,8 +573,9 @@ function numericVars(vars: Record<string, number | ''>): Record<string, number> 
 }
 
 function worstBand(bands: QuantBandHit[]): QuantBandHit {
-  if (bands.some(b => b === 'low' || b === 'high')) return bands.find(b => b !== 'ideal' && b !== 'accepted')!
-  if (bands.some(b => b === 'accepted')) return 'accepted'
+  if (bands.some((b) => b === 'low' || b === 'high'))
+    return bands.find((b) => b !== 'ideal' && b !== 'accepted')!
+  if (bands.some((b) => b === 'accepted')) return 'accepted'
   return 'ideal'
 }
 

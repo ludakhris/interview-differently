@@ -30,10 +30,7 @@ export function SegmentationMatrix({ exhibit }: { exhibit: SegmentationMatrixExh
 
           {/* 2x2 grid */}
           <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-2">
-            <Quadrant
-              items={exhibit.quadrants.topLeft}
-              label={exhibit.quadrantLabels?.topLeft}
-            />
+            <Quadrant items={exhibit.quadrants.topLeft} label={exhibit.quadrantLabels?.topLeft} />
             <Quadrant
               items={exhibit.quadrants.topRight}
               label={exhibit.quadrantLabels?.topRight}
@@ -77,9 +74,7 @@ function Quadrant({
   return (
     <div
       className={`rounded-lg border p-3 min-h-[100px] ${
-        accent
-          ? 'bg-[#4ea58a14] border-[#4ea58a55]'
-          : 'bg-white/3 border-white/10'
+        accent ? 'bg-[#4ea58a14] border-[#4ea58a55]' : 'bg-white/3 border-white/10'
       }`}
     >
       {label && (
@@ -95,9 +90,7 @@ function Quadrant({
         {items.map((it, i) => (
           <li key={i}>
             <p className="text-[14px] font-medium text-[#f5f3ee] leading-snug">{it.label}</p>
-            {it.caption && (
-              <p className="text-[12px] text-white/55 leading-snug">{it.caption}</p>
-            )}
+            {it.caption && <p className="text-[12px] text-white/55 leading-snug">{it.caption}</p>}
           </li>
         ))}
       </ul>

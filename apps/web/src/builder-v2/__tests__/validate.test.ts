@@ -17,7 +17,12 @@ function base(): Scenario {
         type: 'decision',
         narrative: 'Pick one',
         choices: [
-          { id: 'A', text: 'Yes', nextNodeId: '', qualitySignals: [{ dimension: 'Judgment', quality: 'strong' }] },
+          {
+            id: 'A',
+            text: 'Yes',
+            nextNodeId: '',
+            qualitySignals: [{ dimension: 'Judgment', quality: 'strong' }],
+          },
           { id: 'B', text: 'No', nextNodeId: '', qualitySignals: [] },
         ],
       },
@@ -26,7 +31,7 @@ function base(): Scenario {
   }
 }
 
-const messages = (s: Scenario) => validateScenarioDoc(s).map(i => `${i.level}:${i.message}`)
+const messages = (s: Scenario) => validateScenarioDoc(s).map((i) => `${i.level}:${i.message}`)
 
 describe('validateScenarioDoc', () => {
   it('passes a minimal complete scenario', () => {
@@ -46,8 +51,8 @@ describe('validateScenarioDoc', () => {
     s.briefing.situation = ''
     s.rubric.dimensions = []
     const issues = validateScenarioDoc(s)
-    expect(issues.every(i => i.where?.kind === 'setup')).toBe(true)
-    expect(issues.map(i => i.message)).toEqual([
+    expect(issues.every((i) => i.where?.kind === 'setup')).toBe(true)
+    expect(issues.map((i) => i.message)).toEqual([
       'The briefing needs a situation — it is the first thing the candidate reads.',
       'Add at least one rubric dimension — scoring has nothing to measure.',
     ])
@@ -63,23 +68,36 @@ describe('validateScenarioDoc', () => {
       quant: {
         variant: 'numeric-range',
         prompt: 'How many?',
-        field: { id: 'n', label: 'Count', acceptedRange: { min: 10, max: 5, idealMin: 20, idealMax: 30 }, modelAnswer: 100 },
-        formula: { expression: '{a} * {b}', variables: [{ name: 'a', label: 'A', source: { nodeId: 'gone' } }] },
+        field: {
+          id: 'n',
+          label: 'Count',
+          acceptedRange: { min: 10, max: 5, idealMin: 20, idealMax: 30 },
+          modelAnswer: 100,
+        },
+        formula: {
+          expression: '{a} * {b}',
+          variables: [{ name: 'a', label: 'A', source: { nodeId: 'gone' } }],
+        },
       },
     })
     const m = messages(s)
-    expect(m.some(x => /accepted range must run low to high/.test(x))).toBe(true)
-    expect(m.some(x => /model answer sits outside/.test(x))).toBe(true)
-    expect(m.some(x => /ideal band must sit inside/.test(x))).toBe(true)
-    expect(m.some(x => /formula uses "b" but no such variable/.test(x))).toBe(true)
-    expect(m.some(x => /carries forward from a question that was deleted/.test(x))).toBe(true)
+    expect(m.some((x) => /accepted range must run low to high/.test(x))).toBe(true)
+    expect(m.some((x) => /model answer sits outside/.test(x))).toBe(true)
+    expect(m.some((x) => /ideal band must sit inside/.test(x))).toBe(true)
+    expect(m.some((x) => /formula uses "b" but no such variable/.test(x))).toBe(true)
+    expect(m.some((x) => /carries forward from a question that was deleted/.test(x))).toBe(true)
   })
 
   it('sql questions need a prompt, dataset, and reference query', () => {
     const s = base()
     s.phases![0].nodeIds.push('sql1')
-    s.nodes.push({ nodeId: 'sql1', type: 'sql', narrative: '', sql: { prompt: '', datasetSlug: '', referenceSql: '' } })
-    const m = messages(s).filter(x => x.includes('SQL question'))
+    s.nodes.push({
+      nodeId: 'sql1',
+      type: 'sql',
+      narrative: '',
+      sql: { prompt: '', datasetSlug: '', referenceSql: '' },
+    })
+    const m = messages(s).filter((x) => x.includes('SQL question'))
     expect(m).toHaveLength(3)
   })
 
@@ -88,7 +106,7 @@ describe('validateScenarioDoc', () => {
     s.nodes.push({ nodeId: 'orphan', type: 'transition', narrative: 'Back', nextNodeId: 'd1' })
     s.exhibits = [{ id: 'x1', kind: 'text-exhibit', title: 'Memo', blocks: [] } as never]
     const issues = validateScenarioDoc(s)
-    expect(issues.map(i => i.level)).toEqual(['warning', 'warning'])
+    expect(issues.map((i) => i.level)).toEqual(['warning', 'warning'])
     expect(hasBlockingIssues(issues)).toBe(false)
   })
 

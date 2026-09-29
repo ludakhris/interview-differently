@@ -16,7 +16,7 @@ interface Props {
   title: string
   caption?: string
   footnote?: string
-  badge?: string                       // e.g. 'Table', 'Chart', 'Matrix'
+  badge?: string // e.g. 'Table', 'Chart', 'Matrix'
   children: ReactNode
   bodyClassName?: string
 }

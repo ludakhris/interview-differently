@@ -27,10 +27,7 @@ export function PhaseStepper({ phases, accentColor = '#0f5b89' }: PhaseStepperPr
             <li key={p.phase.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <PhaseChip view={p} accentColor={accentColor} />
               {i < phases.length - 1 && (
-                <span
-                  className="h-px w-4 sm:w-8 bg-white/15 flex-shrink-0"
-                  aria-hidden
-                />
+                <span className="h-px w-4 sm:w-8 bg-white/15 flex-shrink-0" aria-hidden />
               )}
             </li>
           ))}

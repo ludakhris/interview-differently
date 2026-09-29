@@ -15,7 +15,11 @@ export interface CohortToolState {
   enabled: boolean
 }
 
-async function authedFetch(getToken: GetToken, path: string, init: RequestInit = {}): Promise<Response> {
+async function authedFetch(
+  getToken: GetToken,
+  path: string,
+  init: RequestInit = {}
+): Promise<Response> {
   const token = await getToken()
   if (!token) throw new Error('Not signed in')
   const res = await fetch(`${API_URL}/api${path}`, {
@@ -30,7 +34,8 @@ async function authedFetch(getToken: GetToken, path: string, init: RequestInit =
     let message = `${res.status} ${res.statusText}`
     try {
       const body = (await res.json()) as { message?: string | string[] }
-      if (body.message) message = Array.isArray(body.message) ? body.message.join(', ') : body.message
+      if (body.message)
+        message = Array.isArray(body.message) ? body.message.join(', ') : body.message
     } catch {
       // not json — keep status text
     }
@@ -44,12 +49,20 @@ export async function fetchMyTools(getToken: GetToken): Promise<ToolKey[]> {
   return res.json() as Promise<ToolKey[]>
 }
 
-export async function listCohortTools(getToken: GetToken, cohortId: string): Promise<CohortToolState[]> {
+export async function listCohortTools(
+  getToken: GetToken,
+  cohortId: string
+): Promise<CohortToolState[]> {
   const res = await authedFetch(getToken, `/admin/cohorts/${cohortId}/tools`)
   return res.json() as Promise<CohortToolState[]>
 }
 
-export async function setCohortTool(getToken: GetToken, cohortId: string, toolKey: ToolKey, enabled: boolean): Promise<void> {
+export async function setCohortTool(
+  getToken: GetToken,
+  cohortId: string,
+  toolKey: ToolKey,
+  enabled: boolean
+): Promise<void> {
   await authedFetch(getToken, `/admin/cohorts/${cohortId}/tools/${toolKey}`, {
     method: 'PUT',
     body: JSON.stringify({ enabled }),

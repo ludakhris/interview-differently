@@ -34,7 +34,9 @@ abstract class LocalDiskStorageBase {
 
   async delete(key: string): Promise<void> {
     const target = path.join(this.root, key)
-    await fs.unlink(target).catch(() => {/* ignore */})
+    await fs.unlink(target).catch(() => {
+      /* ignore */
+    })
   }
 
   /** Read a file from disk — used by the scenario-media controller's static handler. */
@@ -51,7 +53,9 @@ abstract class LocalDiskStorageBase {
 
 @Injectable()
 export class LocalDiskPublicStorage extends LocalDiskStorageBase implements PublicMediaStorage {
-  constructor() { super(LocalDiskPublicStorage.name) }
+  constructor() {
+    super(LocalDiskPublicStorage.name)
+  }
 
   async upload(key: string, buffer: Buffer): Promise<string> {
     await this.writeFile(key, buffer)
@@ -61,7 +65,9 @@ export class LocalDiskPublicStorage extends LocalDiskStorageBase implements Publ
 
 @Injectable()
 export class LocalDiskPrivateStorage extends LocalDiskStorageBase implements PrivateMediaStorage {
-  constructor() { super(LocalDiskPrivateStorage.name) }
+  constructor() {
+    super(LocalDiskPrivateStorage.name)
+  }
 
   async upload(key: string, buffer: Buffer): Promise<void> {
     await this.writeFile(key, buffer)

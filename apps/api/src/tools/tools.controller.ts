@@ -13,7 +13,7 @@ interface AuthedRequest {
 export class ToolsAdminController {
   constructor(
     private readonly service: ToolsService,
-    private readonly scope: InstitutionScope,
+    private readonly scope: InstitutionScope
   ) {}
 
   @Get()
@@ -30,7 +30,7 @@ export class ToolsAdminController {
     @Req() req: AdminRequest,
     @Param('cohortId') cohortId: string,
     @Param('toolKey') toolKey: string,
-    @Body() body: { enabled: boolean },
+    @Body() body: { enabled: boolean }
   ): Promise<void> {
     await this.scope.assertCohort(req, cohortId)
     await this.service.setForCohort(cohortId, toolKey, body.enabled)

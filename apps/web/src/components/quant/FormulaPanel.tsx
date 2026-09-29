@@ -40,22 +40,20 @@ export function FormulaPanel({
 
   const computed = useMemo(
     () => evaluateFormula(formula.expression, { variables: numericValues }),
-    [formula.expression, numericValues],
+    [formula.expression, numericValues]
   )
 
   return (
     <div className="bg-[#0d0d0d] border border-white/10 rounded-2xl p-5">
       <header className="mb-4">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
-          Formula
-        </p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Formula</p>
         <p className="mt-1 text-[14px] text-[#f5f3ee] font-medium leading-snug">
           {formula.display ?? formula.expression}
         </p>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {formula.variables.map(v => (
+        {formula.variables.map((v) => (
           <VariableInput
             key={v.name}
             nodeId={nodeId}
@@ -78,11 +76,7 @@ export function FormulaPanel({
         >
           {computed === null
             ? '—'
-            : formatQuantValue(
-                computed,
-                resultFormat ?? 'decimal',
-                resultUnit,
-              )}
+            : formatQuantValue(computed, resultFormat ?? 'decimal', resultUnit)}
         </p>
       </div>
     </div>
@@ -116,11 +110,7 @@ function VariableInput({
       value={value}
       onChange={onChange}
       hint={hint}
-      placeholder={
-        variable.defaultValue !== undefined
-          ? String(variable.defaultValue)
-          : undefined
-      }
+      placeholder={variable.defaultValue !== undefined ? String(variable.defaultValue) : undefined}
     />
   )
 }

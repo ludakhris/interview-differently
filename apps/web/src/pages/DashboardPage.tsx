@@ -8,7 +8,10 @@ import { TrackIcon } from '@/components/TrackIcon'
 import { useScenarios } from '@/hooks/useScenarios'
 import { useRole } from '@/hooks/useRole'
 import { useProfile } from '@/hooks/useProfile'
-import { fetchImmersiveSessionsForUser, type ImmersiveSessionSummary } from '@/services/immersiveService'
+import {
+  fetchImmersiveSessionsForUser,
+  type ImmersiveSessionSummary,
+} from '@/services/immersiveService'
 import { fetchMyDatasets, type DatasetSummary } from '@/services/datasetsService'
 import { fetchMyTools } from '@/services/toolsService'
 import type { ResultSummary } from '@/services/resultsService'
@@ -16,7 +19,15 @@ import type { Scenario } from '@id/types'
 import { BUSINESS_CASE_SUBCATEGORY_LABELS, TOOL_META, type ToolKey } from '@id/types'
 
 // Track order on the dashboard. Tracks not listed here fall to the end alphabetically.
-const TRACK_ORDER: string[] = ['business case', 'data-analytics', 'operations', 'business', 'risk', 'customer-success', 'general']
+const TRACK_ORDER: string[] = [
+  'business case',
+  'data-analytics',
+  'operations',
+  'business',
+  'risk',
+  'customer-success',
+  'general',
+]
 
 // Sub-category order within the "business case" track. Anything else trails alphabetically.
 const SUBCATEGORY_ORDER: string[] = [
@@ -61,7 +72,11 @@ function groupScenarios(scenarios: Scenario[]) {
     const trackScenarios = byTrack.get(track) ?? []
     if (track === 'business case') {
       const sorted = [...trackScenarios].sort((a, b) =>
-        compareWithOrder(a.subcategory ?? 'uncategorized', b.subcategory ?? 'uncategorized', SUBCATEGORY_ORDER),
+        compareWithOrder(
+          a.subcategory ?? 'uncategorized',
+          b.subcategory ?? 'uncategorized',
+          SUBCATEGORY_ORDER
+        )
       )
       return { track, scenarios: sorted }
     }
@@ -91,10 +106,14 @@ export function DashboardPage() {
     if (!isSignedIn) return
     fetchMyTools(getToken)
       .then(setTools)
-      .catch(() => {/* non-critical — Tools section just stays hidden */})
+      .catch(() => {
+        /* non-critical — Tools section just stays hidden */
+      })
     fetchMyDatasets(getToken)
       .then(setDatasets)
-      .catch(() => {/* non-critical */})
+      .catch(() => {
+        /* non-critical */
+      })
   }, [isSignedIn, getToken])
   const groupedScenarios = useMemo(() => groupScenarios(scenarios), [scenarios])
   const refreshKey = (location.state as { refreshedAt?: number } | null)?.refreshedAt
@@ -105,7 +124,9 @@ export function DashboardPage() {
     if (!isSignedIn || !userId) return
     fetchImmersiveSessionsForUser(userId)
       .then(setImmersiveSessions)
-      .catch(() => {/* non-critical */})
+      .catch(() => {
+        /* non-critical */
+      })
   }, [isSignedIn, userId, refreshKey])
 
   if (isLoading) {
@@ -249,25 +270,40 @@ export function DashboardPage() {
           </h3>
           {!isSignedIn ? (
             <div className="flex items-center gap-3 text-slate-mid">
-              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[16px]">📈</div>
+              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[16px]">
+                📈
+              </div>
               <p className="text-[14px]">Sign in to track your competency scores.</p>
             </div>
           ) : profileLoading ? (
             <p className="text-[13px] text-slate-mid">Loading profile...</p>
           ) : !profile || profile.dimensionAverages.length === 0 ? (
             <div className="flex items-center gap-3 text-slate-mid">
-              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[16px]">📈</div>
-              <p className="text-[14px]">Complete a simulation to see your competency scores appear here.</p>
+              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[16px]">
+                📈
+              </div>
+              <p className="text-[14px]">
+                Complete a simulation to see your competency scores appear here.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
               {profile.dimensionAverages.map((dim) => {
-                const color = dim.averageScore >= 80 ? '#2d9e5f' : dim.averageScore >= 60 ? '#d4830a' : '#c0392b'
+                const color =
+                  dim.averageScore >= 80
+                    ? '#2d9e5f'
+                    : dim.averageScore >= 60
+                      ? '#d4830a'
+                      : '#c0392b'
                 return (
                   <div key={dim.dimension}>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[13px] font-semibold text-[#f5f3ee]">{dim.dimension}</span>
-                      <span className="text-[13px] font-bold" style={{ color }}>{dim.averageScore}</span>
+                      <span className="text-[13px] font-semibold text-[#f5f3ee]">
+                        {dim.dimension}
+                      </span>
+                      <span className="text-[13px] font-bold" style={{ color }}>
+                        {dim.averageScore}
+                      </span>
                     </div>
                     <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                       <div
@@ -291,9 +327,16 @@ export function DashboardPage() {
             <div className="space-y-1">
               {profile.history.map((item: ResultSummary) => {
                 const meta = trackMeta[item.track]
-                const color = item.overallScore >= 80 ? '#2d9e5f' : item.overallScore >= 60 ? '#d4830a' : '#c0392b'
+                const color =
+                  item.overallScore >= 80
+                    ? '#2d9e5f'
+                    : item.overallScore >= 60
+                      ? '#d4830a'
+                      : '#c0392b'
                 const date = new Date(item.completedAt).toLocaleDateString('en-GB', {
-                  day: 'numeric', month: 'short', year: 'numeric',
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
                 })
                 return (
                   <div
@@ -301,14 +344,21 @@ export function DashboardPage() {
                     className="flex items-center justify-between py-3 border-b border-white/5 last:border-0"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: meta?.color ?? '#888' }} />
+                      <div
+                        className="h-2 w-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: meta?.color ?? '#888' }}
+                      />
                       <div>
-                        <p className="text-[13px] font-semibold text-[#f5f3ee]">{item.scenarioTitle}</p>
+                        <p className="text-[13px] font-semibold text-[#f5f3ee]">
+                          {item.scenarioTitle}
+                        </p>
                         <p className="text-[11px] text-slate-mid">{date}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-[13px] font-bold" style={{ color }}>{item.overallScore}</span>
+                      <span className="text-[13px] font-bold" style={{ color }}>
+                        {item.overallScore}
+                      </span>
                       <button
                         onClick={() => navigate(`/scenario/${item.scenarioId}/feedback/${item.id}`)}
                         className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
@@ -338,10 +388,11 @@ export function DashboardPage() {
             <div className="space-y-1">
               {immersiveSessions.map((session) => {
                 const date = new Date(session.createdAt).toLocaleDateString('en-GB', {
-                  day: 'numeric', month: 'short', year: 'numeric',
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
                 })
-                const statusColor =
-                  session.status === 'completed' ? '#2d9e5f' : '#888'
+                const statusColor = session.status === 'completed' ? '#2d9e5f' : '#888'
                 return (
                   <div
                     key={session.id}
@@ -354,17 +405,25 @@ export function DashboardPage() {
                           {session.scenarioId}
                         </p>
                         <p className="text-[11px] text-slate-mid">
-                          {date} · {session._count.responses} response{session._count.responses !== 1 ? 's' : ''}
+                          {date} · {session._count.responses} response
+                          {session._count.responses !== 1 ? 's' : ''}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-[11px] font-medium capitalize" style={{ color: statusColor }}>
+                      <span
+                        className="text-[11px] font-medium capitalize"
+                        style={{ color: statusColor }}
+                      >
                         {session.status}
                       </span>
                       {session.status === 'completed' && (
                         <button
-                          onClick={() => navigate(`/scenario/${session.scenarioId}/immersive/${session.id}/feedback`)}
+                          onClick={() =>
+                            navigate(
+                              `/scenario/${session.scenarioId}/immersive/${session.id}/feedback`
+                            )
+                          }
                           className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
                         >
                           View →
@@ -408,7 +467,9 @@ export function DashboardPage() {
                     key={key}
                     onClick={() => available && navigate(meta.path)}
                     className={`bg-[#111111] rounded-2xl border border-white/10 overflow-hidden transition-all group ${
-                      available ? 'hover:border-white/20 hover:-translate-y-0.5 cursor-pointer' : 'opacity-60'
+                      available
+                        ? 'hover:border-white/20 hover:-translate-y-0.5 cursor-pointer'
+                        : 'opacity-60'
                     }`}
                   >
                     <div className="h-1.5 w-full" style={{ backgroundColor: TOOL_COLOR }} />
@@ -421,10 +482,15 @@ export function DashboardPage() {
                           <Icon size={20} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: TOOL_COLOR }}>
+                          <p
+                            className="text-[10px] font-bold uppercase tracking-[0.18em]"
+                            style={{ color: TOOL_COLOR }}
+                          >
                             {available ? 'Tool' : 'Coming soon'}
                           </p>
-                          <h4 className="mt-0.5 font-display font-bold text-[15px] text-[#f5f3ee] leading-snug">{meta.label}</h4>
+                          <h4 className="mt-0.5 font-display font-bold text-[15px] text-[#f5f3ee] leading-snug">
+                            {meta.label}
+                          </h4>
                         </div>
                       </div>
                       <p className="text-[12px] text-slate-mid leading-relaxed">{blurb}</p>

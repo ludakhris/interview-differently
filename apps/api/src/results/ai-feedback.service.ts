@@ -21,7 +21,7 @@ export class AiFeedbackService {
     rubricDimensions: RubricDimensionInput[],
     dimensionScores: DimensionScoreInput[],
     decisions: DecisionContextInput[],
-    timeoutMs = 25000,
+    timeoutMs = 25000
   ): Promise<AiFeedbackResult> {
     const prompt = buildSimulationFeedbackPrompt(rubricDimensions, dimensionScores, decisions)
     const controller = new AbortController()
@@ -34,7 +34,7 @@ export class AiFeedbackService {
           max_tokens: 1024,
           messages: [{ role: 'user', content: prompt }],
         },
-        { signal: controller.signal },
+        { signal: controller.signal }
       )
       clearTimeout(timer)
       const text = message.content[0].type === 'text' ? message.content[0].text : ''
@@ -47,7 +47,10 @@ export class AiFeedbackService {
   }
 
   private parseResponse(text: string, rubricDimensions: RubricDimensionInput[]): AiFeedbackResult {
-    const cleaned = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim()
+    const cleaned = text
+      .replace(/^```json\s*/i, '')
+      .replace(/```\s*$/i, '')
+      .trim()
     const parsed = JSON.parse(cleaned) as { dimensions: { dimension: string; feedback: string }[] }
     const resultMap = new Map(parsed.dimensions.map((d) => [d.dimension, d.feedback]))
     const dimensions = rubricDimensions.map((rd) => ({

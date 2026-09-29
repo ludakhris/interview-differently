@@ -68,7 +68,7 @@ export class SqlRunnerService {
         `SELECT table_name, column_name, data_type
          FROM information_schema.columns
          WHERE table_schema = 'public'
-         ORDER BY table_name, ordinal_position`,
+         ORDER BY table_name, ordinal_position`
       )
       const tables = new Map<string, SchemaTable>()
       for (const c of cols.rows) {
@@ -131,6 +131,12 @@ export class SqlRunnerService {
     const columns = last.fields.map((f) => f.name)
     const all = last.rows as Record<string, unknown>[]
     const rows = all.slice(0, GRADE_ROW_CAP).map((r) => columns.map((c) => r[c]))
-    return { columns, rows, rowCount: all.length, command: last.command ?? '', truncated: all.length > GRADE_ROW_CAP }
+    return {
+      columns,
+      rows,
+      rowCount: all.length,
+      command: last.command ?? '',
+      truncated: all.length > GRADE_ROW_CAP,
+    }
   }
 }

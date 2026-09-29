@@ -19,7 +19,10 @@ interface Props {
 export function HeroList({ panels, accentColor = '#0f5b89' }: Props) {
   if (panels.length === 0) return null
 
-  const heroIndex = Math.max(0, panels.findIndex(p => p.hero))
+  const heroIndex = Math.max(
+    0,
+    panels.findIndex((p) => p.hero)
+  )
   const hero = panels[heroIndex]
   const rest = panels.filter((_, i) => i !== heroIndex)
   const heroTone = panelTone(hero)
@@ -31,7 +34,9 @@ export function HeroList({ panels, accentColor = '#0f5b89' }: Props) {
         style={{ backgroundImage: `linear-gradient(135deg, ${accentColor}22 0%, #0d0d0d 70%)` }}
       >
         <p className={eyebrow}>{hero.label}</p>
-        <p className={`mt-2 text-[36px] font-display font-extrabold leading-none ${toneText[heroTone]}`}>
+        <p
+          className={`mt-2 text-[36px] font-display font-extrabold leading-none ${toneText[heroTone]}`}
+        >
           {hero.value}
           {hero.unit && (
             <span className="ml-2 text-[16px] font-normal text-white/65 align-baseline">
@@ -40,9 +45,7 @@ export function HeroList({ panels, accentColor = '#0f5b89' }: Props) {
           )}
         </p>
         {hero.caption && (
-          <p className="mt-3 text-[15px] text-white/75 leading-relaxed max-w-md">
-            {hero.caption}
-          </p>
+          <p className="mt-3 text-[15px] text-white/75 leading-relaxed max-w-md">{hero.caption}</p>
         )}
       </div>
 
@@ -59,7 +62,9 @@ export function HeroList({ panels, accentColor = '#0f5b89' }: Props) {
                 <dt className="text-[14px] text-white/65">{p.label}</dt>
                 <dd className={`text-[15px] font-semibold ${toneText[tone]}`}>
                   {p.value}
-                  {p.unit && <span className="ml-1 text-[13px] font-normal text-white/55">{p.unit}</span>}
+                  {p.unit && (
+                    <span className="ml-1 text-[13px] font-normal text-white/55">{p.unit}</span>
+                  )}
                 </dd>
               </div>
             )

@@ -23,7 +23,15 @@ interface Props {
  * an assessment or simulation. Shares one SandboxDb across every question on
  * the page; the caller owns the query text so it can be autosaved.
  */
-export function SqlWorkbench({ db, tables, value, onChange, editorHeight = 160, resultsHeight = 240, autoRun = false }: Props) {
+export function SqlWorkbench({
+  db,
+  tables,
+  value,
+  onChange,
+  editorHeight = 160,
+  resultsHeight = 240,
+  autoRun = false,
+}: Props) {
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState<SandboxResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -39,10 +47,13 @@ export function SqlWorkbench({ db, tables, value, onChange, editorHeight = 160, 
         return
       }
       const { from, to } = view.state.selection.main
-      view.dispatch({ changes: { from, to, insert: text }, selection: { anchor: from + text.length } })
+      view.dispatch({
+        changes: { from, to, insert: text },
+        selection: { anchor: from + text.length },
+      })
       view.focus()
     },
-    [onChange, value],
+    [onChange, value]
   )
 
   const run = useCallback(async () => {
@@ -80,8 +91,14 @@ export function SqlWorkbench({ db, tables, value, onChange, editorHeight = 160, 
         </button>
         <div className="flex items-center gap-3">
           <span className="font-mono text-[11px] text-white/40">
-            {!db ? 'loading dataset…' : result ? `${result.rowCount} row${result.rowCount !== 1 ? 's' : ''} · ${result.durationMs} ms` : ''}
-            {result && result.rowCount > ROW_CAP && <span className="text-amber-400 ml-2">showing first {ROW_CAP}</span>}
+            {!db
+              ? 'loading dataset…'
+              : result
+                ? `${result.rowCount} row${result.rowCount !== 1 ? 's' : ''} · ${result.durationMs} ms`
+                : ''}
+            {result && result.rowCount > ROW_CAP && (
+              <span className="text-amber-400 ml-2">showing first {ROW_CAP}</span>
+            )}
           </span>
           <button
             onClick={() => setShowSchema((v) => !v)}
@@ -96,8 +113,13 @@ export function SqlWorkbench({ db, tables, value, onChange, editorHeight = 160, 
       {/* Schema opens as a left rail beside the editor so the tables stay visible while typing */}
       <div className="flex min-w-0">
         {showSchema && (
-          <aside className="w-[220px] flex-shrink-0 border-r border-white/8 bg-[#0a0a0a] px-3 py-3 overflow-y-auto" style={{ maxHeight: editorHeight + resultsHeight + 1 }}>
-            <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2">Tables — click to insert</p>
+          <aside
+            className="w-[220px] flex-shrink-0 border-r border-white/8 bg-[#0a0a0a] px-3 py-3 overflow-y-auto"
+            style={{ maxHeight: editorHeight + resultsHeight + 1 }}
+          >
+            <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2">
+              Tables — click to insert
+            </p>
             <SchemaTree tables={tables} onPick={insertAtCursor} />
           </aside>
         )}
@@ -111,17 +133,24 @@ export function SqlWorkbench({ db, tables, value, onChange, editorHeight = 160, 
             height={editorHeight}
             placeholder="Write your query here…"
           />
-          <div className="border-t border-white/8 overflow-auto bg-[#0a0a0a]" style={{ maxHeight: resultsHeight }}>
+          <div
+            className="border-t border-white/8 overflow-auto bg-[#0a0a0a]"
+            style={{ maxHeight: resultsHeight }}
+          >
             {error && (
               <div className="m-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 flex gap-2">
                 <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-[12px] text-[#f5f3ee]/85 font-mono whitespace-pre-wrap">{error}</p>
+                <p className="text-[12px] text-[#f5f3ee]/85 font-mono whitespace-pre-wrap">
+                  {error}
+                </p>
               </div>
             )}
             {result ? (
               <ResultsGrid result={result} />
             ) : !error ? (
-              <p className="px-4 py-4 text-[12px] text-white/30">Run your query to check the output before moving on.</p>
+              <p className="px-4 py-4 text-[12px] text-white/30">
+                Run your query to check the output before moving on.
+              </p>
             ) : null}
           </div>
         </div>

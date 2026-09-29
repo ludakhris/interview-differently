@@ -8,7 +8,15 @@
 //   const notify = useNotify()
 //   await notify('Could not load the scenario to export.')
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 
 export interface ConfirmOptions {
   title: string
@@ -25,14 +33,16 @@ interface Pending extends ConfirmOptions {
   resolve: (ok: boolean) => void
 }
 
-const ConfirmContext = createContext<((opts: ConfirmOptions, notice?: boolean) => Promise<boolean>) | null>(null)
+const ConfirmContext = createContext<
+  ((opts: ConfirmOptions, notice?: boolean) => Promise<boolean>) | null
+>(null)
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<Pending | null>(null)
   const confirmBtn = useRef<HTMLButtonElement>(null)
 
   const ask = useCallback((opts: ConfirmOptions, notice = false) => {
-    return new Promise<boolean>(resolve => setPending({ ...opts, notice, resolve }))
+    return new Promise<boolean>((resolve) => setPending({ ...opts, notice, resolve }))
   }, [])
 
   const close = (ok: boolean) => {
@@ -56,17 +66,24 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     <ConfirmContext.Provider value={ask}>
       {children}
       {pending && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4" onClick={() => close(false)}>
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
+          onClick={() => close(false)}
+        >
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="confirm-title"
             className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#111] shadow-2xl"
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="px-6 pt-5 pb-4">
-              <h2 id="confirm-title" className="font-display font-bold text-[16px] text-[#f5f3ee]">{pending.title}</h2>
-              {pending.body && <div className="mt-2 text-[13px] text-white/60 leading-relaxed">{pending.body}</div>}
+              <h2 id="confirm-title" className="font-display font-bold text-[16px] text-[#f5f3ee]">
+                {pending.title}
+              </h2>
+              {pending.body && (
+                <div className="mt-2 text-[13px] text-white/60 leading-relaxed">{pending.body}</div>
+              )}
             </div>
             <div className="px-6 pb-5 flex gap-2 justify-end">
               {!pending.notice && (
@@ -109,5 +126,10 @@ export function useConfirm(): (opts: ConfirmOptions) => Promise<boolean> {
 export function useNotify(): (message: string, title?: string) => Promise<void> {
   const ask = useContext(ConfirmContext)
   if (!ask) throw new Error('useNotify must be used inside <ConfirmProvider>')
-  return useCallback(async (message: string, title = 'Something went wrong') => { await ask({ title, body: message }, true) }, [ask])
+  return useCallback(
+    async (message: string, title = 'Something went wrong') => {
+      await ask({ title, body: message }, true)
+    },
+    [ask]
+  )
 }

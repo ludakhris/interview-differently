@@ -40,23 +40,36 @@ function normalizeRows(r: QueryResult, ordered: boolean): string[] {
   return ordered ? rows : rows.sort()
 }
 
-export function compareResults(student: QueryResult, reference: QueryResult, opts: CompareOptions): CompareOutcome {
+export function compareResults(
+  student: QueryResult,
+  reference: QueryResult,
+  opts: CompareOptions
+): CompareOutcome {
   if (student.columns.length !== reference.columns.length) {
-    return { match: false, reason: `expected ${reference.columns.length} column(s), got ${student.columns.length}` }
+    return {
+      match: false,
+      reason: `expected ${reference.columns.length} column(s), got ${student.columns.length}`,
+    }
   }
   if (opts.strictColumns) {
     const a = student.columns.map((c) => c.toLowerCase())
     const b = reference.columns.map((c) => c.toLowerCase())
-    if (a.join(',') !== b.join(',')) return { match: false, reason: `expected columns ${b.join(', ')}` }
+    if (a.join(',') !== b.join(','))
+      return { match: false, reason: `expected columns ${b.join(', ')}` }
   }
   if (student.rowCount !== reference.rowCount) {
-    return { match: false, reason: `expected ${reference.rowCount} row(s), got ${student.rowCount}` }
+    return {
+      match: false,
+      reason: `expected ${reference.rowCount} row(s), got ${student.rowCount}`,
+    }
   }
-  if (student.truncated || reference.truncated) return { match: false, reason: 'result too large to grade' }
+  if (student.truncated || reference.truncated)
+    return { match: false, reason: 'result too large to grade' }
   const a = normalizeRows(student, opts.ordered)
   const b = normalizeRows(reference, opts.ordered)
   for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return { match: false, reason: opts.ordered ? `row ${i + 1} differs` : 'rows differ' }
+    if (a[i] !== b[i])
+      return { match: false, reason: opts.ordered ? `row ${i + 1} differs` : 'rows differ' }
   }
   return { match: true }
 }

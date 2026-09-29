@@ -3,10 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { DimensionTrendChart } from '@/components/DimensionTrendChart'
-import {
-  fetchStudentDetail,
-  type StudentDetailResponse,
-} from '@/services/analyticsService'
+import { fetchStudentDetail, type StudentDetailResponse } from '@/services/analyticsService'
 
 /**
  * Admin drill-down for a single student inside an institution. Linked from
@@ -76,9 +73,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
     .map((m) => m.cohort?.name)
     .filter((n): n is string => Boolean(n))
   const overallAvg = data.completions.length
-    ? Math.round(
-        data.completions.reduce((s, c) => s + c.overallScore, 0) / data.completions.length,
-      )
+    ? Math.round(data.completions.reduce((s, c) => s + c.overallScore, 0) / data.completions.length)
     : null
 
   return (
@@ -108,13 +103,12 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
       {/* Quick stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MiniStat label="Completions" value={data.completions.length} />
-        <MiniStat
-          label="Avg score"
-          value={overallAvg ?? '—'}
-          accent={scoreColor(overallAvg)}
-        />
+        <MiniStat label="Avg score" value={overallAvg ?? '—'} accent={scoreColor(overallAvg)} />
         <MiniStat label="Immersive sessions" value={data.immersiveSessions.length} />
-        <MiniStat label="Assessments" value={data.assessments.filter((a) => a.submittedAt).length} />
+        <MiniStat
+          label="Assessments"
+          value={data.assessments.filter((a) => a.submittedAt).length}
+        />
       </div>
 
       {/* Per-dimension trend chart */}
@@ -139,7 +133,10 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
               .map((c) => (
                 <li key={c.id} className="py-3 flex items-center justify-between">
                   <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-[#f5f3ee] truncate" title={c.scenarioTitle}>
+                    <p
+                      className="text-[13px] font-semibold text-[#f5f3ee] truncate"
+                      title={c.scenarioTitle}
+                    >
                       {c.scenarioTitle}
                     </p>
                     <p className="text-[11px] text-slate-mid">
@@ -203,7 +200,9 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
       {/* Assessments */}
       {data.assessments.length > 0 && (
         <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">Assessments</h2>
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
+            Assessments
+          </h2>
           <ul className="divide-y divide-white/5">
             {[...data.assessments]
               .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
@@ -212,14 +211,21 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
                   <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0">
                       <p className="text-[13px] text-[#f5f3ee] truncate">
-                        <span className="uppercase tracking-widest text-[10px] text-[#2d9e5f] mr-2">{a.label}</span>
+                        <span className="uppercase tracking-widest text-[10px] text-[#2d9e5f] mr-2">
+                          {a.label}
+                        </span>
                         {a.title}
                       </p>
                       <p className="text-[11px] text-slate-mid">
-                        {a.submittedAt ? `Submitted ${new Date(a.submittedAt).toLocaleDateString()}` : `Started ${new Date(a.startedAt).toLocaleDateString()} · in progress`}
+                        {a.submittedAt
+                          ? `Submitted ${new Date(a.submittedAt).toLocaleDateString()}`
+                          : `Started ${new Date(a.startedAt).toLocaleDateString()} · in progress`}
                       </p>
                     </div>
-                    <span className="font-mono text-[15px] font-semibold" style={{ color: scoreColor(a.percent) }}>
+                    <span
+                      className="font-mono text-[15px] font-semibold"
+                      style={{ color: scoreColor(a.percent) }}
+                    >
                       {a.percent == null ? '—' : `${a.percent}%`}
                     </span>
                   </div>
@@ -227,7 +233,10 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
                     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                       {a.sections.map((sec) => (
                         <span key={sec.title} className="text-[11px] text-slate-mid">
-                          {sec.title} <span className="font-mono text-slate-light">{sec.correct}/{sec.total}</span>
+                          {sec.title}{' '}
+                          <span className="font-mono text-slate-light">
+                            {sec.correct}/{sec.total}
+                          </span>
                         </span>
                       ))}
                     </div>

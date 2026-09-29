@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 
 export interface InstitutionInput {
@@ -28,7 +33,9 @@ function normaliseDomain(raw: string | null | undefined): string | null {
   const trimmed = raw.trim().toLowerCase().replace(/^@/, '')
   if (trimmed === '') return null
   if (!DOMAIN_RE.test(trimmed)) {
-    throw new BadRequestException(`Invalid email domain: "${raw}". Expected something like "example.edu".`)
+    throw new BadRequestException(
+      `Invalid email domain: "${raw}". Expected something like "example.edu".`
+    )
   }
   return trimmed
 }
@@ -92,7 +99,12 @@ export class InstitutionsService {
         data: { name: input.name.trim(), emailDomain },
       })
     } catch (err) {
-      if (typeof err === 'object' && err && 'code' in err && (err as { code: string }).code === 'P2002') {
+      if (
+        typeof err === 'object' &&
+        err &&
+        'code' in err &&
+        (err as { code: string }).code === 'P2002'
+      ) {
         throw new ConflictException(`Email domain "${emailDomain}" is already registered`)
       }
       throw err
@@ -113,7 +125,8 @@ export class InstitutionsService {
     } catch (err) {
       const code = (err as { code?: string }).code
       if (code === 'P2025') throw new NotFoundException(`Institution ${id} not found`)
-      if (code === 'P2002') throw new ConflictException(`Email domain "${data.emailDomain}" is already registered`)
+      if (code === 'P2002')
+        throw new ConflictException(`Email domain "${data.emailDomain}" is already registered`)
       throw err
     }
   }
@@ -126,7 +139,9 @@ export class InstitutionsService {
       if (code === 'P2025') throw new NotFoundException(`Institution ${id} not found`)
       // Datasets / assessments / scenarios reference institutions with ON DELETE RESTRICT (#25 Phase 5).
       if (code === 'P2003') {
-        throw new ConflictException('Institution still owns datasets, assessments, or scenarios — delete or reassign those first')
+        throw new ConflictException(
+          'Institution still owns datasets, assessments, or scenarios — delete or reassign those first'
+        )
       }
       throw err
     }

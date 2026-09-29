@@ -19,9 +19,7 @@ export const KEY_DATA_LAYOUTS = [
 
 export type KeyDataLayout = (typeof KEY_DATA_LAYOUTS)[number]
 
-export function isKeyDataLayout(
-  style: ContextDisplayStyle | undefined,
-): style is KeyDataLayout {
+export function isKeyDataLayout(style: ContextDisplayStyle | undefined): style is KeyDataLayout {
   return !!style && (KEY_DATA_LAYOUTS as readonly string[]).includes(style)
 }
 

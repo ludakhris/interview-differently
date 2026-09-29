@@ -34,7 +34,7 @@ export class ImmersiveSessionsController {
   constructor(
     private readonly service: ImmersiveSessionsService,
     private readonly transcription: TranscriptionService,
-    private readonly clerk: ClerkService,
+    private readonly clerk: ClerkService
   ) {}
 
   @Post()
@@ -67,7 +67,7 @@ export class ImmersiveSessionsController {
     @Req() req: AuthedRequest,
     @Param('sessionId') sessionId: string,
     @Body() body: Record<string, string>,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFile() file?: Express.Multer.File
   ) {
     await this.assertSession(req, sessionId)
     try {
@@ -78,7 +78,7 @@ export class ImmersiveSessionsController {
         body.questionText,
         null,
         null,
-        body.durationSeconds != null ? Number(body.durationSeconds) : null,
+        body.durationSeconds != null ? Number(body.durationSeconds) : null
       )
 
       // Transcribe AND upload to private storage in parallel — both are
@@ -86,8 +86,12 @@ export class ImmersiveSessionsController {
       if (file?.buffer) {
         void this.transcription
           .transcribe(file.buffer, file.originalname)
-          .then(transcript => transcript ? this.service.updateTranscript(response.id, transcript) : null)
-          .catch(() => {/* best effort */})
+          .then((transcript) =>
+            transcript ? this.service.updateTranscript(response.id, transcript) : null
+          )
+          .catch(() => {
+            /* best effort */
+          })
 
         // Preserve the recorder's content-type so playback works for both
         // audio-only and audio+video webm.
@@ -95,7 +99,9 @@ export class ImmersiveSessionsController {
         const ext = contentType.startsWith('video/') ? 'webm' : 'webm'
         void this.service
           .storeResponseMedia(sessionId, response.id, file.buffer, contentType, ext)
-          .catch(() => {/* best effort */})
+          .catch(() => {
+            /* best effort */
+          })
       }
 
       return response
@@ -110,7 +116,7 @@ export class ImmersiveSessionsController {
   async getResponseMediaUrl(
     @Req() req: AuthedRequest,
     @Param('sessionId') sessionId: string,
-    @Param('responseId') responseId: string,
+    @Param('responseId') responseId: string
   ) {
     await this.assertSession(req, sessionId)
     try {
@@ -125,7 +131,7 @@ export class ImmersiveSessionsController {
   async getResponse(
     @Req() req: AuthedRequest,
     @Param('sessionId') sessionId: string,
-    @Param('responseId') responseId: string,
+    @Param('responseId') responseId: string
   ) {
     await this.assertSession(req, sessionId)
     try {

@@ -35,7 +35,16 @@ export function NarrationPlayer({ isPlaying, isMuted, onToggleMute, onReplay }: 
         title="Replay narration"
         className="p-1.5 rounded-lg hover:bg-white/10 text-slate-light hover:text-white transition-colors"
       >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M1.5 8a6.5 6.5 0 1 0 1.4-4" />
           <polyline points="1.5 2 1.5 5.5 5 5.5" />
         </svg>
@@ -48,13 +57,31 @@ export function NarrationPlayer({ isPlaying, isMuted, onToggleMute, onReplay }: 
         className={`p-1.5 rounded-lg hover:bg-white/10 transition-colors ${isMuted ? 'text-amber-400' : 'text-slate-light hover:text-white'}`}
       >
         {isMuted ? (
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M9 3L5 7H2v2h3l4 4V3z" />
             <line x1="12" y1="9" x2="15" y2="12" />
             <line x1="15" y1="9" x2="12" y2="12" />
           </svg>
         ) : (
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M9 3L5 7H2v2h3l4 4V3z" />
             <path d="M12 6a3 3 0 0 1 0 4" />
           </svg>

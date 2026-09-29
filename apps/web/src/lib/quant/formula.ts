@@ -12,10 +12,7 @@ export interface EvalOptions {
   variables: Record<string, number | undefined>
 }
 
-export function evaluateFormula(
-  expression: string,
-  options: EvalOptions,
-): number | null {
+export function evaluateFormula(expression: string, options: EvalOptions): number | null {
   try {
     const tokens = tokenize(expression, options.variables)
     if (tokens === null) return null
@@ -35,10 +32,7 @@ type Token =
   | { kind: 'lparen' }
   | { kind: 'rparen' }
 
-function tokenize(
-  expr: string,
-  vars: Record<string, number | undefined>,
-): Token[] | null {
+function tokenize(expr: string, vars: Record<string, number | undefined>): Token[] | null {
   const tokens: Token[] = []
   let i = 0
   while (i < expr.length) {
@@ -105,7 +99,8 @@ function toRPN(tokens: Token[]): Token[] | null {
       while (
         ops.length &&
         ops[ops.length - 1].kind === 'op' &&
-        PRECEDENCE[(ops[ops.length - 1] as { kind: 'op'; value: '+' | '-' | '*' | '/' }).value] >= PRECEDENCE[t.value]
+        PRECEDENCE[(ops[ops.length - 1] as { kind: 'op'; value: '+' | '-' | '*' | '/' }).value] >=
+          PRECEDENCE[t.value]
       ) {
         output.push(ops.pop() as Token)
       }
@@ -172,7 +167,7 @@ import type { QuantNumberFormat } from '@id/types'
 export function formatQuantValue(
   value: number,
   format: QuantNumberFormat | undefined,
-  unit: string | undefined,
+  unit: string | undefined
 ): string {
   let core: string
   if (format === 'currency') core = `$${value.toLocaleString()}`

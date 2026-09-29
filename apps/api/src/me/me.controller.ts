@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Req, UseGuards } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
 import { MeService } from './me.service'
 
@@ -42,7 +52,10 @@ export class MeController {
 
   @Delete('memberships/:membershipId')
   @HttpCode(204)
-  async leave(@Req() req: AuthedRequest, @Param('membershipId') membershipId: string): Promise<void> {
+  async leave(
+    @Req() req: AuthedRequest,
+    @Param('membershipId') membershipId: string
+  ): Promise<void> {
     await this.service.leave(req.userId, membershipId)
   }
 }

@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Req, UseGuards } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common'
 import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
 import { InstitutionScope, type AdminRequest } from '../auth/scope'
 import { InstitutionsService, type InstitutionInput } from './institutions.service'
@@ -9,7 +20,7 @@ import { InstitutionsService, type InstitutionInput } from './institutions.servi
 export class InstitutionsController {
   constructor(
     private readonly service: InstitutionsService,
-    private readonly scope: InstitutionScope,
+    private readonly scope: InstitutionScope
   ) {}
 
   @Get()

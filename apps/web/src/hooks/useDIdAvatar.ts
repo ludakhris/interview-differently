@@ -11,7 +11,6 @@ interface DIdStreamResponse {
   ice_servers: RTCIceServer[]
 }
 
-
 export interface UseDIdAvatarReturn {
   videoRef: React.RefObject<HTMLVideoElement>
   speak: (text: string, voiceId?: string) => Promise<void>
@@ -53,7 +52,9 @@ export function useDIdAvatar(): UseDIdAvatarReturn {
   }, [])
 
   useEffect(() => {
-    return () => { void disconnect() }
+    return () => {
+      void disconnect()
+    }
   }, [disconnect])
 
   const connect = useCallback(async (sourceUrl: string) => {
@@ -94,17 +95,25 @@ export function useDIdAvatar(): UseDIdAvatarReturn {
             sdpMLineIndex: c.sdpMLineIndex ?? 0,
             sessionId: sessionIdRef.current,
           }),
-        }).catch(() => {/* best effort */})
+        }).catch(() => {
+          /* best effort */
+        })
       }
 
       // connect() waits for stream/ready before resolving — this is D-ID's signal that
       // the stream can accept talk requests. Without it (e.g. no credits), we time out
       // and fall back to voice narration.
       let streamReadyResolve: (() => void) | null = null
-      const streamReadyPromise = new Promise<void>(resolve => { streamReadyResolve = resolve })
+      const streamReadyPromise = new Promise<void>((resolve) => {
+        streamReadyResolve = resolve
+      })
 
       pc.ondatachannel = (event) => {
-        console.log('[D-ID] ondatachannel fired, channel:', event.channel.label, event.channel.readyState)
+        console.log(
+          '[D-ID] ondatachannel fired, channel:',
+          event.channel.label,
+          event.channel.readyState
+        )
         event.channel.onopen = () => console.log('[D-ID] data channel open')
         event.channel.onmessage = (msg) => {
           const raw = msg.data as string
@@ -148,7 +157,7 @@ export function useDIdAvatar(): UseDIdAvatarReturn {
 
       // Wait up to 30 seconds for stream/ready; if it never arrives (e.g. no credits), throw
       const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Avatar timed out — check your D-ID credits')), 30000),
+        setTimeout(() => reject(new Error('Avatar timed out — check your D-ID credits')), 30000)
       )
       await Promise.race([streamReadyPromise, timeout])
     } catch (err) {

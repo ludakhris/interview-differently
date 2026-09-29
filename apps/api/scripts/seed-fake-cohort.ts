@@ -95,20 +95,57 @@ async function confirm(prompt: string): Promise<boolean> {
 // ── seed data templates ────────────────────────────────────────────────────
 
 const FIRST_NAMES = [
-  'Alex', 'Sam', 'Taylor', 'Jordan', 'Casey', 'Riley', 'Morgan', 'Cameron',
-  'Jamie', 'Drew', 'Avery', 'Quinn', 'Reese', 'Skyler', 'Rowan', 'Harper',
-  'Kai', 'Sage', 'River', 'Logan',
+  'Alex',
+  'Sam',
+  'Taylor',
+  'Jordan',
+  'Casey',
+  'Riley',
+  'Morgan',
+  'Cameron',
+  'Jamie',
+  'Drew',
+  'Avery',
+  'Quinn',
+  'Reese',
+  'Skyler',
+  'Rowan',
+  'Harper',
+  'Kai',
+  'Sage',
+  'River',
+  'Logan',
 ]
 const LAST_NAMES = [
-  'Patel', 'Nguyen', 'Garcia', 'Cohen', 'Singh', 'Kim', 'Okafor', 'Hassan',
-  'Andersen', 'Murphy', 'Yamamoto', 'Reyes', 'Schmidt', 'O\'Brien', 'Park',
-  'Williams', 'Rossi', 'Khan', 'Tremblay', 'Petrova',
+  'Patel',
+  'Nguyen',
+  'Garcia',
+  'Cohen',
+  'Singh',
+  'Kim',
+  'Okafor',
+  'Hassan',
+  'Andersen',
+  'Murphy',
+  'Yamamoto',
+  'Reyes',
+  'Schmidt',
+  "O'Brien",
+  'Park',
+  'Williams',
+  'Rossi',
+  'Khan',
+  'Tremblay',
+  'Petrova',
 ]
 // Pulled from track-meta.ts to keep the demo data realistic.
 const TRACKS = ['operations', 'business', 'risk', 'customer-success', 'general']
 const DIMENSIONS = [
-  'Communication', 'Decision Making', 'Stakeholder Management',
-  'Analytical Thinking', 'Risk Assessment',
+  'Communication',
+  'Decision Making',
+  'Stakeholder Management',
+  'Analytical Thinking',
+  'Risk Assessment',
 ]
 
 function pick<T>(arr: T[]): T {
@@ -186,7 +223,9 @@ async function add(args: Args, prisma: PrismaClient, clerk: ClerkClient): Promis
       const msg = err instanceof Error ? err.message : String(err)
       // Clerk surfaces detailed reasons under .errors — log them so users can fix
       // whatever's blocking (often "email address can't be used" for reserved TLDs).
-      const detail = (err as { errors?: Array<{ message?: string; longMessage?: string; code?: string }> }).errors
+      const detail = (
+        err as { errors?: Array<{ message?: string; longMessage?: string; code?: string }> }
+      ).errors
       if (msg.includes('already exists') || msg.includes('taken')) {
         const list = await clerk.users.getUserList({ emailAddress: [email] })
         if (list.data.length === 0) {
@@ -197,8 +236,12 @@ async function add(args: Args, prisma: PrismaClient, clerk: ClerkClient): Promis
         clerkUserId = list.data[0].id
         console.log(`  • clerk user already existed: ${email} (${clerkUserId})`)
       } else {
-        const reasons = detail?.map((e) => `${e.code ?? '?'}: ${e.longMessage ?? e.message ?? ''}`).join('; ')
-        console.warn(`  ! clerk createUser failed for ${email}: ${msg}${reasons ? ` — ${reasons}` : ''}`)
+        const reasons = detail
+          ?.map((e) => `${e.code ?? '?'}: ${e.longMessage ?? e.message ?? ''}`)
+          .join('; ')
+        console.warn(
+          `  ! clerk createUser failed for ${email}: ${msg}${reasons ? ` — ${reasons}` : ''}`
+        )
         skipped++
         continue
       }
@@ -273,7 +316,7 @@ async function add(args: Args, prisma: PrismaClient, clerk: ClerkClient): Promis
   }
 
   console.log(
-    `\n✓ Done. ${createdUsers} users, ${createdAttempts} attempts, ${createdResults} completions, ${skipped} skipped.\n`,
+    `\n✓ Done. ${createdUsers} users, ${createdAttempts} attempts, ${createdResults} completions, ${skipped} skipped.\n`
   )
   console.log(`  View analytics: /admin/institutions/${institution.id}/analytics\n`)
 }
@@ -366,7 +409,7 @@ async function list(prisma: PrismaClient): Promise<void> {
   for (const inst of institutions) {
     console.log(
       `  • ${inst.name}  (domain=${inst.emailDomain ?? 'none'}, ` +
-        `${inst._count.cohorts} cohort(s), ${inst._count.memberships} member(s))`,
+        `${inst._count.cohorts} cohort(s), ${inst._count.memberships} member(s))`
     )
   }
   console.log()

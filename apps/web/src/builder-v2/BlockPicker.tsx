@@ -25,14 +25,38 @@ function DecisionPreview() {
         </p>
         <div className="flex flex-col gap-2">
           {[
-            { id: 'A', text: 'Start with revenue drivers — top-down approach.', quality: 'Strong', color: 'text-emerald-300 bg-emerald-400/10 border-emerald-400/30' },
-            { id: 'B', text: 'Cost structure first, then revenue side.', quality: 'Proficient', color: 'text-teal-300 bg-teal-400/10 border-teal-400/30' },
-            { id: 'C', text: 'Look at competitors to frame the issue.', quality: 'Developing', color: 'text-amber-300 bg-amber-400/10 border-amber-400/30' },
-          ].map(o => (
-            <div key={o.id} className="flex items-start gap-3 px-3 py-2.5 border border-white/[0.06] rounded-lg bg-white/[0.02]">
-              <span className="w-[22px] h-[22px] rounded-[6px] bg-white/[0.06] border border-white/10 text-[11px] font-bold flex items-center justify-center flex-none mt-px">{o.id}</span>
+            {
+              id: 'A',
+              text: 'Start with revenue drivers — top-down approach.',
+              quality: 'Strong',
+              color: 'text-emerald-300 bg-emerald-400/10 border-emerald-400/30',
+            },
+            {
+              id: 'B',
+              text: 'Cost structure first, then revenue side.',
+              quality: 'Proficient',
+              color: 'text-teal-300 bg-teal-400/10 border-teal-400/30',
+            },
+            {
+              id: 'C',
+              text: 'Look at competitors to frame the issue.',
+              quality: 'Developing',
+              color: 'text-amber-300 bg-amber-400/10 border-amber-400/30',
+            },
+          ].map((o) => (
+            <div
+              key={o.id}
+              className="flex items-start gap-3 px-3 py-2.5 border border-white/[0.06] rounded-lg bg-white/[0.02]"
+            >
+              <span className="w-[22px] h-[22px] rounded-[6px] bg-white/[0.06] border border-white/10 text-[11px] font-bold flex items-center justify-center flex-none mt-px">
+                {o.id}
+              </span>
               <span className="flex-1 text-[13px] text-white/80 leading-snug">{o.text}</span>
-              <span className={`flex-none text-[11px] font-semibold border rounded-full px-2 py-0.5 ${o.color}`}>{o.quality}</span>
+              <span
+                className={`flex-none text-[11px] font-semibold border rounded-full px-2 py-0.5 ${o.color}`}
+              >
+                {o.quality}
+              </span>
             </div>
           ))}
         </div>
@@ -47,10 +71,13 @@ function TransitionPreview() {
       <div className="w-full max-w-lg border border-white/10 rounded-[14px] bg-[#111] p-6">
         <div className="flex items-center gap-2 mb-4">
           <span className="text-[13px] text-white/30">↩</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">Redirect / Transition</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">
+            Redirect / Transition
+          </span>
         </div>
         <p className="text-[14px] text-white/65 leading-relaxed italic mb-4">
-          "Interesting angle — but the client's primary concern is the cost structure. Let's focus there before tackling revenue."
+          "Interesting angle — but the client's primary concern is the cost structure. Let's focus
+          there before tackling revenue."
         </p>
         <div className="flex items-center gap-1.5 text-[12px] text-white/30 font-medium">
           <span>Continues to</span>
@@ -66,13 +93,18 @@ function EndingPreview() {
     <div className="w-full h-full flex items-center justify-center p-10 bg-[#0d0d0d]">
       <div className="w-full max-w-lg flex flex-col gap-3">
         <div className="border border-emerald-400/20 rounded-[14px] bg-emerald-400/[0.04] p-5">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-400/60 mb-2">🏁 Strong ending</div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-400/60 mb-2">
+            🏁 Strong ending
+          </div>
           <p className="text-[13px] text-white/70 leading-relaxed">
-            Clear, structured recommendation with supporting financials. The candidate identified the core driver and sized the opportunity correctly.
+            Clear, structured recommendation with supporting financials. The candidate identified
+            the core driver and sized the opportunity correctly.
           </p>
         </div>
         <div className="border border-amber-400/15 rounded-[14px] bg-amber-400/[0.03] p-4">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-amber-400/50 mb-2">🏁 Developing ending</div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-amber-400/50 mb-2">
+            🏁 Developing ending
+          </div>
           <p className="text-[12px] text-white/50 leading-relaxed">
             Recommendation lacked specificity. Framework was sound but conclusions too conservative.
           </p>
@@ -110,19 +142,19 @@ export function BlockPicker({ onPick, onClose }: Props) {
 
   // When group tab switches, auto-select first kind in that group
   useEffect(() => {
-    const first = REGISTRY.find(d => d.group === activeGroup)
+    const first = REGISTRY.find((d) => d.group === activeGroup)
     if (first) setSelectedKind(first.kind)
   }, [activeGroup])
 
-  const groupKinds = REGISTRY.filter(d => d.group === activeGroup)
-  const selected = REGISTRY.find(d => d.kind === selectedKind) ?? groupKinds[0]
+  const groupKinds = REGISTRY.filter((d) => d.group === activeGroup)
+  const selected = REGISTRY.find((d) => d.kind === selectedKind) ?? groupKinds[0]
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
       <div
         className="relative z-10 w-[820px] max-h-[88vh] bg-[#111] border border-white/10 rounded-2xl overflow-hidden flex flex-col shadow-2xl"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-6 pt-5 pb-0 flex-none">
@@ -137,7 +169,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
 
         {/* ── Group tabs ─────────────────────────────────────────────────────── */}
         <div className="flex gap-1 px-6 pt-3 border-b border-white/[0.07] flex-none">
-          {GROUP_TABS.map(tab => (
+          {GROUP_TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveGroup(tab.id)}
@@ -155,7 +187,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
 
         {/* ── Kind selector pills ────────────────────────────────────────────── */}
         <div className="flex gap-2 px-6 py-3 overflow-x-auto flex-none border-b border-white/[0.06]">
-          {groupKinds.map(desc => (
+          {groupKinds.map((desc) => (
             <button
               key={desc.kind}
               onClick={() => setSelectedKind(desc.kind)}

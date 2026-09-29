@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Req, UseGuards } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common'
 import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
 import { InstitutionScope, type AdminRequest } from '../auth/scope'
 import { CohortsService, type AddMemberInput, type CohortInput } from './cohorts.service'
@@ -18,7 +29,7 @@ import { CohortsService, type AddMemberInput, type CohortInput } from './cohorts
 export class CohortsController {
   constructor(
     private readonly service: CohortsService,
-    private readonly scope: InstitutionScope,
+    private readonly scope: InstitutionScope
   ) {}
 
   @Get('institutions/:institutionId/cohorts')
@@ -30,14 +41,22 @@ export class CohortsController {
 
   @Post('institutions/:institutionId/cohorts')
   @InstitutionAdminAllowed()
-  create(@Req() req: AdminRequest, @Param('institutionId') institutionId: string, @Body() body: CohortInput) {
+  create(
+    @Req() req: AdminRequest,
+    @Param('institutionId') institutionId: string,
+    @Body() body: CohortInput
+  ) {
     this.scope.assertInstitution(req, institutionId)
     return this.service.create(institutionId, body)
   }
 
   @Put('cohorts/:cohortId')
   @InstitutionAdminAllowed()
-  async update(@Req() req: AdminRequest, @Param('cohortId') cohortId: string, @Body() body: Partial<CohortInput>) {
+  async update(
+    @Req() req: AdminRequest,
+    @Param('cohortId') cohortId: string,
+    @Body() body: Partial<CohortInput>
+  ) {
     await this.scope.assertCohort(req, cohortId)
     return this.service.update(cohortId, body)
   }
@@ -59,7 +78,11 @@ export class CohortsController {
 
   @Post('cohorts/:cohortId/members')
   @InstitutionAdminAllowed()
-  async addMember(@Req() req: AdminRequest, @Param('cohortId') cohortId: string, @Body() body: AddMemberInput) {
+  async addMember(
+    @Req() req: AdminRequest,
+    @Param('cohortId') cohortId: string,
+    @Body() body: AddMemberInput
+  ) {
     await this.scope.assertCohort(req, cohortId)
     return this.service.addMember(cohortId, body)
   }
@@ -70,7 +93,7 @@ export class CohortsController {
   async removeMember(
     @Req() req: AdminRequest,
     @Param('cohortId') cohortId: string,
-    @Param('membershipId') membershipId: string,
+    @Param('membershipId') membershipId: string
   ): Promise<void> {
     await this.scope.assertCohort(req, cohortId)
     await this.service.removeMember(cohortId, membershipId)
@@ -79,7 +102,10 @@ export class CohortsController {
   /** Full-admin only: promote/demote a member to institution-admin. */
   @Put('users/:userId/role')
   @HttpCode(204)
-  async setRole(@Param('userId') userId: string, @Body() body: { role: 'institution-admin' | null }): Promise<void> {
+  async setRole(
+    @Param('userId') userId: string,
+    @Body() body: { role: 'institution-admin' | null }
+  ): Promise<void> {
     await this.service.setMemberRole(userId, body.role ?? null)
   }
 }

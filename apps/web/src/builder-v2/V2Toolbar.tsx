@@ -16,7 +16,16 @@ interface Props {
   onPreview: () => void
 }
 
-export function V2Toolbar({ title, saveStatus, institutionName, status, onPublish, onTitleChange, onSave, onPreview }: Props) {
+export function V2Toolbar({
+  title,
+  saveStatus,
+  institutionName,
+  status,
+  onPublish,
+  onTitleChange,
+  onSave,
+  onPreview,
+}: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(title)
 
@@ -32,8 +41,8 @@ export function V2Toolbar({ title, saveStatus, institutionName, status, onPublis
     saveStatus === 'saved'
       ? 'text-emerald-400/80 bg-emerald-400/10 border-emerald-400/25'
       : saveStatus === 'saving'
-      ? 'text-white/40 bg-white/5 border-white/10 animate-pulse'
-      : 'text-amber-400/80 bg-amber-400/10 border-amber-400/25'
+        ? 'text-white/40 bg-white/5 border-white/10 animate-pulse'
+        : 'text-amber-400/80 bg-amber-400/10 border-amber-400/25'
 
   return (
     <div className="flex items-center gap-3 px-4 h-[52px] flex-none border-b border-white/10 bg-[#0d0d0d]">
@@ -45,14 +54,20 @@ export function V2Toolbar({ title, saveStatus, institutionName, status, onPublis
         <input
           autoFocus
           value={draft}
-          onChange={e => setDraft(e.target.value)}
+          onChange={(e) => setDraft(e.target.value)}
           onBlur={commitTitle}
-          onKeyDown={e => { if (e.key === 'Enter') commitTitle(); if (e.key === 'Escape') setEditing(false) }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commitTitle()
+            if (e.key === 'Escape') setEditing(false)
+          }}
           className="text-[14px] font-semibold bg-transparent border-b border-emerald-400/60 outline-none text-white min-w-[200px] max-w-[360px] pb-px"
         />
       ) : (
         <button
-          onClick={() => { setDraft(title); setEditing(true) }}
+          onClick={() => {
+            setDraft(title)
+            setEditing(true)
+          }}
           className="text-[14px] font-semibold text-white/90 hover:text-white truncate max-w-[360px] text-left"
         >
           {title}
@@ -60,7 +75,11 @@ export function V2Toolbar({ title, saveStatus, institutionName, status, onPublis
       )}
 
       <span
-        title={institutionName ? `Only ${institutionName} members can see this scenario` : 'Visible to every user'}
+        title={
+          institutionName
+            ? `Only ${institutionName} members can see this scenario`
+            : 'Visible to every user'
+        }
         className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded flex-none ${
           institutionName ? 'bg-green/20 text-green-light' : 'bg-white/10 text-white/50'
         }`}
@@ -88,9 +107,15 @@ export function V2Toolbar({ title, saveStatus, institutionName, status, onPublis
 
       {/* Status + Publish */}
       <span
-        title={status === 'published' ? 'Candidates see the last published version. Re-publish to push your edits.' : 'Not visible to candidates yet'}
+        title={
+          status === 'published'
+            ? 'Candidates see the last published version. Re-publish to push your edits.'
+            : 'Not visible to candidates yet'
+        }
         className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded flex-none ${
-          status === 'published' ? 'bg-emerald-400/15 text-emerald-300' : 'bg-amber-400/15 text-amber-300'
+          status === 'published'
+            ? 'bg-emerald-400/15 text-emerald-300'
+            : 'bg-amber-400/15 text-amber-300'
         }`}
       >
         {status}

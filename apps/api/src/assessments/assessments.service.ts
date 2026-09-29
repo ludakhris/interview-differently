@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { randomBytes } from 'crypto'
 import { Prisma } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
@@ -7,7 +12,12 @@ import { SqlRunnerService, type QueryOutcome } from '../sql-runner/sql-runner.se
 import { AssessmentParseError, parseAssessmentMarkdown, questionIndex } from './parse-markdown'
 import { compareResults } from './grade'
 import { drawCount, drawSection } from './draw'
-import type { AssessmentQuestion, AssessmentSection, ParsedAssessment, SectionScore } from './assessment.types'
+import type {
+  AssessmentQuestion,
+  AssessmentSection,
+  ParsedAssessment,
+  SectionScore,
+} from './assessment.types'
 import type { ContentWhere } from '../datasets/datasets.service'
 
 export interface DeliveryInput {
@@ -27,7 +37,7 @@ export class AssessmentsService {
   constructor(
     private prisma: PrismaService,
     private clerk: ClerkService,
-    private runner: SqlRunnerService,
+    private runner: SqlRunnerService
   ) {}
 
   // ── Admin: import ────────────────────────────────────────────────────────
@@ -40,8 +50,13 @@ export class AssessmentsService {
   async preview(markdown: string, datasetWhere: ContentWhere) {
     const parsed = this.parse(markdown)
     if (!parsed.dataset) return { parsed, datasetId: null, datasetName: null, sqlErrors: [] }
-    const dataset = await this.prisma.dataset.findFirst({ where: { slug: parsed.dataset, ...(datasetWhere ?? {}) } })
-    if (!dataset) throw new BadRequestException(`Dataset "${parsed.dataset}" not found — create it under Admin → Datasets first`)
+    const dataset = await this.prisma.dataset.findFirst({
+      where: { slug: parsed.dataset, ...(datasetWhere ?? {}) },
+    })
+    if (!dataset)
+      throw new BadRequestException(
+        `Dataset "${parsed.dataset}" not found — create it under Admin → Datasets first`
+      )
     const sqlErrors = await this.checkReferenceQueries(dataset.setupSql, parsed.sections)
     return { parsed, datasetId: dataset.id, datasetName: dataset.name, sqlErrors }
   }
@@ -56,17 +71,22 @@ export class AssessmentsService {
     markdown: string,
     datasetWhere: ContentWhere,
     institutionId: string | null,
-    canOverwrite: (owner: string | null) => boolean,
+    canOverwrite: (owner: string | null) => boolean
   ) {
     const { parsed, datasetId, sqlErrors } = await this.preview(markdown, datasetWhere)
     if (sqlErrors.length > 0) {
       throw new BadRequestException(
-        `Reference queries failed: ${sqlErrors.map((e) => `${e.questionId} (${e.error})`).join('; ')}`,
+        `Reference queries failed: ${sqlErrors.map((e) => `${e.questionId} (${e.error})`).join('; ')}`
       )
     }
-    const existing = await this.prisma.assessment.findUnique({ where: { slug: parsed.slug }, select: { institutionId: true } })
+    const existing = await this.prisma.assessment.findUnique({
+      where: { slug: parsed.slug },
+      select: { institutionId: true },
+    })
     if (existing && !canOverwrite(existing.institutionId)) {
-      throw new ForbiddenException(`Slug "${parsed.slug}" belongs to another institution — change the slug`)
+      throw new ForbiddenException(
+        `Slug "${parsed.slug}" belongs to another institution — change the slug`
+      )
     }
     const data = {
       title: parsed.title,
@@ -99,7 +119,7 @@ export class AssessmentsService {
     if (sqlQs.length === 0) return []
     const outcomes = await this.runner.executeMany(
       setupSql,
-      sqlQs.map((q) => (q as { referenceSql: string }).referenceSql),
+      sqlQs.map((q) => (q as { referenceSql: string }).referenceSql)
     )
     return outcomes.flatMap((o, i) => (o.ok ? [] : [{ questionId: sqlQs[i].id, error: o.error }]))
   }
@@ -164,7 +184,9 @@ export class AssessmentsService {
       deliveries: a.deliveries.map((d) => ({
         id: d.id,
         label: d.label,
-        cohort: d.cohort ? { id: d.cohort.id, name: d.cohort.name, institutionName: d.cohort.institution.name } : null,
+        cohort: d.cohort
+          ? { id: d.cohort.id, name: d.cohort.name, institutionName: d.cohort.institution.name }
+          : null,
         opensAt: d.opensAt,
         closesAt: d.closesAt,
         timeLimitMinutes: d.timeLimitMinutes,
@@ -180,7 +202,8 @@ export class AssessmentsService {
     try {
       await this.prisma.assessment.delete({ where: { id } })
     } catch (err) {
-      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException(`Assessment ${id} not found`)
+      if ((err as { code?: string }).code === 'P2025')
+        throw new NotFoundException(`Assessment ${id} not found`)
       throw err
     }
   }
@@ -193,9 +216,13 @@ export class AssessmentsService {
     if (!label) throw new BadRequestException('label is required (e.g. "pre" or "post")')
     const opensAt = input.opensAt ? new Date(input.opensAt) : null
     const closesAt = input.closesAt ? new Date(input.closesAt) : null
-    if (opensAt && closesAt && closesAt <= opensAt) throw new BadRequestException('closesAt must be after opensAt')
+    if (opensAt && closesAt && closesAt <= opensAt)
+      throw new BadRequestException('closesAt must be after opensAt')
     const timeLimitMinutes = input.timeLimitMinutes ?? null
-    if (timeLimitMinutes !== null && !(Number.isInteger(timeLimitMinutes) && timeLimitMinutes > 0)) {
+    if (
+      timeLimitMinutes !== null &&
+      !(Number.isInteger(timeLimitMinutes) && timeLimitMinutes > 0)
+    ) {
       throw new BadRequestException('timeLimitMinutes must be a positive integer')
     }
     const [assessment, cohort] = await Promise.all([
@@ -206,7 +233,9 @@ export class AssessmentsService {
     if (!cohort) throw new NotFoundException(`Cohort ${input.cohortId} not found`)
     // An institution's bank goes only to that institution's cohorts; platform banks go anywhere.
     if (assessment.institutionId && assessment.institutionId !== cohort.institutionId) {
-      throw new BadRequestException("This assessment belongs to another institution — pick one of its own cohorts")
+      throw new BadRequestException(
+        'This assessment belongs to another institution — pick one of its own cohorts'
+      )
     }
     return this.prisma.assessmentDelivery.create({
       data: { assessmentId, cohortId: input.cohortId, label, opensAt, closesAt, timeLimitMinutes },
@@ -217,7 +246,8 @@ export class AssessmentsService {
     try {
       await this.prisma.assessmentDelivery.delete({ where: { id } })
     } catch (err) {
-      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException(`Delivery ${id} not found`)
+      if ((err as { code?: string }).code === 'P2025')
+        throw new NotFoundException(`Delivery ${id} not found`)
       throw err
     }
   }
@@ -232,7 +262,8 @@ export class AssessmentsService {
   async createInvite(deliveryId: string) {
     const d = await this.prisma.assessmentDelivery.findUnique({ where: { id: deliveryId } })
     if (!d) throw new NotFoundException(`Delivery ${deliveryId} not found`)
-    if (!d.cohortId) throw new BadRequestException('This delivery\'s cohort was deleted — no cohort to invite into')
+    if (!d.cohortId)
+      throw new BadRequestException("This delivery's cohort was deleted — no cohort to invite into")
     const cohortId = d.cohortId
     const inviteCode = randomBytes(12).toString('base64url')
     await this.prisma.$transaction([
@@ -248,9 +279,13 @@ export class AssessmentsService {
 
   async revokeInvite(deliveryId: string): Promise<void> {
     try {
-      await this.prisma.assessmentDelivery.update({ where: { id: deliveryId }, data: { inviteCode: null } })
+      await this.prisma.assessmentDelivery.update({
+        where: { id: deliveryId },
+        data: { inviteCode: null },
+      })
     } catch (err) {
-      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException(`Delivery ${deliveryId} not found`)
+      if ((err as { code?: string }).code === 'P2025')
+        throw new NotFoundException(`Delivery ${deliveryId} not found`)
       throw err
     }
   }
@@ -290,11 +325,14 @@ export class AssessmentsService {
       where: { inviteCode: code },
       include: {
         assessment: { select: { title: true, sections: true } },
-        cohort: { select: { name: true, institutionId: true, institution: { select: { name: true } } } },
+        cohort: {
+          select: { name: true, institutionId: true, institution: { select: { name: true } } },
+        },
       },
     })
     // A delivery whose cohort was deleted has nothing to invite into.
-    if (!d || !d.cohort || !d.cohortId) throw new NotFoundException('This invite link is no longer valid')
+    if (!d || !d.cohort || !d.cohortId)
+      throw new NotFoundException('This invite link is no longer valid')
     return { ...d, cohort: d.cohort, cohortId: d.cohortId }
   }
 
@@ -303,11 +341,19 @@ export class AssessmentsService {
     const profile = await this.clerk.getUserProfile(userId)
     await this.prisma.user.upsert({
       where: { id: userId },
-      update: { email: profile?.email ?? undefined, displayName: profile?.displayName ?? undefined },
-      create: { id: userId, email: profile?.email ?? null, displayName: profile?.displayName ?? null },
+      update: {
+        email: profile?.email ?? undefined,
+        displayName: profile?.displayName ?? undefined,
+      },
+      create: {
+        id: userId,
+        email: profile?.email ?? null,
+        displayName: profile?.displayName ?? null,
+      },
     })
     const existing = await this.prisma.membership.findFirst({ where: { userId, cohortId } })
-    if (!existing) await this.prisma.membership.create({ data: { userId, institutionId, cohortId } })
+    if (!existing)
+      await this.prisma.membership.create({ data: { userId, institutionId, cohortId } })
   }
 
   /** Every attempt on a delivery with per-section scores — the admin results table. */
@@ -326,7 +372,10 @@ export class AssessmentsService {
       select: { id: true, email: true, displayName: true },
     })
     const byId = new Map(users.map((u) => [u.id, u]))
-    const sections = (d.assessment.sections as unknown as AssessmentSection[]).map((s) => ({ id: s.id, title: s.title }))
+    const sections = (d.assessment.sections as unknown as AssessmentSection[]).map((s) => ({
+      id: s.id,
+      title: s.title,
+    }))
     // Cohort members who haven't opened it yet, so a live class shows who's missing (#40).
     const started = new Set(d.attempts.map((a) => a.userId))
     const members = d.cohortId
@@ -335,7 +384,9 @@ export class AssessmentsService {
           select: { userId: true, user: { select: { email: true, displayName: true } } },
         })
       : []
-    const notStarted = [...new Map(members.filter((m) => !started.has(m.userId)).map((m) => [m.userId, m])).values()].map((m) => ({
+    const notStarted = [
+      ...new Map(members.filter((m) => !started.has(m.userId)).map((m) => [m.userId, m])).values(),
+    ].map((m) => ({
       userId: m.userId,
       email: m.user.email,
       displayName: m.user.displayName,
@@ -386,9 +437,13 @@ export class AssessmentsService {
     })
     if (!institution) throw new NotFoundException(`Institution ${institutionId} not found`)
     const cohort = cohortId
-      ? await this.prisma.cohort.findFirst({ where: { id: cohortId, institutionId }, select: { id: true, name: true } })
+      ? await this.prisma.cohort.findFirst({
+          where: { id: cohortId, institutionId },
+          select: { id: true, name: true },
+        })
       : null
-    if (cohortId && !cohort) throw new NotFoundException(`Cohort ${cohortId} not found in this institution`)
+    if (cohortId && !cohort)
+      throw new NotFoundException(`Cohort ${cohortId} not found in this institution`)
 
     const deliveries = await this.prisma.assessmentDelivery.findMany({
       where: { cohort: { institutionId, ...(cohortId ? { id: cohortId } : {}) } },
@@ -405,7 +460,10 @@ export class AssessmentsService {
 
     // Group by (assessment, cohort); newest matching delivery wins per side.
     type D = (typeof deliveries)[number]
-    const groups = new Map<string, { assessment: D['assessment']; cohort: D['cohort']; pre?: D; post?: D }>()
+    const groups = new Map<
+      string,
+      { assessment: D['assessment']; cohort: D['cohort']; pre?: D; post?: D }
+    >()
     for (const d of deliveries) {
       const key = `${d.assessmentId}:${d.cohortId}`
       const g = groups.get(key) ?? { assessment: d.assessment, cohort: d.cohort }
@@ -425,16 +483,29 @@ export class AssessmentsService {
     const pairs = [...groups.values()]
       .filter((g) => g.pre || g.post)
       .map((g) => {
-        const sections = (g.assessment.sections as unknown as AssessmentSection[]).map((s) => ({ id: s.id, title: s.title }))
-        const side = (d?: D) => new Map((d?.attempts ?? []).map((a) => [a.userId, pctBySection(a.sectionScores as unknown as SectionScore[] | null)]))
+        const sections = (g.assessment.sections as unknown as AssessmentSection[]).map((s) => ({
+          id: s.id,
+          title: s.title,
+        }))
+        const side = (d?: D) =>
+          new Map(
+            (d?.attempts ?? []).map((a) => [
+              a.userId,
+              pctBySection(a.sectionScores as unknown as SectionScore[] | null),
+            ])
+          )
         const pre = side(g.pre)
         const post = side(g.post)
-        const minutes = (d?: D) => new Map((d?.attempts ?? []).map((a) => [a.userId, minutesTaken(a)]))
+        const minutes = (d?: D) =>
+          new Map((d?.attempts ?? []).map((a) => [a.userId, minutesTaken(a)]))
         const preMin = minutes(g.pre)
         const postMin = minutes(g.post)
         const ids = [...new Set([...pre.keys(), ...post.keys()])].sort((a, b) => {
-          const ua = userById.get(a), ub = userById.get(b)
-          return (ua?.displayName ?? ua?.email ?? a).localeCompare(ub?.displayName ?? ub?.email ?? b)
+          const ua = userById.get(a),
+            ub = userById.get(b)
+          return (ua?.displayName ?? ua?.email ?? a).localeCompare(
+            ub?.displayName ?? ub?.email ?? b
+          )
         })
         const keys = ['overall', ...sections.map((s) => s.id)]
         const students = ids.map((userId, index) => {
@@ -455,7 +526,12 @@ export class AssessmentsService {
         })
         const both = students.filter((st) => st.pre && st.post)
         const avg = (rows: Record<string, number>[]) =>
-          Object.fromEntries(keys.map((k) => [k, rows.length ? Math.round(rows.reduce((n, r) => n + r[k], 0) / rows.length) : null]))
+          Object.fromEntries(
+            keys.map((k) => [
+              k,
+              rows.length ? Math.round(rows.reduce((n, r) => n + r[k], 0) / rows.length) : null,
+            ])
+          )
         return {
           assessmentId: g.assessment.id,
           assessmentTitle: g.assessment.title,
@@ -463,16 +539,28 @@ export class AssessmentsService {
           cohort: g.cohort,
           sections,
           pre: g.pre
-            ? { deliveryId: g.pre.id, label: g.pre.label, submittedCount: pre.size, medianMinutes: median([...preMin.values()]) }
+            ? {
+                deliveryId: g.pre.id,
+                label: g.pre.label,
+                submittedCount: pre.size,
+                medianMinutes: median([...preMin.values()]),
+              }
             : null,
           post: g.post
-            ? { deliveryId: g.post.id, label: g.post.label, submittedCount: post.size, medianMinutes: median([...postMin.values()]) }
+            ? {
+                deliveryId: g.post.id,
+                label: g.post.label,
+                submittedCount: post.size,
+                medianMinutes: median([...postMin.values()]),
+              }
             : null,
           averages: {
             pre: avg([...pre.values()]),
             post: avg([...post.values()]),
             // paired: same students on both sides
-            delta: avg(both.map((st) => Object.fromEntries(keys.map((k) => [k, st.post![k] - st.pre![k]])))),
+            delta: avg(
+              both.map((st) => Object.fromEntries(keys.map((k) => [k, st.post![k] - st.pre![k]])))
+            ),
             pairedCount: both.length,
           },
           students,
@@ -492,7 +580,11 @@ export class AssessmentsService {
   async listForUser(userId: string) {
     const isAdmin = await this.clerk.isAdmin(userId)
     const rows = await this.prisma.assessmentDelivery.findMany({
-      where: isAdmin ? {} : { OR: [{ cohort: this.assessmentsCohortFor(userId) }, { attempts: { some: { userId } } }] },
+      where: isAdmin
+        ? {}
+        : {
+            OR: [{ cohort: this.assessmentsCohortFor(userId) }, { attempts: { some: { userId } } }],
+          },
       orderBy: [{ opensAt: 'asc' }, { createdAt: 'asc' }],
       include: {
         assessment: { select: { title: true, sections: true } },
@@ -532,15 +624,24 @@ export class AssessmentsService {
     })
     if (!d) throw new NotFoundException(`Delivery ${deliveryId} not found`)
     // Own attempt first: a student keeps access to their paper even after the cohort is gone.
-    const existing = await this.prisma.assessmentAttempt.findUnique({ where: { deliveryId_userId: { deliveryId, userId } } })
+    const existing = await this.prisma.assessmentAttempt.findUnique({
+      where: { deliveryId_userId: { deliveryId, userId } },
+    })
     if (existing) return { id: existing.id }
     await this.assertCanSee(userId, d.cohortId)
-    if (!this.isOpen(d, Date.now())) throw new ForbiddenException('This assessment is not open right now')
+    if (!this.isOpen(d, Date.now()))
+      throw new ForbiddenException('This assessment is not open right now')
 
     const sections = d.assessment.sections as unknown as AssessmentSection[]
     const drawnQuestionIds = sections.flatMap((s) => drawSection(s).map((q) => q.id))
     const row = await this.prisma.assessmentAttempt.create({
-      data: { deliveryId, userId, datasetHash: d.assessment.dataset?.setupHash ?? null, drawnQuestionIds, answers: {} },
+      data: {
+        deliveryId,
+        userId,
+        datasetHash: d.assessment.dataset?.setupHash ?? null,
+        drawnQuestionIds,
+        answers: {},
+      },
     })
     return { id: row.id }
   }
@@ -589,7 +690,10 @@ export class AssessmentsService {
       if (typeof value !== 'string') continue
       merged[qid] = value
     }
-    await this.prisma.assessmentAttempt.update({ where: { id: attemptId }, data: { answers: merged } })
+    await this.prisma.assessmentAttempt.update({
+      where: { id: attemptId },
+      data: { answers: merged },
+    })
     return { saved: Object.keys(merged).length }
   }
 
@@ -606,11 +710,18 @@ export class AssessmentsService {
 
     // Run every SQL pair (student, reference) on one fresh instance.
     const sqlIds = drawnIds.filter((id) => index.get(id)?.type === 'sql')
-    const queries = sqlIds.flatMap((id) => [saved[id] ?? '', (index.get(id) as { referenceSql: string }).referenceSql])
+    const queries = sqlIds.flatMap((id) => [
+      saved[id] ?? '',
+      (index.get(id) as { referenceSql: string }).referenceSql,
+    ])
     // SQL questions imply a dataset — the parser refuses a bank with SQL and no dataset.
-    const outcomes = queries.length ? await this.runner.executeMany(a.delivery.assessment.dataset!.setupSql, queries) : []
+    const outcomes = queries.length
+      ? await this.runner.executeMany(a.delivery.assessment.dataset!.setupSql, queries)
+      : []
     const sqlOutcome = new Map<string, { student: QueryOutcome; reference: QueryOutcome }>()
-    sqlIds.forEach((id, i) => sqlOutcome.set(id, { student: outcomes[i * 2], reference: outcomes[i * 2 + 1] }))
+    sqlIds.forEach((id, i) =>
+      sqlOutcome.set(id, { student: outcomes[i * 2], reference: outcomes[i * 2 + 1] })
+    )
 
     const sectionScores: SectionScore[] = sections
       .map((s) => {
@@ -618,16 +729,42 @@ export class AssessmentsService {
         const graded = qs.map((id) => {
           const q = index.get(id)!
           if (q.type !== 'sql') {
-            return { id, type: q.type, correct: (saved[id] ?? '').trim().toUpperCase() === q.answer }
+            return {
+              id,
+              type: q.type,
+              correct: (saved[id] ?? '').trim().toUpperCase() === q.answer,
+            }
           }
           const o = sqlOutcome.get(id)!
-          if (!saved[id]?.trim()) return { id, type: 'sql' as const, correct: false, error: 'no answer' }
-          if (!o.student.ok) return { id, type: 'sql' as const, correct: false, error: o.student.error }
-          if (!o.reference.ok) return { id, type: 'sql' as const, correct: false, error: `reference failed: ${o.reference.error}` }
-          const cmp = compareResults(o.student.result, o.reference.result, { ordered: q.ordered, strictColumns: q.strictColumns })
-          return { id, type: 'sql' as const, correct: cmp.match, ...(cmp.reason ? { error: cmp.reason } : {}) }
+          if (!saved[id]?.trim())
+            return { id, type: 'sql' as const, correct: false, error: 'no answer' }
+          if (!o.student.ok)
+            return { id, type: 'sql' as const, correct: false, error: o.student.error }
+          if (!o.reference.ok)
+            return {
+              id,
+              type: 'sql' as const,
+              correct: false,
+              error: `reference failed: ${o.reference.error}`,
+            }
+          const cmp = compareResults(o.student.result, o.reference.result, {
+            ordered: q.ordered,
+            strictColumns: q.strictColumns,
+          })
+          return {
+            id,
+            type: 'sql' as const,
+            correct: cmp.match,
+            ...(cmp.reason ? { error: cmp.reason } : {}),
+          }
         })
-        return { sectionId: s.id, title: s.title, correct: graded.filter((g) => g.correct).length, total: graded.length, questions: graded }
+        return {
+          sectionId: s.id,
+          title: s.title,
+          correct: graded.filter((g) => g.correct).length,
+          total: graded.length,
+          questions: graded,
+        }
       })
       .filter((s) => s.total > 0)
 
@@ -635,7 +772,11 @@ export class AssessmentsService {
     const submittedLate = deadline ? Date.now() > deadline.getTime() + LATE_GRACE_MS : false
     await this.prisma.assessmentAttempt.update({
       where: { id: attemptId },
-      data: { sectionScores: sectionScores as unknown as object[], submittedAt: new Date(), submittedLate },
+      data: {
+        sectionScores: sectionScores as unknown as object[],
+        submittedAt: new Date(),
+        submittedLate,
+      },
     })
     return this.studentResult(sectionScores)
   }
@@ -657,7 +798,12 @@ export class AssessmentsService {
   private studentResult(scores: SectionScore[]) {
     return {
       overall: overall(scores),
-      sections: scores.map(({ sectionId, title, correct, total }) => ({ sectionId, title, correct, total })),
+      sections: scores.map(({ sectionId, title, correct, total }) => ({
+        sectionId,
+        title,
+        correct,
+        total,
+      })),
     }
   }
 
@@ -673,7 +819,9 @@ export class AssessmentsService {
   private async assertCanSee(userId: string, cohortId: string | null) {
     if (await this.clerk.isAdmin(userId)) return
     if (!cohortId) throw new NotFoundException('Delivery not found')
-    const n = await this.prisma.cohort.count({ where: { id: cohortId, ...this.assessmentsCohortFor(userId) } })
+    const n = await this.prisma.cohort.count({
+      where: { id: cohortId, ...this.assessmentsCohortFor(userId) },
+    })
     if (n === 0) throw new NotFoundException('Delivery not found')
   }
 
@@ -692,7 +840,10 @@ export class AssessmentsService {
   }
 
   /** Earlier of (start + time limit) and the delivery's close, or null when neither applies. */
-  private deadline(d: { closesAt: Date | null; timeLimitMinutes: number | null }, startedAt: Date): Date | null {
+  private deadline(
+    d: { closesAt: Date | null; timeLimitMinutes: number | null },
+    startedAt: Date
+  ): Date | null {
     const candidates: number[] = []
     if (d.timeLimitMinutes) candidates.push(startedAt.getTime() + d.timeLimitMinutes * 60 * 1000)
     if (d.closesAt) candidates.push(d.closesAt.getTime())
@@ -708,7 +859,14 @@ function overall(scores: SectionScore[]) {
 
 function stripAnswer(q: AssessmentQuestion) {
   if (q.type !== 'sql') return { id: q.id, type: q.type, prompt: q.prompt, options: q.options }
-  return { id: q.id, type: 'sql' as const, prompt: q.prompt, ordered: q.ordered, strictColumns: q.strictColumns, ...(q.starterSql ? { starterSql: q.starterSql } : {}) }
+  return {
+    id: q.id,
+    type: 'sql' as const,
+    prompt: q.prompt,
+    ordered: q.ordered,
+    strictColumns: q.strictColumns,
+    ...(q.starterSql ? { starterSql: q.starterSql } : {}),
+  }
 }
 
 /**
@@ -716,14 +874,19 @@ function stripAnswer(q: AssessmentQuestion) {
  * any idle time, which is why summaries use the median rather than the mean.
  */
 function minutesTaken(a: { startedAt: Date; submittedAt: Date | null }): number | null {
-  return a.submittedAt ? Math.round((a.submittedAt.getTime() - a.startedAt.getTime()) / 60000) : null
+  return a.submittedAt
+    ? Math.round((a.submittedAt.getTime() - a.startedAt.getTime()) / 60000)
+    : null
 }
 
 /** Questions with a non-blank saved answer, out of those drawn for this attempt (#40). */
 function progress(a: { drawnQuestionIds: unknown; answers: unknown }) {
   const drawn = (a.drawnQuestionIds as string[]) ?? []
   const answers = (a.answers as Record<string, string> | null) ?? {}
-  return { answeredCount: drawn.filter((q) => answers[q]?.trim()).length, questionCount: drawn.length }
+  return {
+    answeredCount: drawn.filter((q) => answers[q]?.trim()).length,
+    questionCount: drawn.length,
+  }
 }
 
 function median(values: (number | null)[]): number | null {
@@ -738,6 +901,7 @@ function pctBySection(scores: SectionScore[] | null): Record<string, number> {
   const out: Record<string, number> = {}
   const o = overall(scores ?? [])
   out.overall = o.percent
-  for (const s of scores ?? []) out[s.sectionId] = s.total ? Math.round((s.correct / s.total) * 100) : 0
+  for (const s of scores ?? [])
+    out[s.sectionId] = s.total ? Math.round((s.correct / s.total) * 100) : 0
   return out
 }

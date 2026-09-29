@@ -73,7 +73,9 @@ export function AdminInstitutionEngagementPage() {
 
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">Analytics</p>
+            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+              Analytics
+            </p>
             <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
               {detail?.name ?? 'Institution analytics'}
             </h1>
@@ -229,7 +231,10 @@ function ScenarioRow({ row }: { row: ScenarioEngagementRow }) {
       </td>
       <td className="py-2 px-2 text-right text-slate-light">{row.drops}</td>
       <td className="py-2 px-2 text-right text-slate-light">{row.retriedUsers}</td>
-      <td className="py-2 pl-2 text-right font-semibold" style={{ color: scoreColor(row.avgScore) }}>
+      <td
+        className="py-2 pl-2 text-right font-semibold"
+        style={{ color: scoreColor(row.avgScore) }}
+      >
         {row.avgScore ?? '—'}
       </td>
     </tr>

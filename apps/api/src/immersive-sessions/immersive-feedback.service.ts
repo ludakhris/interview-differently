@@ -29,7 +29,7 @@ export class ImmersiveFeedbackService {
   async generateResponseFeedback(
     questionText: string,
     transcript: string,
-    timeoutMs = 20000,
+    timeoutMs = 20000
   ): Promise<ResponseFeedbackResult> {
     const prompt = buildInterviewerFeedbackPrompt(questionText, transcript)
     return this.callClaude<ResponseFeedbackResult>(prompt, 512, timeoutMs)
@@ -37,7 +37,7 @@ export class ImmersiveFeedbackService {
 
   async generateSessionSummary(
     responses: ImmersiveResponseInput[],
-    timeoutMs = 30000,
+    timeoutMs = 30000
   ): Promise<SessionSummaryResult> {
     const prompt = buildInterviewSummaryPrompt(responses)
     return this.callClaude<SessionSummaryResult>(prompt, 1024, timeoutMs)
@@ -54,11 +54,14 @@ export class ImmersiveFeedbackService {
           max_tokens: maxTokens,
           messages: [{ role: 'user', content: prompt }],
         },
-        { signal: controller.signal },
+        { signal: controller.signal }
       )
       clearTimeout(timer)
       const text = message.content[0].type === 'text' ? message.content[0].text : ''
-      const cleaned = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim()
+      const cleaned = text
+        .replace(/^```json\s*/i, '')
+        .replace(/```\s*$/i, '')
+        .trim()
       return { ...(JSON.parse(cleaned) as T), generatedAt: new Date().toISOString() }
     } catch (err) {
       clearTimeout(timer)

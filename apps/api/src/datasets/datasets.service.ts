@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { createHash } from 'crypto'
 import { PrismaService } from '../prisma/prisma.service'
 import { ClerkService } from '../auth/clerk.service'
@@ -14,7 +20,9 @@ export interface DatasetInput {
 }
 
 /** Prisma `where` narrowing content to what an admin may see (undefined = everything). */
-export type ContentWhere = { OR: [{ institutionId: null }, { institutionId: { in: string[] } }] } | undefined
+export type ContentWhere =
+  | { OR: [{ institutionId: null }, { institutionId: { in: string[] } }] }
+  | undefined
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
@@ -31,7 +39,7 @@ export class DatasetsService {
   constructor(
     private prisma: PrismaService,
     private clerk: ClerkService,
-    private runner: SqlRunnerService,
+    private runner: SqlRunnerService
   ) {}
 
   // ── Admin ────────────────────────────────────────────────────────────────
@@ -109,7 +117,8 @@ export class DatasetsService {
     try {
       await this.prisma.dataset.delete({ where: { id } })
     } catch (err) {
-      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException(`Dataset ${id} not found`)
+      if ((err as { code?: string }).code === 'P2025')
+        throw new NotFoundException(`Dataset ${id} not found`)
       throw err
     }
   }
@@ -120,17 +129,25 @@ export class DatasetsService {
    * touched — an institution-admin assigning a platform dataset must not
    * disturb another institution's cohorts.
    */
-  async setCohorts(id: string, cohortIds: string[], withinInstitutions: string[] | null): Promise<void> {
+  async setCohorts(
+    id: string,
+    cohortIds: string[],
+    withinInstitutions: string[] | null
+  ): Promise<void> {
     await this.get(id)
     if (withinInstitutions) {
       const allowed = await this.prisma.cohort.count({
         where: { id: { in: cohortIds }, institutionId: { in: withinInstitutions } },
       })
-      if (allowed !== new Set(cohortIds).size) throw new ForbiddenException('Cohort outside your institutions')
+      if (allowed !== new Set(cohortIds).size)
+        throw new ForbiddenException('Cohort outside your institutions')
     }
     await this.prisma.$transaction([
       this.prisma.cohortDataset.deleteMany({
-        where: { datasetId: id, ...(withinInstitutions ? { cohort: { institutionId: { in: withinInstitutions } } } : {}) },
+        where: {
+          datasetId: id,
+          ...(withinInstitutions ? { cohort: { institutionId: { in: withinInstitutions } } } : {}),
+        },
       }),
       this.prisma.cohortDataset.createMany({
         data: cohortIds.map((cohortId) => ({ cohortId, datasetId: id })),
@@ -146,13 +163,19 @@ export class DatasetsService {
       orderBy: [{ institution: { name: 'asc' } }, { name: 'asc' }],
       include: { institution: { select: { name: true } } },
     })
-    return rows.map((c) => ({ id: c.id, name: c.name, institutionId: c.institutionId, institutionName: c.institution.name }))
+    return rows.map((c) => ({
+      id: c.id,
+      name: c.name,
+      institutionId: c.institutionId,
+      institutionName: c.institution.name,
+    }))
   }
 
   private async prepare(input: DatasetInput) {
     const slug = input.slug?.trim()
     const name = input.name?.trim()
-    if (!slug || !SLUG_RE.test(slug)) throw new BadRequestException('slug must be lowercase letters, digits and hyphens')
+    if (!slug || !SLUG_RE.test(slug))
+      throw new BadRequestException('slug must be lowercase letters, digits and hyphens')
     if (!name) throw new BadRequestException('name is required')
     const schemaSummary = await this.validate(input.setupSql)
     return {
@@ -179,10 +202,22 @@ export class DatasetsService {
         role === 'admin'
           ? {}
           : role === 'institution-admin'
-            ? { OR: [{ institutionId: null }, { institution: { memberships: { some: { userId } } } }] }
+            ? {
+                OR: [
+                  { institutionId: null },
+                  { institution: { memberships: { some: { userId } } } },
+                ],
+              }
             : { cohorts: { some: { cohort: this.sandboxCohortFor(userId) } } },
       orderBy: { name: 'asc' },
-      select: { id: true, slug: true, name: true, description: true, dialect: true, schemaSummary: true },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        dialect: true,
+        schemaSummary: true,
+      },
     })
     return rows
   }
@@ -200,7 +235,9 @@ export class DatasetsService {
     if (role === 'admin') return d
     if (role === 'institution-admin') {
       if (d.institutionId === null) return d
-      const member = await this.prisma.membership.count({ where: { userId, institutionId: d.institutionId } })
+      const member = await this.prisma.membership.count({
+        where: { userId, institutionId: d.institutionId },
+      })
       if (member > 0) return d
     }
     const viaCohort = await this.prisma.cohortDataset.count({
@@ -212,9 +249,13 @@ export class DatasetsService {
   }
 
   private async referencedByPublishedScenario(slug: string): Promise<boolean> {
-    const rows = await this.prisma.scenario.findMany({ where: { status: 'published' }, select: { data: true } })
+    const rows = await this.prisma.scenario.findMany({
+      where: { status: 'published' },
+      select: { data: true },
+    })
     return rows.some((r) => {
-      const nodes = (r.data as { nodes?: { type?: string; sql?: { datasetSlug?: string } }[] }).nodes ?? []
+      const nodes =
+        (r.data as { nodes?: { type?: string; sql?: { datasetSlug?: string } }[] }).nodes ?? []
       return nodes.some((n) => n.type === 'sql' && n.sql?.datasetSlug === slug)
     })
   }

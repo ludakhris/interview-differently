@@ -60,7 +60,7 @@ async function main() {
   if (!args.from || !args.to) {
     console.error(
       'Usage: npm run remap:user -- --from <oldClerkId> --to <newClerkId> [--execute]\n' +
-        'Default mode is dry-run; pass --execute to actually write.',
+        'Default mode is dry-run; pass --execute to actually write.'
     )
     process.exit(1)
   }
@@ -87,7 +87,7 @@ async function main() {
       console.error(
         `New user "${args.to}" not found in the User table.\n` +
           `Sign in on the production site first (any signed-in page triggers /me/sync), ` +
-          `which creates the User mirror row. Then re-run this script.`,
+          `which creates the User mirror row. Then re-run this script.`
       )
       process.exit(1)
     }
@@ -126,9 +126,11 @@ async function main() {
     console.log(`  New user:  ${newUser.email ?? '(no email)'}  ${newUser.displayName ?? ''}\n`)
     console.log(`  Memberships: ${oldMemberships.length} total`)
     console.log(`    • will move: ${moves.length}`)
-    for (const m of moves) console.log(`        - ${m.institution.name}${m.cohort ? ` / ${m.cohort.name}` : ''}`)
+    for (const m of moves)
+      console.log(`        - ${m.institution.name}${m.cohort ? ` / ${m.cohort.name}` : ''}`)
     console.log(`    • will drop (already a member on the new id): ${collisions.length}`)
-    for (const m of collisions) console.log(`        - ${m.institution.name}${m.cohort ? ` / ${m.cohort.name}` : ''}`)
+    for (const m of collisions)
+      console.log(`        - ${m.institution.name}${m.cohort ? ` / ${m.cohort.name}` : ''}`)
     console.log(`  SimulationResult rows: ${results}`)
     console.log(`  SimulationAttempt rows: ${attempts}`)
     console.log(`  ImmersiveSession rows: ${sessions}`)

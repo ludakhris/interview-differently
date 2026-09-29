@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 
 /**
@@ -39,7 +44,10 @@ export class InstitutionScope {
 
   async assertCohort(req: AdminRequest, cohortId: string): Promise<void> {
     if (this.isFullAdmin(req)) return
-    const cohort = await this.prisma.cohort.findUnique({ where: { id: cohortId }, select: { institutionId: true } })
+    const cohort = await this.prisma.cohort.findUnique({
+      where: { id: cohortId },
+      select: { institutionId: true },
+    })
     if (!cohort) throw new NotFoundException(`Cohort ${cohortId} not found`)
     this.assertInstitution(req, cohort.institutionId)
   }
@@ -52,14 +60,18 @@ export class InstitutionScope {
     })
     if (!delivery) throw new NotFoundException(`Delivery ${deliveryId} not found`)
     // Cohort deleted → the delivery belongs to no institution; full admins only.
-    if (!delivery.cohort) throw new ForbiddenException('This delivery no longer belongs to a cohort')
+    if (!delivery.cohort)
+      throw new ForbiddenException('This delivery no longer belongs to a cohort')
     this.assertInstitution(req, delivery.cohort.institutionId)
   }
 
   /** Mutating a scenario (or its media): full admin, or owner institution. */
   async assertScenario(req: AdminRequest, scenarioId: string): Promise<void> {
     if (this.isFullAdmin(req)) return
-    const row = await this.prisma.scenario.findUnique({ where: { scenarioId }, select: { institutionId: true } })
+    const row = await this.prisma.scenario.findUnique({
+      where: { scenarioId },
+      select: { institutionId: true },
+    })
     if (!row) throw new NotFoundException(`Scenario ${scenarioId} not found`)
     this.assertOwns(req, row.institutionId)
   }
@@ -69,7 +81,9 @@ export class InstitutionScope {
   // only by full admins. Set = owned by that institution.
 
   /** Prisma `where` fragment limiting rows to platform + own institutions. */
-  contentWhere(req: AdminRequest): { OR: [{ institutionId: null }, { institutionId: { in: string[] } }] } | undefined {
+  contentWhere(
+    req: AdminRequest
+  ): { OR: [{ institutionId: null }, { institutionId: { in: string[] } }] } | undefined {
     if (this.isFullAdmin(req)) return undefined
     return { OR: [{ institutionId: null }, { institutionId: { in: req.institutionIds ?? [] } }] }
   }
@@ -81,7 +95,8 @@ export class InstitutionScope {
 
   assertOwns(req: AdminRequest, institutionId: string | null): void {
     if (this.isFullAdmin(req)) return
-    if (institutionId === null) throw new ForbiddenException('Platform content is read-only for institution admins')
+    if (institutionId === null)
+      throw new ForbiddenException('Platform content is read-only for institution admins')
     this.assertInstitution(req, institutionId)
   }
 

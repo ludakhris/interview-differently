@@ -1,26 +1,29 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
-import { submitScenarioRequest, type ScenarioRequestPayload } from '@/services/scenarioRequestsService'
+import {
+  submitScenarioRequest,
+  type ScenarioRequestPayload,
+} from '@/services/scenarioRequestsService'
 
 const TRACKS: Array<{ value: string; label: string }> = [
-  { value: '',                  label: 'Not sure yet' },
-  { value: 'operations',        label: 'Operations / Incident Response' },
-  { value: 'business',          label: 'Business / Strategy' },
-  { value: 'risk',              label: 'Risk & Compliance' },
-  { value: 'customer-success',  label: 'Customer Success' },
-  { value: 'general',           label: 'General Judgement & Thinking' },
-  { value: 'custom',            label: 'Something else' },
+  { value: '', label: 'Not sure yet' },
+  { value: 'operations', label: 'Operations / Incident Response' },
+  { value: 'business', label: 'Business / Strategy' },
+  { value: 'risk', label: 'Risk & Compliance' },
+  { value: 'customer-success', label: 'Customer Success' },
+  { value: 'general', label: 'General Judgement & Thinking' },
+  { value: 'custom', label: 'Something else' },
 ]
 
 const inputCls =
   'w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[14px] text-[#f5f3ee] placeholder:text-white/25 focus:outline-none focus:border-white/30 transition-colors'
-const labelCls =
-  'block text-[12px] font-bold uppercase tracking-widest text-white/60 mb-1.5'
-const helpCls =
-  'text-[12px] text-white/35 mb-2 leading-relaxed'
+const labelCls = 'block text-[12px] font-bold uppercase tracking-widest text-white/60 mb-1.5'
+const helpCls = 'text-[12px] text-white/35 mb-2 leading-relaxed'
 const requiredMark = (
-  <span className="text-amber-400 ml-1" aria-label="required">*</span>
+  <span className="text-amber-400 ml-1" aria-label="required">
+    *
+  </span>
 )
 
 export function RequestScenarioPage() {
@@ -33,8 +36,11 @@ export function RequestScenarioPage() {
     hardestMoment: '',
   })
 
-  function update<K extends keyof ScenarioRequestPayload>(key: K, value: ScenarioRequestPayload[K]) {
-    setForm(prev => ({ ...prev, [key]: value }))
+  function update<K extends keyof ScenarioRequestPayload>(
+    key: K,
+    value: ScenarioRequestPayload[K]
+  ) {
+    setForm((prev) => ({ ...prev, [key]: value }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -66,7 +72,7 @@ export function RequestScenarioPage() {
             </h1>
             <p className="text-[15px] text-slate-light leading-relaxed mb-8">
               Thanks for the detail. We'll review it and be in touch within 2 business days.
-              {form.contactEmail && ' We\'ll email you a link to your scenario when it\'s ready.'}
+              {form.contactEmail && " We'll email you a link to your scenario when it's ready."}
             </p>
             <button
               onClick={() => navigate('/dashboard')}
@@ -94,21 +100,35 @@ export function RequestScenarioPage() {
           Help us build your simulation
         </h1>
         <p className="text-[14px] text-slate-light leading-relaxed mb-2">
-          The more specific you are, the better the scenario. Only the first two questions are required —
-          fill what you can, we'll come back with follow-up questions if we need more.
+          The more specific you are, the better the scenario. Only the first two questions are
+          required — fill what you can, we'll come back with follow-up questions if we need more.
         </p>
         <p className="text-[12px] text-white/30 mb-10">
           Takes about 5 minutes. Fields marked {requiredMark} are required.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-
           {/* Honeypot — visually hidden but not display:none (some bots skip those) */}
-          <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', top: 'auto', width: '1px', height: '1px', overflow: 'hidden' }}>
-            <label>Website (leave blank)
-              <input type="text" tabIndex={-1} autoComplete="off"
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              left: '-9999px',
+              top: 'auto',
+              width: '1px',
+              height: '1px',
+              overflow: 'hidden',
+            }}
+          >
+            <label>
+              Website (leave blank)
+              <input
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
                 value={form.honeypot ?? ''}
-                onChange={e => update('honeypot', e.target.value)} />
+                onChange={(e) => update('honeypot', e.target.value)}
+              />
             </label>
           </div>
 
@@ -119,9 +139,10 @@ export function RequestScenarioPage() {
             required
           >
             <textarea
-              required minLength={30}
+              required
+              minLength={30}
               value={form.situation}
-              onChange={e => update('situation', e.target.value)}
+              onChange={(e) => update('situation', e.target.value)}
               rows={6}
               className={`${inputCls} resize-y leading-relaxed`}
               placeholder="What's the situation?"
@@ -130,15 +151,29 @@ export function RequestScenarioPage() {
 
           <div>
             <p className={labelCls}>Candidate's role</p>
-            <p className={helpCls}>Their job title, who they report to, and how long they've been in the role.</p>
+            <p className={helpCls}>
+              Their job title, who they report to, and how long they've been in the role.
+            </p>
             <div className="space-y-2">
-              <input className={inputCls} placeholder="Job title (e.g. Sales Manager)"
-                value={form.role ?? ''} onChange={e => update('role', e.target.value)} />
+              <input
+                className={inputCls}
+                placeholder="Job title (e.g. Sales Manager)"
+                value={form.role ?? ''}
+                onChange={(e) => update('role', e.target.value)}
+              />
               <div className="grid grid-cols-2 gap-2">
-                <input className={inputCls} placeholder="Reports to (e.g. VP of Sales)"
-                  value={form.reportsTo ?? ''} onChange={e => update('reportsTo', e.target.value)} />
-                <input className={inputCls} placeholder="Time in role (e.g. 18 months)"
-                  value={form.timeInRole ?? ''} onChange={e => update('timeInRole', e.target.value)} />
+                <input
+                  className={inputCls}
+                  placeholder="Reports to (e.g. VP of Sales)"
+                  value={form.reportsTo ?? ''}
+                  onChange={(e) => update('reportsTo', e.target.value)}
+                />
+                <input
+                  className={inputCls}
+                  placeholder="Time in role (e.g. 18 months)"
+                  value={form.timeInRole ?? ''}
+                  onChange={(e) => update('timeInRole', e.target.value)}
+                />
               </div>
             </div>
           </div>
@@ -150,7 +185,7 @@ export function RequestScenarioPage() {
           >
             <textarea
               value={form.otherPeople ?? ''}
-              onChange={e => update('otherPeople', e.target.value)}
+              onChange={(e) => update('otherPeople', e.target.value)}
               rows={4}
               className={`${inputCls} resize-y leading-relaxed`}
               placeholder="People in the scene…"
@@ -164,7 +199,7 @@ export function RequestScenarioPage() {
           >
             <textarea
               value={form.metricsContext ?? ''}
-              onChange={e => update('metricsContext', e.target.value)}
+              onChange={(e) => update('metricsContext', e.target.value)}
               rows={5}
               className={`${inputCls} resize-y leading-relaxed font-mono text-[12px]`}
               placeholder="Numbers, tables, alerts…"
@@ -178,7 +213,7 @@ export function RequestScenarioPage() {
           >
             <textarea
               value={form.timePressure ?? ''}
-              onChange={e => update('timePressure', e.target.value)}
+              onChange={(e) => update('timePressure', e.target.value)}
               rows={2}
               className={`${inputCls} resize-y leading-relaxed`}
               placeholder="What's the urgency?"
@@ -192,9 +227,10 @@ export function RequestScenarioPage() {
             required
           >
             <textarea
-              required minLength={20}
+              required
+              minLength={20}
               value={form.hardestMoment}
-              onChange={e => update('hardestMoment', e.target.value)}
+              onChange={(e) => update('hardestMoment', e.target.value)}
               rows={4}
               className={`${inputCls} resize-y leading-relaxed`}
               placeholder="What's the central decision?"
@@ -208,7 +244,7 @@ export function RequestScenarioPage() {
           >
             <textarea
               value={form.temptingWrong ?? ''}
-              onChange={e => update('temptingWrong', e.target.value)}
+              onChange={(e) => update('temptingWrong', e.target.value)}
               rows={3}
               className={`${inputCls} resize-y leading-relaxed`}
               placeholder="The wrong answer that looks right"
@@ -222,7 +258,7 @@ export function RequestScenarioPage() {
           >
             <textarea
               value={form.greatLooksLike ?? ''}
-              onChange={e => update('greatLooksLike', e.target.value)}
+              onChange={(e) => update('greatLooksLike', e.target.value)}
               rows={4}
               className={`${inputCls} resize-y leading-relaxed`}
               placeholder="Concrete behaviours that distinguish a strong response"
@@ -234,11 +270,13 @@ export function RequestScenarioPage() {
             <p className={helpCls}>Helps us pick the right rubric template. Skip if unsure.</p>
             <select
               value={form.track ?? ''}
-              onChange={e => update('track', e.target.value || undefined)}
+              onChange={(e) => update('track', e.target.value || undefined)}
               className={inputCls}
             >
-              {TRACKS.map(t => (
-                <option key={t.value} value={t.value}>{t.label}</option>
+              {TRACKS.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
               ))}
             </select>
           </div>
@@ -247,16 +285,31 @@ export function RequestScenarioPage() {
           <div className="border-t border-white/10 pt-8">
             <p className={labelCls}>Contact (optional)</p>
             <p className={helpCls}>
-              We sometimes have a quick follow-up question while building your scenario. No sales calls — just scenario questions.
+              We sometimes have a quick follow-up question while building your scenario. No sales
+              calls — just scenario questions.
             </p>
             <div className="space-y-2">
-              <input className={inputCls} placeholder="Your name"
-                value={form.contactName ?? ''} onChange={e => update('contactName', e.target.value)} />
+              <input
+                className={inputCls}
+                placeholder="Your name"
+                value={form.contactName ?? ''}
+                onChange={(e) => update('contactName', e.target.value)}
+              />
               <div className="grid grid-cols-2 gap-2">
-                <input type="email" className={inputCls} placeholder="Email"
-                  value={form.contactEmail ?? ''} onChange={e => update('contactEmail', e.target.value)} />
-                <input type="tel" className={inputCls} placeholder="Phone (optional)"
-                  value={form.contactPhone ?? ''} onChange={e => update('contactPhone', e.target.value)} />
+                <input
+                  type="email"
+                  className={inputCls}
+                  placeholder="Email"
+                  value={form.contactEmail ?? ''}
+                  onChange={(e) => update('contactEmail', e.target.value)}
+                />
+                <input
+                  type="tel"
+                  className={inputCls}
+                  placeholder="Phone (optional)"
+                  value={form.contactPhone ?? ''}
+                  onChange={(e) => update('contactPhone', e.target.value)}
+                />
               </div>
             </div>
           </div>
@@ -306,7 +359,10 @@ function Field({
 }) {
   return (
     <div>
-      <p className={labelCls}>{label}{required && requiredMark}</p>
+      <p className={labelCls}>
+        {label}
+        {required && requiredMark}
+      </p>
       <p className={helpCls}>{help}</p>
       {children}
       {example && (

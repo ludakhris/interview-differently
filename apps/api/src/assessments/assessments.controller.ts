@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common'
 import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
 import { InstitutionScope, type AdminRequest } from '../auth/scope'
@@ -13,7 +25,7 @@ interface AuthedRequest {
 export class AssessmentsAdminController {
   constructor(
     private readonly service: AssessmentsService,
-    private readonly scope: InstitutionScope,
+    private readonly scope: InstitutionScope
   ) {}
 
   @Get('assessments')
@@ -30,12 +42,20 @@ export class AssessmentsAdminController {
 
   @Post('assessments/import')
   @InstitutionAdminAllowed()
-  import(@Req() req: AdminRequest, @Body() body: { markdown: string; institutionId?: string | null }) {
+  import(
+    @Req() req: AdminRequest,
+    @Body() body: { markdown: string; institutionId?: string | null }
+  ) {
     const owner = this.scope.ownerFor(req, body.institutionId)
-    return this.service.import(body.markdown, this.scope.contentWhere(req), owner, (existingOwner) => {
-      if (this.scope.isFullAdmin(req)) return true
-      return existingOwner !== null && (req.institutionIds ?? []).includes(existingOwner)
-    })
+    return this.service.import(
+      body.markdown,
+      this.scope.contentWhere(req),
+      owner,
+      (existingOwner) => {
+        if (this.scope.isFullAdmin(req)) return true
+        return existingOwner !== null && (req.institutionIds ?? []).includes(existingOwner)
+      }
+    )
   }
 
   @Get('assessments/:id')
@@ -56,7 +76,11 @@ export class AssessmentsAdminController {
 
   @Post('assessments/:id/deliveries')
   @InstitutionAdminAllowed()
-  async createDelivery(@Req() req: AdminRequest, @Param('id') id: string, @Body() body: DeliveryInput) {
+  async createDelivery(
+    @Req() req: AdminRequest,
+    @Param('id') id: string,
+    @Body() body: DeliveryInput
+  ) {
     this.scope.assertReadable(req, (await this.service.get(id)).institutionId)
     await this.scope.assertCohort(req, body.cohortId)
     return this.service.createDelivery(id, body)
@@ -79,7 +103,11 @@ export class AssessmentsAdminController {
 
   @Get('institutions/:institutionId/assessments')
   @InstitutionAdminAllowed()
-  prePost(@Req() req: AdminRequest, @Param('institutionId') institutionId: string, @Query('cohortId') cohortId?: string) {
+  prePost(
+    @Req() req: AdminRequest,
+    @Param('institutionId') institutionId: string,
+    @Query('cohortId') cohortId?: string
+  ) {
     this.scope.assertInstitution(req, institutionId)
     return this.service.institutionPrePost(institutionId, cohortId || undefined)
   }
@@ -143,12 +171,20 @@ export class AssessmentsMeController {
   }
 
   @Put('attempts/:id/answers')
-  save(@Req() req: AuthedRequest, @Param('id') id: string, @Body() body: { answers: Record<string, string> }) {
+  save(
+    @Req() req: AuthedRequest,
+    @Param('id') id: string,
+    @Body() body: { answers: Record<string, string> }
+  ) {
     return this.service.saveAnswers(req.userId, id, body.answers ?? {})
   }
 
   @Post('attempts/:id/submit')
-  submit(@Req() req: AuthedRequest, @Param('id') id: string, @Body() body: { answers?: Record<string, string> }) {
+  submit(
+    @Req() req: AuthedRequest,
+    @Param('id') id: string,
+    @Body() body: { answers?: Record<string, string> }
+  ) {
     return this.service.submit(req.userId, id, body?.answers)
   }
 

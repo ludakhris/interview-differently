@@ -7,12 +7,15 @@ import { TOOL_KEYS, isToolKey, type ToolKey } from './tool-keys'
 export class ToolsService {
   constructor(
     private prisma: PrismaService,
-    private clerk: ClerkService,
+    private clerk: ClerkService
   ) {}
 
   /** Every known tool with its enabled state for one cohort (missing row = disabled). */
   async listForCohort(cohortId: string): Promise<{ toolKey: ToolKey; enabled: boolean }[]> {
-    const cohort = await this.prisma.cohort.findUnique({ where: { id: cohortId }, include: { tools: true } })
+    const cohort = await this.prisma.cohort.findUnique({
+      where: { id: cohortId },
+      include: { tools: true },
+    })
     if (!cohort) throw new NotFoundException(`Cohort ${cohortId} not found`)
     return TOOL_KEYS.map((toolKey) => ({
       toolKey,

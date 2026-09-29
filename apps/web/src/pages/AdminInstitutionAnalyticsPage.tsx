@@ -73,7 +73,9 @@ export function AdminInstitutionAnalyticsPage() {
 
         <div className="flex items-end justify-between flex-wrap gap-4 mb-8">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">Analytics</p>
+            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+              Analytics
+            </p>
             <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
               {detail?.name ?? 'Institution analytics'}
             </h1>
@@ -134,14 +136,17 @@ function AnalyticsSections({ analytics }: { analytics: InstitutionAnalytics }) {
     <div className="space-y-6">
       {isFiltered && analytics.cohort && (
         <p className="text-[13px] text-slate-light">
-          Showing data for cohort <span className="font-semibold text-[#f5f3ee]">{analytics.cohort.name}</span>.
+          Showing data for cohort{' '}
+          <span className="font-semibold text-[#f5f3ee]">{analytics.cohort.name}</span>.
         </p>
       )}
 
       {/* Stat cards */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Overview</h2>
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+            Overview
+          </h2>
           <CsvButton
             onClick={() =>
               downloadCsv({
@@ -176,16 +181,20 @@ function AnalyticsSections({ analytics }: { analytics: InstitutionAnalytics }) {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatCard label="Students" value={analytics.totalStudents} />
-          <StatCard label="Active (30d)" value={analytics.activeStudentsLast30Days} sublabel="sims, interviews or assessments" />
+          <StatCard
+            label="Active (30d)"
+            value={analytics.activeStudentsLast30Days}
+            sublabel="sims, interviews or assessments"
+          />
           <StatCard label="Completed sims" value={analytics.completedSimulations} />
-          <StatCard label="Assessments" value={analytics.assessmentsSubmitted} sublabel="submitted" />
+          <StatCard
+            label="Assessments"
+            value={analytics.assessmentsSubmitted}
+            sublabel="submitted"
+          />
           <StatCard
             label="Completion rate"
-            value={
-              analytics.completionRate !== null
-                ? `${analytics.completionRate}%`
-                : '—'
-            }
+            value={analytics.completionRate !== null ? `${analytics.completionRate}%` : '—'}
             sublabel={
               analytics.startedSimulations > 0
                 ? `${analytics.startedSimulations} started`
@@ -354,13 +363,15 @@ function CohortBreakdownTable({
         if (b.cohortId === null) return -1
         return a.name.localeCompare(b.name)
       }),
-    [rows],
+    [rows]
   )
 
   return (
     <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">By cohort</h2>
+        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+          By cohort
+        </h2>
         {onExport && sorted.length > 0 && <CsvButton onClick={onExport} />}
       </div>
       {sorted.length === 0 ? (
@@ -378,7 +389,9 @@ function CohortBreakdownTable({
           <tbody>
             {sorted.map((r) => (
               <tr key={r.cohortId ?? 'none'} className="border-b border-white/5 last:border-0">
-                <td className={`py-2 ${r.cohortId === null ? 'italic text-slate-mid' : 'text-[#f5f3ee]'}`}>
+                <td
+                  className={`py-2 ${r.cohortId === null ? 'italic text-slate-mid' : 'text-[#f5f3ee]'}`}
+                >
                   {r.name}
                 </td>
                 <td className="py-2 text-right text-slate-light">{r.totalStudents}</td>

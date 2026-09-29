@@ -47,7 +47,9 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
             Dashboard
           </button>
         )}
-        {isLoaded && isSignedIn && (tools.length > 0 || isAnyAdmin) && <ToolsMenu tools={tools} isAnyAdmin={isAnyAdmin} />}
+        {isLoaded && isSignedIn && (tools.length > 0 || isAnyAdmin) && (
+          <ToolsMenu tools={tools} isAnyAdmin={isAnyAdmin} />
+        )}
         {isLoaded && isSignedIn && isAnyAdmin && (
           <button
             onClick={() => navigate('/builder')}
@@ -64,18 +66,17 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
             Settings
           </button>
         )}
-        {isLoaded && (
-          isSignedIn
-            ? <UserButton afterSignOutUrl="/dashboard" />
-            : (
-              <button
-                onClick={() => navigate('/sign-in')}
-                className="text-[13px] font-semibold text-[#f5f3ee] hover:text-white/70 transition-colors"
-              >
-                Sign in
-              </button>
-            )
-        )}
+        {isLoaded &&
+          (isSignedIn ? (
+            <UserButton afterSignOutUrl="/dashboard" />
+          ) : (
+            <button
+              onClick={() => navigate('/sign-in')}
+              className="text-[13px] font-semibold text-[#f5f3ee] hover:text-white/70 transition-colors"
+            >
+              Sign in
+            </button>
+          ))}
       </div>
     </nav>
   )
@@ -102,7 +103,10 @@ function ToolsMenu({ tools, isAnyAdmin }: { tools: ToolKey[]; isAnyAdmin: boolea
         className="inline-flex items-center gap-1 text-[12px] font-medium text-slate-mid hover:text-[#f5f3ee] transition-colors"
       >
         Tools
-        <ChevronDown size={12} className={`text-white/40 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          size={12}
+          className={`text-white/40 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-white/10 bg-[#111111] shadow-card-lg py-1 z-50">
@@ -121,7 +125,11 @@ function ToolsMenu({ tools, isAnyAdmin }: { tools: ToolKey[]; isAnyAdmin: boolea
               >
                 <p className="text-[13px] font-semibold text-[#f5f3ee]">
                   {meta.label}
-                  {!live && <span className="ml-2 text-[9px] uppercase tracking-widest text-white/40">soon</span>}
+                  {!live && (
+                    <span className="ml-2 text-[9px] uppercase tracking-widest text-white/40">
+                      soon
+                    </span>
+                  )}
                 </p>
                 <p className="text-[11px] text-slate-mid leading-snug">{meta.description}</p>
               </button>
@@ -130,7 +138,9 @@ function ToolsMenu({ tools, isAnyAdmin }: { tools: ToolKey[]; isAnyAdmin: boolea
           {isAnyAdmin && (
             <>
               {tools.length > 0 && <div className="my-1 border-t border-white/8" />}
-              <p className="px-3 pt-1.5 pb-0.5 text-[9px] font-bold uppercase tracking-widest text-white/30">Admin</p>
+              <p className="px-3 pt-1.5 pb-0.5 text-[9px] font-bold uppercase tracking-widest text-white/30">
+                Admin
+              </p>
               {[
                 { label: 'Datasets', path: '/admin/datasets' },
                 { label: 'Assessments', path: '/admin/assessments' },

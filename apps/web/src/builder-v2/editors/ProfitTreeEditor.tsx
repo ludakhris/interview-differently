@@ -4,7 +4,13 @@
 import { useState } from 'react'
 import type { ProfitTreeExhibit, ProfitTreeNode } from '@id/types'
 import {
-  EditShell, Field, TextInput, SelectInput, SectionLabel, AddButton, RemoveButton,
+  EditShell,
+  Field,
+  TextInput,
+  SelectInput,
+  SectionLabel,
+  AddButton,
+  RemoveButton,
 } from './shared'
 
 const TONE_OPTIONS = [
@@ -38,7 +44,7 @@ function NodeRow({
     onUpdate({ ...node, children: [...(node.children ?? []), newNode()] })
   }
   function updateChild(idx: number, updated: ProfitTreeNode) {
-    onUpdate({ ...node, children: (node.children ?? []).map((c, i) => i === idx ? updated : c) })
+    onUpdate({ ...node, children: (node.children ?? []).map((c, i) => (i === idx ? updated : c)) })
   }
   function removeChild(idx: number) {
     onUpdate({ ...node, children: (node.children ?? []).filter((_, i) => i !== idx) })
@@ -49,18 +55,20 @@ function NodeRow({
       <div className="flex gap-2 items-center mb-2">
         <TextInput
           value={node.label}
-          onChange={e => onUpdate({ ...node, label: e.target.value })}
+          onChange={(e) => onUpdate({ ...node, label: e.target.value })}
           placeholder="Node label"
         />
         <TextInput
           value={node.value ?? ''}
-          onChange={e => onUpdate({ ...node, value: e.target.value || undefined })}
+          onChange={(e) => onUpdate({ ...node, value: e.target.value || undefined })}
           placeholder="Value (e.g. $22M)"
         />
         <div className="w-36 flex-none">
           <SelectInput
             value={node.tone ?? ''}
-            onChange={e => onUpdate({ ...node, tone: (e.target.value || undefined) as ProfitTreeNode['tone'] })}
+            onChange={(e) =>
+              onUpdate({ ...node, tone: (e.target.value || undefined) as ProfitTreeNode['tone'] })
+            }
             options={TONE_OPTIONS}
           />
         </div>
@@ -72,7 +80,7 @@ function NodeRow({
           key={child.id}
           node={child}
           depth={depth + 1}
-          onUpdate={updated => updateChild(ci, updated)}
+          onUpdate={(updated) => updateChild(ci, updated)}
           onRemove={() => removeChild(ci)}
         />
       ))}
@@ -93,28 +101,42 @@ export function ProfitTreeEditor({ exhibit, onDone }: Props) {
   const [roots, setRoots] = useState<ProfitTreeNode[]>(exhibit.roots ?? [exhibit.root])
 
   function updateRoot(idx: number, updated: ProfitTreeNode) {
-    setRoots(prev => prev.map((r, i) => i === idx ? updated : r))
+    setRoots((prev) => prev.map((r, i) => (i === idx ? updated : r)))
   }
   function removeRoot(idx: number) {
-    setRoots(prev => prev.filter((_, i) => i !== idx))
+    setRoots((prev) => prev.filter((_, i) => i !== idx))
   }
   function addRoot() {
-    setRoots(prev => [...prev, newNode()])
+    setRoots((prev) => [...prev, newNode()])
   }
 
   function handleDone() {
     // write roots; keep root = first root for backwards compat
-    onDone({ ...exhibit, title, caption: caption || undefined, root: roots[0] ?? exhibit.root, roots })
+    onDone({
+      ...exhibit,
+      title,
+      caption: caption || undefined,
+      root: roots[0] ?? exhibit.root,
+      roots,
+    })
   }
 
   return (
     <EditShell emoji="🌳" kindLabel="Profit Tree" onDone={handleDone}>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Title">
-          <TextInput value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Profit breakdown" />
+          <TextInput
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Profit breakdown"
+          />
         </Field>
         <Field label="Caption">
-          <TextInput value={caption} onChange={e => setCaption(e.target.value)} placeholder="e.g. Trace the driver" />
+          <TextInput
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            placeholder="e.g. Trace the driver"
+          />
         </Field>
       </div>
 
@@ -128,11 +150,7 @@ export function ProfitTreeEditor({ exhibit, onDone }: Props) {
               </span>
               {roots.length > 1 && <RemoveButton onClick={() => removeRoot(i)} />}
             </div>
-            <NodeRow
-              node={root}
-              depth={0}
-              onUpdate={updated => updateRoot(i, updated)}
-            />
+            <NodeRow node={root} depth={0} onUpdate={(updated) => updateRoot(i, updated)} />
           </div>
         ))}
         <AddButton onClick={addRoot} label="Add top-level node" />

@@ -63,7 +63,12 @@ describe('parseAssessmentMarkdown', () => {
   const parsed = parseAssessmentMarkdown(BANK)
 
   it('reads frontmatter', () => {
-    expect(parsed).toMatchObject({ slug: 'demo-bank', title: 'Demo Bank', dataset: 'demo', defaultDraw: 2 })
+    expect(parsed).toMatchObject({
+      slug: 'demo-bank',
+      title: 'Demo Bank',
+      dataset: 'demo',
+      defaultDraw: 2,
+    })
   })
 
   it('splits sections and applies per-section draw', () => {
@@ -71,7 +76,9 @@ describe('parseAssessmentMarkdown', () => {
       ['s1', 'Basics', 1],
       ['s2', 'Joins', 1], // default 2 capped to the 1 usable question, with a warning
     ])
-    expect(parsed.warnings).toContain('Section 2 draws 2 but only has 1 questions — all will be used')
+    expect(parsed.warnings).toContain(
+      'Section 2 draws 2 but only has 1 questions — all will be used'
+    )
   })
 
   it('parses MC options on one line or several, and answers with trailing text', () => {
@@ -79,17 +86,26 @@ describe('parseAssessmentMarkdown', () => {
     expect(q1).toMatchObject({ id: '1.1', type: 'mc', answer: 'B' })
     expect((q1 as { options: unknown[] }).options).toHaveLength(4)
     expect(q2).toMatchObject({ id: '1.2', type: 'mc', answer: 'A' })
-    expect((q2 as { options: { text: string }[] }).options.map((o) => o.text)).toEqual(['Ascending', 'Descending'])
+    expect((q2 as { options: { text: string }[] }).options.map((o) => o.text)).toEqual([
+      'Ascending',
+      'Descending',
+    ])
   })
 
   it('parses Scenario questions as MC with a multi-paragraph setup and code blocks kept verbatim', () => {
-    const q = parsed.sections[0].questions[2] as { id: string; type: string; prompt: string; options: { key: string }[]; answer: string }
+    const q = parsed.sections[0].questions[2] as {
+      id: string
+      type: string
+      prompt: string
+      options: { key: string }[]
+      answer: string
+    }
     expect(q).toMatchObject({ id: '1.3', type: 'scenario', answer: 'A' })
     expect(q.options.map((o) => o.key)).toEqual(['A', 'B', 'C'])
     expect(q.prompt).toBe(
       'A teammate runs this query to find customers with no phone number:\n\n' +
         '```sql\nSELECT * FROM customers WHERE phone = NULL;\n-- A) looks like an option but is code\n```\n\n' +
-        'It returns zero rows. Why?',
+        'It returns zero rows. Why?'
     )
   })
 
@@ -97,7 +113,9 @@ describe('parseAssessmentMarkdown', () => {
     const md = BANK.replace('**1.2 (MC)**', '**1.2 (Essay)**')
     const p = parseAssessmentMarkdown(md)
     expect(p.sections[0].questions.map((q) => q.id)).toEqual(['1.1', '1.3', '1.4'])
-    expect(p.warnings).toContain('Question 1.2 skipped — only MC, Scenario and Hands-On SQL are supported')
+    expect(p.warnings).toContain(
+      'Question 1.2 skipped — only MC, Scenario and Hands-On SQL are supported'
+    )
   })
 
   it('captures SQL reference queries and flags', () => {
@@ -108,7 +126,11 @@ describe('parseAssessmentMarkdown', () => {
       strictColumns: false,
       referenceSql: 'SELECT * FROM customers\nORDER BY signup_date DESC\nLIMIT 5;',
     })
-    expect(parsed.sections[1].questions[0]).toMatchObject({ id: '2.1', ordered: false, strictColumns: true })
+    expect(parsed.sections[1].questions[0]).toMatchObject({
+      id: '2.1',
+      ordered: false,
+      strictColumns: true,
+    })
   })
 
   it('captures an optional starter query and keeps the prompt clean', () => {
@@ -147,20 +169,37 @@ SELECT state, COUNT(*) AS n FROM customers GROUP BY state;
 
   it('rejects structural problems', () => {
     expect(() => parseAssessmentMarkdown('no frontmatter')).toThrow(AssessmentParseError)
-    expect(() => parseAssessmentMarkdown(BANK.replace('**Answer: B**', ''))).toThrow(/1\.1: missing/)
-    expect(() => parseAssessmentMarkdown(BANK.replace('**Answer: B**', '**Answer: Z**'))).toThrow(/not one of the options/)
+    expect(() => parseAssessmentMarkdown(BANK.replace('**Answer: B**', ''))).toThrow(
+      /1\.1: missing/
+    )
+    expect(() => parseAssessmentMarkdown(BANK.replace('**Answer: B**', '**Answer: Z**'))).toThrow(
+      /not one of the options/
+    )
   })
 
   it('joins an option that wraps onto the next line instead of dropping the rest', () => {
-    const md = BANK.replace('B) Descending\n', 'B) Descending, unless the column\nhas an index on it\n')
-    const q = parseAssessmentMarkdown(md).sections[0].questions[1] as { options: { text: string }[] }
-    expect(q.options.map((o) => o.text)).toEqual(['Ascending', 'Descending, unless the column has an index on it'])
+    const md = BANK.replace(
+      'B) Descending\n',
+      'B) Descending, unless the column\nhas an index on it\n'
+    )
+    const q = parseAssessmentMarkdown(md).sections[0].questions[1] as {
+      options: { text: string }[]
+    }
+    expect(q.options.map((o) => o.text)).toEqual([
+      'Ascending',
+      'Descending, unless the column has an index on it',
+    ])
   })
 
   it('makes dataset optional unless the bank has Hands-On SQL', () => {
-    const noSql = BANK.replace('dataset: demo\n', '').replace(/\*\*1\.4 \(Hands-On SQL\)[\s\S]*$/, '')
+    const noSql = BANK.replace('dataset: demo\n', '').replace(
+      /\*\*1\.4 \(Hands-On SQL\)[\s\S]*$/,
+      ''
+    )
     expect(parseAssessmentMarkdown(noSql).dataset).toBeNull()
-    expect(() => parseAssessmentMarkdown(BANK.replace('dataset: demo\n', ''))).toThrow(/needs a dataset/)
+    expect(() => parseAssessmentMarkdown(BANK.replace('dataset: demo\n', ''))).toThrow(
+      /needs a dataset/
+    )
   })
 })
 
@@ -257,17 +296,36 @@ describe('per-type draw', () => {
   })
 
   it('rejects a malformed frontmatter draw', () => {
-    expect(() => parseAssessmentMarkdown(TYPED_BANK.replace('draw: { mc: 2, sql: 1 }', 'draw: lots'))).toThrow(AssessmentParseError)
+    expect(() =>
+      parseAssessmentMarkdown(TYPED_BANK.replace('draw: { mc: 2, sql: 1 }', 'draw: lots'))
+    ).toThrow(AssessmentParseError)
   })
 })
 
 describe('compareResults', () => {
-  const r = (columns: string[], rows: unknown[][]): QueryResult => ({ columns, rows, rowCount: rows.length, command: 'SELECT' })
+  const r = (columns: string[], rows: unknown[][]): QueryResult => ({
+    columns,
+    rows,
+    rowCount: rows.length,
+    command: 'SELECT',
+  })
   const loose = { ordered: false, strictColumns: false }
 
   it('ignores row order and column names by default', () => {
-    const ref = r(['name', 'total'], [['a', '10.00'], ['b', '5.50']])
-    const student = r(['n', 't'], [['b', 5.5], ['a', '10']])
+    const ref = r(
+      ['name', 'total'],
+      [
+        ['a', '10.00'],
+        ['b', '5.50'],
+      ]
+    )
+    const student = r(
+      ['n', 't'],
+      [
+        ['b', 5.5],
+        ['a', '10'],
+      ]
+    )
     expect(compareResults(student, ref, loose)).toEqual({ match: true })
   })
 
@@ -279,8 +337,12 @@ describe('compareResults', () => {
 
   it('enforces column names when flagged, case-insensitively', () => {
     const ref = r(['customer_id'], [[1]])
-    expect(compareResults(r(['CUSTOMER_ID'], [[1]]), ref, { ...loose, strictColumns: true }).match).toBe(true)
-    expect(compareResults(r(['id'], [[1]]), ref, { ...loose, strictColumns: true })).toMatchObject({ match: false })
+    expect(
+      compareResults(r(['CUSTOMER_ID'], [[1]]), ref, { ...loose, strictColumns: true }).match
+    ).toBe(true)
+    expect(compareResults(r(['id'], [[1]]), ref, { ...loose, strictColumns: true })).toMatchObject({
+      match: false,
+    })
   })
 
   it('reports column count and row count mismatches', () => {
@@ -301,10 +363,15 @@ describe('createDelivery institution guard', () => {
   const make = (assessmentInstitutionId: string | null) => {
     const created: unknown[] = []
     const prisma = {
-      assessment: { findUnique: async () => ({ id: 'a1', institutionId: assessmentInstitutionId }) },
+      assessment: {
+        findUnique: async () => ({ id: 'a1', institutionId: assessmentInstitutionId }),
+      },
       cohort: {
         findUnique: async ({ where }: { where: { id: string } }) =>
-          ({ own: { id: 'own', institutionId: 'inst-a' }, other: { id: 'other', institutionId: 'inst-b' } })[where.id] ?? null,
+          ({
+            own: { id: 'own', institutionId: 'inst-a' },
+            other: { id: 'other', institutionId: 'inst-b' },
+          })[where.id] ?? null,
       },
       assessmentDelivery: { create: async (args: unknown) => (created.push(args), { id: 'd1' }) },
     }
@@ -313,22 +380,33 @@ describe('createDelivery institution guard', () => {
 
   it("rejects delivering an institution's bank to another institution's cohort", async () => {
     const { service, created } = make('inst-a')
-    await expect(service.createDelivery('a1', { cohortId: 'other', label: 'pre' })).rejects.toThrow(/another institution/)
+    await expect(service.createDelivery('a1', { cohortId: 'other', label: 'pre' })).rejects.toThrow(
+      /another institution/
+    )
     expect(created).toHaveLength(0)
   })
 
   it("allows the bank's own cohorts, and platform banks anywhere", async () => {
-    await expect(make('inst-a').service.createDelivery('a1', { cohortId: 'own', label: 'pre' })).resolves.toEqual({ id: 'd1' })
-    await expect(make(null).service.createDelivery('a1', { cohortId: 'other', label: 'pre' })).resolves.toEqual({ id: 'd1' })
+    await expect(
+      make('inst-a').service.createDelivery('a1', { cohortId: 'own', label: 'pre' })
+    ).resolves.toEqual({ id: 'd1' })
+    await expect(
+      make(null).service.createDelivery('a1', { cohortId: 'other', label: 'pre' })
+    ).resolves.toEqual({ id: 'd1' })
   })
 })
 
 describe('completion times (#39)', () => {
   it('reads expected_minutes from frontmatter', () => {
     expect(parseAssessmentMarkdown(BANK).expectedMinutes).toBeNull()
-    expect(parseAssessmentMarkdown(BANK.replace('draw: 2\n', 'draw: 2\nexpected_minutes: 30\n')).expectedMinutes).toBe(30)
+    expect(
+      parseAssessmentMarkdown(BANK.replace('draw: 2\n', 'draw: 2\nexpected_minutes: 30\n'))
+        .expectedMinutes
+    ).toBe(30)
     for (const bad of ['0', '-5', '12.5', 'soon']) {
-      expect(() => parseAssessmentMarkdown(BANK.replace('draw: 2\n', `draw: 2\nexpected_minutes: ${bad}\n`))).toThrow(/expected_minutes/)
+      expect(() =>
+        parseAssessmentMarkdown(BANK.replace('draw: 2\n', `draw: 2\nexpected_minutes: ${bad}\n`))
+      ).toThrow(/expected_minutes/)
     }
   })
 
@@ -336,10 +414,38 @@ describe('completion times (#39)', () => {
     const t0 = new Date('2026-09-29T10:00:00Z')
     const at = (min: number) => new Date(t0.getTime() + min * 60000)
     const attempts = [
-      { id: 'a', userId: 'u1', startedAt: t0, submittedAt: at(20), submittedLate: false, sectionScores: null },
-      { id: 'b', userId: 'u2', startedAt: t0, submittedAt: at(34), submittedLate: false, sectionScores: null },
-      { id: 'c', userId: 'u3', startedAt: t0, submittedAt: at(90), submittedLate: false, sectionScores: null },
-      { id: 'd', userId: 'u4', startedAt: t0, submittedAt: null, submittedLate: false, sectionScores: null },
+      {
+        id: 'a',
+        userId: 'u1',
+        startedAt: t0,
+        submittedAt: at(20),
+        submittedLate: false,
+        sectionScores: null,
+      },
+      {
+        id: 'b',
+        userId: 'u2',
+        startedAt: t0,
+        submittedAt: at(34),
+        submittedLate: false,
+        sectionScores: null,
+      },
+      {
+        id: 'c',
+        userId: 'u3',
+        startedAt: t0,
+        submittedAt: at(90),
+        submittedLate: false,
+        sectionScores: null,
+      },
+      {
+        id: 'd',
+        userId: 'u4',
+        startedAt: t0,
+        submittedAt: null,
+        submittedLate: false,
+        sectionScores: null,
+      },
     ]
     const prisma = {
       assessmentDelivery: {
@@ -353,7 +459,11 @@ describe('completion times (#39)', () => {
       },
       user: { findMany: async () => [] },
     }
-    const r = await new AssessmentsService(prisma as never, {} as never, {} as never).deliveryResults('d1')
+    const r = await new AssessmentsService(
+      prisma as never,
+      {} as never,
+      {} as never
+    ).deliveryResults('d1')
     expect(r.delivery).toMatchObject({ expectedMinutes: 30, medianMinutes: 34 })
     expect(r.attempts.map((a) => a.minutes)).toEqual([20, 34, 90, null])
   })
@@ -372,8 +482,15 @@ describe('live progress (#40)', () => {
           assessment: { id: 'x', title: 'T', sections: [], expectedMinutes: null },
           attempts: [
             {
-              id: 'a', userId: 'u1', startedAt: t, submittedAt: null, submittedLate: false, sectionScores: null, updatedAt: t,
-              drawnQuestionIds: ['q1', 'q2', 'q3', 'q4'], answers: { q1: 'B', q2: '  ', q3: 'SELECT 1', stale: 'A' },
+              id: 'a',
+              userId: 'u1',
+              startedAt: t,
+              submittedAt: null,
+              submittedLate: false,
+              sectionScores: null,
+              updatedAt: t,
+              drawnQuestionIds: ['q1', 'q2', 'q3', 'q4'],
+              answers: { q1: 'B', q2: '  ', q3: 'SELECT 1', stale: 'A' },
             },
           ],
         }),
@@ -387,7 +504,11 @@ describe('live progress (#40)', () => {
         ],
       },
     }
-    const r = await new AssessmentsService(prisma as never, {} as never, {} as never).deliveryResults('d1')
+    const r = await new AssessmentsService(
+      prisma as never,
+      {} as never,
+      {} as never
+    ).deliveryResults('d1')
     expect(r.attempts[0]).toMatchObject({ answeredCount: 2, questionCount: 4, lastActivityAt: t })
     expect(r.notStarted).toEqual([{ userId: 'u2', email: 'two@x', displayName: 'Two' }])
   })

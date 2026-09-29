@@ -87,7 +87,7 @@ export class DidController {
         dto.candidate,
         dto.sdpMid,
         dto.sdpMLineIndex,
-        dto.sessionId,
+        dto.sessionId
       )
     } catch {
       throw new HttpException('Failed to send ICE candidate', HttpStatus.SERVICE_UNAVAILABLE)

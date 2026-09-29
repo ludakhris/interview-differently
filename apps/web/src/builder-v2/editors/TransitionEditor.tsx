@@ -15,19 +15,23 @@ export function TransitionEditor({ node, allNodes, onDone }: Props) {
   const targetOptions = [
     { value: '', label: '— unset —' },
     ...allNodes
-      .filter(n => n.nodeId !== node.nodeId)
-      .map(n => ({
+      .filter((n) => n.nodeId !== node.nodeId)
+      .map((n) => ({
         value: n.nodeId,
         label: `${n.nodeId} — ${n.narrative?.slice(0, 40) ?? n.type}${(n.narrative?.length ?? 0) > 40 ? '…' : ''}`,
       })),
   ]
 
   return (
-    <EditShell emoji="↩" kindLabel="Redirect / Transition" onDone={() => onDone({ ...node, narrative, nextNodeId })}>
+    <EditShell
+      emoji="↩"
+      kindLabel="Redirect / Transition"
+      onDone={() => onDone({ ...node, narrative, nextNodeId })}
+    >
       <Field label="Bridge narrative">
         <Textarea
           value={narrative}
-          onChange={e => setNarrative(e.target.value)}
+          onChange={(e) => setNarrative(e.target.value)}
           rows={3}
           placeholder="What does the interviewer say to redirect or bridge to the next topic?"
         />
@@ -35,7 +39,7 @@ export function TransitionEditor({ node, allNodes, onDone }: Props) {
       <Field label="Continues to">
         <SelectInput
           value={nextNodeId}
-          onChange={e => setNextNodeId(e.target.value)}
+          onChange={(e) => setNextNodeId(e.target.value)}
           options={targetOptions}
         />
       </Field>

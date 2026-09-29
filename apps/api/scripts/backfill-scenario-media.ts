@@ -50,7 +50,7 @@ function isPublishedImmersive(s: Scenario): boolean {
 
 function renderableNodes(s: Scenario): ScenarioNode[] {
   return s.nodes.filter(
-    n => n.type === 'decision' && ((n.audioScript ?? '').trim() || (n.narrative ?? '').trim()),
+    (n) => n.type === 'decision' && ((n.audioScript ?? '').trim() || (n.narrative ?? '').trim())
   )
 }
 
@@ -62,7 +62,9 @@ async function main() {
   const { scenarios } = (await listRes.json()) as ListResponse
 
   const targets = scenarios.filter(isPublishedImmersive)
-  console.log(`${targets.length} published immersive scenarios found (of ${scenarios.length} total)\n`)
+  console.log(
+    `${targets.length} published immersive scenarios found (of ${scenarios.length} total)\n`
+  )
   if (targets.length === 0) return
 
   let rendered = 0
@@ -72,10 +74,14 @@ async function main() {
 
   for (const scenario of targets) {
     const nodes = renderableNodes(scenario)
-    console.log(`[${scenario.scenarioId}] ${scenario.title} — ${nodes.length} node${nodes.length === 1 ? '' : 's'}`)
+    console.log(
+      `[${scenario.scenarioId}] ${scenario.title} — ${nodes.length} node${nodes.length === 1 ? '' : 's'}`
+    )
 
     if (!scenario.interviewer?.presenterId || !scenario.interviewer?.voiceId) {
-      console.log(`  ⏭  no interviewer persona set — skipping all nodes (open the briefing in /builder to fix)`)
+      console.log(
+        `  ⏭  no interviewer persona set — skipping all nodes (open the briefing in /builder to fix)`
+      )
       skippedNoPersona += nodes.length
       continue
     }
@@ -89,7 +95,7 @@ async function main() {
       try {
         const r = await fetch(
           `${API_URL}/api/scenario-media/render/${scenario.scenarioId}/${node.nodeId}`,
-          { method: 'POST' },
+          { method: 'POST' }
         )
         const elapsed = ((Date.now() - t0) / 1000).toFixed(1)
         if (!r.ok) {
@@ -98,7 +104,9 @@ async function main() {
         }
         // Sub-second response means the asset was already up-to-date (idempotent hit).
         const wasIdempotent = Date.now() - t0 < 1500
-        console.log(`  ✓  ${node.nodeId} ${wasIdempotent ? '(already current)' : `rendered in ${elapsed}s`}`)
+        console.log(
+          `  ✓  ${node.nodeId} ${wasIdempotent ? '(already current)' : `rendered in ${elapsed}s`}`
+        )
         rendered++
       } catch (err) {
         const reason = err instanceof Error ? err.message : 'unknown'
@@ -110,7 +118,9 @@ async function main() {
   }
 
   console.log()
-  console.log(`Summary: ${rendered} rendered/current, ${failed} failed, ${skippedNoPersona} skipped (no persona)`)
+  console.log(
+    `Summary: ${rendered} rendered/current, ${failed} failed, ${skippedNoPersona} skipped (no persona)`
+  )
   if (failures.length > 0) {
     console.log()
     console.log('Failures:')
@@ -119,7 +129,7 @@ async function main() {
   }
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err)
   process.exit(1)
 })

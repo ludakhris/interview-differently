@@ -33,7 +33,7 @@ export class AdminGuard implements CanActivate {
   constructor(
     private readonly clerk: ClerkService,
     private readonly reflector: Reflector,
-    private readonly prisma: PrismaService,
+    private readonly prisma: PrismaService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -55,7 +55,10 @@ export class AdminGuard implements CanActivate {
     }
 
     const role = await this.clerk.getRole(userId)
-    const allowInstitutionAdmin = this.reflector.get<boolean>('allowInstitutionAdmin', context.getHandler())
+    const allowInstitutionAdmin = this.reflector.get<boolean>(
+      'allowInstitutionAdmin',
+      context.getHandler()
+    )
 
     if (role === 'admin') {
       // Full admin always allowed.

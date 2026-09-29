@@ -77,10 +77,15 @@ export function AdminDatasetsPage() {
       <Nav />
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="mb-8">
-          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">Admin · Tools</p>
-          <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">SQL Datasets</h1>
+          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+            Admin · Tools
+          </p>
+          <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
+            SQL Datasets
+          </h1>
           <p className="text-[13px] text-slate-mid mt-1">
-            Postgres setup scripts students can query in the SQL Sandbox. Assign a dataset to a cohort to enable the tool for its members.
+            Postgres setup scripts students can query in the SQL Sandbox. Assign a dataset to a
+            cohort to enable the tool for its members.
           </p>
         </div>
 
@@ -93,7 +98,9 @@ export function AdminDatasetsPage() {
         <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Datasets</h2>
+              <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+                Datasets
+              </h2>
               <button
                 onClick={() => setSelectedId('new')}
                 className="text-[12px] font-semibold text-green-light hover:text-green transition-colors"
@@ -112,7 +119,9 @@ export function AdminDatasetsPage() {
                     <button
                       onClick={() => setSelectedId(d.id)}
                       className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${
-                        selectedId === d.id ? 'bg-white/10 border border-white/15' : 'border border-transparent hover:bg-white/5'
+                        selectedId === d.id
+                          ? 'bg-white/10 border border-white/15'
+                          : 'border border-transparent hover:bg-white/5'
                       }`}
                     >
                       <p className="text-[13px] font-semibold text-[#f5f3ee] flex items-center gap-2">
@@ -120,8 +129,9 @@ export function AdminDatasetsPage() {
                         <OwnerBadge institutionName={d.institutionName} />
                       </p>
                       <p className="text-[11px] text-slate-mid">
-                        <span className="font-mono">{d.slug}</span> · {d.schemaSummary.length} table{d.schemaSummary.length !== 1 ? 's' : ''} ·{' '}
-                        {d.cohortCount} cohort{d.cohortCount !== 1 ? 's' : ''}
+                        <span className="font-mono">{d.slug}</span> · {d.schemaSummary.length} table
+                        {d.schemaSummary.length !== 1 ? 's' : ''} · {d.cohortCount} cohort
+                        {d.cohortCount !== 1 ? 's' : ''}
                       </p>
                     </button>
                   </li>
@@ -145,7 +155,9 @@ export function AdminDatasetsPage() {
               />
             ) : !selectedId ? (
               <div className="bg-[#111111] rounded-xl border border-white/10 px-6 py-12 text-center">
-                <p className="text-[13px] text-slate-mid">Select a dataset to edit it, or create a new one.</p>
+                <p className="text-[13px] text-slate-mid">
+                  Select a dataset to edit it, or create a new one.
+                </p>
               </div>
             ) : !detail ? (
               <p className="text-[13px] text-slate-mid">Loading…</p>
@@ -230,7 +242,10 @@ function DatasetEditor({
     try {
       const s = await validateDatasetSql(getToken, setupSql)
       setSchema(s)
-      setMsg({ kind: 'ok', text: `Script OK — ${s.length} table${s.length !== 1 ? 's' : ''}, ${s.reduce((n, t) => n + t.rowCount, 0)} rows.` })
+      setMsg({
+        kind: 'ok',
+        text: `Script OK — ${s.length} table${s.length !== 1 ? 's' : ''}, ${s.reduce((n, t) => n + t.rowCount, 0)} rows.`,
+      })
     } catch (e) {
       setSchema(null)
       setMsg({ kind: 'err', text: e instanceof Error ? e.message : 'Validation failed' })
@@ -247,8 +262,16 @@ function DatasetEditor({
       if (readOnly && initial) {
         saved = initial
       } else {
-        const payload = { slug, name, description: description.trim() || null, setupSql, institutionId: ownerId ?? null }
-        saved = initial ? await updateDataset(getToken, initial.id, payload) : await createDataset(getToken, payload)
+        const payload = {
+          slug,
+          name,
+          description: description.trim() || null,
+          setupSql,
+          institutionId: ownerId ?? null,
+        }
+        saved = initial
+          ? await updateDataset(getToken, initial.id, payload)
+          : await createDataset(getToken, payload)
       }
       await setDatasetCohorts(getToken, saved.id, cohortIds)
       setSchema(saved.schemaSummary)
@@ -275,22 +298,40 @@ function DatasetEditor({
         <div className="p-6 space-y-4 min-w-0">
           {readOnly && (
             <p className="text-[12px] text-white/50 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-              Platform dataset — shared with every institution and maintained by the platform team. You can give your cohorts access below.
+              Platform dataset — shared with every institution and maintained by the platform team.
+              You can give your cohorts access below.
             </p>
           )}
           {!initial && owners.length > 1 && (
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Owner</span>
-              <OwnerSelect owners={owners} value={ownerChoice} onChange={setOwnerChoice} className={`${inputCls} mt-1`} />
+              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+                Owner
+              </span>
+              <OwnerSelect
+                owners={owners}
+                value={ownerChoice}
+                onChange={setOwnerChoice}
+                className={`${inputCls} mt-1`}
+              />
             </label>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-3">
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Name</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="SQL Fundamentals" disabled={readOnly} className={`${inputCls} mt-1`} />
+              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+                Name
+              </span>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="SQL Fundamentals"
+                disabled={readOnly}
+                className={`${inputCls} mt-1`}
+              />
             </label>
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Slug</span>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+                Slug
+              </span>
               <input
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
@@ -301,7 +342,9 @@ function DatasetEditor({
             </label>
           </div>
           <label className="block">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Description</span>
+            <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+              Description
+            </span>
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -313,8 +356,12 @@ function DatasetEditor({
 
           <div>
             <div className="flex items-baseline justify-between mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Setup SQL</span>
-              <span className="font-mono text-[10px] text-white/30">{setupSql.split('\n').length} lines</span>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+                Setup SQL
+              </span>
+              <span className="font-mono text-[10px] text-white/30">
+                {setupSql.split('\n').length} lines
+              </span>
             </div>
             <div className="rounded-lg border border-white/10 overflow-hidden bg-[#0d0d0d]">
               <CodeMirror
@@ -330,8 +377,10 @@ function DatasetEditor({
               />
             </div>
             <p className="text-[11px] text-white/40 mt-1.5 leading-relaxed">
-              Plain Postgres. Keep it deterministic — no <span className="font-mono">RANDOM()</span> or <span className="font-mono">NOW()</span>; use{' '}
-              <span className="font-mono">CURRENT_DATE - n</span> for relative dates so every student gets identical data.
+              Plain Postgres. Keep it deterministic — no <span className="font-mono">RANDOM()</span>{' '}
+              or <span className="font-mono">NOW()</span>; use{' '}
+              <span className="font-mono">CURRENT_DATE - n</span> for relative dates so every
+              student gets identical data.
             </p>
           </div>
         </div>
@@ -340,7 +389,9 @@ function DatasetEditor({
         <aside className="border-t lg:border-t-0 lg:border-l border-white/8 bg-[#0d0d0d] p-5 space-y-6">
           <section>
             <div className="flex items-baseline justify-between mb-2">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Schema</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+                Schema
+              </p>
               {schema && (
                 <span className="font-mono text-[10px] text-white/30">
                   {schema.length} tables · {totalRows} rows
@@ -348,16 +399,24 @@ function DatasetEditor({
               )}
             </div>
             {!schema || schema.length === 0 ? (
-              <p className="text-[12px] text-white/40">Validate the script to see its tables here.</p>
+              <p className="text-[12px] text-white/40">
+                Validate the script to see its tables here.
+              </p>
             ) : (
               <ul className="space-y-1.5">
                 {schema.map((t) => (
                   <li key={t.table} className="rounded-lg border border-white/8 px-3 py-2">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="font-mono text-[12px] font-semibold text-[#f5f3ee] truncate">{t.table}</span>
-                      <span className="font-mono text-[10px] text-white/30 flex-shrink-0">{t.rowCount} rows</span>
+                      <span className="font-mono text-[12px] font-semibold text-[#f5f3ee] truncate">
+                        {t.table}
+                      </span>
+                      <span className="font-mono text-[10px] text-white/30 flex-shrink-0">
+                        {t.rowCount} rows
+                      </span>
                     </div>
-                    <p className="font-mono text-[10px] text-white/40 truncate mt-0.5">{t.columns.map((c) => c.name).join(', ')}</p>
+                    <p className="font-mono text-[10px] text-white/40 truncate mt-0.5">
+                      {t.columns.map((c) => c.name).join(', ')}
+                    </p>
                   </li>
                 ))}
               </ul>
@@ -365,9 +424,12 @@ function DatasetEditor({
           </section>
 
           <section>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-1">Cohorts with access</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+              Cohorts with access
+            </p>
             <p className="text-[11px] text-white/40 mb-2 leading-relaxed">
-              The cohort also needs the SQL Sandbox tool switched on under Institutions &amp; Cohorts.
+              The cohort also needs the SQL Sandbox tool switched on under Institutions &amp;
+              Cohorts.
             </p>
             {cohorts.length === 0 ? (
               <p className="text-[12px] text-white/40">No cohorts exist yet.</p>
@@ -375,7 +437,9 @@ function DatasetEditor({
               <div className="space-y-3">
                 {Object.entries(byInstitution).map(([inst, list]) => (
                   <div key={inst}>
-                    <p className="text-[10px] uppercase tracking-widest text-white/30 mb-1">{inst}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-white/30 mb-1">
+                      {inst}
+                    </p>
                     <div className="flex flex-wrap gap-1.5">
                       {list.map((c) => {
                         const on = cohortIds.includes(c.id)
@@ -383,7 +447,11 @@ function DatasetEditor({
                           <button
                             key={c.id}
                             type="button"
-                            onClick={() => setCohortIds((ids) => (on ? ids.filter((x) => x !== c.id) : [...ids, c.id]))}
+                            onClick={() =>
+                              setCohortIds((ids) =>
+                                on ? ids.filter((x) => x !== c.id) : [...ids, c.id]
+                              )
+                            }
                             className={`px-2.5 py-1 rounded-full text-[12px] border transition-colors ${
                               on
                                 ? 'bg-[#1a6b3c]/30 border-[#2d9e5f]/60 text-[#f5f3ee]'
@@ -416,7 +484,15 @@ function DatasetEditor({
           {initial && onDeleted && !readOnly && (
             <button
               onClick={async () => {
-                if (!(await confirm({ title: `Delete dataset "${initial.name}"?`, body: 'Cohorts lose access and any assessment built on it must be re-pointed. This cannot be undone.', confirmLabel: 'Delete dataset', danger: true }))) return
+                if (
+                  !(await confirm({
+                    title: `Delete dataset "${initial.name}"?`,
+                    body: 'Cohorts lose access and any assessment built on it must be re-pointed. This cannot be undone.',
+                    confirmLabel: 'Delete dataset',
+                    danger: true,
+                  }))
+                )
+                  return
                 try {
                   await deleteDataset(getToken, initial.id)
                   await onDeleted()
@@ -438,7 +514,10 @@ function DatasetEditor({
             </button>
           )}
           {msg && (
-            <p className={`text-[12px] font-mono truncate ${msg.kind === 'ok' ? 'text-green-light' : 'text-red-400'}`} title={msg.text}>
+            <p
+              className={`text-[12px] font-mono truncate ${msg.kind === 'ok' ? 'text-green-light' : 'text-red-400'}`}
+              title={msg.text}
+            >
               {msg.text}
             </p>
           )}
@@ -455,7 +534,13 @@ function DatasetEditor({
           )}
           <button
             onClick={save}
-            disabled={saving || !slug.trim() || !name.trim() || !setupSql.trim() || (!initial && ownerId === undefined)}
+            disabled={
+              saving ||
+              !slug.trim() ||
+              !name.trim() ||
+              !setupSql.trim() ||
+              (!initial && ownerId === undefined)
+            }
             className="px-3 py-1.5 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white disabled:opacity-50 transition-colors"
           >
             {saving ? 'Saving…' : readOnly ? 'Save cohort access' : initial ? 'Save' : 'Create'}

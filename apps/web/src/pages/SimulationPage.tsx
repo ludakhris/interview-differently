@@ -166,7 +166,16 @@ function SimulationContent({
       if (isSignedIn) void saveResult({ ...result, scenarioTitle: scenario.title })
       setTimeout(() => navigate(`/scenario/${scenarioId}/feedback`), 600)
     }
-  }, [isComplete, isGated, isPreview, scenarioId, navigate, computeResult, isSignedIn, scenario.title])
+  }, [
+    isComplete,
+    isGated,
+    isPreview,
+    scenarioId,
+    navigate,
+    computeResult,
+    isSignedIn,
+    scenario.title,
+  ])
 
   // ── Phase + exhibits plumbing ─────────────────────────────────────────────
   // Hooks must run on every render (rules-of-hooks), so they're declared
@@ -175,16 +184,21 @@ function SimulationContent({
   // Treat both decision answers and quant submissions as "node answered" so
   // the phase stepper marks them complete consistently.
   const answeredNodeIds = useMemo(
-    () => new Set([...Object.keys(choicesMade), ...Object.keys(quantAnswers), ...Object.keys(sqlAnswers)]),
-    [choicesMade, quantAnswers, sqlAnswers],
+    () =>
+      new Set([
+        ...Object.keys(choicesMade),
+        ...Object.keys(quantAnswers),
+        ...Object.keys(sqlAnswers),
+      ]),
+    [choicesMade, quantAnswers, sqlAnswers]
   )
   const phaseViews = useMemo(
     () => buildPhaseViews(scenario, currentNode.nodeId, answeredNodeIds),
-    [scenario, currentNode.nodeId, answeredNodeIds],
+    [scenario, currentNode.nodeId, answeredNodeIds]
   )
   const currentPhase = useMemo(
     () => getPhaseForNode(scenario, currentNode.nodeId),
-    [scenario, currentNode.nodeId],
+    [scenario, currentNode.nodeId]
   )
 
   // Hard gate — when an unauthenticated visitor lands on /play we render only
@@ -213,7 +227,9 @@ function SimulationContent({
         <div className="text-center animate-fade-in">
           <div className="text-4xl mb-4">✓</div>
           <p className="font-display font-bold text-[18px] text-[#f5f3ee]">
-            {isPreview ? 'Preview complete — returning to builder...' : 'Evaluating your responses...'}
+            {isPreview
+              ? 'Preview complete — returning to builder...'
+              : 'Evaluating your responses...'}
           </p>
         </div>
       </div>
@@ -235,9 +251,10 @@ function SimulationContent({
   // evidence introduced for that stage.
   const hasPhases = Boolean(scenario.phases?.length)
   const exhibitCatalog = scenario.exhibits ?? []
-  const phaseIndex = currentPhase && scenario.phases
-    ? scenario.phases.findIndex(p => p.id === currentPhase.id)
-    : -1
+  const phaseIndex =
+    currentPhase && scenario.phases
+      ? scenario.phases.findIndex((p) => p.id === currentPhase.id)
+      : -1
   const isFirstPhase = phaseIndex === 0
   const exhibitsLabel = isFirstPhase ? 'Brief' : 'Exhibits'
 
@@ -247,7 +264,9 @@ function SimulationContent({
         <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 bg-[#1a1a1a] border-t border-amber-500/30">
           <div className="flex items-center gap-2.5">
             <span className="text-amber-400 text-[13px]">◈</span>
-            <span className="text-[12px] font-semibold text-amber-400 uppercase tracking-widest">Preview Mode</span>
+            <span className="text-[12px] font-semibold text-amber-400 uppercase tracking-widest">
+              Preview Mode
+            </span>
             <span className="text-[12px] text-white/30">— responses are not saved</span>
           </div>
           <button
@@ -260,9 +279,7 @@ function SimulationContent({
       )}
       <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
 
-      {hasPhases && (
-        <PhaseStepper phases={phaseViews} accentColor={meta?.color} />
-      )}
+      {hasPhases && <PhaseStepper phases={phaseViews} accentColor={meta?.color} />}
 
       <div className="flex flex-1">
         {/* Sidebar — only on lg+ screens */}
@@ -276,224 +293,223 @@ function SimulationContent({
 
         {/* Main scrollable content */}
         <div className={`relative flex-1 min-w-0 overflow-y-auto ${isPreview ? 'pb-14' : ''}`}>
-
           {/* Main render — only reached for signed-in / preview-mode visitors;
               gated guests are short-circuited at the top with the sign-up
               overlay so simulation content never enters the DOM here. */}
           <div>
-
-          {/* ── Transition node ── */}
-          {currentNode.type === 'transition' && (
-            <div className="max-w-2xl mx-auto px-6 py-16 animate-fade-in">
-              <div className="bg-[#111111] border border-white/10 rounded-2xl p-8 mb-8">
-                <div
-                  className="text-[11px] font-bold uppercase tracking-widest mb-4"
-                  style={{ color: meta?.color }}
-                >
-                  What happened next
+            {/* ── Transition node ── */}
+            {currentNode.type === 'transition' && (
+              <div className="max-w-2xl mx-auto px-6 py-16 animate-fade-in">
+                <div className="bg-[#111111] border border-white/10 rounded-2xl p-8 mb-8">
+                  <div
+                    className="text-[11px] font-bold uppercase tracking-widest mb-4"
+                    style={{ color: meta?.color }}
+                  >
+                    What happened next
+                  </div>
+                  <p className="text-[15px] text-[#f5f3ee] leading-relaxed font-light">
+                    {currentNode.narrative}
+                  </p>
                 </div>
-                <p className="text-[15px] text-[#f5f3ee] leading-relaxed font-light">
-                  {currentNode.narrative}
-                </p>
-              </div>
-              <div className="flex justify-end">
-                <button
-                  onClick={advanceTransition}
-                  className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
-                >
-                  Continue
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── Quant node ── */}
-          {currentNode.type === 'quant' && (
-            <div className="max-w-3xl mx-auto px-6 py-8 animate-slide-up">
-              {hasPhases && (
-                <div className="mb-6">
-                  <InlineExhibits
-                    phase={currentPhase}
-                    catalog={exhibitCatalog}
-                    accentColor={meta?.color}
-                    label={exhibitsLabel}
-                  />
+                <div className="flex justify-end">
+                  <button
+                    onClick={advanceTransition}
+                    className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                  >
+                    Continue
+                  </button>
                 </div>
-              )}
-              {/* key on nodeId — React would otherwise reuse the same QuantNode
+              </div>
+            )}
+
+            {/* ── Quant node ── */}
+            {currentNode.type === 'quant' && (
+              <div className="max-w-3xl mx-auto px-6 py-8 animate-slide-up">
+                {hasPhases && (
+                  <div className="mb-6">
+                    <InlineExhibits
+                      phase={currentPhase}
+                      catalog={exhibitCatalog}
+                      accentColor={meta?.color}
+                      label={exhibitsLabel}
+                    />
+                  </div>
+                )}
+                {/* key on nodeId — React would otherwise reuse the same QuantNode
                   instance across consecutive quant nodes (because their position
                   in the render tree is identical), carrying `submitted` and the
                   typed values from the previous node into the new one. */}
-              <QuantNode
-                key={currentNode.nodeId}
-                node={currentNode}
-                carryForward={buildCarryForward(currentNode.nodeId)}
-                onSubmit={submitQuant}
-                onHintUsed={markHintUsed}
-              />
-              {quantAnswers[currentNode.nodeId] && currentNode.nextNodeId && (
-                <div className="mt-6 flex justify-end">
-                  <button
-                    onClick={advanceQuant}
-                    className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
-                  >
-                    Continue
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                <QuantNode
+                  key={currentNode.nodeId}
+                  node={currentNode}
+                  carryForward={buildCarryForward(currentNode.nodeId)}
+                  onSubmit={submitQuant}
+                  onHintUsed={markHintUsed}
+                />
+                {quantAnswers[currentNode.nodeId] && currentNode.nextNodeId && (
+                  <div className="mt-6 flex justify-end">
+                    <button
+                      onClick={advanceQuant}
+                      className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
-          {/* ── SQL node ── */}
-          {currentNode.type === 'sql' && currentNode.sql && (
-            <div className="max-w-4xl mx-auto px-6 py-8 animate-slide-up">
-              {hasPhases && (
-                <div className="mb-6">
-                  <InlineExhibits
-                    phase={currentPhase}
-                    catalog={exhibitCatalog}
-                    accentColor={meta?.color}
-                    label={exhibitsLabel}
-                  />
-                </div>
-              )}
-              <SqlNode key={currentNode.nodeId} node={currentNode} onSubmit={submitSql} onHintUsed={markHintUsed} />
-              {sqlAnswers[currentNode.nodeId] && currentNode.nextNodeId && (
-                <div className="mt-6 flex justify-end">
-                  <button
-                    onClick={advanceSql}
-                    className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
-                  >
-                    Continue
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+            {/* ── SQL node ── */}
+            {currentNode.type === 'sql' && currentNode.sql && (
+              <div className="max-w-4xl mx-auto px-6 py-8 animate-slide-up">
+                {hasPhases && (
+                  <div className="mb-6">
+                    <InlineExhibits
+                      phase={currentPhase}
+                      catalog={exhibitCatalog}
+                      accentColor={meta?.color}
+                      label={exhibitsLabel}
+                    />
+                  </div>
+                )}
+                <SqlNode
+                  key={currentNode.nodeId}
+                  node={currentNode}
+                  onSubmit={submitSql}
+                  onHintUsed={markHintUsed}
+                />
+                {sqlAnswers[currentNode.nodeId] && currentNode.nextNodeId && (
+                  <div className="mt-6 flex justify-end">
+                    <button
+                      onClick={advanceSql}
+                      className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
-          {/* ── Decision node ── */}
-          {currentNode.type === 'decision' && (
-            <div className="max-w-4xl mx-auto px-6 py-8 animate-slide-up">
-
-              {/* Phase 1 exhibits read as scenario intro — render above the
+            {/* ── Decision node ── */}
+            {currentNode.type === 'decision' && (
+              <div className="max-w-4xl mx-auto px-6 py-8 animate-slide-up">
+                {/* Phase 1 exhibits read as scenario intro — render above the
                   KeyData block so the candidate frames the case before any
                   numbers. Phase 2+ exhibits render below KeyData. */}
-              {hasPhases && isFirstPhase && (
-                <div className="mb-6">
-                  <InlineExhibits
-                    phase={currentPhase}
-                    catalog={exhibitCatalog}
-                    accentColor={meta?.color}
-                    label={exhibitsLabel}
-                  />
-                </div>
-              )}
-
-              {/* Alert banner (ops P1 alert, shown on first step) */}
-              {display?.alertBanner && stepNumber === 1 && (
-                <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 mb-5">
-                  <span className="text-amber-400 text-[18px] flex-shrink-0 mt-0.5">
-                    {display.alertBanner.icon}
-                  </span>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">
-                      {display.alertBanner.title}
-                    </p>
-                    <p className="text-[13px] text-[#f5f3ee]/80 leading-relaxed">
-                      {display.alertBanner.body}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Context display — full width above narrative */}
-              {currentNode.contextPanels && currentNode.contextPanels.length > 0 && (
-                <div className="mb-6">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
-                    {ctxLabel}
-                  </p>
-                  {currentNode.chart && (
-                    <MetricChart config={currentNode.chart} />
-                  )}
-                  {isKeyDataLayout(ctxStyle) ? (
-                    <KeyDataPanel
-                      layout={ctxStyle}
-                      panels={currentNode.contextPanels}
+                {hasPhases && isFirstPhase && (
+                  <div className="mb-6">
+                    <InlineExhibits
+                      phase={currentPhase}
+                      catalog={exhibitCatalog}
                       accentColor={meta?.color}
+                      label={exhibitsLabel}
                     />
-                  ) : (
-                    <ContextPanel
-                      panels={currentNode.contextPanels}
-                      contextStyle={ctxStyle}
-                      incidentMeta={display?.incidentMeta}
-                    />
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
 
-              {/* Phase 2+ exhibits render between KeyData and the question —
+                {/* Alert banner (ops P1 alert, shown on first step) */}
+                {display?.alertBanner && stepNumber === 1 && (
+                  <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 mb-5">
+                    <span className="text-amber-400 text-[18px] flex-shrink-0 mt-0.5">
+                      {display.alertBanner.icon}
+                    </span>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">
+                        {display.alertBanner.title}
+                      </p>
+                      <p className="text-[13px] text-[#f5f3ee]/80 leading-relaxed">
+                        {display.alertBanner.body}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Context display — full width above narrative */}
+                {currentNode.contextPanels && currentNode.contextPanels.length > 0 && (
+                  <div className="mb-6">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+                      {ctxLabel}
+                    </p>
+                    {currentNode.chart && <MetricChart config={currentNode.chart} />}
+                    {isKeyDataLayout(ctxStyle) ? (
+                      <KeyDataPanel
+                        layout={ctxStyle}
+                        panels={currentNode.contextPanels}
+                        accentColor={meta?.color}
+                      />
+                    ) : (
+                      <ContextPanel
+                        panels={currentNode.contextPanels}
+                        contextStyle={ctxStyle}
+                        incidentMeta={display?.incidentMeta}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Phase 2+ exhibits render between KeyData and the question —
                   they're new evidence introduced for this stage rather than
                   framing context for the whole case. */}
-              {hasPhases && !isFirstPhase && (
-                <div className="mb-6">
-                  <InlineExhibits
-                    phase={currentPhase}
-                    catalog={exhibitCatalog}
-                    accentColor={meta?.color}
-                    label={exhibitsLabel}
-                  />
-                </div>
-              )}
-
-              {/* Narrative + choices — stacked. Choices read as the answer
-                  to the narrative above, not as a parallel column. */}
-              <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
-                <p className="text-[15px] text-[#f5f3ee] leading-[1.7] font-light">
-                  {currentNode.narrative}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-3">
-                  What do you do?
-                </p>
-                <div className="space-y-3">
-                  {currentNode.choices?.map((choice) => (
-                    <ChoiceCard
-                      key={choice.id}
-                      id={choice.id}
-                      text={choice.text}
-                      selected={selectedChoice === choice.id}
-                      onSelect={setSelectedChoice}
+                {hasPhases && !isFirstPhase && (
+                  <div className="mb-6">
+                    <InlineExhibits
+                      phase={currentPhase}
+                      catalog={exhibitCatalog}
+                      accentColor={meta?.color}
+                      label={exhibitsLabel}
                     />
-                  ))}
+                  </div>
+                )}
+
+                {/* Narrative + choices — stacked. Choices read as the answer
+                  to the narrative above, not as a parallel column. */}
+                <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
+                  <p className="text-[15px] text-[#f5f3ee] leading-[1.7] font-light">
+                    {currentNode.narrative}
+                  </p>
                 </div>
 
-                <div className="mt-5 flex items-center justify-between">
-                  <span className="text-[13px] text-slate-light">
-                    {selectedChoice ? 'Ready to submit' : 'Select an action'}
-                  </span>
-                  <button
-                    onClick={() => selectedChoice && submitChoice(selectedChoice)}
-                    disabled={!selectedChoice}
-                    className={`
+                <div>
+                  <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-3">
+                    What do you do?
+                  </p>
+                  <div className="space-y-3">
+                    {currentNode.choices?.map((choice) => (
+                      <ChoiceCard
+                        key={choice.id}
+                        id={choice.id}
+                        text={choice.text}
+                        selected={selectedChoice === choice.id}
+                        onSelect={setSelectedChoice}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="mt-5 flex items-center justify-between">
+                    <span className="text-[13px] text-slate-light">
+                      {selectedChoice ? 'Ready to submit' : 'Select an action'}
+                    </span>
+                    <button
+                      onClick={() => selectedChoice && submitChoice(selectedChoice)}
+                      disabled={!selectedChoice}
+                      className={`
                       font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
-                      ${selectedChoice
-                        ? 'bg-green hover:bg-green-light text-white cursor-pointer'
-                        : 'bg-white/10 text-slate-light cursor-not-allowed'
+                      ${
+                        selectedChoice
+                          ? 'bg-green hover:bg-green-light text-white cursor-pointer'
+                          : 'bg-white/10 text-slate-light cursor-not-allowed'
                       }
                     `}
-                  >
-                    Submit
-                  </button>
+                    >
+                      Submit
+                    </button>
+                  </div>
                 </div>
               </div>
-
-            </div>
-          )}
-
-          </div>{/* end main render wrapper */}
-
+            )}
+          </div>
+          {/* end main render wrapper */}
         </div>
       </div>
     </div>

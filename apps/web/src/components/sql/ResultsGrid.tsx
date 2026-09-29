@@ -8,12 +8,16 @@ const NUMERIC_RE = /^-?\d+(\.\d+)?$/
  */
 export function ResultsGrid({ result, limit }: { result: SandboxResult; limit?: number }) {
   if (result.columns.length === 0) {
-    return <p className="px-5 py-6 text-[13px] text-slate-mid font-mono">{result.command || 'OK'} — no rows returned.</p>
+    return (
+      <p className="px-5 py-6 text-[13px] text-slate-mid font-mono">
+        {result.command || 'OK'} — no rows returned.
+      </p>
+    )
   }
   const rows = limit === undefined ? result.rows : result.allRows.slice(0, limit)
   // Right-align a column when every non-null value in it looks numeric.
   const numeric = result.columns.map((_, ci) =>
-    rows.every((r) => r[ci] == null || typeof r[ci] === 'number' || NUMERIC_RE.test(String(r[ci]))),
+    rows.every((r) => r[ci] == null || typeof r[ci] === 'number' || NUMERIC_RE.test(String(r[ci])))
   )
   return (
     <table className="min-w-full text-[12px] font-mono border-collapse">
@@ -54,7 +58,11 @@ export function ResultsGrid({ result, limit }: { result: SandboxResult; limit?: 
 function formatCell(v: unknown): React.ReactNode {
   if (v === null || v === undefined) return <span className="text-white/25 italic">null</span>
   if (typeof v === 'boolean')
-    return v ? <span className="text-emerald-400">true</span> : <span className="text-white/40">false</span>
+    return v ? (
+      <span className="text-emerald-400">true</span>
+    ) : (
+      <span className="text-white/40">false</span>
+    )
   if (typeof v === 'object') return JSON.stringify(v)
   return String(v)
 }

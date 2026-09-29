@@ -22,7 +22,9 @@ export interface CompetencyProfile {
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
-export async function saveResult(result: ScenarioResult & { scenarioTitle: string }): Promise<void> {
+export async function saveResult(
+  result: ScenarioResult & { scenarioTitle: string }
+): Promise<void> {
   const res = await fetch(`${API_URL}/api/results`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
@@ -60,7 +62,7 @@ export async function fetchResult(resultId: string): Promise<ScenarioResult> {
   const res = await fetch(`${API_URL}/api/results/${resultId}`, { headers: await authHeader() })
   if (!res.ok) throw new Error(`Result fetch failed: ${res.status}`)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const row = await res.json() as any
+  const row = (await res.json()) as any
   return {
     id: row.id,
     userId: row.userId,
@@ -69,7 +71,8 @@ export async function fetchResult(resultId: string): Promise<ScenarioResult> {
     overallScore: row.overallScore,
     completedAt: row.completedAt,
     choiceSequence: row.choiceSequence,
-    dimensionScores: row.dimensionScores.map((d: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    dimensionScores: row.dimensionScores.map((d: any) => ({
       dimension: d.dimension,
       score: d.score,
       quality: d.quality as 'strong' | 'proficient' | 'developing',
@@ -79,7 +82,9 @@ export async function fetchResult(resultId: string): Promise<ScenarioResult> {
 }
 
 export async function fetchProfile(userId: string): Promise<CompetencyProfile> {
-  const res = await fetch(`${API_URL}/api/results/profile/${userId}`, { headers: await authHeader() })
+  const res = await fetch(`${API_URL}/api/results/profile/${userId}`, {
+    headers: await authHeader(),
+  })
   if (!res.ok) throw new Error('Failed to fetch competency profile')
   return res.json() as Promise<CompetencyProfile>
 }
@@ -95,7 +100,9 @@ export interface AiFeedbackResponse {
 }
 
 export async function fetchAiFeedback(resultId: string): Promise<AiFeedbackResponse> {
-  const res = await fetch(`${API_URL}/api/results/${resultId}/ai-feedback`, { headers: await authHeader() })
+  const res = await fetch(`${API_URL}/api/results/${resultId}/ai-feedback`, {
+    headers: await authHeader(),
+  })
   if (!res.ok) throw new Error(`AI feedback fetch failed: ${res.status}`)
   return res.json() as Promise<AiFeedbackResponse>
 }

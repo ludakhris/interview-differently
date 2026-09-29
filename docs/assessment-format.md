@@ -6,20 +6,21 @@ Keep the source file out of the repo — it contains the answers.
 
 ## Skeleton
 
-```markdown
+````markdown
 ---
-slug: sql-fundamentals-v1          # stable id; re-import replaces by slug
+slug: sql-fundamentals-v1 # stable id; re-import replaces by slug
 title: SQL Fundamentals Pre/Post
-dataset: sql-fundamentals          # Dataset.slug (Admin → Datasets)
-draw: { mc: 3, sql: 1 }            # default per section: 3 MC + 1 SQL; a plain number (draw: 4) is any-type; omit for "all"
-expected_minutes: 30               # optional: how long it's designed to take, shown against actual times in analytics
+dataset: sql-fundamentals # Dataset.slug (Admin → Datasets)
+draw: { mc: 3, sql: 1 } # default per section: 3 MC + 1 SQL; a plain number (draw: 4) is any-type; omit for "all"
+expected_minutes: 30 # optional: how long it's designed to take, shown against actual times in analytics
 ---
 
 ## Section 1: Querying Basics
-> draw: mc 4, sql 1                # optional per-section override (or a plain total: > draw: 5)
+
+> draw: mc 4, sql 1 # optional per-section override (or a plain total: > draw: 5)
 
 **1.1 (MC)** Which clause is used to filter individual rows before any grouping happens?
-A) SELECT  B) WHERE  C) HAVING  D) ORDER BY
+A) SELECT B) WHERE C) HAVING D) ORDER BY
 **Answer: B**
 
 **1.2 (MC)** By default, does `ORDER BY signup_date` sort oldest-first or newest-first?
@@ -28,8 +29,10 @@ B) Newest first (descending)
 **Answer: A. ASC is the default when nothing is specified.**
 
 **1.7 (Hands-On SQL)** Return the 5 most recently signed-up customers from Texas, most recent first.
+
 > ordered
-**Answer:**
+> **Answer:**
+
 ```sql
 SELECT first_name, last_name, signup_date
 FROM customers
@@ -37,12 +40,15 @@ WHERE state = 'TX'
 ORDER BY signup_date DESC
 LIMIT 5;
 ```
+````
 
 ---
 
 ## Section 2: Aggregations
+
 …
-```
+
+`````
 
 ## Rules
 
@@ -68,14 +74,15 @@ SELECT c.customer_id
 FROM customers c
 JOIN orders o ON o.customer_id = c.customer_id
 WHERE o.order_id IS NULL;
-```
+`````
 
 It returns zero rows. What's the fix?
 A) Change `JOIN` to `LEFT JOIN`
 B) Change `IS NULL` to `= NULL`
 C) Add `DISTINCT`
 **Answer: A**
-````
+
+`````
 
 **Starter query (optional)** — a `**Starter:**` line followed by a ```` ```sql ```` fence, placed before `**Answer:**`. The student's editor opens pre-filled with it (they're told it's an example to edit or replace). Useful for scaffolding a `SELECT … FROM …` skeleton or a partial query with a `-- finish this` comment:
 
@@ -91,7 +98,7 @@ FROM customers
 ```sql
 SELECT state, COUNT(*) AS customers FROM customers GROUP BY state ORDER BY customers DESC;
 ```
-````
+`````
 
 **SQL flags** — `>` lines between the prompt and `**Starter:**` / `**Answer:**`:
 

@@ -20,7 +20,9 @@ export function QuantComparePanel({ result }: Props) {
     <div className="bg-[#0d0d0d] border border-white/10 rounded-xl overflow-hidden">
       <div className="px-4 py-3 border-b border-white/8 bg-white/3">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Quant submission</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
+            Quant submission
+          </p>
           {result.hintUsed && (
             <span
               className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border border-amber-500/35 bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded-full"
@@ -30,20 +32,27 @@ export function QuantComparePanel({ result }: Props) {
             </span>
           )}
         </div>
-        <p className="mt-0.5 text-[13px] font-medium text-[#f5f3ee] leading-snug">{result.prompt}</p>
+        <p className="mt-0.5 text-[13px] font-medium text-[#f5f3ee] leading-snug">
+          {result.prompt}
+        </p>
       </div>
       <div className="divide-y divide-white/8">
         {result.results.map((field) => {
           const tone = bandTone[field.band]
           return (
-            <div key={field.fieldId} className="px-4 py-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center">
+            <div
+              key={field.fieldId}
+              className="px-4 py-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center"
+            >
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-white/50">
                   {field.fieldId}
                 </p>
                 <div className="mt-1 grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-widest text-white/35">Your answer</p>
+                    <p className="text-[10px] uppercase tracking-widest text-white/35">
+                      Your answer
+                    </p>
                     <p className="text-[14px] font-display font-bold text-[#f5f3ee]">
                       {format(field.userAnswer)}
                     </p>

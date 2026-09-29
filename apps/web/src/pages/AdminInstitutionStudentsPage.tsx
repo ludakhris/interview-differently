@@ -3,7 +3,11 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { AnalyticsTabs } from '@/components/AnalyticsTabs'
-import { fetchStudentRoster, type RosterResponse, type RosterStudent } from '@/services/analyticsService'
+import {
+  fetchStudentRoster,
+  type RosterResponse,
+  type RosterStudent,
+} from '@/services/analyticsService'
 import { getInstitution, type InstitutionDetail } from '@/services/institutionsService'
 import { downloadCsv, filenameSlug } from '@/lib/csv'
 
@@ -64,27 +68,38 @@ export function AdminInstitutionStudentsPage() {
   }
 
   const label = useCallback(
-    (s: RosterStudent) => (showNames ? (s.displayName ?? s.email ?? s.anonymousLabel) : s.anonymousLabel),
-    [showNames],
+    (s: RosterStudent) =>
+      showNames ? (s.displayName ?? s.email ?? s.anonymousLabel) : s.anonymousLabel,
+    [showNames]
   )
 
   const rows = useMemo(() => {
     if (!data) return []
-    const num = (v: number | string | null) => (v == null ? -Infinity : typeof v === 'string' ? Date.parse(v) : v)
+    const num = (v: number | string | null) =>
+      v == null ? -Infinity : typeof v === 'string' ? Date.parse(v) : v
     const key = (s: RosterStudent): number | string => {
       switch (sort) {
-        case 'sims': return s.completedSimulations
-        case 'avg': return num(s.avgScore)
-        case 'pre': return num(s.prePercent)
-        case 'post': return num(s.postPercent)
-        case 'gain': return num(gain(s))
-        case 'active': return num(s.lastActiveAt)
-        default: return label(s)
+        case 'sims':
+          return s.completedSimulations
+        case 'avg':
+          return num(s.avgScore)
+        case 'pre':
+          return num(s.prePercent)
+        case 'post':
+          return num(s.postPercent)
+        case 'gain':
+          return num(gain(s))
+        case 'active':
+          return num(s.lastActiveAt)
+        default:
+          return label(s)
       }
     }
     return [...data.students].sort((a, b) => {
-      const x = key(a), y = key(b)
-      const c = typeof x === 'string' && typeof y === 'string' ? x.localeCompare(y) : Number(x) - Number(y)
+      const x = key(a),
+        y = key(b)
+      const c =
+        typeof x === 'string' && typeof y === 'string' ? x.localeCompare(y) : Number(x) - Number(y)
       return dir === 'asc' ? c : -c
     })
   }, [data, sort, dir, label])
@@ -94,9 +109,24 @@ export function AdminInstitutionStudentsPage() {
     else patchParams({ sort: k, dir: k === 'label' ? 'asc' : 'desc' })
   }
 
-  const Th = ({ k, children, right, first }: { k: SortKey; children: React.ReactNode; right?: boolean; first?: boolean }) => (
-    <th className={`py-2 ${right ? 'text-right px-2' : 'text-left pr-4'} ${first ? 'pl-5' : ''} font-bold whitespace-nowrap`}>
-      <button onClick={() => clickSort(k)} className={`hover:text-[#f5f3ee] transition-colors ${sort === k ? 'text-[#f5f3ee]' : ''}`}>
+  const Th = ({
+    k,
+    children,
+    right,
+    first,
+  }: {
+    k: SortKey
+    children: React.ReactNode
+    right?: boolean
+    first?: boolean
+  }) => (
+    <th
+      className={`py-2 ${right ? 'text-right px-2' : 'text-left pr-4'} ${first ? 'pl-5' : ''} font-bold whitespace-nowrap`}
+    >
+      <button
+        onClick={() => clickSort(k)}
+        className={`hover:text-[#f5f3ee] transition-colors ${sort === k ? 'text-[#f5f3ee]' : ''}`}
+      >
         {children}
         {sort === k && <span className="ml-1 text-[9px]">{dir === 'asc' ? '▲' : '▼'}</span>}
       </button>
@@ -107,14 +137,21 @@ export function AdminInstitutionStudentsPage() {
     <div className="min-h-screen bg-[#0a0a0a]">
       <Nav />
       <div className="max-w-6xl mx-auto px-6 py-12">
-        <button onClick={() => navigate('/admin/institutions')} className="text-[12px] text-slate-mid hover:text-[#f5f3ee] transition-colors mb-3">
+        <button
+          onClick={() => navigate('/admin/institutions')}
+          className="text-[12px] text-slate-mid hover:text-[#f5f3ee] transition-colors mb-3"
+        >
           ← Back to institutions
         </button>
 
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">Analytics</p>
-            <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">{detail?.name ?? 'Institution analytics'}</h1>
+            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+              Analytics
+            </p>
+            <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
+              {detail?.name ?? 'Institution analytics'}
+            </h1>
             {data?.cohort && (
               <p className="text-[12px] text-slate-mid mt-1">
                 Cohort: <span className="text-[#f5f3ee]">{data.cohort.name}</span>
@@ -143,7 +180,11 @@ export function AdminInstitutionStudentsPage() {
           )}
         </div>
 
-        <AnalyticsTabs institutionId={institutionId} active="students" available={['overview', 'engagement', 'heatmap', 'assessments', 'students']} />
+        <AnalyticsTabs
+          institutionId={institutionId}
+          active="students"
+          available={['overview', 'engagement', 'heatmap', 'assessments', 'students']}
+        />
 
         {error && (
           <div className="rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 mb-4">
@@ -161,13 +202,22 @@ export function AdminInstitutionStudentsPage() {
           <>
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
               <label className="flex items-center gap-2 text-[12px] text-slate-mid cursor-pointer">
-                <input type="checkbox" checked={showNames} onChange={(e) => patchParams({ names: e.target.checked ? '1' : null })} className="accent-green" />
+                <input
+                  type="checkbox"
+                  checked={showNames}
+                  onChange={(e) => patchParams({ names: e.target.checked ? '1' : null })}
+                  className="accent-green"
+                />
                 Show names &amp; emails
               </label>
               <button
                 onClick={() =>
                   downloadCsv({
-                    filename: filenameSlug(data.institution.name, data.cohort?.name ?? null, 'students'),
+                    filename: filenameSlug(
+                      data.institution.name,
+                      data.cohort?.name ?? null,
+                      'students'
+                    ),
                     headers: [
                       showNames ? 'name' : 'student',
                       ...(showNames ? ['email'] : []),
@@ -206,14 +256,28 @@ export function AdminInstitutionStudentsPage() {
               <table className="min-w-full text-[12px]">
                 <thead>
                   <tr className="text-[10px] uppercase tracking-widest text-slate-mid border-b border-white/10">
-                    <Th k="label" first>Student</Th>
+                    <Th k="label" first>
+                      Student
+                    </Th>
                     {!cohortId && <th className="py-2 pr-4 text-left font-bold">Cohort</th>}
-                    <Th k="sims" right>Sims</Th>
-                    <Th k="avg" right>Avg score</Th>
-                    <Th k="pre" right>Pre</Th>
-                    <Th k="post" right>Post</Th>
-                    <Th k="gain" right>% Improvement</Th>
-                    <Th k="active" right>Last active</Th>
+                    <Th k="sims" right>
+                      Sims
+                    </Th>
+                    <Th k="avg" right>
+                      Avg score
+                    </Th>
+                    <Th k="pre" right>
+                      Pre
+                    </Th>
+                    <Th k="post" right>
+                      Post
+                    </Th>
+                    <Th k="gain" right>
+                      % Improvement
+                    </Th>
+                    <Th k="active" right>
+                      Last active
+                    </Th>
                     <th className="pr-5" />
                   </tr>
                 </thead>
@@ -221,28 +285,56 @@ export function AdminInstitutionStudentsPage() {
                   {rows.map((s) => (
                     <tr
                       key={s.userId}
-                      onClick={() => navigate(`/admin/institutions/${institutionId}/students/${encodeURIComponent(s.userId)}`)}
+                      onClick={() =>
+                        navigate(
+                          `/admin/institutions/${institutionId}/students/${encodeURIComponent(s.userId)}`
+                        )
+                      }
                       className="border-b border-white/5 last:border-0 hover:bg-white/[0.03] cursor-pointer"
                     >
                       <td className="py-3 pl-5 pr-4">
                         <p className="text-[#f5f3ee]">{label(s)}</p>
-                        {showNames && s.displayName && s.email && <p className="text-[11px] text-white/40">{s.email}</p>}
+                        {showNames && s.displayName && s.email && (
+                          <p className="text-[11px] text-white/40">{s.email}</p>
+                        )}
                       </td>
-                      {!cohortId && <td className="py-3 pr-4 text-slate-mid">{s.cohorts.join(', ') || '—'}</td>}
+                      {!cohortId && (
+                        <td className="py-3 pr-4 text-slate-mid">{s.cohorts.join(', ') || '—'}</td>
+                      )}
                       <td className="py-3 px-2 text-right font-mono text-slate-light">
                         {s.completedSimulations}
-                        {s.immersiveCompleted > 0 && <span className="text-white/30"> +{s.immersiveCompleted}</span>}
+                        {s.immersiveCompleted > 0 && (
+                          <span className="text-white/30"> +{s.immersiveCompleted}</span>
+                        )}
                       </td>
-                      <td className="py-3 px-2 text-right font-mono" style={{ color: scoreColor(s.avgScore) }}>
+                      <td
+                        className="py-3 px-2 text-right font-mono"
+                        style={{ color: scoreColor(s.avgScore) }}
+                      >
                         {s.avgScore ?? '—'}
                       </td>
-                      <td className={`py-3 px-2 text-right font-mono ${s.prePercent == null ? 'text-white/25' : 'text-[#d4830a]'}`}>{s.prePercent == null ? '—' : `${s.prePercent}%`}</td>
-                      <td className={`py-3 px-2 text-right font-mono ${s.postPercent == null ? 'text-white/25' : 'text-[#2d9e5f]'}`}>{s.postPercent == null ? '—' : `${s.postPercent}%`}</td>
-                      <td className="py-3 px-2 text-right font-mono font-semibold" style={{ color: gainColor(gain(s)) }}>
+                      <td
+                        className={`py-3 px-2 text-right font-mono ${s.prePercent == null ? 'text-white/25' : 'text-[#d4830a]'}`}
+                      >
+                        {s.prePercent == null ? '—' : `${s.prePercent}%`}
+                      </td>
+                      <td
+                        className={`py-3 px-2 text-right font-mono ${s.postPercent == null ? 'text-white/25' : 'text-[#2d9e5f]'}`}
+                      >
+                        {s.postPercent == null ? '—' : `${s.postPercent}%`}
+                      </td>
+                      <td
+                        className="py-3 px-2 text-right font-mono font-semibold"
+                        style={{ color: gainColor(gain(s)) }}
+                      >
                         {gain(s) == null ? '—' : `${gain(s)! > 0 ? '+' : ''}${gain(s)}%`}
                       </td>
                       <td className="py-3 px-2 text-right font-mono text-white/40 whitespace-nowrap">
-                        {s.lastActiveAt ? new Date(s.lastActiveAt).toLocaleDateString(undefined, { dateStyle: 'medium' }) : 'never'}
+                        {s.lastActiveAt
+                          ? new Date(s.lastActiveAt).toLocaleDateString(undefined, {
+                              dateStyle: 'medium',
+                            })
+                          : 'never'}
                       </td>
                       <td className="py-3 pr-5 text-right text-[11px] text-slate-mid">View →</td>
                     </tr>

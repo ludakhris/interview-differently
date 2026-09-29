@@ -31,7 +31,9 @@ export function FeedbackPage() {
   const navigate = useNavigate()
   const [result, setResult] = useState<ScenarioResult | null>(null)
   const [aiFeedback, setAiFeedback] = useState<Map<string, string> | null>(null)
-  const [aiFeedbackStatus, setAiFeedbackStatus] = useState<'loading' | 'ready' | 'failed'>('loading')
+  const [aiFeedbackStatus, setAiFeedbackStatus] = useState<'loading' | 'ready' | 'failed'>(
+    'loading'
+  )
   const { trackMeta } = useScenarios()
   const { aiFeedbackEnabled } = useConfig()
 
@@ -71,7 +73,9 @@ export function FeedbackPage() {
       })
       .finally(() => clearTimeout(timeout))
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [result, aiFeedbackEnabled])
 
   if (!result) return null
@@ -101,7 +105,10 @@ export function FeedbackPage() {
             className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-[13px] font-semibold ${qualityBg[overallQuality]}`}
             style={{ color: qualityColor[overallQuality] }}
           >
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: qualityColor[overallQuality] }} />
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: qualityColor[overallQuality] }}
+            />
             Overall: {qualityLabel[overallQuality]}
           </div>
           <p className="mt-3 text-[12px] text-white/40">
@@ -117,7 +124,10 @@ export function FeedbackPage() {
           </div>
           <div className="space-y-4">
             {result.dimensionScores.map((dim) => (
-              <div key={dim.dimension} className="bg-[#111111] rounded-xl border border-white/10 p-5">
+              <div
+                key={dim.dimension}
+                className="bg-[#111111] rounded-xl border border-white/10 p-5"
+              >
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-display font-bold text-[15px] text-[#f5f3ee]">
                     {dim.dimension}
@@ -126,7 +136,10 @@ export function FeedbackPage() {
                     <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-700"
-                        style={{ width: `${dim.score}%`, backgroundColor: qualityColor[dim.quality] }}
+                        style={{
+                          width: `${dim.score}%`,
+                          backgroundColor: qualityColor[dim.quality],
+                        }}
                       />
                     </div>
                     <span
@@ -144,7 +157,9 @@ export function FeedbackPage() {
                     <div className="h-3 bg-white/20 rounded-full w-4/5" />
                     <div className="mt-3 flex items-center gap-1.5">
                       <span className="text-slate-mid/40 text-[10px]">✦</span>
-                      <span className="text-[10px] font-medium text-slate-mid/40 uppercase tracking-widest">Generating AI feedback…</span>
+                      <span className="text-[10px] font-medium text-slate-mid/40 uppercase tracking-widest">
+                        Generating AI feedback…
+                      </span>
                     </div>
                   </div>
                 ) : (
@@ -155,7 +170,9 @@ export function FeedbackPage() {
                     {aiFeedbackStatus === 'ready' && aiFeedback?.get(dim.dimension) && (
                       <div className="mt-3 flex items-center gap-1.5">
                         <span className="text-green-light text-[10px]">✦</span>
-                        <span className="text-[10px] font-medium text-green-light/70 uppercase tracking-widest">AI feedback</span>
+                        <span className="text-[10px] font-medium text-green-light/70 uppercase tracking-widest">
+                          AI feedback
+                        </span>
                       </div>
                     )}
                   </>
@@ -185,12 +202,14 @@ export function FeedbackPage() {
           <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-3">
             What to work on
           </h3>
-          {result.dimensionScores.filter((d) => d.quality === 'developing').map((dim) => (
-            <div key={dim.dimension} className="flex items-start gap-3 mb-3 last:mb-0">
-              <span className="text-red-400 mt-0.5">→</span>
-              <span className="text-[14px] text-[#f5f3ee] font-light">{dim.dimension}</span>
-            </div>
-          ))}
+          {result.dimensionScores
+            .filter((d) => d.quality === 'developing')
+            .map((dim) => (
+              <div key={dim.dimension} className="flex items-start gap-3 mb-3 last:mb-0">
+                <span className="text-red-400 mt-0.5">→</span>
+                <span className="text-[14px] text-[#f5f3ee] font-light">{dim.dimension}</span>
+              </div>
+            ))}
           {result.dimensionScores.every((d) => d.quality !== 'developing') && (
             <p className="text-[14px] text-[#f5f3ee] font-light">
               No critical gaps identified. Try a harder track to push your ceiling.

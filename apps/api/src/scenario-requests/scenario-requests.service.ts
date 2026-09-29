@@ -32,7 +32,12 @@ export interface ScenarioRequestInput {
 }
 
 const VALID_TRACKS = new Set([
-  'operations', 'business', 'risk', 'customer-success', 'general', 'custom',
+  'operations',
+  'business',
+  'risk',
+  'customer-success',
+  'general',
+  'custom',
 ])
 
 @Injectable()
@@ -45,10 +50,13 @@ export class ScenarioRequestsService {
   constructor(private readonly prisma: PrismaService) {
     const apiKey = process.env.RESEND_API_KEY
     this.resend = apiKey ? new Resend(apiKey) : null
-    this.fromAddress = process.env.RESEND_FROM ?? 'Interview Differently <noreply@interviewdifferently.com>'
+    this.fromAddress =
+      process.env.RESEND_FROM ?? 'Interview Differently <noreply@interviewdifferently.com>'
     this.adminEmail = process.env.ADMIN_EMAIL ?? 'admin@interviewdifferently.com'
     if (!apiKey) {
-      this.logger.warn('RESEND_API_KEY not set — scenario requests will be persisted but no email sent')
+      this.logger.warn(
+        'RESEND_API_KEY not set — scenario requests will be persisted but no email sent'
+      )
     }
   }
 
@@ -74,8 +82,10 @@ export class ScenarioRequestsService {
 
     // Fire-and-forget email so the response stays snappy. If it fails, it's
     // recorded on the row (status=new, emailSent=false, emailError=...).
-    void this.sendAdminEmail(row.id, cleaned).catch(err => {
-      this.logger.error(`Failed to email scenario request ${row.id}: ${err instanceof Error ? err.message : 'unknown'}`)
+    void this.sendAdminEmail(row.id, cleaned).catch((err) => {
+      this.logger.error(
+        `Failed to email scenario request ${row.id}: ${err instanceof Error ? err.message : 'unknown'}`
+      )
     })
 
     return { id: row.id }
@@ -88,7 +98,9 @@ export class ScenarioRequestsService {
       throw new BadRequestException(`"situation" must be at least ${SITUATION_MIN_LEN} characters`)
     }
     if (hardestMoment.length < HARDEST_MIN_LEN) {
-      throw new BadRequestException(`"hardestMoment" must be at least ${HARDEST_MIN_LEN} characters`)
+      throw new BadRequestException(
+        `"hardestMoment" must be at least ${HARDEST_MIN_LEN} characters`
+      )
     }
     if (input.track && !VALID_TRACKS.has(input.track)) {
       throw new BadRequestException(`"track" must be one of ${[...VALID_TRACKS].join(', ')}`)
@@ -97,23 +109,24 @@ export class ScenarioRequestsService {
       throw new BadRequestException('"contactEmail" is not a valid email address')
     }
 
-    const cap = (s: string | undefined) => s == null ? null : s.trim().slice(0, FIELD_MAX_LEN) || null
+    const cap = (s: string | undefined) =>
+      s == null ? null : s.trim().slice(0, FIELD_MAX_LEN) || null
     return {
-      situation:        situation.slice(0, FIELD_MAX_LEN),
-      hardestMoment:    hardestMoment.slice(0, FIELD_MAX_LEN),
-      role:             cap(input.role) ?? undefined,
-      reportsTo:        cap(input.reportsTo) ?? undefined,
-      timeInRole:       cap(input.timeInRole) ?? undefined,
-      otherPeople:      cap(input.otherPeople) ?? undefined,
-      metricsContext:   cap(input.metricsContext) ?? undefined,
-      timePressure:     cap(input.timePressure) ?? undefined,
-      temptingWrong:    cap(input.temptingWrong) ?? undefined,
-      greatLooksLike:   cap(input.greatLooksLike) ?? undefined,
-      track:            input.track || undefined,
+      situation: situation.slice(0, FIELD_MAX_LEN),
+      hardestMoment: hardestMoment.slice(0, FIELD_MAX_LEN),
+      role: cap(input.role) ?? undefined,
+      reportsTo: cap(input.reportsTo) ?? undefined,
+      timeInRole: cap(input.timeInRole) ?? undefined,
+      otherPeople: cap(input.otherPeople) ?? undefined,
+      metricsContext: cap(input.metricsContext) ?? undefined,
+      timePressure: cap(input.timePressure) ?? undefined,
+      temptingWrong: cap(input.temptingWrong) ?? undefined,
+      greatLooksLike: cap(input.greatLooksLike) ?? undefined,
+      track: input.track || undefined,
       estimatedMinutes: input.estimatedMinutes ?? undefined,
-      contactName:      cap(input.contactName) ?? undefined,
-      contactEmail:     cap(input.contactEmail) ?? undefined,
-      contactPhone:     cap(input.contactPhone) ?? undefined,
+      contactName: cap(input.contactName) ?? undefined,
+      contactEmail: cap(input.contactEmail) ?? undefined,
+      contactPhone: cap(input.contactPhone) ?? undefined,
     }
   }
 
@@ -151,19 +164,26 @@ export class ScenarioRequestsService {
   private formatEmail(id: string, d: ScenarioRequestInput) {
     const subject = `New scenario request — ${d.contactName ?? 'anonymous'}${d.track ? ` (${d.track})` : ''}`
     const sections: Array<[string, string | undefined]> = [
-      ['The Situation',                   d.situation],
-      ['Candidate Role',                  joinNonEmpty([d.role, d.reportsTo && `reports to ${d.reportsTo}`, d.timeInRole && `(${d.timeInRole})`])],
-      ['Other People',                    d.otherPeople],
-      ['Data / Metrics',                  d.metricsContext],
-      ['Time Pressure',                   d.timePressure],
-      ['The Hardest Moment',              d.hardestMoment],
-      ['The Tempting Wrong Answer',       d.temptingWrong],
-      ['What Great Looks Like',           d.greatLooksLike],
-      ['Track',                           d.track],
-      ['Estimated Minutes',               d.estimatedMinutes != null ? String(d.estimatedMinutes) : undefined],
+      ['The Situation', d.situation],
+      [
+        'Candidate Role',
+        joinNonEmpty([
+          d.role,
+          d.reportsTo && `reports to ${d.reportsTo}`,
+          d.timeInRole && `(${d.timeInRole})`,
+        ]),
+      ],
+      ['Other People', d.otherPeople],
+      ['Data / Metrics', d.metricsContext],
+      ['Time Pressure', d.timePressure],
+      ['The Hardest Moment', d.hardestMoment],
+      ['The Tempting Wrong Answer', d.temptingWrong],
+      ['What Great Looks Like', d.greatLooksLike],
+      ['Track', d.track],
+      ['Estimated Minutes', d.estimatedMinutes != null ? String(d.estimatedMinutes) : undefined],
     ]
     const contact: Array<[string, string | undefined]> = [
-      ['Name',  d.contactName],
+      ['Name', d.contactName],
       ['Email', d.contactEmail],
       ['Phone', d.contactPhone],
     ]
@@ -176,7 +196,9 @@ export class ScenarioRequestsService {
       '\nContact',
       '───────',
       ...contact.filter(([, v]) => v && v.trim().length > 0).map(([label, v]) => `${label}: ${v}`),
-    ].filter(Boolean).join('\n')
+    ]
+      .filter(Boolean)
+      .join('\n')
 
     const html = `
 <!doctype html><html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #1a1a1a; background: #fafaf8;">
@@ -184,20 +206,27 @@ export class ScenarioRequestsService {
   <p style="font-size: 12px; color: #777; margin: 0 0 24px;">id: <code>${id}</code></p>
   ${sections
     .filter(([, v]) => v && v.trim().length > 0)
-    .map(([label, v]) => `
+    .map(
+      ([label, v]) => `
       <div style="margin-bottom: 18px;">
         <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #777; margin-bottom: 4px;">${escapeHtml(label)}</div>
         <div style="font-size: 14px; line-height: 1.55; white-space: pre-wrap;">${escapeHtml(v ?? '')}</div>
-      </div>`)
+      </div>`
+    )
     .join('')}
   <hr style="border: none; border-top: 1px solid #e0e0d8; margin: 24px 0;" />
   <h2 style="font-size: 14px; margin: 0 0 12px;">Contact</h2>
-  ${contact.filter(([, v]) => v && v.trim().length > 0).length === 0
-    ? '<p style="font-size: 13px; color: #888;">Anonymous — no contact details provided</p>'
-    : `<table style="font-size: 13px; line-height: 1.6;">${contact
-        .filter(([, v]) => v && v.trim().length > 0)
-        .map(([label, v]) => `<tr><td style="padding-right: 16px; color: #777;">${escapeHtml(label)}</td><td>${escapeHtml(v ?? '')}</td></tr>`)
-        .join('')}</table>`}
+  ${
+    contact.filter(([, v]) => v && v.trim().length > 0).length === 0
+      ? '<p style="font-size: 13px; color: #888;">Anonymous — no contact details provided</p>'
+      : `<table style="font-size: 13px; line-height: 1.6;">${contact
+          .filter(([, v]) => v && v.trim().length > 0)
+          .map(
+            ([label, v]) =>
+              `<tr><td style="padding-right: 16px; color: #777;">${escapeHtml(label)}</td><td>${escapeHtml(v ?? '')}</td></tr>`
+          )
+          .join('')}</table>`
+  }
   ${d.contactEmail ? `<p style="font-size: 12px; color: #888; margin-top: 24px;">Reply-to is set — hit reply to email this person directly.</p>` : ''}
 </body></html>`.trim()
 

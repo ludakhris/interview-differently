@@ -5,7 +5,14 @@ import { useState } from 'react'
 import { useImmersive } from '../ImmersiveContext'
 import type { ScenarioNode, Choice, ContextPanel, QualitySignal } from '@id/types'
 import {
-  EditShell, Field, TextInput, Textarea, SelectInput, SectionLabel, AddButton, RemoveButton,
+  EditShell,
+  Field,
+  TextInput,
+  Textarea,
+  SelectInput,
+  SectionLabel,
+  AddButton,
+  RemoveButton,
 } from './shared'
 
 const CHOICE_IDS = ['A', 'B', 'C', 'D'] as const
@@ -38,81 +45,103 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
   // ── Choices ────────────────────────────────────────────────────────────────
 
   function updateChoice(idx: number, patch: Partial<Choice>) {
-    setChoices(prev => prev.map((c, i) => i === idx ? { ...c, ...patch } : c))
+    setChoices((prev) => prev.map((c, i) => (i === idx ? { ...c, ...patch } : c)))
   }
 
   function updateChoiceSignal(idx: number, quality: string) {
-    setChoices(prev => prev.map((c, i) => {
-      if (i !== idx) return c
-      const sig: QualitySignal = { dimension: c.qualitySignals?.[0]?.dimension ?? 'Structure', quality: quality as QualitySignal['quality'] }
-      return { ...c, qualitySignals: [sig] }
-    }))
+    setChoices((prev) =>
+      prev.map((c, i) => {
+        if (i !== idx) return c
+        const sig: QualitySignal = {
+          dimension: c.qualitySignals?.[0]?.dimension ?? 'Structure',
+          quality: quality as QualitySignal['quality'],
+        }
+        return { ...c, qualitySignals: [sig] }
+      })
+    )
   }
 
   function updateChoiceSignalDimension(idx: number, dimension: string) {
-    setChoices(prev => prev.map((c, i) => {
-      if (i !== idx) return c
-      const sig: QualitySignal = { dimension, quality: c.qualitySignals?.[0]?.quality ?? 'developing' }
-      return { ...c, qualitySignals: [sig] }
-    }))
+    setChoices((prev) =>
+      prev.map((c, i) => {
+        if (i !== idx) return c
+        const sig: QualitySignal = {
+          dimension,
+          quality: c.qualitySignals?.[0]?.quality ?? 'developing',
+        }
+        return { ...c, qualitySignals: [sig] }
+      })
+    )
   }
 
   function addChoice() {
-    const usedIds = new Set(choices.map(c => c.id))
-    const nextId = CHOICE_IDS.find(id => !usedIds.has(id))
+    const usedIds = new Set(choices.map((c) => c.id))
+    const nextId = CHOICE_IDS.find((id) => !usedIds.has(id))
     if (!nextId) return
-    setChoices(prev => [...prev, {
-      id: nextId,
-      text: '',
-      nextNodeId: '',
-      qualitySignals: [{ dimension: 'Structure', quality: 'developing' }],
-    }])
+    setChoices((prev) => [
+      ...prev,
+      {
+        id: nextId,
+        text: '',
+        nextNodeId: '',
+        qualitySignals: [{ dimension: 'Structure', quality: 'developing' }],
+      },
+    ])
   }
 
   function removeChoice(idx: number) {
-    setChoices(prev => prev.filter((_, i) => i !== idx))
+    setChoices((prev) => prev.filter((_, i) => i !== idx))
   }
 
   // ── Context Panels (Key Data) ──────────────────────────────────────────────
 
   function addPanel() {
-    setPanels(prev => [...prev, { label: '', value: '', type: 'metric' }])
+    setPanels((prev) => [...prev, { label: '', value: '', type: 'metric' }])
   }
 
   function updatePanel(idx: number, patch: Partial<ContextPanel>) {
-    setPanels(prev => prev.map((p, i) => i === idx ? { ...p, ...patch } : p))
+    setPanels((prev) => prev.map((p, i) => (i === idx ? { ...p, ...patch } : p)))
   }
 
   function removePanel(idx: number) {
-    setPanels(prev => prev.filter((_, i) => i !== idx))
+    setPanels((prev) => prev.filter((_, i) => i !== idx))
   }
 
   // ── Target options — grouped by type ──────────────────────────────────────
 
-  const otherNodes = allNodes.filter(n => n.nodeId !== node.nodeId)
-  const endings  = otherNodes.filter(n => n.type === 'feedback')
-  const redirects = otherNodes.filter(n => n.type === 'transition')
-  const others    = otherNodes.filter(n => n.type !== 'feedback' && n.type !== 'transition')
+  const otherNodes = allNodes.filter((n) => n.nodeId !== node.nodeId)
+  const endings = otherNodes.filter((n) => n.type === 'feedback')
+  const redirects = otherNodes.filter((n) => n.type === 'transition')
+  const others = otherNodes.filter((n) => n.type !== 'feedback' && n.type !== 'transition')
 
-  function nodeLabel(n: typeof allNodes[0]): string {
+  function nodeLabel(n: (typeof allNodes)[0]): string {
     const txt = n.narrative?.trim()
     return txt ? (txt.length > 45 ? txt.slice(0, 45) + '…' : txt) : n.nodeId
   }
 
   const targetOptions = [
     { value: '', label: '→ continue (next block)' },
-    ...(endings.length ? [
-      { value: '__sep_endings', label: '─── Endings ───', disabled: true },
-      ...endings.map(n => ({ value: n.nodeId, label: `🏁 ${nodeLabel(n)}` })),
-    ] : []),
-    ...(redirects.length ? [
-      { value: '__sep_redirects', label: '─── Redirects ───', disabled: true },
-      ...redirects.map(n => ({ value: n.nodeId, label: `↩ ${nodeLabel(n)}` })),
-    ] : []),
-    ...(others.length ? [
-      { value: '__sep_others', label: '─── Other nodes ───', disabled: true },
-      ...others.map(n => ({ value: n.nodeId, label: `${n.type === 'quant' ? '🔢' : '🔀'} ${nodeLabel(n)}` })),
-    ] : []),
+    ...(endings.length
+      ? [
+          { value: '__sep_endings', label: '─── Endings ───', disabled: true },
+          ...endings.map((n) => ({ value: n.nodeId, label: `🏁 ${nodeLabel(n)}` })),
+        ]
+      : []),
+    ...(redirects.length
+      ? [
+          { value: '__sep_redirects', label: '─── Redirects ───', disabled: true },
+          ...redirects.map((n) => ({ value: n.nodeId, label: `↩ ${nodeLabel(n)}` })),
+        ]
+      : []),
+    ...(others.length
+      ? [
+          { value: '__sep_others', label: '─── Other nodes ───', disabled: true },
+          ...others.map((n) => ({
+            value: n.nodeId,
+            label: `${n.type === 'quant' ? '🔢' : '🔀'} ${nodeLabel(n)}`,
+          })),
+        ]
+      : []),
   ]
 
   // ── Save ───────────────────────────────────────────────────────────────────
@@ -133,7 +162,7 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
       <Field label="Question / narrative">
         <Textarea
           value={narrative}
-          onChange={e => setNarrative(e.target.value)}
+          onChange={(e) => setNarrative(e.target.value)}
           rows={3}
           placeholder="The question or scenario the candidate is responding to."
         />
@@ -143,7 +172,7 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
         <Field label="Audio script — what the interviewer says aloud (optional; defaults to the narrative)">
           <Textarea
             value={audioScript}
-            onChange={e => setAudioScript(e.target.value)}
+            onChange={(e) => setAudioScript(e.target.value)}
             rows={3}
             placeholder="Spoken version of the question. Keep it conversational; changing it marks the rendered video stale."
           />
@@ -154,30 +183,35 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
       <div className="flex flex-col gap-2">
         <SectionLabel label="Key Data tiles (optional)" />
         {panels.map((panel, i) => (
-          <div key={i} className="flex flex-col gap-2 p-3 border border-white/[0.06] rounded-xl bg-white/[0.01]">
+          <div
+            key={i}
+            className="flex flex-col gap-2 p-3 border border-white/[0.06] rounded-xl bg-white/[0.01]"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">Tile {i + 1}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+                Tile {i + 1}
+              </span>
               <RemoveButton onClick={() => removePanel(i)} />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <TextInput
                 value={panel.label}
-                onChange={e => updatePanel(i, { label: e.target.value })}
+                onChange={(e) => updatePanel(i, { label: e.target.value })}
                 placeholder="Label  e.g. Revenue"
               />
               <TextInput
                 value={panel.value}
-                onChange={e => updatePanel(i, { value: e.target.value })}
+                onChange={(e) => updatePanel(i, { value: e.target.value })}
                 placeholder="Value  e.g. $24M"
               />
               <TextInput
                 value={panel.unit ?? ''}
-                onChange={e => updatePanel(i, { unit: e.target.value || undefined })}
+                onChange={(e) => updatePanel(i, { unit: e.target.value || undefined })}
                 placeholder="Unit (optional)  e.g. %"
               />
               <TextInput
                 value={panel.caption ?? ''}
-                onChange={e => updatePanel(i, { caption: e.target.value || undefined })}
+                onChange={(e) => updatePanel(i, { caption: e.target.value || undefined })}
                 placeholder="Caption (optional)"
               />
             </div>
@@ -185,7 +219,7 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
               <input
                 type="checkbox"
                 checked={panel.hero ?? false}
-                onChange={e => updatePanel(i, { hero: e.target.checked || undefined })}
+                onChange={(e) => updatePanel(i, { hero: e.target.checked || undefined })}
                 className="accent-emerald-400"
               />
               <span className="text-[11px] text-white/40">Hero tile — displays large</span>
@@ -202,7 +236,10 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
           const quality = choice.qualitySignals?.[0]?.quality ?? 'developing'
           const dimension = choice.qualitySignals?.[0]?.dimension ?? 'Structure'
           return (
-            <div key={choice.id} className="flex flex-col gap-2 p-3 border border-white/[0.06] rounded-xl bg-white/[0.01]">
+            <div
+              key={choice.id}
+              className="flex flex-col gap-2 p-3 border border-white/[0.06] rounded-xl bg-white/[0.01]"
+            >
               {/* Row 1: badge + text */}
               <div className="flex items-start gap-2">
                 <span className="w-[22px] h-[22px] rounded-[6px] bg-white/[0.06] border border-white/10 text-[11px] font-bold flex items-center justify-center flex-none mt-1.5">
@@ -210,7 +247,7 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
                 </span>
                 <Textarea
                   value={choice.text}
-                  onChange={e => updateChoice(i, { text: e.target.value })}
+                  onChange={(e) => updateChoice(i, { text: e.target.value })}
                   rows={2}
                   placeholder="Option text shown to the candidate"
                 />
@@ -221,20 +258,20 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
                 <div className="w-32 flex-none">
                   <SelectInput
                     value={quality}
-                    onChange={e => updateChoiceSignal(i, e.target.value)}
+                    onChange={(e) => updateChoiceSignal(i, e.target.value)}
                     options={QUALITY_OPTIONS}
                   />
                 </div>
                 <TextInput
                   value={dimension}
-                  onChange={e => updateChoiceSignalDimension(i, e.target.value)}
+                  onChange={(e) => updateChoiceSignalDimension(i, e.target.value)}
                   placeholder="Rubric dimension"
                   className={`flex-1 ${QUALITY_COLORS[quality] ?? ''}`}
                 />
                 <div className="flex-1">
                   <SelectInput
                     value={choice.nextNodeId ?? ''}
-                    onChange={e => updateChoice(i, { nextNodeId: e.target.value })}
+                    onChange={(e) => updateChoice(i, { nextNodeId: e.target.value })}
                     options={targetOptions}
                   />
                 </div>
@@ -242,9 +279,7 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
             </div>
           )
         })}
-        {choices.length < 4 && (
-          <AddButton onClick={addChoice} label="Add option" />
-        )}
+        {choices.length < 4 && <AddButton onClick={addChoice} label="Add option" />}
       </div>
     </EditShell>
   )

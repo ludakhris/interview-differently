@@ -8,7 +8,7 @@ import { AnalyticsService } from './analytics.service'
 export class AnalyticsController {
   constructor(
     private readonly service: AnalyticsService,
-    private readonly scope: InstitutionScope,
+    private readonly scope: InstitutionScope
   ) {}
 
   /**
@@ -21,7 +21,7 @@ export class AnalyticsController {
   getInstitutionAnalytics(
     @Req() req: AdminRequest,
     @Param('institutionId') institutionId: string,
-    @Query('cohortId') cohortId?: string,
+    @Query('cohortId') cohortId?: string
   ) {
     this.scope.assertInstitution(req, institutionId)
     return this.service.getInstitutionAnalytics(institutionId, cohortId || undefined)
@@ -38,7 +38,7 @@ export class AnalyticsController {
   getScenarioEngagement(
     @Req() req: AdminRequest,
     @Param('institutionId') institutionId: string,
-    @Query('cohortId') cohortId?: string,
+    @Query('cohortId') cohortId?: string
   ) {
     this.scope.assertInstitution(req, institutionId)
     return this.service.getScenarioEngagement(institutionId, cohortId || undefined)
@@ -50,7 +50,11 @@ export class AnalyticsController {
    */
   @Get('institutions/:institutionId/students')
   @InstitutionAdminAllowed()
-  getStudentRoster(@Req() req: AdminRequest, @Param('institutionId') institutionId: string, @Query('cohortId') cohortId?: string) {
+  getStudentRoster(
+    @Req() req: AdminRequest,
+    @Param('institutionId') institutionId: string,
+    @Query('cohortId') cohortId?: string
+  ) {
     this.scope.assertInstitution(req, institutionId)
     return this.service.getStudentRoster(institutionId, cohortId || undefined)
   }
@@ -60,7 +64,7 @@ export class AnalyticsController {
   getStudentDetail(
     @Req() req: AdminRequest,
     @Param('institutionId') institutionId: string,
-    @Param('userId') userId: string,
+    @Param('userId') userId: string
   ) {
     this.scope.assertInstitution(req, institutionId)
     return this.service.getStudentDetail(institutionId, userId)
@@ -77,7 +81,7 @@ export class AnalyticsController {
   getCompetencyHeatmap(
     @Req() req: AdminRequest,
     @Param('institutionId') institutionId: string,
-    @Query('cohortId') cohortId?: string,
+    @Query('cohortId') cohortId?: string
   ) {
     this.scope.assertInstitution(req, institutionId)
     return this.service.getCompetencyHeatmap(institutionId, cohortId || undefined)

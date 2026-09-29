@@ -76,9 +76,7 @@ function HighlightSection({ items }: { items: SidebarItem[] }) {
             key={i}
             className="flex justify-between items-center py-1.5 border-b border-red-500/10 last:border-0"
           >
-            {item.label && (
-              <span className="text-[11px] text-white/40 pr-2">{item.label}</span>
-            )}
+            {item.label && <span className="text-[11px] text-white/40 pr-2">{item.label}</span>}
             <span
               className={`text-[11px] font-semibold ${
                 item.emphasis ? emphasisColor[item.emphasis] : 'text-[#f5f3ee]/70'
@@ -93,11 +91,7 @@ function HighlightSection({ items }: { items: SidebarItem[] }) {
   )
 }
 
-function SidebarSectionBlock({
-  section,
-}: {
-  section: SidebarSection
-}) {
+function SidebarSectionBlock({ section }: { section: SidebarSection }) {
   return (
     <div>
       <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/40 mb-2">

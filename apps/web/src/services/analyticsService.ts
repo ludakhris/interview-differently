@@ -36,7 +36,7 @@ export interface InstitutionAnalytics {
 async function authedFetch(
   getToken: GetToken,
   path: string,
-  init: RequestInit = {},
+  init: RequestInit = {}
 ): Promise<Response> {
   const token = await getToken()
   if (!token) throw new Error('Not signed in')
@@ -51,7 +51,8 @@ async function authedFetch(
     let message = `${res.status} ${res.statusText}`
     try {
       const body = (await res.json()) as { message?: string | string[] }
-      if (body.message) message = Array.isArray(body.message) ? body.message.join(', ') : body.message
+      if (body.message)
+        message = Array.isArray(body.message) ? body.message.join(', ') : body.message
     } catch {
       // not json
     }
@@ -63,7 +64,7 @@ async function authedFetch(
 export async function fetchInstitutionAnalytics(
   getToken: GetToken,
   institutionId: string,
-  cohortId?: string,
+  cohortId?: string
 ): Promise<InstitutionAnalytics> {
   const qs = cohortId ? `?cohortId=${encodeURIComponent(cohortId)}` : ''
   const res = await authedFetch(getToken, `/admin/institutions/${institutionId}/analytics${qs}`)
@@ -95,7 +96,7 @@ export interface ScenarioEngagementResponse {
 export async function fetchScenarioEngagement(
   getToken: GetToken,
   institutionId: string,
-  cohortId?: string,
+  cohortId?: string
 ): Promise<ScenarioEngagementResponse> {
   const qs = cohortId ? `?cohortId=${encodeURIComponent(cohortId)}` : ''
   const res = await authedFetch(getToken, `/admin/institutions/${institutionId}/engagement${qs}`)
@@ -156,11 +157,11 @@ export interface StudentDetailResponse {
 export async function fetchStudentDetail(
   getToken: GetToken,
   institutionId: string,
-  userId: string,
+  userId: string
 ): Promise<StudentDetailResponse> {
   const res = await authedFetch(
     getToken,
-    `/admin/institutions/${institutionId}/students/${encodeURIComponent(userId)}`,
+    `/admin/institutions/${institutionId}/students/${encodeURIComponent(userId)}`
   )
   return res.json() as Promise<StudentDetailResponse>
 }
@@ -192,7 +193,7 @@ export interface HeatmapResponse {
 export async function fetchHeatmap(
   getToken: GetToken,
   institutionId: string,
-  cohortId?: string,
+  cohortId?: string
 ): Promise<HeatmapResponse> {
   const qs = cohortId ? `?cohortId=${encodeURIComponent(cohortId)}` : ''
   const res = await authedFetch(getToken, `/admin/institutions/${institutionId}/heatmap${qs}`)
@@ -222,7 +223,11 @@ export interface RosterResponse {
   students: RosterStudent[]
 }
 
-export async function fetchStudentRoster(getToken: GetToken, institutionId: string, cohortId?: string): Promise<RosterResponse> {
+export async function fetchStudentRoster(
+  getToken: GetToken,
+  institutionId: string,
+  cohortId?: string
+): Promise<RosterResponse> {
   const qs = cohortId ? `?cohortId=${encodeURIComponent(cohortId)}` : ''
   const res = await authedFetch(getToken, `/admin/institutions/${institutionId}/students${qs}`)
   return res.json() as Promise<RosterResponse>

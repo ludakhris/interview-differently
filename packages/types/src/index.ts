@@ -142,12 +142,12 @@ export interface ContextPanel {
   // These fields are consumed by the case-style KeyData layouts (tile-grid,
   // hero-list, context-cards, briefing-sections). They are optional and
   // ignored by the legacy ops/risk styles (monitor / table / finding).
-  caption?: string                     // small supporting line beneath the value
-  unit?: string                        // suffix shown after the value, e.g. 'stores', 'people'
-  share?: number                       // 0-100, drives the mini-bar in context-cards
+  caption?: string // small supporting line beneath the value
+  unit?: string // suffix shown after the value, e.g. 'stores', 'people'
+  share?: number // 0-100, drives the mini-bar in context-cards
   tone?: 'accent' | 'danger' | 'neutral' // emphasis colour for the value
-  hero?: boolean                       // marks the framing stat for hero-list
-  group?: string                       // section name for briefing-sections (e.g. 'Market', 'Customer', 'Constraint')
+  hero?: boolean // marks the framing stat for hero-list
+  group?: string // section name for briefing-sections (e.g. 'Market', 'Customer', 'Constraint')
 }
 
 // ── Scenario Display ──────────────────────────────────────────────────────────
@@ -178,12 +178,12 @@ export interface SidebarSection {
 }
 
 export interface IncidentMeta {
-  id: string           // e.g. 'INC-2026-0341'
+  id: string // e.g. 'INC-2026-0341'
   discoveredAt: string // display string, e.g. '10:22 AM'
-  severity: string     // e.g. 'High', 'P2'
-  status: string       // e.g. 'Open — Uncontained'
+  severity: string // e.g. 'High', 'P2'
+  status: string // e.g. 'Open — Uncontained'
   assignedTo?: string
-  regulatoryFlag?: string  // e.g. 'SOX / GLBA — mandatory review'
+  regulatoryFlag?: string // e.g. 'SOX / GLBA — mandatory review'
 }
 
 export interface ScenarioDisplay {
@@ -205,18 +205,18 @@ export interface Choice {
 }
 
 export interface ChartDataPoint {
-  t: string   // x-axis label, e.g. '14:39'
-  v: number   // y value
+  t: string // x-axis label, e.g. '14:39'
+  v: number // y value
 }
 
 export interface ChartConfig {
   title: string
-  unit: string                         // e.g. '%', 'ms'
+  unit: string // e.g. '%', 'ms'
   color: 'red' | 'amber' | 'green'
-  baseline?: number                    // normal operating level — renders as dashed reference line
+  baseline?: number // normal operating level — renders as dashed reference line
   annotation?: {
-    tIndex: number                     // index into series array
-    label: string                      // e.g. '↑ Incident start'
+    tIndex: number // index into series array
+    label: string // e.g. '↑ Incident start'
   }
   series: ChartDataPoint[]
 }
@@ -226,14 +226,14 @@ export interface ScenarioNode {
   type: NodeType
   narrative: string
   contextPanels?: ContextPanel[]
-  chart?: ChartConfig                  // optional time-series chart for monitor-style nodes
+  chart?: ChartConfig // optional time-series chart for monitor-style nodes
   choices?: Choice[]
   // transition nodes
   transitionText?: string
   nextNodeId?: string
   // immersive mode fields
-  audioScript?: string                 // exact words for AI narrator; falls back to narrative if absent
-  responsePrompt?: string              // open-ended question the candidate answers verbally
+  audioScript?: string // exact words for AI narrator; falls back to narrative if absent
+  responsePrompt?: string // open-ended question the candidate answers verbally
   // quant nodes — required when type === 'quant', ignored otherwise
   quant?: QuantSpec
   // sql nodes — required when type === 'sql', ignored otherwise
@@ -266,8 +266,8 @@ export interface BuilderMeta {
 }
 
 export interface ScenarioInterviewer {
-  presenterId: string                  // D-ID presenter id (e.g. 'amy-Aq6OmGZnMt')
-  voiceId: string                      // Microsoft Azure voice id (e.g. 'en-GB-SoniaNeural')
+  presenterId: string // D-ID presenter id (e.g. 'amy-Aq6OmGZnMt')
+  voiceId: string // Microsoft Azure voice id (e.g. 'en-GB-SoniaNeural')
 }
 
 // ── Phases ────────────────────────────────────────────────────────────────────
@@ -281,12 +281,12 @@ export interface ScenarioInterviewer {
 // Scenarios without `phases` render as a single implicit phase (back-compat).
 
 export interface ScenarioPhase {
-  id: string                           // stable phase id, e.g. 'structure'
-  label: string                        // short display label, e.g. 'Structure'
-  description?: string                 // 1-line description shown on hover / mobile drawer
-  nodeIds: string[]                    // node ids that belong to this phase, in order
-  exhibitIds?: string[]                // ids of exhibits pinned to this phase (looked up in scenario.exhibits)
-  rubricDimensions?: string[]          // dimension names scored within this phase (subset of scenario.rubric.dimensions)
+  id: string // stable phase id, e.g. 'structure'
+  label: string // short display label, e.g. 'Structure'
+  description?: string // 1-line description shown on hover / mobile drawer
+  nodeIds: string[] // node ids that belong to this phase, in order
+  exhibitIds?: string[] // ids of exhibits pinned to this phase (looked up in scenario.exhibits)
+  rubricDimensions?: string[] // dimension names scored within this phase (subset of scenario.rubric.dimensions)
 }
 
 // ── Exhibits ──────────────────────────────────────────────────────────────────
@@ -305,26 +305,26 @@ export type ExhibitKind =
   | 'text-exhibit'
 
 interface ExhibitBase {
-  id: string                           // stable exhibit id, e.g. 'rural-population-table'
+  id: string // stable exhibit id, e.g. 'rural-population-table'
   kind: ExhibitKind
-  title: string                        // visible header, e.g. 'Rural population by region'
-  caption?: string                     // 1-2 line context shown below the title
-  footnote?: string                    // source / method note shown beneath the body
+  title: string // visible header, e.g. 'Rural population by region'
+  caption?: string // 1-2 line context shown below the title
+  footnote?: string // source / method note shown beneath the body
 }
 
 // data-table — rows × columns. Optional per-cell tone for highlighting.
 export interface DataTableColumn {
-  key: string                          // column id, matches keys in row data
+  key: string // column id, matches keys in row data
   label: string
-  align?: 'left' | 'right' | 'center'  // default right for numeric
-  format?: 'number' | 'currency' | 'percent' | 'text'  // hint for renderer
+  align?: 'left' | 'right' | 'center' // default right for numeric
+  format?: 'number' | 'currency' | 'percent' | 'text' // hint for renderer
   sortable?: boolean
 }
 
 export interface DataTableCell {
   value: string | number
   tone?: 'accent' | 'danger' | 'neutral'
-  emphasis?: boolean                   // bold-weight cell
+  emphasis?: boolean // bold-weight cell
 }
 
 export interface DataTableRow {
@@ -336,7 +336,7 @@ export interface DataTableExhibit extends ExhibitBase {
   kind: 'data-table'
   columns: DataTableColumn[]
   rows: DataTableRow[]
-  totalRow?: DataTableRow              // optional sticky bottom row
+  totalRow?: DataTableRow // optional sticky bottom row
 }
 
 // profit-tree — hierarchical issue tree, e.g. Profit → Revenue/Cost → ...
@@ -345,16 +345,16 @@ export interface DataTableExhibit extends ExhibitBase {
 export interface ProfitTreeNode {
   id: string
   label: string
-  value?: string                       // displayed value, e.g. '$22M' or '50%'
-  formula?: string                     // optional formula explanation
+  value?: string // displayed value, e.g. '$22M' or '50%'
+  formula?: string // optional formula explanation
   tone?: 'accent' | 'danger' | 'neutral'
   children?: ProfitTreeNode[]
 }
 
 export interface ProfitTreeExhibit extends ExhibitBase {
   kind: 'profit-tree'
-  root: ProfitTreeNode       // single-root legacy; renderer uses roots ?? [root]
-  roots?: ProfitTreeNode[]   // multi-root: editor writes here
+  root: ProfitTreeNode // single-root legacy; renderer uses roots ?? [root]
+  roots?: ProfitTreeNode[] // multi-root: editor writes here
 }
 
 // segmentation-matrix — 2×2 grid. Each quadrant has a label + list of items.
@@ -391,9 +391,9 @@ export interface ChartExhibit extends ExhibitBase {
 // text-exhibit — rich text passage (paragraphs + bullet lists).
 export interface TextExhibitBlock {
   kind: 'paragraph' | 'bullets' | 'quote'
-  text?: string                        // for paragraph / quote
-  items?: string[]                     // for bullets
-  attribution?: string                 // for quote
+  text?: string // for paragraph / quote
+  items?: string[] // for bullets
+  attribution?: string // for quote
 }
 
 export interface TextExhibit extends ExhibitBase {
@@ -425,39 +425,39 @@ export type Exhibit =
 export type QuantNumberFormat = 'integer' | 'decimal' | 'percent' | 'currency'
 
 export interface QuantBand {
-  min: number                          // accepted band minimum (inclusive)
-  max: number                          // accepted band maximum (inclusive)
-  idealMin?: number                    // optional inner band — "strong"
+  min: number // accepted band minimum (inclusive)
+  max: number // accepted band maximum (inclusive)
+  idealMin?: number // optional inner band — "strong"
   idealMax?: number
 }
 
 export interface QuantFieldSpec {
-  id: string                           // field id, used as key in answers + formula vars
-  label: string                        // visible label
-  prompt?: string                      // optional longer prompt below the label
-  unit?: string                        // display suffix, e.g. '%', 'M', '$'
+  id: string // field id, used as key in answers + formula vars
+  label: string // visible label
+  prompt?: string // optional longer prompt below the label
+  unit?: string // display suffix, e.g. '%', 'M', '$'
   format?: QuantNumberFormat
   acceptedRange: QuantBand
-  modelAnswer: number                  // the exact derived number (centre of band)
-  derivation?: string                  // 1-2 sentence explanation shown on submit
+  modelAnswer: number // the exact derived number (centre of band)
+  derivation?: string // 1-2 sentence explanation shown on submit
 }
 
 // Variable referenced by a QuantFormula. May source from a prior quant node's
 // answer; if so the prior answer pre-fills the variable but stays editable.
 export interface QuantVariable {
-  name: string                         // matches token in expression, e.g. 'families'
+  name: string // matches token in expression, e.g. 'families'
   label: string
   unit?: string
   format?: QuantNumberFormat
-  defaultValue?: number                // initial seed if no source
+  defaultValue?: number // initial seed if no source
   source?: {
-    nodeId: string                     // prior quant node id
-    fieldId?: string                   // for structured-quant, which field
+    nodeId: string // prior quant node id
+    fieldId?: string // for structured-quant, which field
   }
 }
 
 export interface QuantFormula {
-  expression: string                   // e.g. '{families} * {cost} * 12'
+  expression: string // e.g. '{families} * {cost} * 12'
   variables: QuantVariable[]
   // Optional human-readable form, e.g. 'families × monthly cost × 12 months'.
   // Shown to the candidate above the variable inputs.
@@ -465,9 +465,9 @@ export interface QuantFormula {
 }
 
 interface QuantNodeBase {
-  prompt: string                       // the question, e.g. "How many rural families receive benefits?"
-  context?: string                     // optional extra framing (1-2 sentences)
-  formula?: QuantFormula               // when present, variables drive the computed answer
+  prompt: string // the question, e.g. "How many rural families receive benefits?"
+  context?: string // optional extra framing (1-2 sentences)
+  formula?: QuantFormula // when present, variables drive the computed answer
   // Optional hint text — author-controlled. Reveals the formula / approach
   // when the candidate clicks "Need a hint?". Using the hint docks the
   // submission to at most "proficient" so candidates who needed help don't
@@ -481,12 +481,12 @@ interface QuantNodeBase {
 
 export interface NumericRangeQuant extends QuantNodeBase {
   variant: 'numeric-range'
-  field: QuantFieldSpec                // single field
+  field: QuantFieldSpec // single field
 }
 
 export interface StructuredQuant extends QuantNodeBase {
   variant: 'structured-quant'
-  fields: QuantFieldSpec[]             // multiple fields, each with own band
+  fields: QuantFieldSpec[] // multiple fields, each with own band
 }
 
 export type QuantSpec = NumericRangeQuant | StructuredQuant
@@ -500,13 +500,13 @@ export type QuantSpec = NumericRangeQuant | StructuredQuant
 // wrong → developing; revealing the hint caps at proficient, like quant.
 
 export interface SqlSpec {
-  prompt: string                       // the business ask, e.g. "Which states have more than 10 customers?"
-  context?: string                     // optional framing shown above the prompt
-  datasetSlug: string                  // Dataset.slug (Admin → Datasets)
-  referenceSql: string                 // author's query; result set is the answer key
-  ordered?: boolean                    // row order must match
-  strictColumns?: boolean              // column names must match
-  hint?: string                        // optional nudge; using it docks the signal to proficient
+  prompt: string // the business ask, e.g. "Which states have more than 10 customers?"
+  context?: string // optional framing shown above the prompt
+  datasetSlug: string // Dataset.slug (Admin → Datasets)
+  referenceSql: string // author's query; result set is the answer key
+  ordered?: boolean // row order must match
+  strictColumns?: boolean // column names must match
+  hint?: string // optional nudge; using it docks the signal to proficient
 }
 
 // Outcome of an sql node submission, preserved for the results page.
@@ -514,9 +514,9 @@ export interface SqlNodeResultSummary {
   nodeId: string
   phaseId?: string
   prompt: string
-  sql: string                          // what the candidate submitted
+  sql: string // what the candidate submitted
   correct: boolean
-  reason?: string                      // mismatch explanation when incorrect
+  reason?: string // mismatch explanation when incorrect
   hintUsed?: boolean
 }
 
@@ -553,8 +553,8 @@ export interface Scenario {
   // the shared track icon. Falls back to the track icon when absent.
   icon?: string
   estimatedMinutes: number
-  mode?: 'text' | 'immersive'          // defaults to 'text' when absent
-  interviewer?: ScenarioInterviewer    // required when mode === 'immersive' (locks persona for pre-rendering)
+  mode?: 'text' | 'immersive' // defaults to 'text' when absent
+  interviewer?: ScenarioInterviewer // required when mode === 'immersive' (locks persona for pre-rendering)
   briefing: ScenarioBriefing
   display?: ScenarioDisplay
   createdBy?: string // institution id for custom scenarios
@@ -588,11 +588,11 @@ export interface ScenarioMediaAsset {
   id: string
   scenarioId: string
   nodeId: string
-  scriptHash: string                   // sha256 of the audioScript that produced this clip
+  scriptHash: string // sha256 of the audioScript that produced this clip
   presenterId: string
   voiceId: string
   status: ScenarioMediaAssetStatus
-  mediaUrl: string | null              // public URL (R2) once status === 'ready'
+  mediaUrl: string | null // public URL (R2) once status === 'ready'
   durationMs: number | null
   errorMessage: string | null
   createdAt: string
@@ -687,10 +687,14 @@ export type ToolKey = (typeof TOOL_KEYS)[number]
 
 // `live` — the tool's page exists. A flag can be switched on before the
 // page ships; the UI renders such tools dimmed instead of 404ing.
-export const TOOL_META: Record<ToolKey, { label: string; description: string; path: string; live: boolean }> = {
+export const TOOL_META: Record<
+  ToolKey,
+  { label: string; description: string; path: string; live: boolean }
+> = {
   'sql-sandbox': {
     label: 'SQL Sandbox',
-    description: 'Write and run SQL against a cohort dataset in a private in-browser Postgres database instance.',
+    description:
+      'Write and run SQL against a cohort dataset in a private in-browser Postgres database instance.',
     path: '/tools/sql',
     live: true,
   },

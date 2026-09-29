@@ -13,9 +13,10 @@ export function ChoiceCard({ id, text, selected, onSelect }: Props) {
         choice-card w-full text-left flex items-start gap-4
         rounded-xl border-2 px-5 py-4 cursor-pointer
         transition-all duration-150
-        ${selected
-          ? 'border-green bg-green/10'
-          : 'border-white/10 bg-[#111111] hover:border-white/25'
+        ${
+          selected
+            ? 'border-green bg-green/10'
+            : 'border-white/10 bg-[#111111] hover:border-white/25'
         }
       `}
     >
@@ -28,7 +29,9 @@ export function ChoiceCard({ id, text, selected, onSelect }: Props) {
       >
         {id}
       </span>
-      <span className={`text-[14px] leading-relaxed pt-0.5 ${selected ? 'text-[#f5f3ee] font-medium' : 'text-slate-light'}`}>
+      <span
+        className={`text-[14px] leading-relaxed pt-0.5 ${selected ? 'text-[#f5f3ee] font-medium' : 'text-slate-light'}`}
+      >
         {text}
       </span>
     </button>

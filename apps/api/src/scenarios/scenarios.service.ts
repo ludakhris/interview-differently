@@ -77,7 +77,10 @@ export class ScenariosService {
 
   /** Owner of a scenario, for mutation checks. null = public. */
   async ownerOf(id: string): Promise<string | null> {
-    const row = await this.prisma.scenario.findUnique({ where: { scenarioId: id }, select: { institutionId: true } })
+    const row = await this.prisma.scenario.findUnique({
+      where: { scenarioId: id },
+      select: { institutionId: true },
+    })
     if (!row) throw new NotFoundException(`Scenario ${id} not found`)
     return row.institutionId
   }
@@ -143,11 +146,20 @@ export class ScenariosService {
   private visibleWhere(viewer: Viewer | null) {
     if (!viewer) return { institutionId: null }
     if (viewer.role === 'admin') return {}
-    return { OR: [{ institutionId: null }, { institution: { memberships: { some: { userId: viewer.userId } } } }] }
+    return {
+      OR: [
+        { institutionId: null },
+        { institution: { memberships: { some: { userId: viewer.userId } } } },
+      ],
+    }
   }
 
   /** Column-backed ownership merged onto the JSON blob for clients. */
-  private withOwner(row: { data: unknown; institutionId: string | null; institution: { name: string } | null }): Scenario {
+  private withOwner(row: {
+    data: unknown
+    institutionId: string | null
+    institution: { name: string } | null
+  }): Scenario {
     return {
       ...(row.data as object),
       institutionId: row.institutionId,
@@ -194,6 +206,13 @@ function toSummary(full: Scenario): Scenario {
     // contain user scores or model-answer derivations.
     ...(full.rubric ? { rubric: full.rubric } : {}),
     // Publish state + last-edit stamp for the builder list.
-    ...(full.builderMeta ? { builderMeta: { status: full.builderMeta.status, lastEditedAt: full.builderMeta.lastEditedAt } } : {}),
+    ...(full.builderMeta
+      ? {
+          builderMeta: {
+            status: full.builderMeta.status,
+            lastEditedAt: full.builderMeta.lastEditedAt,
+          },
+        }
+      : {}),
   }
 }

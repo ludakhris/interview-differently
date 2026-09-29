@@ -10,10 +10,7 @@ import { PrerenderedAvatarPlayer } from '@/components/immersive/PrerenderedAvata
 import { ResponseRecorder, type RecordingResult } from '@/components/immersive/ResponseRecorder'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import { useNarration } from '@/hooks/useNarration'
-import {
-  createImmersiveSession,
-  submitImmersiveResponse,
-} from '@/services/immersiveService'
+import { createImmersiveSession, submitImmersiveResponse } from '@/services/immersiveService'
 import { listScenarioMedia } from '@/services/scenarioMediaService'
 import type { ScenarioMediaAsset, ScenarioNode } from '@id/types'
 
@@ -36,7 +33,7 @@ export function ImmersiveSimulationPage() {
   const narration = useNarration()
 
   const [narrationMode] = useState<NarrationMode>(
-    searchParams.get('mode') === 'avatar' ? 'avatar' : 'voice',
+    searchParams.get('mode') === 'avatar' ? 'avatar' : 'voice'
   )
 
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -46,16 +43,17 @@ export function ImmersiveSimulationPage() {
   const sessionCreatedRef = useRef(false)
 
   const decisionNodes: ScenarioNode[] = (scenario?.nodes ?? []).filter(
-    n => n.type === 'decision' && n.responsePrompt,
+    (n) => n.type === 'decision' && n.responsePrompt
   )
 
   const currentNode = decisionNodes[nodeIndex] ?? null
   const totalNodes = decisionNodes.length
   const isLastNode = nodeIndex === totalNodes - 1
 
-  const currentAsset = currentNode && mediaAssets
-    ? mediaAssets.find(a => a.nodeId === currentNode.nodeId) ?? null
-    : null
+  const currentAsset =
+    currentNode && mediaAssets
+      ? (mediaAssets.find((a) => a.nodeId === currentNode.nodeId) ?? null)
+      : null
   const currentMediaUrl = currentAsset?.status === 'ready' ? currentAsset.mediaUrl : null
 
   // Unified "is currently playing narration" across both modes
@@ -83,7 +81,7 @@ export function ImmersiveSimulationPage() {
     sessionCreatedRef.current = true
 
     createImmersiveSession(scenarioId, userId)
-      .then(session => {
+      .then((session) => {
         setSessionId(session.id)
         setPageState('narrating')
       })
@@ -111,7 +109,7 @@ export function ImmersiveSimulationPage() {
 
   // Avatar mode: called by PrerenderedAvatarPlayer when the clip finishes
   const handleAvatarDone = useCallback(() => {
-    setPageState(prev => (prev === 'narrating' ? 'responding' : prev))
+    setPageState((prev) => (prev === 'narrating' ? 'responding' : prev))
   }, [])
 
   const handleResponseSubmit = useCallback(
@@ -135,7 +133,7 @@ export function ImmersiveSimulationPage() {
 
       advanceOrFinish()
     },
-    [currentNode, sessionId, nodeIndex], // eslint-disable-line react-hooks/exhaustive-deps
+    [currentNode, sessionId, nodeIndex] // eslint-disable-line react-hooks/exhaustive-deps
   )
 
   const handleSkip = useCallback(() => {
@@ -150,7 +148,7 @@ export function ImmersiveSimulationPage() {
         : `/dashboard`
       setTimeout(() => navigate(target), 800)
     } else {
-      setNodeIndex(i => i + 1)
+      setNodeIndex((i) => i + 1)
       setPageState('narrating')
     }
   }
@@ -216,7 +214,6 @@ export function ImmersiveSimulationPage() {
 
         <div className="flex-1 min-w-0 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-6 py-8 space-y-6 animate-fade-in">
-
             {/* Alert banner on first question */}
             {display?.alertBanner && nodeIndex === 0 && (
               <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
@@ -264,9 +261,12 @@ export function ImmersiveSimulationPage() {
                 </div>
               ) : (
                 <div className="w-full aspect-video rounded-2xl bg-[#0d0d0d] border border-red-400/30 flex flex-col items-center justify-center gap-2 p-6 text-center">
-                  <p className="text-[13px] text-red-400 font-semibold">Interviewer clip unavailable</p>
+                  <p className="text-[13px] text-red-400 font-semibold">
+                    Interviewer clip unavailable
+                  </p>
                   <p className="text-[11px] text-slate-mid leading-relaxed max-w-md">
-                    This question's avatar clip wasn't pre-rendered. Ask an admin to render this scenario in the builder before retrying.
+                    This question's avatar clip wasn't pre-rendered. Ask an admin to render this
+                    scenario in the builder before retrying.
                   </p>
                 </div>
               )
@@ -318,7 +318,6 @@ export function ImmersiveSimulationPage() {
                 </div>
               )
             )}
-
           </div>
         </div>
       </div>

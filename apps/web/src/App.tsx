@@ -71,56 +71,210 @@ export default function App() {
   useRegisterToken()
   return (
     <ConfirmProvider>
-    <Routes>
-      {/* Public */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/scenario/:scenarioId/briefing" element={<BriefingPage />} />
-      <Route path="/scenario/:scenarioId/play" element={<SimulationPage />} />
-      <Route path="/request-scenario" element={<RequestScenarioPage />} />
-      <Route path="/a/:code" element={<InvitePage />} />
+      <Routes>
+        {/* Public */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/scenario/:scenarioId/briefing" element={<BriefingPage />} />
+        <Route path="/scenario/:scenarioId/play" element={<SimulationPage />} />
+        <Route path="/request-scenario" element={<RequestScenarioPage />} />
+        <Route path="/a/:code" element={<InvitePage />} />
 
-      {/* Internal showcase pages — visual reference for authors. */}
-      <Route path="/dev/quant" element={<QuantGalleryPage />} />
-      <Route path="/dev/exhibits" element={<ExhibitGalleryPage />} />
+        {/* Internal showcase pages — visual reference for authors. */}
+        <Route path="/dev/quant" element={<QuantGalleryPage />} />
+        <Route path="/dev/exhibits" element={<ExhibitGalleryPage />} />
 
-      {/* Auth pages — /* catches Clerk's internal sub-routes */}
-      <Route path="/sign-in/*" element={<AuthPage mode="sign-in" />} />
-      <Route path="/sign-up/*" element={<AuthPage mode="sign-up" />} />
+        {/* Auth pages — /* catches Clerk's internal sub-routes */}
+        <Route path="/sign-in/*" element={<AuthPage mode="sign-in" />} />
+        <Route path="/sign-up/*" element={<AuthPage mode="sign-up" />} />
 
-      {/* Protected */}
-      <Route path="/dashboard" element={<DashboardPage />} />
-      <Route path="/scenario/:scenarioId/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
-      <Route path="/scenario/:scenarioId/feedback/:resultId" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
-      <Route path="/scenario/:scenarioId/immersive" element={<ProtectedRoute><ImmersiveSimulationPage /></ProtectedRoute>} />
-      <Route path="/scenario/:scenarioId/immersive/:sessionId/feedback" element={<ProtectedRoute><ImmersiveFeedbackPage /></ProtectedRoute>} />
-      <Route path="/builder" element={<AdminRoute><BuilderListPage /></AdminRoute>} />
-      <Route path="/builder/new" element={<AdminRoute><BuilderSetupPage /></AdminRoute>} />
-      {/* Document editor — the builder (#24 Phase G) */}
-      <Route path="/builder/:scenarioId" element={<AdminRoute><BuilderV2Page /></AdminRoute>} />
-      {/* The graph canvas is gone (#28) — old links land on the editor */}
-      <Route path="/builder/:scenarioId/advanced" element={<BuilderV2Redirect />} />
-      {/* Old v2 URL — bookmarks / preview back-links */}
-      <Route path="/builder/v2/:scenarioId" element={<BuilderV2Redirect />} />
-      <Route path="/tools/sql" element={<ProtectedRoute><SqlSandboxPage /></ProtectedRoute>} />
-      <Route path="/tools/assessments" element={<ProtectedRoute><AssessmentsPage /></ProtectedRoute>} />
-      <Route path="/tools/assessments/attempt/:attemptId" element={<ProtectedRoute><AssessmentAttemptPage /></ProtectedRoute>} />
-      <Route path="/tools/assessments/attempt/:attemptId/result" element={<ProtectedRoute><AssessmentResultPage /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-      <Route path="/welcome" element={<ProtectedRoute><WelcomePage /></ProtectedRoute>} />
-      {/* Legacy alias — old admin-only path now goes to the unified settings page */}
-      <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />
-      <Route path="/admin/datasets" element={<AdminRoute><AdminDatasetsPage /></AdminRoute>} />
-      <Route path="/admin/assessments" element={<AdminRoute><AdminAssessmentsPage /></AdminRoute>} />
-      <Route path="/admin/institutions" element={<AdminRoute><AdminInstitutionsPage /></AdminRoute>} />
-      <Route path="/admin/institutions/:institutionId/analytics" element={<AdminRoute><AdminInstitutionAnalyticsPage /></AdminRoute>} />
-      <Route path="/admin/institutions/:institutionId/engagement" element={<AdminRoute><AdminInstitutionEngagementPage /></AdminRoute>} />
-      <Route path="/admin/institutions/:institutionId/heatmap" element={<AdminRoute><AdminInstitutionHeatmapPage /></AdminRoute>} />
-      <Route path="/admin/institutions/:institutionId/assessments" element={<AdminRoute><AdminInstitutionAssessmentsPage /></AdminRoute>} />
-      <Route path="/admin/institutions/:institutionId/students" element={<AdminRoute><AdminInstitutionStudentsPage /></AdminRoute>} />
-      <Route path="/admin/institutions/:institutionId/students/:userId" element={<AdminRoute><AdminStudentDetailPage /></AdminRoute>} />
+        {/* Protected */}
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route
+          path="/scenario/:scenarioId/feedback"
+          element={
+            <ProtectedRoute>
+              <FeedbackPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/scenario/:scenarioId/feedback/:resultId"
+          element={
+            <ProtectedRoute>
+              <FeedbackPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/scenario/:scenarioId/immersive"
+          element={
+            <ProtectedRoute>
+              <ImmersiveSimulationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/scenario/:scenarioId/immersive/:sessionId/feedback"
+          element={
+            <ProtectedRoute>
+              <ImmersiveFeedbackPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/builder"
+          element={
+            <AdminRoute>
+              <BuilderListPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/builder/new"
+          element={
+            <AdminRoute>
+              <BuilderSetupPage />
+            </AdminRoute>
+          }
+        />
+        {/* Document editor — the builder (#24 Phase G) */}
+        <Route
+          path="/builder/:scenarioId"
+          element={
+            <AdminRoute>
+              <BuilderV2Page />
+            </AdminRoute>
+          }
+        />
+        {/* The graph canvas is gone (#28) — old links land on the editor */}
+        <Route path="/builder/:scenarioId/advanced" element={<BuilderV2Redirect />} />
+        {/* Old v2 URL — bookmarks / preview back-links */}
+        <Route path="/builder/v2/:scenarioId" element={<BuilderV2Redirect />} />
+        <Route
+          path="/tools/sql"
+          element={
+            <ProtectedRoute>
+              <SqlSandboxPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tools/assessments"
+          element={
+            <ProtectedRoute>
+              <AssessmentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tools/assessments/attempt/:attemptId"
+          element={
+            <ProtectedRoute>
+              <AssessmentAttemptPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tools/assessments/attempt/:attemptId/result"
+          element={
+            <ProtectedRoute>
+              <AssessmentResultPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/welcome"
+          element={
+            <ProtectedRoute>
+              <WelcomePage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Legacy alias — old admin-only path now goes to the unified settings page */}
+        <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />
+        <Route
+          path="/admin/datasets"
+          element={
+            <AdminRoute>
+              <AdminDatasetsPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/assessments"
+          element={
+            <AdminRoute>
+              <AdminAssessmentsPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/institutions"
+          element={
+            <AdminRoute>
+              <AdminInstitutionsPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/institutions/:institutionId/analytics"
+          element={
+            <AdminRoute>
+              <AdminInstitutionAnalyticsPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/institutions/:institutionId/engagement"
+          element={
+            <AdminRoute>
+              <AdminInstitutionEngagementPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/institutions/:institutionId/heatmap"
+          element={
+            <AdminRoute>
+              <AdminInstitutionHeatmapPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/institutions/:institutionId/assessments"
+          element={
+            <AdminRoute>
+              <AdminInstitutionAssessmentsPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/institutions/:institutionId/students"
+          element={
+            <AdminRoute>
+              <AdminInstitutionStudentsPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/institutions/:institutionId/students/:userId"
+          element={
+            <AdminRoute>
+              <AdminStudentDetailPage />
+            </AdminRoute>
+          }
+        />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </ConfirmProvider>
   )
 }

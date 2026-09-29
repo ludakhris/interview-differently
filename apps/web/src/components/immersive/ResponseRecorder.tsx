@@ -50,7 +50,7 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function stopStream() {
-    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current?.getTracks().forEach((t) => t.stop())
     streamRef.current = null
   }
 
@@ -71,11 +71,13 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
       const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
         ? 'video/webm;codecs=vp9,opus'
         : MediaRecorder.isTypeSupported('video/webm')
-        ? 'video/webm'
-        : 'audio/webm'
+          ? 'video/webm'
+          : 'audio/webm'
 
       const recorder = new MediaRecorder(stream, { mimeType })
-      recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data)
+      }
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mimeType })
         blobRef.current = blob
@@ -100,7 +102,10 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
   }, [mode])
 
   const stopRecording = useCallback(() => {
-    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
     mediaRecorderRef.current?.stop()
   }, [])
 
@@ -120,7 +125,9 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
   }, [previewUrl])
 
   const formatTime = (secs: number) => {
-    const m = Math.floor(secs / 60).toString().padStart(2, '0')
+    const m = Math.floor(secs / 60)
+      .toString()
+      .padStart(2, '0')
     const s = (secs % 60).toString().padStart(2, '0')
     return `${m}:${s}`
   }
@@ -130,14 +137,12 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
       {/* Mode selector — only shown when idle */}
       {state === 'idle' && (
         <div className="flex border-b border-white/10">
-          {(['audio', 'video'] as RecordingMode[]).map(m => (
+          {(['audio', 'video'] as RecordingMode[]).map((m) => (
             <button
               key={m}
               onClick={() => setMode(m)}
               className={`flex-1 py-2.5 text-[13px] font-medium transition-colors ${
-                mode === m
-                  ? 'text-white bg-white/5'
-                  : 'text-slate-light hover:text-white'
+                mode === m ? 'text-white bg-white/5' : 'text-slate-light hover:text-white'
               }`}
             >
               {m === 'audio' ? 'Audio only' : 'Video + Audio'}
@@ -148,7 +153,7 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
 
       <div className="p-5 space-y-4">
         {/* Video preview area */}
-        {(state === 'recording' && mode === 'video') && (
+        {state === 'recording' && mode === 'video' && (
           <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
             <video ref={videoPreviewRef} className="w-full h-full object-cover" playsInline muted />
             <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/60 rounded-full px-2.5 py-1">

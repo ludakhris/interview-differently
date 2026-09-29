@@ -9,7 +9,12 @@ import { SchemaTree } from '@/components/sql/SchemaTree'
 import { ResultsGrid } from '@/components/sql/ResultsGrid'
 import { ResultActions } from '@/components/sql/ResultActions'
 import { SandboxDb, type SandboxResult } from '@/lib/sql/sandboxDb'
-import { fetchMyDataset, fetchMyDatasets, type DatasetDetail, type DatasetSummary } from '@/services/datasetsService'
+import {
+  fetchMyDataset,
+  fetchMyDatasets,
+  type DatasetDetail,
+  type DatasetSummary,
+} from '@/services/datasetsService'
 
 /**
  * SQL Sandbox (#25) — a DB-client-style workspace against a cohort dataset.
@@ -118,7 +123,11 @@ export function SqlSandboxPage() {
         setDbState({ status: 'ready' })
       })
       .catch((e) => {
-        if (!cancelled) setDbState({ status: 'error', message: e instanceof Error ? e.message : 'Failed to load dataset' })
+        if (!cancelled)
+          setDbState({
+            status: 'error',
+            message: e instanceof Error ? e.message : 'Failed to load dataset',
+          })
       })
     return () => {
       cancelled = true
@@ -170,7 +179,10 @@ export function SqlSandboxPage() {
       return
     }
     const { from, to } = view.state.selection.main
-    view.dispatch({ changes: { from, to, insert: text }, selection: { anchor: from + text.length } })
+    view.dispatch({
+      changes: { from, to, insert: text },
+      selection: { anchor: from + text.length },
+    })
     view.focus()
   }, [])
 
@@ -209,8 +221,9 @@ export function SqlSandboxPage() {
       {needsPick && (
         <div className="mx-6 mt-4 rounded-xl bg-[#2d9e5f]/10 border border-[#2d9e5f]/40 px-4 py-3 flex items-center gap-3 flex-wrap">
           <p className="text-[13px] text-[#f5f3ee]">
-            <span className="font-semibold">Choose a dataset to start.</span> Your cohort has {datasets.length} — pick the one your
-            instructor asked you to use. You can switch any time from the menu on the left.
+            <span className="font-semibold">Choose a dataset to start.</span> Your cohort has{' '}
+            {datasets.length} — pick the one your instructor asked you to use. You can switch any
+            time from the menu on the left.
           </p>
           <div className="flex gap-2 flex-wrap">
             {datasets.map((d) => (
@@ -240,7 +253,10 @@ export function SqlSandboxPage() {
             <p className="text-[13px] text-slate-mid mt-1">
               Ask your instructor to enable the SQL Sandbox for your cohort and assign a dataset.
             </p>
-            <button onClick={() => navigate('/dashboard')} className="mt-4 text-[12px] text-green-light hover:underline">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="mt-4 text-[12px] text-green-light hover:underline"
+            >
               ← Back to dashboard
             </button>
           </div>
@@ -251,7 +267,9 @@ export function SqlSandboxPage() {
           <aside className="flex flex-col w-[240px] flex-shrink-0 bg-[#0d0d0d] border-r border-white/8">
             <div className="h-[3px] w-full flex-shrink-0 bg-[#2d9e5f]" />
             <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#2d9e5f]">Workspace</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#2d9e5f]">
+                Workspace
+              </p>
               <button
                 onClick={reset}
                 disabled={!ready}
@@ -285,11 +303,15 @@ export function SqlSandboxPage() {
 
             <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-6">
               <section>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-2">Schema</p>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-2">
+                  Schema
+                </p>
                 {dataset ? (
                   <SchemaTree tables={dataset.schemaSummary} onPick={insertAtCursor} />
                 ) : needsPick ? (
-                  <p className="text-[12px] text-slate-mid">Select a dataset above to see its tables.</p>
+                  <p className="text-[12px] text-slate-mid">
+                    Select a dataset above to see its tables.
+                  </p>
                 ) : (
                   <p className="text-[12px] text-slate-mid">Loading…</p>
                 )}
@@ -297,7 +319,9 @@ export function SqlSandboxPage() {
 
               {history.length > 0 && (
                 <section>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-2">History</p>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-2">
+                    History
+                  </p>
                   <ul className="space-y-0.5">
                     {history.map((h, i) => (
                       <li key={i}>
@@ -335,7 +359,8 @@ export function SqlSandboxPage() {
                 )}
               </div>
               <p className="text-[11px] text-white/30">
-                Your own copy of the data. Break it freely — <RotateCcw size={10} className="inline -mt-0.5" /> rebuilds it.
+                Your own copy of the data. Break it freely —{' '}
+                <RotateCcw size={10} className="inline -mt-0.5" /> rebuilds it.
               </p>
             </div>
 
@@ -365,8 +390,12 @@ export function SqlSandboxPage() {
                 <div className="m-4 mb-0 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 flex gap-3">
                   <AlertTriangle size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-red-400 mb-0.5">Query error</p>
-                    <p className="text-[13px] text-[#f5f3ee]/85 font-mono whitespace-pre-wrap">{queryError}</p>
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-red-400 mb-0.5">
+                      Query error
+                    </p>
+                    <p className="text-[13px] text-[#f5f3ee]/85 font-mono whitespace-pre-wrap">
+                      {queryError}
+                    </p>
                   </div>
                 </div>
               )}
@@ -381,7 +410,8 @@ export function SqlSandboxPage() {
                   <ResultsGrid result={result} limit={rowLimit} />
                 ) : ready ? (
                   <p className="px-5 py-8 text-[12px] text-white/30">
-                    Write a query above and press <span className="font-mono">⌘↵</span>. Click a table or column in the rail to drop its name into the editor.
+                    Write a query above and press <span className="font-mono">⌘↵</span>. Click a
+                    table or column in the rail to drop its name into the editor.
                   </p>
                 ) : null}
               </div>
@@ -402,10 +432,14 @@ export function SqlSandboxPage() {
                 <span className="flex items-center gap-3">
                   {result && result.rowCount > rowLimit && (
                     <span className="text-amber-400">
-                      showing first {rowLimit.toLocaleString()} of {result.rowCount.toLocaleString()}
+                      showing first {rowLimit.toLocaleString()} of{' '}
+                      {result.rowCount.toLocaleString()}
                     </span>
                   )}
-                  <label className="flex items-center gap-1.5" title="How many rows the grid shows. Copy and CSV always include every row.">
+                  <label
+                    className="flex items-center gap-1.5"
+                    title="How many rows the grid shows. Copy and CSV always include every row."
+                  >
                     show
                     <select
                       value={rowLimit}
@@ -428,7 +462,12 @@ export function SqlSandboxPage() {
                     </select>
                     rows
                   </label>
-                  {result && !queryError && <ResultActions result={result} datasetName={dataset?.name ?? slug ?? 'sandbox'} />}
+                  {result && !queryError && (
+                    <ResultActions
+                      result={result}
+                      datasetName={dataset?.name ?? slug ?? 'sandbox'}
+                    />
+                  )}
                   <span>postgres · pglite</span>
                 </span>
               </div>

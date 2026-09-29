@@ -69,31 +69,33 @@ export class AnalyticsService {
     }
 
     // 2. SimulationResult + SimulationAttempt + ImmersiveSession rows for those users
-    const [results, traditionalAttempts, immersiveSessions, assessmentAttempts] = await Promise.all([
-      this.prisma.simulationResult.findMany({
-        where: { userId: { in: userIds } },
-        select: {
-          id: true,
-          userId: true,
-          track: true,
-          overallScore: true,
-          completedAt: true,
-          dimensionScores: { select: { dimension: true, score: true } },
-        },
-      }),
-      this.prisma.simulationAttempt.findMany({
-        where: { userId: { in: userIds } },
-        select: { userId: true, scenarioId: true, startedAt: true },
-      }),
-      this.prisma.immersiveSession.findMany({
-        where: { userId: { in: userIds } },
-        select: { userId: true, status: true, createdAt: true },
-      }),
-      this.prisma.assessmentAttempt.findMany({
-        where: { userId: { in: userIds } },
-        select: { userId: true, startedAt: true, submittedAt: true },
-      }),
-    ])
+    const [results, traditionalAttempts, immersiveSessions, assessmentAttempts] = await Promise.all(
+      [
+        this.prisma.simulationResult.findMany({
+          where: { userId: { in: userIds } },
+          select: {
+            id: true,
+            userId: true,
+            track: true,
+            overallScore: true,
+            completedAt: true,
+            dimensionScores: { select: { dimension: true, score: true } },
+          },
+        }),
+        this.prisma.simulationAttempt.findMany({
+          where: { userId: { in: userIds } },
+          select: { userId: true, scenarioId: true, startedAt: true },
+        }),
+        this.prisma.immersiveSession.findMany({
+          where: { userId: { in: userIds } },
+          select: { userId: true, status: true, createdAt: true },
+        }),
+        this.prisma.assessmentAttempt.findMany({
+          where: { userId: { in: userIds } },
+          select: { userId: true, startedAt: true, submittedAt: true },
+        }),
+      ]
+    )
 
     const completedSimulations = results.length
     const assessmentsSubmitted = assessmentAttempts.filter((a) => a.submittedAt).length
@@ -127,12 +129,16 @@ export class AnalyticsService {
     ]).size
 
     // 4. Per-track + per-dimension breakdowns
-    const byTrack = groupAvg(results, (r) => r.track, (r) => r.overallScore)
+    const byTrack = groupAvg(
+      results,
+      (r) => r.track,
+      (r) => r.overallScore
+    )
     const dimensionPairs = results.flatMap((r) => r.dimensionScores)
     const byDimension = groupAvg(
       dimensionPairs,
       (d) => d.dimension,
-      (d) => d.score,
+      (d) => d.score
     )
 
     // 5. Per-cohort comparison (only when no cohort filter)
@@ -223,16 +229,18 @@ export class AnalyticsService {
       ...sessions.map((s) => s.scenarioId),
     ])
     const missingTitleIds = [...allScenarioIds].filter((id) => !titleFromResults.has(id))
-    const scenarioRows = missingTitleIds.length === 0
-      ? []
-      : await this.prisma.scenario.findMany({
-          where: { scenarioId: { in: missingTitleIds } },
-          select: { scenarioId: true, data: true },
-        })
+    const scenarioRows =
+      missingTitleIds.length === 0
+        ? []
+        : await this.prisma.scenario.findMany({
+            where: { scenarioId: { in: missingTitleIds } },
+            select: { scenarioId: true, data: true },
+          })
     const titleFromScenarios = new Map<string, string>()
     for (const row of scenarioRows) {
       const data = row.data as { title?: unknown } | null
-      const title = data && typeof data === 'object' && typeof data.title === 'string' ? data.title : null
+      const title =
+        data && typeof data === 'object' && typeof data.title === 'string' ? data.title : null
       if (title) titleFromScenarios.set(row.scenarioId, title)
     }
 
@@ -283,13 +291,10 @@ export class AnalyticsService {
       .map(([scenarioId, b]) => ({
         scenarioId,
         scenarioTitle:
-          titleFromResults.get(scenarioId) ??
-          titleFromScenarios.get(scenarioId) ??
-          scenarioId,
+          titleFromResults.get(scenarioId) ?? titleFromScenarios.get(scenarioId) ?? scenarioId,
         starts: b.starts,
         completions: b.completions,
-        completionRate:
-          b.starts === 0 ? null : Math.round((b.completions / b.starts) * 1000) / 10,
+        completionRate: b.starts === 0 ? null : Math.round((b.completions / b.starts) * 1000) / 10,
         drops: Math.max(0, b.starts - b.completions),
         retriedUsers: [...b.startUserCounts.values()].filter((c) => c >= 2).length,
         avgScore: avg(b.scores),
@@ -399,7 +404,10 @@ export class AnalyticsService {
       let count = 0
       for (const dim of dimensions) {
         const arr = userDims?.get(dim) ?? []
-        const a = arr.length === 0 ? null : Math.round((arr.reduce((s, n) => s + n, 0) / arr.length) * 10) / 10
+        const a =
+          arr.length === 0
+            ? null
+            : Math.round((arr.reduce((s, n) => s + n, 0) / arr.length) * 10) / 10
         scoresByDimension[dim] = a
         if (a !== null) {
           total += a
@@ -411,7 +419,10 @@ export class AnalyticsService {
         anonymousLabel: `Student ${String(index + 1).padStart(2, '0')}`,
         displayName: u.displayName,
         email: u.email,
-        completedCount: userDims ? [...userDims.values()].reduce((s, arr) => s + arr.length, 0) / Math.max(1, dimensions.length) : 0,
+        completedCount: userDims
+          ? [...userDims.values()].reduce((s, arr) => s + arr.length, 0) /
+            Math.max(1, dimensions.length)
+          : 0,
         lastActivityAt: lastActivity.get(u.id)?.toISOString() ?? null,
         avgScore: count === 0 ? null : Math.round((total / count) * 10) / 10,
         scoresByDimension,
@@ -443,7 +454,9 @@ export class AnalyticsService {
       include: { cohort: { select: { id: true, name: true } } },
     })
     if (memberships.length === 0) {
-      throw new NotFoundException(`Student ${userId} is not a member of institution ${institutionId}`)
+      throw new NotFoundException(
+        `Student ${userId} is not a member of institution ${institutionId}`
+      )
     }
 
     const user = await this.prisma.user.findUnique({
@@ -525,7 +538,10 @@ export class AnalyticsService {
         responseCount: s._count.responses,
       })),
       assessments: assessmentAttempts.map((a) => {
-        const scores = (a.sectionScores as unknown as { sectionId: string; title: string; correct: number; total: number }[] | null) ?? []
+        const scores =
+          (a.sectionScores as unknown as
+            | { sectionId: string; title: string; correct: number; total: number }[]
+            | null) ?? []
         const correct = scores.reduce((n, x) => n + x.correct, 0)
         const total = scores.reduce((n, x) => n + x.total, 0)
         return {
@@ -555,18 +571,32 @@ export class AnalyticsService {
     if (!institution) throw new NotFoundException(`Institution ${institutionId} not found`)
     let cohort: { id: string; name: string } | null = null
     if (cohortId) {
-      const c = await this.prisma.cohort.findFirst({ where: { id: cohortId, institutionId }, select: { id: true, name: true } })
-      if (!c) throw new NotFoundException(`Cohort ${cohortId} not found in institution ${institutionId}`)
+      const c = await this.prisma.cohort.findFirst({
+        where: { id: cohortId, institutionId },
+        select: { id: true, name: true },
+      })
+      if (!c)
+        throw new NotFoundException(`Cohort ${cohortId} not found in institution ${institutionId}`)
       cohort = c
     }
 
     const memberships = await this.prisma.membership.findMany({
       where: { institutionId, ...(cohortId ? { cohortId } : {}) },
-      include: { user: { select: { email: true, displayName: true } }, cohort: { select: { name: true } } },
+      include: {
+        user: { select: { email: true, displayName: true } },
+        cohort: { select: { name: true } },
+      },
     })
-    const byUser = new Map<string, { email: string | null; displayName: string | null; cohorts: string[] }>()
+    const byUser = new Map<
+      string,
+      { email: string | null; displayName: string | null; cohorts: string[] }
+    >()
     for (const m of memberships) {
-      const u = byUser.get(m.userId) ?? { email: m.user.email, displayName: m.user.displayName, cohorts: [] }
+      const u = byUser.get(m.userId) ?? {
+        email: m.user.email,
+        displayName: m.user.displayName,
+        cohorts: [],
+      }
       if (m.cohort) u.cohorts.push(m.cohort.name)
       byUser.set(m.userId, u)
     }
@@ -574,12 +604,27 @@ export class AnalyticsService {
     if (userIds.length === 0) return { institution, cohort, students: [] }
 
     const [results, attempts, immersive, assessments] = await Promise.all([
-      this.prisma.simulationResult.findMany({ where: { userId: { in: userIds } }, select: { userId: true, overallScore: true, completedAt: true } }),
-      this.prisma.simulationAttempt.findMany({ where: { userId: { in: userIds } }, select: { userId: true, startedAt: true } }),
-      this.prisma.immersiveSession.findMany({ where: { userId: { in: userIds } }, select: { userId: true, status: true, createdAt: true } }),
+      this.prisma.simulationResult.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, overallScore: true, completedAt: true },
+      }),
+      this.prisma.simulationAttempt.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, startedAt: true },
+      }),
+      this.prisma.immersiveSession.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, status: true, createdAt: true },
+      }),
       this.prisma.assessmentAttempt.findMany({
         where: { userId: { in: userIds } },
-        select: { userId: true, startedAt: true, submittedAt: true, sectionScores: true, delivery: { select: { label: true } } },
+        select: {
+          userId: true,
+          startedAt: true,
+          submittedAt: true,
+          sectionScores: true,
+          delivery: { select: { label: true } },
+        },
       }),
     ])
 
@@ -589,19 +634,24 @@ export class AnalyticsService {
         const r = results.filter((x) => x.userId === userId)
         const a = assessments.filter((x) => x.userId === userId && x.submittedAt)
         const pct = (x: (typeof a)[number]) => {
-          const sc = (x.sectionScores as unknown as { correct: number; total: number }[] | null) ?? []
+          const sc =
+            (x.sectionScores as unknown as { correct: number; total: number }[] | null) ?? []
           const total = sc.reduce((n, y) => n + y.total, 0)
           return total ? Math.round((sc.reduce((n, y) => n + y.correct, 0) / total) * 100) : null
         }
         const latest = (label: string) =>
-          a.filter((x) => x.delivery.label.toLowerCase().startsWith(label)).sort((x, y) => y.submittedAt!.getTime() - x.submittedAt!.getTime())[0]
+          a
+            .filter((x) => x.delivery.label.toLowerCase().startsWith(label))
+            .sort((x, y) => y.submittedAt!.getTime() - x.submittedAt!.getTime())[0]
         const pre = latest('pre')
         const post = latest('post')
         const stamps = [
           ...r.map((x) => x.completedAt),
           ...attempts.filter((x) => x.userId === userId).map((x) => x.startedAt),
           ...immersive.filter((x) => x.userId === userId).map((x) => x.createdAt),
-          ...assessments.filter((x) => x.userId === userId).flatMap((x) => [x.startedAt, ...(x.submittedAt ? [x.submittedAt] : [])]),
+          ...assessments
+            .filter((x) => x.userId === userId)
+            .flatMap((x) => [x.startedAt, ...(x.submittedAt ? [x.submittedAt] : [])]),
         ]
         return {
           userId,
@@ -609,16 +659,25 @@ export class AnalyticsService {
           displayName: u.displayName,
           cohorts: u.cohorts,
           completedSimulations: r.length,
-          immersiveCompleted: immersive.filter((x) => x.userId === userId && x.status === 'completed').length,
+          immersiveCompleted: immersive.filter(
+            (x) => x.userId === userId && x.status === 'completed'
+          ).length,
           avgScore: avg(r.map((x) => x.overallScore)),
           assessmentsSubmitted: a.length,
           prePercent: pre ? pct(pre) : null,
           postPercent: post ? pct(post) : null,
-          lastActiveAt: stamps.length ? new Date(Math.max(...stamps.map((d) => d.getTime()))).toISOString() : null,
+          lastActiveAt: stamps.length
+            ? new Date(Math.max(...stamps.map((d) => d.getTime()))).toISOString()
+            : null,
         }
       })
-      .sort((x, y) => (x.displayName ?? x.email ?? x.userId).localeCompare(y.displayName ?? y.email ?? y.userId))
-      .map((st, index) => ({ ...st, anonymousLabel: `Student ${String(index + 1).padStart(2, '0')}` }))
+      .sort((x, y) =>
+        (x.displayName ?? x.email ?? x.userId).localeCompare(y.displayName ?? y.email ?? y.userId)
+      )
+      .map((st, index) => ({
+        ...st,
+        anonymousLabel: `Student ${String(index + 1).padStart(2, '0')}`,
+      }))
 
     return { institution, cohort, students }
   }
@@ -630,7 +689,7 @@ export class AnalyticsService {
    */
   private async cohortBreakdown(
     institutionId: string,
-    institutionResults: Array<{ userId: string; overallScore: number }>,
+    institutionResults: Array<{ userId: string; overallScore: number }>
   ) {
     const cohorts = await this.prisma.cohort.findMany({
       where: { institutionId },
@@ -708,7 +767,7 @@ function avg(nums: number[]): number | null {
 function groupAvg<T, K extends string>(
   items: T[],
   keyFn: (item: T) => K,
-  valueFn: (item: T) => number,
+  valueFn: (item: T) => number
 ): Array<{ key: K; count: number; avg: number }> {
   const groups = new Map<K, number[]>()
   for (const item of items) {

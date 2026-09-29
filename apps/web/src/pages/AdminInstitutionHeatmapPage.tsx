@@ -117,7 +117,8 @@ export function AdminInstitutionHeatmapPage() {
             )}
             {/* Print-only provenance line — hidden on screen, visible in PDF */}
             <p className="hidden print:block text-[11px] text-slate-mid mt-1">
-              Generated {new Date().toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' })}
+              Generated{' '}
+              {new Date().toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' })}
             </p>
           </div>
 
@@ -177,7 +178,7 @@ export function AdminInstitutionHeatmapPage() {
                     filename: filenameSlug(
                       data.institution.name,
                       data.cohort?.name ?? null,
-                      'heatmap',
+                      'heatmap'
                     ),
                     headers: [
                       showNames ? 'name' : 'student',
@@ -222,7 +223,9 @@ export function AdminInstitutionHeatmapPage() {
             dir={dir}
             onSort={clickSort}
             onRowClick={(userId) =>
-              navigate(`/admin/institutions/${institutionId}/students/${encodeURIComponent(userId)}`)
+              navigate(
+                `/admin/institutions/${institutionId}/students/${encodeURIComponent(userId)}`
+              )
             }
           />
         )}

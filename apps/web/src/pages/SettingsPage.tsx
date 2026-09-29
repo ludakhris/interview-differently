@@ -84,7 +84,9 @@ export function SettingsPage() {
       <Nav />
       <div className="max-w-2xl mx-auto px-6 py-12 animate-fade-in">
         <div className="mb-8">
-          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">Settings</p>
+          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+            Settings
+          </p>
           <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
             Your account
           </h1>
@@ -119,7 +121,6 @@ export function SettingsPage() {
                 />
               )}
             </div>
-
           </>
         )}
       </div>

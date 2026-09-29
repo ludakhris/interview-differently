@@ -25,6 +25,8 @@ export async function copyResultTsv(result: SandboxResult): Promise<void> {
     const c = toCell(v)
     return c == null ? '' : String(c).replace(/[\t\r\n]+/g, ' ')
   }
-  const lines = [result.columns.map(clean), ...result.allRows.map((r) => r.map(clean))].map((l) => l.join('\t'))
+  const lines = [result.columns.map(clean), ...result.allRows.map((r) => r.map(clean))].map((l) =>
+    l.join('\t')
+  )
   await navigator.clipboard.writeText(lines.join('\n'))
 }

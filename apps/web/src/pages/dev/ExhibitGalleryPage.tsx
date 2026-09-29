@@ -33,8 +33,7 @@ const SAMPLE_TEXT: TextExhibitType = {
   blocks: [
     {
       kind: 'paragraph',
-      text:
-        "Northstar wants a clean answer to \"should we use the Aurelia Retail Network to deliver financial services to the rural unbanked?\" — not a survey of options, not a McKinsey 7S. A defensible yes/no with the sizing to back it.",
+      text: 'Northstar wants a clean answer to "should we use the Aurelia Retail Network to deliver financial services to the rural unbanked?" — not a survey of options, not a McKinsey 7S. A defensible yes/no with the sizing to back it.',
     },
     {
       kind: 'bullets',
@@ -66,10 +65,22 @@ const SAMPLE_TABLE: DataTableExhibit = {
     { key: 'stores', label: 'Network stores', format: 'number', sortable: true },
   ],
   rows: [
-    { region: 'Northern Highlands', pop: 4200000, benefits: { value: 2300000, tone: 'accent' }, share: 55, stores: 3100 },
+    {
+      region: 'Northern Highlands',
+      pop: 4200000,
+      benefits: { value: 2300000, tone: 'accent' },
+      share: 55,
+      stores: 3100,
+    },
     { region: 'Central Plains', pop: 8900000, benefits: 4100000, share: 46, stores: 7200 },
     { region: 'Eastern Coast', pop: 5600000, benefits: 2800000, share: 50, stores: 4500 },
-    { region: 'Western Delta', pop: 6100000, benefits: { value: 3400000, tone: 'accent', emphasis: true }, share: 56, stores: 4800 },
+    {
+      region: 'Western Delta',
+      pop: 6100000,
+      benefits: { value: 3400000, tone: 'accent', emphasis: true },
+      share: 56,
+      stores: 4800,
+    },
     { region: 'Southern Range', pop: 3200000, benefits: 1400000, share: 44, stores: 2400 },
   ],
   totalRow: {
@@ -154,8 +165,7 @@ const SAMPLE_MATRIX: SegmentationMatrixExhibit = {
   kind: 'segmentation-matrix',
   title: 'Regional rollout prioritisation',
   caption: 'Plot each region by demand signal × infrastructure readiness.',
-  footnote:
-    'Demand: % on benefits × uptake trend. Readiness: network density + agent training.',
+  footnote: 'Demand: % on benefits × uptake trend. Readiness: network density + agent training.',
   xAxis: { label: 'Infrastructure readiness', lowLabel: 'Low', highLabel: 'High' },
   yAxis: { label: 'Demand signal', lowLabel: 'Low', highLabel: 'High' },
   quadrantLabels: {
@@ -188,12 +198,8 @@ function Section({ id, kind, blurb, children }: SectionProps) {
   return (
     <section id={id} className="space-y-3">
       <header>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
-          {kind}
-        </p>
-        <p className="mt-1 text-[13px] text-white/70 leading-relaxed max-w-2xl">
-          {blurb}
-        </p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">{kind}</p>
+        <p className="mt-1 text-[13px] text-white/70 leading-relaxed max-w-2xl">{blurb}</p>
       </header>
       <div data-screenshot-target={id}>{children}</div>
     </section>
@@ -212,10 +218,9 @@ export function ExhibitGalleryPage() {
             Visual reference — every exhibit subtype
           </h1>
           <p className="mt-3 text-[14px] text-white/65 leading-relaxed max-w-2xl">
-            Each block below is one of the five exhibit subtypes available to
-            case authors. Pick a subtype based on the kind of evidence you want
-            the candidate to read — they all share the same chrome (title,
-            caption, footnote) so cases feel consistent across authors.
+            Each block below is one of the five exhibit subtypes available to case authors. Pick a
+            subtype based on the kind of evidence you want the candidate to read — they all share
+            the same chrome (title, caption, footnote) so cases feel consistent across authors.
           </p>
         </header>
 
@@ -260,9 +265,9 @@ export function ExhibitGalleryPage() {
         </Section>
 
         <footer className="pt-6 border-t border-white/10 text-[11px] text-white/35 leading-relaxed">
-          Reference page for the scenario-author userguide. Renders the live
-          components from <code className="font-mono">apps/web/src/components/exhibits/</code>{' '}
-          — any regression in a subtype shows up here immediately.
+          Reference page for the scenario-author userguide. Renders the live components from{' '}
+          <code className="font-mono">apps/web/src/components/exhibits/</code> — any regression in a
+          subtype shows up here immediately.
         </footer>
       </div>
     </div>

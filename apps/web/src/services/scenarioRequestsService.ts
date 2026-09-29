@@ -23,7 +23,7 @@ export interface ScenarioRequestPayload {
 }
 
 export async function submitScenarioRequest(
-  payload: ScenarioRequestPayload,
+  payload: ScenarioRequestPayload
 ): Promise<{ id: string }> {
   const res = await fetch(`${API_URL}/api/scenario-requests`, {
     method: 'POST',
@@ -31,13 +31,16 @@ export async function submitScenarioRequest(
     body: JSON.stringify(payload),
   })
   if (!res.ok) {
-    if (res.status === 429) throw new Error('Too many requests — please wait an hour before trying again.')
+    if (res.status === 429)
+      throw new Error('Too many requests — please wait an hour before trying again.')
     const text = await res.text().catch(() => '')
     let message = `Submission failed (${res.status})`
     try {
       const parsed = JSON.parse(text) as { message?: string }
       if (parsed.message) message = parsed.message
-    } catch {/* keep default */}
+    } catch {
+      /* keep default */
+    }
     throw new Error(message)
   }
   return res.json() as Promise<{ id: string }>

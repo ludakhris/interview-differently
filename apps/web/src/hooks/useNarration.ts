@@ -26,11 +26,15 @@ const PREFERRED_VOICES = [
 
 function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
   for (const name of PREFERRED_VOICES) {
-    const match = voices.find(v => v.name === name)
+    const match = voices.find((v) => v.name === name)
     if (match) return match
   }
   // Fallback: first English voice that isn't the default robotic one
-  return voices.find(v => v.lang.startsWith('en') && !v.name.toLowerCase().includes('zira')) ?? voices[0] ?? null
+  return (
+    voices.find((v) => v.lang.startsWith('en') && !v.name.toLowerCase().includes('zira')) ??
+    voices[0] ??
+    null
+  )
 }
 
 /**
@@ -47,7 +51,9 @@ export function useNarration(): UseNarrationReturn {
 
   // Voices load asynchronously — populate ref when ready
   useEffect(() => {
-    const load = () => { voicesRef.current = window.speechSynthesis.getVoices() }
+    const load = () => {
+      voicesRef.current = window.speechSynthesis.getVoices()
+    }
     load()
     window.speechSynthesis.addEventListener('voiceschanged', load)
     return () => window.speechSynthesis.removeEventListener('voiceschanged', load)
@@ -72,37 +78,34 @@ export function useNarration(): UseNarrationReturn {
     setIsPlaying(false)
   }, [])
 
-  const play = useCallback(
-    (text: string) => {
-      if (mutedRef.current) {
-        setIsPlaying(false)
-        return
-      }
+  const play = useCallback((text: string) => {
+    if (mutedRef.current) {
+      setIsPlaying(false)
+      return
+    }
 
-      window.speechSynthesis?.cancel()
+    window.speechSynthesis?.cancel()
 
-      const utterance = new SpeechSynthesisUtterance(applyAudioTranslations(text))
+    const utterance = new SpeechSynthesisUtterance(applyAudioTranslations(text))
 
-      const voice = pickVoice(voicesRef.current)
-      if (voice) utterance.voice = voice
+    const voice = pickVoice(voicesRef.current)
+    if (voice) utterance.voice = voice
 
-      utterance.rate = 1.0
-      utterance.pitch = 1.0
-      utterance.volume = 1.0
+    utterance.rate = 1.0
+    utterance.pitch = 1.0
+    utterance.volume = 1.0
 
-      utterance.onstart = () => setIsPlaying(true)
-      utterance.onend = () => setIsPlaying(false)
-      utterance.onerror = () => setIsPlaying(false)
+    utterance.onstart = () => setIsPlaying(true)
+    utterance.onend = () => setIsPlaying(false)
+    utterance.onerror = () => setIsPlaying(false)
 
-      utteranceRef.current = utterance
-      setIsPlaying(true)
-      window.speechSynthesis.speak(utterance)
-    },
-    [],
-  )
+    utteranceRef.current = utterance
+    setIsPlaying(true)
+    window.speechSynthesis.speak(utterance)
+  }, [])
 
   const toggleMute = useCallback(() => {
-    setIsMuted(prev => {
+    setIsMuted((prev) => {
       if (!prev) {
         // Muting — stop any current narration
         window.speechSynthesis?.cancel()

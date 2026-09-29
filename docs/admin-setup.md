@@ -13,6 +13,7 @@ Admin users have access to the scenario builder (`/builder`). Access is controll
 4. Scroll down to **Public metadata** and click the edit icon.
 
 5. Add the following JSON:
+
    ```json
    { "role": "admin" }
    ```

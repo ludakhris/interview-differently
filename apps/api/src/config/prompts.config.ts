@@ -48,7 +48,7 @@ export interface ImmersiveResponseInput {
 export function buildSimulationFeedbackPrompt(
   rubricDimensions: RubricDimensionInput[],
   dimensionScores: DimensionScoreInput[],
-  decisions: DecisionContextInput[],
+  decisions: DecisionContextInput[]
 ): string {
   const rubricSection = rubricDimensions
     .map((d) => {
@@ -97,10 +97,7 @@ Respond in this exact JSON format (no markdown, no extra text):
  * Expected output: JSON object matching:
  * { "feedback": "<3-4 sentences>", "strengths": "<1 sentence>", "development": "<1 sentence>" }
  */
-export function buildInterviewerFeedbackPrompt(
-  questionText: string,
-  transcript: string,
-): string {
+export function buildInterviewerFeedbackPrompt(questionText: string, transcript: string): string {
   return `You are an experienced hiring manager giving feedback on a candidate's verbal interview response. Be direct, specific, and constructive — mirror how a real interviewer would assess this answer.
 
 ## Interview Question
@@ -134,9 +131,7 @@ Respond in this exact JSON format (no markdown, no extra text):
  *   "hiringRecommendation": "strong yes" | "yes" | "maybe" | "no"
  * }
  */
-export function buildInterviewSummaryPrompt(
-  responses: ImmersiveResponseInput[],
-): string {
+export function buildInterviewSummaryPrompt(responses: ImmersiveResponseInput[]): string {
   const responsesSection = responses
     .map((r, i) => {
       return `Question ${i + 1}: ${r.questionText}\nResponse: ${r.transcript.trim() || '[No response provided]'}`

@@ -38,11 +38,11 @@ Each simulation track has a purpose-built instrument panel modelled on the real 
 
 ## Simulation tracks
 
-| Track | Scenario | Evaluated on |
-|---|---|---|
-| Incident Response | Payment API degradation — triage a live P1 with 13 minutes to SLA breach | Prioritization logic, stakeholder communication, root cause reasoning, confidence under pressure |
-| Business Case | Magazine launch viability — model unit economics and make a go/no-go recommendation | Quantitative accuracy, structured reasoning, challenging assumptions, communication clarity |
-| Risk & Compliance | Credential exposure — discover plaintext passwords in a shared internal document | Escalation path, risk calibration, regulatory awareness, communication clarity |
+| Track             | Scenario                                                                            | Evaluated on                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Incident Response | Payment API degradation — triage a live P1 with 13 minutes to SLA breach            | Prioritization logic, stakeholder communication, root cause reasoning, confidence under pressure |
+| Business Case     | Magazine launch viability — model unit economics and make a go/no-go recommendation | Quantitative accuracy, structured reasoning, challenging assumptions, communication clarity      |
+| Risk & Compliance | Credential exposure — discover plaintext passwords in a shared internal document    | Escalation path, risk calibration, regulatory awareness, communication clarity                   |
 
 ## Architecture
 
@@ -71,6 +71,7 @@ Planned additions: PostgreSQL (Railway), Redis session state (Railway), Anthropi
 All simulation content lives in `apps/web/src/lib/scenarios.ts` and is fully typed via `packages/types`. Swapping static config for API responses requires only updating `apps/web/src/services/scenariosService.ts`.
 
 Each scenario defines:
+
 - **Nodes** — branching decision and transition steps with narrative and choices
 - **Context panels** — per-node live metrics displayed as monitor tiles, data tables, or finding cards
 - **Chart config** — time-series data for the metric chart (ops track)
@@ -79,14 +80,14 @@ Each scenario defines:
 
 ## Build phases
 
-| Phase | Scope | Status |
-|---|---|---|
-| 1 | Student simulation — 3 tracks, branching engine, scenario-specific instrument panels, scored feedback | ✅ In progress |
-| 2 | No-code scenario builder — React Flow canvas, node editor, rubric templates, validation, publish | 🔜 Next |
-| 3 | Auth — Clerk integration, institutional email sign-in, student and admin roles | Planned |
-| 4 | AI feedback — Claude API replaces template scoring; structured feedback per competency dimension | Planned |
-| 5 | Score persistence — database-backed results, running competency profile per student across simulations | Planned |
-| 6 | Institution analytics — competency heatmap, cohort views, drop-off analysis, CSV/PDF export | Planned |
+| Phase | Scope                                                                                                  | Status         |
+| ----- | ------------------------------------------------------------------------------------------------------ | -------------- |
+| 1     | Student simulation — 3 tracks, branching engine, scenario-specific instrument panels, scored feedback  | ✅ In progress |
+| 2     | No-code scenario builder — React Flow canvas, node editor, rubric templates, validation, publish       | 🔜 Next        |
+| 3     | Auth — Clerk integration, institutional email sign-in, student and admin roles                         | Planned        |
+| 4     | AI feedback — Claude API replaces template scoring; structured feedback per competency dimension       | Planned        |
+| 5     | Score persistence — database-backed results, running competency profile per student across simulations | Planned        |
+| 6     | Institution analytics — competency heatmap, cohort views, drop-off analysis, CSV/PDF export            | Planned        |
 
 Phases 2 and 3 can run in parallel. Phase 4 is blocked on Phase 3 (AI feedback requires an authenticated user ID). Phases 5 and 6 are sequential — analytics has nothing to show until persistence is in place.
 

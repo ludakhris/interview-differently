@@ -63,7 +63,11 @@ export interface CohortOption {
   institutionName: string
 }
 
-async function authedFetch(getToken: GetToken, path: string, init: RequestInit = {}): Promise<Response> {
+async function authedFetch(
+  getToken: GetToken,
+  path: string,
+  init: RequestInit = {}
+): Promise<Response> {
   const token = await getToken()
   if (!token) throw new Error('Not signed in')
   const res = await fetch(`${API_URL}/api${path}`, {
@@ -78,7 +82,8 @@ async function authedFetch(getToken: GetToken, path: string, init: RequestInit =
     let message = `${res.status} ${res.statusText}`
     try {
       const body = (await res.json()) as { message?: string | string[] }
-      if (body.message) message = Array.isArray(body.message) ? body.message.join(', ') : body.message
+      if (body.message)
+        message = Array.isArray(body.message) ? body.message.join(', ') : body.message
     } catch {
       // not json — keep status text
     }
@@ -111,7 +116,10 @@ export async function getDataset(getToken: GetToken, id: string): Promise<Datase
   return res.json() as Promise<DatasetDetail>
 }
 
-export async function validateDatasetSql(getToken: GetToken, setupSql: string): Promise<SchemaTable[]> {
+export async function validateDatasetSql(
+  getToken: GetToken,
+  setupSql: string
+): Promise<SchemaTable[]> {
   const res = await authedFetch(getToken, '/admin/datasets/validate', {
     method: 'POST',
     body: JSON.stringify({ setupSql }),
@@ -119,13 +127,26 @@ export async function validateDatasetSql(getToken: GetToken, setupSql: string): 
   return res.json() as Promise<SchemaTable[]>
 }
 
-export async function createDataset(getToken: GetToken, payload: DatasetInput): Promise<DatasetDetail> {
-  const res = await authedFetch(getToken, '/admin/datasets', { method: 'POST', body: JSON.stringify(payload) })
+export async function createDataset(
+  getToken: GetToken,
+  payload: DatasetInput
+): Promise<DatasetDetail> {
+  const res = await authedFetch(getToken, '/admin/datasets', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
   return res.json() as Promise<DatasetDetail>
 }
 
-export async function updateDataset(getToken: GetToken, id: string, payload: DatasetInput): Promise<DatasetDetail> {
-  const res = await authedFetch(getToken, `/admin/datasets/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+export async function updateDataset(
+  getToken: GetToken,
+  id: string,
+  payload: DatasetInput
+): Promise<DatasetDetail> {
+  const res = await authedFetch(getToken, `/admin/datasets/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
   return res.json() as Promise<DatasetDetail>
 }
 
@@ -133,8 +154,15 @@ export async function deleteDataset(getToken: GetToken, id: string): Promise<voi
   await authedFetch(getToken, `/admin/datasets/${id}`, { method: 'DELETE' })
 }
 
-export async function setDatasetCohorts(getToken: GetToken, id: string, cohortIds: string[]): Promise<void> {
-  await authedFetch(getToken, `/admin/datasets/${id}/cohorts`, { method: 'PUT', body: JSON.stringify({ cohortIds }) })
+export async function setDatasetCohorts(
+  getToken: GetToken,
+  id: string,
+  cohortIds: string[]
+): Promise<void> {
+  await authedFetch(getToken, `/admin/datasets/${id}/cohorts`, {
+    method: 'PUT',
+    body: JSON.stringify({ cohortIds }),
+  })
 }
 
 export async function listCohortOptions(getToken: GetToken): Promise<CohortOption[]> {

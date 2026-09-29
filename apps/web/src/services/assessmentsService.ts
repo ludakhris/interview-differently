@@ -5,14 +5,24 @@
  * `/me/assessments`, `/me/deliveries/*`, `/me/attempts/*` behind
  * AuthenticatedGuard. All take `getToken` from `useAuth()`.
  */
-import type { AssessmentSection, OverallScore, SectionScore, SectionScoreSummary, StudentQuestion } from '@id/types'
+import type {
+  AssessmentSection,
+  OverallScore,
+  SectionScore,
+  SectionScoreSummary,
+  StudentQuestion,
+} from '@id/types'
 import type { SchemaTable } from './datasetsService'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 export type GetToken = () => Promise<string | null>
 
-async function authedFetch(getToken: GetToken, path: string, init: RequestInit = {}): Promise<Response> {
+async function authedFetch(
+  getToken: GetToken,
+  path: string,
+  init: RequestInit = {}
+): Promise<Response> {
   const token = await getToken()
   if (!token) throw new Error('Not signed in')
   const res = await fetch(`${API_URL}/api${path}`, {
@@ -27,7 +37,8 @@ async function authedFetch(getToken: GetToken, path: string, init: RequestInit =
     let message = `${res.status} ${res.statusText}`
     try {
       const body = (await res.json()) as { message?: string | string[] }
-      if (body.message) message = Array.isArray(body.message) ? body.message.join(', ') : body.message
+      if (body.message)
+        message = Array.isArray(body.message) ? body.message.join(', ') : body.message
     } catch {
       // not json — keep status text
     }
@@ -147,17 +158,26 @@ export async function getAssessment(getToken: GetToken, id: string): Promise<Ass
   return res.json() as Promise<AssessmentDetail>
 }
 
-export async function previewAssessment(getToken: GetToken, markdown: string): Promise<PreviewResult> {
-  const res = await authedFetch(getToken, '/admin/assessments/preview', { method: 'POST', body: JSON.stringify({ markdown }) })
+export async function previewAssessment(
+  getToken: GetToken,
+  markdown: string
+): Promise<PreviewResult> {
+  const res = await authedFetch(getToken, '/admin/assessments/preview', {
+    method: 'POST',
+    body: JSON.stringify({ markdown }),
+  })
   return res.json() as Promise<PreviewResult>
 }
 
 export async function importAssessment(
   getToken: GetToken,
   markdown: string,
-  institutionId: string | null,
+  institutionId: string | null
 ): Promise<{ id: string; slug: string; warnings: string[] }> {
-  const res = await authedFetch(getToken, '/admin/assessments/import', { method: 'POST', body: JSON.stringify({ markdown, institutionId }) })
+  const res = await authedFetch(getToken, '/admin/assessments/import', {
+    method: 'POST',
+    body: JSON.stringify({ markdown, institutionId }),
+  })
   return res.json() as Promise<{ id: string; slug: string; warnings: string[] }>
 }
 
@@ -165,8 +185,15 @@ export async function deleteAssessment(getToken: GetToken, id: string): Promise<
   await authedFetch(getToken, `/admin/assessments/${id}`, { method: 'DELETE' })
 }
 
-export async function createDelivery(getToken: GetToken, assessmentId: string, input: DeliveryInput): Promise<{ id: string }> {
-  const res = await authedFetch(getToken, `/admin/assessments/${assessmentId}/deliveries`, { method: 'POST', body: JSON.stringify(input) })
+export async function createDelivery(
+  getToken: GetToken,
+  assessmentId: string,
+  input: DeliveryInput
+): Promise<{ id: string }> {
+  const res = await authedFetch(getToken, `/admin/assessments/${assessmentId}/deliveries`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
   return res.json() as Promise<{ id: string }>
 }
 
@@ -174,8 +201,13 @@ export async function deleteDelivery(getToken: GetToken, id: string): Promise<vo
   await authedFetch(getToken, `/admin/deliveries/${id}`, { method: 'DELETE' })
 }
 
-export async function createInvite(getToken: GetToken, deliveryId: string): Promise<{ inviteCode: string }> {
-  const res = await authedFetch(getToken, `/admin/deliveries/${deliveryId}/invite`, { method: 'POST' })
+export async function createInvite(
+  getToken: GetToken,
+  deliveryId: string
+): Promise<{ inviteCode: string }> {
+  const res = await authedFetch(getToken, `/admin/deliveries/${deliveryId}/invite`, {
+    method: 'POST',
+  })
   return res.json() as Promise<{ inviteCode: string }>
 }
 
@@ -200,7 +232,12 @@ export interface MyDelivery {
   timeLimitMinutes: number | null
   questionCount: number
   isOpen: boolean
-  attempt: { id: string; startedAt: string; submittedAt: string | null; deadlineAt: string | null } | null
+  attempt: {
+    id: string
+    startedAt: string
+    submittedAt: string | null
+    deadlineAt: string | null
+  } | null
 }
 
 export interface AttemptPaper {
@@ -228,8 +265,13 @@ export async function fetchMyAssessments(getToken: GetToken): Promise<MyDelivery
   return res.json() as Promise<MyDelivery[]>
 }
 
-export async function startAttempt(getToken: GetToken, deliveryId: string): Promise<{ id: string }> {
-  const res = await authedFetch(getToken, `/me/deliveries/${deliveryId}/attempts`, { method: 'POST' })
+export async function startAttempt(
+  getToken: GetToken,
+  deliveryId: string
+): Promise<{ id: string }> {
+  const res = await authedFetch(getToken, `/me/deliveries/${deliveryId}/attempts`, {
+    method: 'POST',
+  })
   return res.json() as Promise<{ id: string }>
 }
 
@@ -238,16 +280,33 @@ export async function fetchAttempt(getToken: GetToken, attemptId: string): Promi
   return res.json() as Promise<AttemptPaper>
 }
 
-export async function saveAnswers(getToken: GetToken, attemptId: string, answers: Record<string, string>): Promise<void> {
-  await authedFetch(getToken, `/me/attempts/${attemptId}/answers`, { method: 'PUT', body: JSON.stringify({ answers }) })
+export async function saveAnswers(
+  getToken: GetToken,
+  attemptId: string,
+  answers: Record<string, string>
+): Promise<void> {
+  await authedFetch(getToken, `/me/attempts/${attemptId}/answers`, {
+    method: 'PUT',
+    body: JSON.stringify({ answers }),
+  })
 }
 
-export async function submitAttempt(getToken: GetToken, attemptId: string, answers: Record<string, string>): Promise<StudentResult> {
-  const res = await authedFetch(getToken, `/me/attempts/${attemptId}/submit`, { method: 'POST', body: JSON.stringify({ answers }) })
+export async function submitAttempt(
+  getToken: GetToken,
+  attemptId: string,
+  answers: Record<string, string>
+): Promise<StudentResult> {
+  const res = await authedFetch(getToken, `/me/attempts/${attemptId}/submit`, {
+    method: 'POST',
+    body: JSON.stringify({ answers }),
+  })
   return res.json() as Promise<StudentResult>
 }
 
-export async function fetchAttemptResult(getToken: GetToken, attemptId: string): Promise<StudentResult> {
+export async function fetchAttemptResult(
+  getToken: GetToken,
+  attemptId: string
+): Promise<StudentResult> {
   const res = await authedFetch(getToken, `/me/attempts/${attemptId}/result`)
   return res.json() as Promise<StudentResult>
 }
@@ -269,12 +328,22 @@ export interface InviteInfo {
 /** Public — no token. */
 export async function fetchInviteInfo(code: string): Promise<InviteInfo> {
   const res = await fetch(`${API_URL}/api/invites/${encodeURIComponent(code)}`)
-  if (!res.ok) throw new Error(res.status === 404 ? 'This invite link is no longer valid.' : `${res.status} ${res.statusText}`)
+  if (!res.ok)
+    throw new Error(
+      res.status === 404
+        ? 'This invite link is no longer valid.'
+        : `${res.status} ${res.statusText}`
+    )
   return res.json() as Promise<InviteInfo>
 }
 
-export async function acceptInvite(getToken: GetToken, code: string): Promise<{ attemptId: string; submitted: boolean }> {
-  const res = await authedFetch(getToken, `/invites/${encodeURIComponent(code)}/accept`, { method: 'POST' })
+export async function acceptInvite(
+  getToken: GetToken,
+  code: string
+): Promise<{ attemptId: string; submitted: boolean }> {
+  const res = await authedFetch(getToken, `/invites/${encodeURIComponent(code)}/accept`, {
+    method: 'POST',
+  })
   return res.json() as Promise<{ attemptId: string; submitted: boolean }>
 }
 
@@ -298,8 +367,18 @@ export interface PrePostPair {
   expectedMinutes: number | null
   cohort: { id: string; name: string }
   sections: { id: string; title: string }[]
-  pre: { deliveryId: string; label: string; submittedCount: number; medianMinutes: number | null } | null
-  post: { deliveryId: string; label: string; submittedCount: number; medianMinutes: number | null } | null
+  pre: {
+    deliveryId: string
+    label: string
+    submittedCount: number
+    medianMinutes: number | null
+  } | null
+  post: {
+    deliveryId: string
+    label: string
+    submittedCount: number
+    medianMinutes: number | null
+  } | null
   averages: {
     pre: Record<string, number | null>
     post: Record<string, number | null>
@@ -315,7 +394,11 @@ export interface PrePostResponse {
   pairs: PrePostPair[]
 }
 
-export async function fetchPrePost(getToken: GetToken, institutionId: string, cohortId?: string): Promise<PrePostResponse> {
+export async function fetchPrePost(
+  getToken: GetToken,
+  institutionId: string,
+  cohortId?: string
+): Promise<PrePostResponse> {
   const qs = cohortId ? `?cohortId=${encodeURIComponent(cohortId)}` : ''
   const res = await authedFetch(getToken, `/admin/institutions/${institutionId}/assessments${qs}`)
   return res.json() as Promise<PrePostResponse>

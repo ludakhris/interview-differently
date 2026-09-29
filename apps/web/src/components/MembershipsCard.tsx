@@ -83,12 +83,24 @@ export function MembershipsCard({ variant = 'settings', onJoined, onSkip }: Memb
               <div>
                 <p className="text-[13px] font-semibold text-[#f5f3ee]">{m.institution.name}</p>
                 <p className="text-[11px] text-slate-mid">
-                  {m.cohort ? <>Cohort: {m.cohort.name}</> : <span className="italic">No cohort</span>}
+                  {m.cohort ? (
+                    <>Cohort: {m.cohort.name}</>
+                  ) : (
+                    <span className="italic">No cohort</span>
+                  )}
                 </p>
               </div>
               <button
                 onClick={async () => {
-                  if (!(await confirm({ title: `Leave ${m.institution.name}?`, body: 'You can rejoin later with a join key or invite link. Your results are kept.', confirmLabel: 'Leave', danger: true }))) return
+                  if (
+                    !(await confirm({
+                      title: `Leave ${m.institution.name}?`,
+                      body: 'You can rejoin later with a join key or invite link. Your results are kept.',
+                      confirmLabel: 'Leave',
+                      danger: true,
+                    }))
+                  )
+                    return
                   try {
                     await leaveMembership(getToken, m.membershipId)
                     await refresh()
@@ -116,7 +128,10 @@ export function MembershipsCard({ variant = 'settings', onJoined, onSkip }: Memb
 
       {variant === 'welcome' && (
         <div className="mt-6 text-center">
-          <button onClick={onSkip} className="text-[12px] text-slate-mid hover:text-[#f5f3ee] transition-colors">
+          <button
+            onClick={onSkip}
+            className="text-[12px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+          >
             Skip for now →
           </button>
         </div>
@@ -155,8 +170,8 @@ function JoinForm({
           </p>
           <p className="text-[14px] text-[#f5f3ee] mb-3">
             We noticed your email is at{' '}
-            <span className="font-mono text-slate-light">@{suggestedInstitution.emailDomain}</span> — looks like
-            you're with <strong>{suggestedInstitution.name}</strong>.
+            <span className="font-mono text-slate-light">@{suggestedInstitution.emailDomain}</span>{' '}
+            — looks like you're with <strong>{suggestedInstitution.name}</strong>.
           </p>
           <button
             onClick={async () => {
@@ -180,7 +195,9 @@ function JoinForm({
       )}
 
       {suggestedInstitution && alreadyInSuggested && (
-        <p className="text-[12px] text-slate-mid italic">You're already a member of {suggestedInstitution.name}.</p>
+        <p className="text-[12px] text-slate-mid italic">
+          You're already a member of {suggestedInstitution.name}.
+        </p>
       )}
 
       <form

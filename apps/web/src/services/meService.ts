@@ -25,7 +25,7 @@ export interface MyMembership {
 async function authedFetch(
   getToken: GetToken,
   path: string,
-  init: RequestInit = {},
+  init: RequestInit = {}
 ): Promise<Response> {
   const token = await getToken()
   if (!token) throw new Error('Not signed in')
@@ -41,7 +41,8 @@ async function authedFetch(
     let message = `${res.status} ${res.statusText}`
     try {
       const body = (await res.json()) as { message?: string | string[] }
-      if (body.message) message = Array.isArray(body.message) ? body.message.join(', ') : body.message
+      if (body.message)
+        message = Array.isArray(body.message) ? body.message.join(', ') : body.message
     } catch {
       // not json — keep status text
     }
@@ -50,7 +51,9 @@ async function authedFetch(
   return res
 }
 
-export async function fetchInstitutionSuggestion(getToken: GetToken): Promise<InstitutionSuggestion> {
+export async function fetchInstitutionSuggestion(
+  getToken: GetToken
+): Promise<InstitutionSuggestion> {
   const res = await authedFetch(getToken, '/me/institution-suggestion')
   return res.json() as Promise<InstitutionSuggestion>
 }
@@ -62,7 +65,7 @@ export async function fetchMyMemberships(getToken: GetToken): Promise<MyMembersh
 
 export async function joinByInstitution(
   getToken: GetToken,
-  institutionId: string,
+  institutionId: string
 ): Promise<{ membershipId: string }> {
   const res = await authedFetch(getToken, '/me/memberships', {
     method: 'POST',
@@ -73,13 +76,17 @@ export async function joinByInstitution(
 
 export async function joinByKey(
   getToken: GetToken,
-  joinKey: string,
+  joinKey: string
 ): Promise<{ membershipId: string; institutionId: string; cohortId: string | null }> {
   const res = await authedFetch(getToken, '/me/memberships', {
     method: 'POST',
     body: JSON.stringify({ joinKey }),
   })
-  return res.json() as Promise<{ membershipId: string; institutionId: string; cohortId: string | null }>
+  return res.json() as Promise<{
+    membershipId: string
+    institutionId: string
+    cohortId: string | null
+  }>
 }
 
 export async function leaveMembership(getToken: GetToken, membershipId: string): Promise<void> {

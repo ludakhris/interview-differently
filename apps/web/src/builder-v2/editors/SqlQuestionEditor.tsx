@@ -31,11 +31,17 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
   const [dimension, setDimension] = useState(node.sqlSignalDimensions?.[0] ?? 'Technical Accuracy')
 
   const [datasets, setDatasets] = useState<DatasetSummary[]>([])
-  const [test, setTest] = useState<{ state: 'idle' | 'running' | 'ok' | 'error'; result?: SandboxResult; error?: string }>({ state: 'idle' })
+  const [test, setTest] = useState<{
+    state: 'idle' | 'running' | 'ok' | 'error'
+    result?: SandboxResult
+    error?: string
+  }>({ state: 'idle' })
   const dbRef = useRef<{ slug: string; db: SandboxDb } | null>(null)
 
   useEffect(() => {
-    fetchMyDatasets(getToken).then(setDatasets).catch(() => setDatasets([]))
+    fetchMyDatasets(getToken)
+      .then(setDatasets)
+      .catch(() => setDatasets([]))
   }, [getToken])
   useEffect(() => () => void dbRef.current?.db.close(), [])
 
@@ -80,10 +86,19 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
   return (
     <EditShell emoji="🗄️" kindLabel="SQL Question" onDone={finish}>
       <Field label="Business ask (the prompt)">
-        <Textarea rows={2} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="e.g. Which states have more than 10 customers?" />
+        <Textarea
+          rows={2}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="e.g. Which states have more than 10 customers?"
+        />
       </Field>
       <Field label="Context (optional, shown above the prompt)">
-        <TextInput value={context} onChange={(e) => setContext(e.target.value)} placeholder="e.g. Marketing wants a state-level loyalty push." />
+        <TextInput
+          value={context}
+          onChange={(e) => setContext(e.target.value)}
+          placeholder="e.g. Marketing wants a state-level loyalty push."
+        />
       </Field>
 
       <SectionLabel label="Dataset & reference query" />
@@ -95,14 +110,23 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
             setTest({ state: 'idle' })
           }}
           options={[
-            ...(datasets.length === 0 ? [{ value: datasetSlug, label: datasetSlug || 'Loading datasets…' }] : []),
+            ...(datasets.length === 0
+              ? [{ value: datasetSlug, label: datasetSlug || 'Loading datasets…' }]
+              : []),
             ...datasets.map((d) => ({ value: d.slug, label: `${d.name} (${d.slug})` })),
           ]}
         />
       </Field>
       <Field label="Reference query — its result set is the answer key">
         <div className="rounded-lg border border-white/12 overflow-hidden">
-          <SqlEditor value={referenceSql} onChange={setReferenceSql} onRun={testQuery} tables={selected?.schemaSummary ?? []} height={160} placeholder="SELECT …" />
+          <SqlEditor
+            value={referenceSql}
+            onChange={setReferenceSql}
+            onRun={testQuery}
+            tables={selected?.schemaSummary ?? []}
+            height={160}
+            placeholder="SELECT …"
+          />
         </div>
       </Field>
       <div className="flex items-center gap-3">
@@ -116,7 +140,8 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
         </button>
         {test.state === 'ok' && test.result && (
           <span className="font-mono text-[11px] text-emerald-300">
-            {test.result.rowCount} row{test.result.rowCount !== 1 ? 's' : ''} · {test.result.columns.length} col{test.result.columns.length !== 1 ? 's' : ''}
+            {test.result.rowCount} row{test.result.rowCount !== 1 ? 's' : ''} ·{' '}
+            {test.result.columns.length} col{test.result.columns.length !== 1 ? 's' : ''}
           </span>
         )}
         {test.state === 'ok' && test.result && (
@@ -124,7 +149,9 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
             <ResultActions result={test.result} datasetName={selected?.name ?? datasetSlug} />
           </span>
         )}
-        {test.state === 'error' && <span className="font-mono text-[11px] text-red-400">{test.error}</span>}
+        {test.state === 'error' && (
+          <span className="font-mono text-[11px] text-red-400">{test.error}</span>
+        )}
       </div>
       {test.state === 'ok' && test.result && (
         <div className="max-h-[220px] overflow-auto rounded-lg border border-white/10 bg-[#0a0a0a]">
@@ -135,24 +162,44 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
       <SectionLabel label="Grading" />
       <div className="flex flex-wrap gap-4 text-[12px] text-white/70">
         <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" checked={ordered} onChange={(e) => setOrdered(e.target.checked)} className="accent-emerald-400" />
+          <input
+            type="checkbox"
+            checked={ordered}
+            onChange={(e) => setOrdered(e.target.checked)}
+            className="accent-emerald-400"
+          />
           Row order must match
         </label>
         <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" checked={strictColumns} onChange={(e) => setStrictColumns(e.target.checked)} className="accent-emerald-400" />
+          <input
+            type="checkbox"
+            checked={strictColumns}
+            onChange={(e) => setStrictColumns(e.target.checked)}
+            className="accent-emerald-400"
+          />
           Column names must match
         </label>
       </div>
       <p className="text-[11px] text-white/35 -mt-2">
-        Without flags, any query returning the same rows (in any order, any column names) counts as correct. Numbers compare to 6 decimals.
+        Without flags, any query returning the same rows (in any order, any column names) counts as
+        correct. Numbers compare to 6 decimals.
       </p>
       <Field label="Rubric dimension this question scores">
-        <TextInput value={dimension} onChange={(e) => setDimension(e.target.value)} placeholder="Technical Accuracy" />
+        <TextInput
+          value={dimension}
+          onChange={(e) => setDimension(e.target.value)}
+          placeholder="Technical Accuracy"
+        />
       </Field>
 
       <SectionLabel label="Hint (optional)" />
       <Field label="Shown on request — using it caps the score at Proficient">
-        <Textarea rows={2} value={hint} onChange={(e) => setHint(e.target.value)} placeholder="e.g. Group by state, then filter the groups with HAVING." />
+        <Textarea
+          rows={2}
+          value={hint}
+          onChange={(e) => setHint(e.target.value)}
+          placeholder="e.g. Group by state, then filter the groups with HAVING."
+        />
       </Field>
     </EditShell>
   )

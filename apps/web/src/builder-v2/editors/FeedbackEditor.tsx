@@ -15,7 +15,7 @@ export function FeedbackEditor({ node, onDone }: Props) {
       <Field label="Closing narrative">
         <Textarea
           value={narrative}
-          onChange={e => setNarrative(e.target.value)}
+          onChange={(e) => setNarrative(e.target.value)}
           rows={5}
           placeholder="Describe the outcome — what happened, what the candidate did well or missed."
         />

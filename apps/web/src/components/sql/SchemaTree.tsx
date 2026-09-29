@@ -5,17 +5,27 @@ import type { SchemaTable } from '@/services/datasetsService'
 // Postgres data_type → short badge + colour. Anything unknown renders dim.
 export function typeBadge(type: string): { label: string; cls: string } {
   if (/int/.test(type)) return { label: 'int', cls: 'text-sky-400 bg-sky-400/10' }
-  if (/numeric|decimal|double|real|money/.test(type)) return { label: 'num', cls: 'text-emerald-400 bg-emerald-400/10' }
-  if (/date|time/.test(type)) return { label: type.startsWith('time') ? 'ts' : 'date', cls: 'text-amber-400 bg-amber-400/10' }
+  if (/numeric|decimal|double|real|money/.test(type))
+    return { label: 'num', cls: 'text-emerald-400 bg-emerald-400/10' }
+  if (/date|time/.test(type))
+    return { label: type.startsWith('time') ? 'ts' : 'date', cls: 'text-amber-400 bg-amber-400/10' }
   if (/bool/.test(type)) return { label: 'bool', cls: 'text-violet-400 bg-violet-400/10' }
   if (/text|char/.test(type)) return { label: 'text', cls: 'text-slate-light bg-white/5' }
   return { label: type.slice(0, 6), cls: 'text-white/40 bg-white/5' }
 }
 
 /** Collapsible table → column tree. Clicking a table or column name calls `onPick` with that bare name. */
-export function SchemaTree({ tables, onPick }: { tables: SchemaTable[]; onPick: (name: string) => void }) {
+export function SchemaTree({
+  tables,
+  onPick,
+}: {
+  tables: SchemaTable[]
+  onPick: (name: string) => void
+}) {
   // First table open by default so the sidebar isn't a wall of columns.
-  const [open, setOpen] = useState<Record<string, boolean>>(() => (tables[0] ? { [tables[0].table]: true } : {}))
+  const [open, setOpen] = useState<Record<string, boolean>>(() =>
+    tables[0] ? { [tables[0].table]: true } : {}
+  )
   return (
     <ul className="space-y-0.5">
       {tables.map((t) => {
@@ -56,7 +66,9 @@ export function SchemaTree({ tables, onPick }: { tables: SchemaTable[]; onPick: 
                         <span className="font-mono text-[11px] text-white/60 group-hover/col:text-[#f5f3ee] truncate transition-colors">
                           {c.name}
                         </span>
-                        <span className={`font-mono text-[9px] px-1 py-px rounded ${b.cls}`}>{b.label}</span>
+                        <span className={`font-mono text-[9px] px-1 py-px rounded ${b.cls}`}>
+                          {b.label}
+                        </span>
                       </button>
                     </li>
                   )

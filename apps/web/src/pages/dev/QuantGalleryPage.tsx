@@ -27,8 +27,7 @@ const SIMPLE_NUMERIC: ScenarioNode = {
       format: 'integer',
       acceptedRange: { min: 3000000, max: 4000000, idealMin: 3400000, idealMax: 3600000 },
       modelAnswer: 3500000,
-      derivation:
-        '14M ÷ 4 ≈ 3.5M families. Accepted band ±15% on household size assumptions.',
+      derivation: '14M ÷ 4 ≈ 3.5M families. Accepted band ±15% on household size assumptions.',
     },
   },
 }
@@ -129,7 +128,13 @@ const STRUCTURED: ScenarioNode = {
 // Each demo manages its own throwaway submit state — the gallery never
 // advances anywhere, it just shows the band feedback inline.
 
-function Demo({ node, carryForward }: { node: ScenarioNode; carryForward?: Record<string, { value: number; from: string }> }) {
+function Demo({
+  node,
+  carryForward,
+}: {
+  node: ScenarioNode
+  carryForward?: Record<string, { value: number; from: string }>
+}) {
   // Track last submission for the gallery; not displayed, just held so QuantNode
   // can render its inline band feedback without us throwing the payload away.
   const [, setLast] = useState<{
@@ -177,10 +182,9 @@ export function QuantGalleryPage() {
             Visual reference — quantitative question variants
           </h1>
           <p className="mt-3 text-[14px] text-white/65 leading-relaxed max-w-2xl">
-            Quant nodes ask the candidate to compute a specific number with an
-            accepted band. Two variants below, plus a formula form with
-            carry-forward variables. Submit any of them to see the inline band
-            feedback (in-band / accepted / off).
+            Quant nodes ask the candidate to compute a specific number with an accepted band. Two
+            variants below, plus a formula form with carry-forward variables. Submit any of them to
+            see the inline band feedback (in-band / accepted / off).
           </p>
         </header>
 
@@ -200,7 +204,10 @@ export function QuantGalleryPage() {
           <Demo
             node={FORMULA_NUMERIC}
             carryForward={{
-              families: { value: 3500000, from: 'How many rural families receive state benefits today?' },
+              families: {
+                value: 3500000,
+                from: 'How many rural families receive state benefits today?',
+              },
             }}
           />
         </Section>
@@ -214,10 +221,9 @@ export function QuantGalleryPage() {
         </Section>
 
         <footer className="pt-6 border-t border-white/10 text-[11px] text-white/35 leading-relaxed">
-          Reference page for the scenario-author userguide. Renders the live
-          components from <code className="font-mono">apps/web/src/components/quant/</code> —
-          any regression in a variant or in the formula evaluator surfaces
-          here immediately.
+          Reference page for the scenario-author userguide. Renders the live components from{' '}
+          <code className="font-mono">apps/web/src/components/quant/</code> — any regression in a
+          variant or in the formula evaluator surfaces here immediately.
         </footer>
       </div>
     </div>

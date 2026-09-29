@@ -32,10 +32,10 @@ export type EntityKind =
 export interface EntityDescriptor {
   kind: EntityKind
   group: EntityGroup
-  label: string      // "Data Table"
-  emoji: string      // used as icon placeholder until we have SVGs
-  blurb: string      // one-line gallery caption
-  example: string    // italic example use case shown below blurb
+  label: string // "Data Table"
+  emoji: string // used as icon placeholder until we have SVGs
+  blurb: string // one-line gallery caption
+  example: string // italic example use case shown below blurb
   // Path relative to /docs/screenshots — used by Picker to show a real preview.
   screenshot?: string
 }
@@ -111,7 +111,8 @@ export const REGISTRY: EntityDescriptor[] = [
     group: 'quant',
     label: 'SQL Question',
     emoji: '🗄️',
-    blurb: 'Candidate writes and runs SQL against a dataset; graded by comparing result sets to your reference query.',
+    blurb:
+      'Candidate writes and runs SQL against a dataset; graded by comparing result sets to your reference query.',
     example: 'e.g. "Which states have more than 10 customers?"',
     screenshot: 'quant/04-sql-question.png',
   },
@@ -143,7 +144,7 @@ export const REGISTRY: EntityDescriptor[] = [
 ]
 
 export function descriptorFor(kind: EntityKind): EntityDescriptor {
-  const d = REGISTRY.find(r => r.kind === kind)
+  const d = REGISTRY.find((r) => r.kind === kind)
   if (!d) throw new Error(`No descriptor for entity kind: ${kind}`)
   return d
 }
@@ -242,9 +243,24 @@ export function seedNode(kind: EntityKind, id: string): ScenarioNode {
         type: 'decision',
         narrative: 'How would you approach this problem?',
         choices: [
-          { id: 'A', text: 'Option A — describe your approach here.', nextNodeId: '', qualitySignals: [{ dimension: 'Rubric dimension', quality: 'strong' }] },
-          { id: 'B', text: 'Option B — alternative approach.', nextNodeId: '', qualitySignals: [{ dimension: 'Rubric dimension', quality: 'proficient' }] },
-          { id: 'C', text: 'Option C — weaker approach.', nextNodeId: '', qualitySignals: [{ dimension: 'Rubric dimension', quality: 'developing' }] },
+          {
+            id: 'A',
+            text: 'Option A — describe your approach here.',
+            nextNodeId: '',
+            qualitySignals: [{ dimension: 'Rubric dimension', quality: 'strong' }],
+          },
+          {
+            id: 'B',
+            text: 'Option B — alternative approach.',
+            nextNodeId: '',
+            qualitySignals: [{ dimension: 'Rubric dimension', quality: 'proficient' }],
+          },
+          {
+            id: 'C',
+            text: 'Option C — weaker approach.',
+            nextNodeId: '',
+            qualitySignals: [{ dimension: 'Rubric dimension', quality: 'developing' }],
+          },
         ],
       }
     case 'transition':
@@ -285,10 +301,13 @@ export function seedNode(kind: EntityKind, id: string): ScenarioNode {
         type: 'sql',
         narrative: 'PLACEHOLDER — replace with the business ask for this case.',
         sql: {
-          prompt: 'PLACEHOLDER — what does the business need from the data? e.g. "Which states have more than 10 customers? Return the state and its count."',
-          context: 'Replace this with who is asking and why. The dataset below must be the one this case is about.',
+          prompt:
+            'PLACEHOLDER — what does the business need from the data? e.g. "Which states have more than 10 customers? Return the state and its count."',
+          context:
+            'Replace this with who is asking and why. The dataset below must be the one this case is about.',
           datasetSlug: 'sql-fundamentals',
-          referenceSql: '-- Replace with the reference query; its result set is the answer key.\nSELECT state, COUNT(*) AS customer_count\nFROM customers\nGROUP BY state\nHAVING COUNT(*) > 10;',
+          referenceSql:
+            '-- Replace with the reference query; its result set is the answer key.\nSELECT state, COUNT(*) AS customer_count\nFROM customers\nGROUP BY state\nHAVING COUNT(*) > 10;',
         },
         sqlSignalDimensions: ['Technical Accuracy'],
       }

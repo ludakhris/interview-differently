@@ -13,7 +13,13 @@ interface NodeRenderStatusProps {
   onRendered: (asset: ScenarioMediaAsset) => void
 }
 
-export function NodeRenderStatus({ scenarioId, nodeId, audioScript, asset, onRendered }: NodeRenderStatusProps) {
+export function NodeRenderStatus({
+  scenarioId,
+  nodeId,
+  audioScript,
+  asset,
+  onRendered,
+}: NodeRenderStatusProps) {
   const [currentHash, setCurrentHash] = useState<string | null>(null)
   const [rendering, setRendering] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -24,8 +30,12 @@ export function NodeRenderStatus({ scenarioId, nodeId, audioScript, asset, onRen
       setCurrentHash(null)
       return
     }
-    sha256Hex(audioScript.trim()).then(h => { if (!cancelled) setCurrentHash(h) })
-    return () => { cancelled = true }
+    sha256Hex(audioScript.trim()).then((h) => {
+      if (!cancelled) setCurrentHash(h)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [audioScript])
 
   const status: Status = (() => {
@@ -51,7 +61,8 @@ export function NodeRenderStatus({ scenarioId, nodeId, audioScript, asset, onRen
     }
   }
 
-  const buttonLabel = status === 'ready' ? 'Re-render' : status === 'rendering' ? 'Rendering…' : 'Render'
+  const buttonLabel =
+    status === 'ready' ? 'Re-render' : status === 'rendering' ? 'Rendering…' : 'Render'
 
   return (
     <div className="space-y-2">
@@ -76,9 +87,7 @@ export function NodeRenderStatus({ scenarioId, nodeId, audioScript, asset, onRen
       )}
 
       {(error || (asset?.status === 'failed' && asset.errorMessage)) && (
-        <p className="text-[10px] text-red-400 leading-relaxed">
-          {error ?? asset?.errorMessage}
-        </p>
+        <p className="text-[10px] text-red-400 leading-relaxed">{error ?? asset?.errorMessage}</p>
       )}
 
       {status === 'stale' && !error && (
@@ -98,10 +107,10 @@ export function NodeRenderStatus({ scenarioId, nodeId, audioScript, asset, onRen
 
 function StatusBadge({ status }: { status: Status }) {
   const config = {
-    'ready':        { dot: '#2d9e5f', label: 'RENDERED' },
-    'stale':        { dot: '#d4830a', label: 'STALE'    },
-    'rendering':    { dot: '#1a5a8a', label: 'RENDERING' },
-    'failed':       { dot: '#c0392b', label: 'FAILED'   },
+    ready: { dot: '#2d9e5f', label: 'RENDERED' },
+    stale: { dot: '#d4830a', label: 'STALE' },
+    rendering: { dot: '#1a5a8a', label: 'RENDERING' },
+    failed: { dot: '#c0392b', label: 'FAILED' },
     'not-rendered': { dot: 'rgba(255,255,255,0.3)', label: 'NOT RENDERED' },
   }[status]
 

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 
 const isMobileDevice =
-  typeof window !== 'undefined' &&
-  /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+  typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
 
 export function MobileWarning() {
   const [visible, setVisible] = useState(isMobileDevice)
@@ -14,7 +13,7 @@ export function MobileWarning() {
       setVisible(false)
       return
     }
-    const t = setTimeout(() => setTimeLeft(s => s - 1), 1000)
+    const t = setTimeout(() => setTimeLeft((s) => s - 1), 1000)
     return () => clearTimeout(t)
   }, [visible, timeLeft])
 
@@ -28,7 +27,8 @@ export function MobileWarning() {
           <div className="flex-1 min-w-0">
             <p className="text-[14px] font-semibold text-[#f5f3ee] mb-1">Best on desktop</p>
             <p className="text-[12px] text-white/40 leading-relaxed">
-              The scenario builder is designed for larger screens. For the full experience, open it on your laptop or desktop.
+              The scenario builder is designed for larger screens. For the full experience, open it
+              on your laptop or desktop.
             </p>
           </div>
           <button

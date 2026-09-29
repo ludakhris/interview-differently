@@ -1,19 +1,16 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { ImmersiveFeedbackService } from './immersive-feedback.service'
-import {
-  PRIVATE_MEDIA_STORAGE,
-  type PrivateMediaStorage,
-} from '../storage/media-storage.interface'
+import { PRIVATE_MEDIA_STORAGE, type PrivateMediaStorage } from '../storage/media-storage.interface'
 
-const SIGNED_URL_TTL_SECONDS = 15 * 60   // 15 min — long enough to start playback, short enough to invalidate quickly
+const SIGNED_URL_TTL_SECONDS = 15 * 60 // 15 min — long enough to start playback, short enough to invalidate quickly
 
 @Injectable()
 export class ImmersiveSessionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly feedback: ImmersiveFeedbackService,
-    @Inject(PRIVATE_MEDIA_STORAGE) private readonly privateStorage: PrivateMediaStorage,
+    @Inject(PRIVATE_MEDIA_STORAGE) private readonly privateStorage: PrivateMediaStorage
   ) {}
 
   async createSession(scenarioId: string, userId: string) {
@@ -28,7 +25,7 @@ export class ImmersiveSessionsService {
     questionText: string,
     mediaUrl: string | null,
     transcript: string | null,
-    durationSeconds: number | null,
+    durationSeconds: number | null
   ) {
     const session = await this.prisma.immersiveSession.findUnique({ where: { id: sessionId } })
     if (!session) throw new NotFoundException(`Session ${sessionId} not found`)
@@ -56,7 +53,7 @@ export class ImmersiveSessionsService {
     responseId: string,
     buffer: Buffer,
     contentType: string,
-    extension: string,
+    extension: string
   ): Promise<void> {
     const key = `responses/${sessionId}/${responseId}.${extension}`
     await this.privateStorage.upload(key, buffer, contentType)
@@ -73,14 +70,15 @@ export class ImmersiveSessionsService {
    */
   async getResponseSignedUrl(
     sessionId: string,
-    responseId: string,
+    responseId: string
   ): Promise<{ url: string; expiresAt: string }> {
     const response = await this.prisma.immersiveResponse.findFirst({
       where: { id: responseId, sessionId },
       select: { mediaUrl: true },
     })
     if (!response) throw new NotFoundException(`Response ${responseId} not found`)
-    if (!response.mediaUrl) throw new NotFoundException(`Response ${responseId} has no stored media`)
+    if (!response.mediaUrl)
+      throw new NotFoundException(`Response ${responseId} has no stored media`)
     const url = await this.privateStorage.getSignedUrl(response.mediaUrl, SIGNED_URL_TTL_SECONDS)
     const expiresAt = new Date(Date.now() + SIGNED_URL_TTL_SECONDS * 1000).toISOString()
     return { url, expiresAt }
@@ -104,7 +102,7 @@ export class ImmersiveSessionsService {
     if (!response.aiFeedback && response.transcript) {
       const feedbackResult = await this.feedback.generateResponseFeedback(
         response.questionText,
-        response.transcript,
+        response.transcript
       )
       const updated = await this.prisma.immersiveResponse.update({
         where: { id: responseId },
@@ -147,15 +145,15 @@ export class ImmersiveSessionsService {
     if (!session) throw new NotFoundException(`Session ${sessionId} not found`)
 
     if (session.summary) {
-      return { sessionId, ...session.summary as object }
+      return { sessionId, ...(session.summary as object) }
     }
 
-    const responsesWithTranscripts = session.responses.filter(r => r.transcript)
+    const responsesWithTranscripts = session.responses.filter((r) => r.transcript)
     const summaryResult = await this.feedback.generateSessionSummary(
-      responsesWithTranscripts.map(r => ({
+      responsesWithTranscripts.map((r) => ({
         questionText: r.questionText,
         transcript: r.transcript ?? '',
-      })),
+      }))
     )
 
     await this.prisma.immersiveSession.update({

@@ -38,7 +38,7 @@ export async function createScenario(
   track: string,
   subcategory?: string,
   /** Owner (#15). null = public; institution-admins default to their own institution server-side. */
-  institutionId: string | null = null,
+  institutionId: string | null = null
 ): Promise<Scenario> {
   const id = crypto.randomUUID()
   const startNodeId = crypto.randomUUID()
@@ -97,7 +97,7 @@ export async function importStaticScenario(scenario: Scenario): Promise<Scenario
  */
 export async function duplicateScenario(
   id: string,
-  opts: { title?: string; institutionId?: string | null } = {},
+  opts: { title?: string; institutionId?: string | null } = {}
 ): Promise<Scenario | null> {
   const original = await getScenario(id)
   if (!original) return null
@@ -118,7 +118,7 @@ export async function duplicateScenario(
 /** Creates a *draft* from an imported YAML/JSON scenario (unlike importStaticScenario, which publishes). */
 export async function createScenarioFromImport(
   scenario: Scenario,
-  opts: { title?: string; institutionId?: string | null } = {},
+  opts: { title?: string; institutionId?: string | null } = {}
 ): Promise<Scenario> {
   const draft: Scenario = {
     ...scenario,

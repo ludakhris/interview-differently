@@ -10,14 +10,14 @@ export class IpRateLimiter {
 
   constructor(
     private readonly maxPerWindow: number,
-    private readonly windowMs: number,
+    private readonly windowMs: number
   ) {}
 
   /** Returns true if this IP is allowed; false if it has exceeded the limit. */
   allow(ip: string): boolean {
     const now = Date.now()
     const cutoff = now - this.windowMs
-    const recent = (this.hits.get(ip) ?? []).filter(t => t > cutoff)
+    const recent = (this.hits.get(ip) ?? []).filter((t) => t > cutoff)
     if (recent.length >= this.maxPerWindow) {
       this.hits.set(ip, recent)
       return false

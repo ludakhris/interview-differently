@@ -48,13 +48,15 @@ export function WelcomePage() {
     <div className="min-h-screen bg-[#0a0a0a]">
       <Nav />
       <div className="max-w-xl mx-auto px-6 py-12 animate-fade-in">
-        <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-2">Welcome</p>
+        <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+          Welcome
+        </p>
         <h1 className="font-display font-extrabold text-[28px] text-[#f5f3ee] tracking-tight mb-3">
           {user?.firstName ? `Hi ${user.firstName} —` : "Glad you're here —"} let's get you set up
         </h1>
         <p className="text-[14px] text-slate-light leading-relaxed mb-8">
-          If your school or organisation uses InterviewDifferently, joining now means your scores feed
-          into their cohort analytics. You can change this later in Settings.
+          If your school or organisation uses InterviewDifferently, joining now means your scores
+          feed into their cohort analytics. You can change this later in Settings.
         </p>
 
         <div className="bg-[#111111] rounded-xl border border-white/10 p-6">

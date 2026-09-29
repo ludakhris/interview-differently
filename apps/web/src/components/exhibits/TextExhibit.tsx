@@ -24,9 +24,7 @@ export function TextExhibit({ exhibit }: { exhibit: TextExhibitType }) {
 
 function Block({ block }: { block: TextExhibitBlock }) {
   if (block.kind === 'paragraph') {
-    return (
-      <p className="text-[15px] text-[#f5f3ee]/90 leading-relaxed">{block.text}</p>
-    )
+    return <p className="text-[15px] text-[#f5f3ee]/90 leading-relaxed">{block.text}</p>
   }
   if (block.kind === 'bullets') {
     return (
@@ -42,9 +40,7 @@ function Block({ block }: { block: TextExhibitBlock }) {
   // quote
   return (
     <blockquote className="border-l-2 border-[#4ea58a] pl-3 py-1">
-      <p className="text-[15px] italic text-[#f5f3ee]/90 leading-relaxed">
-        “{block.text}”
-      </p>
+      <p className="text-[15px] italic text-[#f5f3ee]/90 leading-relaxed">“{block.text}”</p>
       {block.attribution && (
         <p className="mt-1.5 text-[12px] text-white/50">— {block.attribution}</p>
       )}

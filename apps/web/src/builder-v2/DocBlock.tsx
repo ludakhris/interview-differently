@@ -43,7 +43,14 @@ interface ExhibitBlockProps {
   onToggleShared?: () => void
 }
 
-export function ExhibitBlock({ exhibit, isEditing, isShared, onEditRequest, onUpdate, onToggleShared }: ExhibitBlockProps) {
+export function ExhibitBlock({
+  exhibit,
+  isEditing,
+  isShared,
+  onEditRequest,
+  onUpdate,
+  onToggleShared,
+}: ExhibitBlockProps) {
   const desc = descriptorFor(exhibit.kind)
 
   if (isEditing) {
@@ -75,7 +82,13 @@ export function ExhibitBlock({ exhibit, isEditing, isShared, onEditRequest, onUp
   )
 }
 
-function ExhibitEditor({ exhibit, onDone }: { exhibit: Exhibit; onDone: (updated: Exhibit) => void }) {
+function ExhibitEditor({
+  exhibit,
+  onDone,
+}: {
+  exhibit: Exhibit
+  onDone: (updated: Exhibit) => void
+}) {
   switch (exhibit.kind) {
     case 'text-exhibit':
       return <TextExhibitEditor exhibit={exhibit} onDone={onDone} />
@@ -159,7 +172,7 @@ function DecisionBlock({
   allNodes: ScenarioNode[]
   onEditRequest: () => void
 }) {
-  const nodeMap = Object.fromEntries(allNodes.map(n => [n.nodeId, n]))
+  const nodeMap = Object.fromEntries(allNodes.map((n) => [n.nodeId, n]))
   const immersive = useImmersive()
 
   return (
@@ -167,11 +180,15 @@ function DecisionBlock({
       {/* Immersive: what the interviewer says + render state (#24 Phase H) */}
       {immersive && (
         <div className="mb-3 pb-3 border-b border-white/[0.06]">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">🎙 Interviewer says</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">
+            🎙 Interviewer says
+          </span>
           {node.audioScript?.trim() ? (
             <p className="text-[13px] text-white/70 leading-relaxed mt-0.5">{node.audioScript}</p>
           ) : (
-            <p className="text-[12px] text-white/30 italic mt-0.5">No audio script — the narrative is spoken instead.</p>
+            <p className="text-[12px] text-white/30 italic mt-0.5">
+              No audio script — the narrative is spoken instead.
+            </p>
           )}
           <div className="mt-2 max-w-[360px]">
             <NodeRenderStatus
@@ -197,11 +214,25 @@ function DecisionBlock({
                   : 'border-white/[0.08] bg-white/[0.03]',
               ].join(' ')}
             >
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">{panel.label}</span>
-              <span className={['font-bold tabular-nums', panel.hero ? 'text-[20px] text-emerald-300' : 'text-[15px] text-white/80'].join(' ')}>
-                {panel.value}{panel.unit ? <span className="text-[11px] font-normal ml-0.5 text-white/40">{panel.unit}</span> : null}
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+                {panel.label}
               </span>
-              {panel.caption && <span className="text-[10px] text-white/30 mt-0.5 leading-tight">{panel.caption}</span>}
+              <span
+                className={[
+                  'font-bold tabular-nums',
+                  panel.hero ? 'text-[20px] text-emerald-300' : 'text-[15px] text-white/80',
+                ].join(' ')}
+              >
+                {panel.value}
+                {panel.unit ? (
+                  <span className="text-[11px] font-normal ml-0.5 text-white/40">{panel.unit}</span>
+                ) : null}
+              </span>
+              {panel.caption && (
+                <span className="text-[10px] text-white/30 mt-0.5 leading-tight">
+                  {panel.caption}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -212,7 +243,7 @@ function DecisionBlock({
       </p>
       {/* Options */}
       <div className="flex flex-col gap-1.5">
-        {(node.choices ?? []).map(choice => {
+        {(node.choices ?? []).map((choice) => {
           const targetNode = choice.nextNodeId ? nodeMap[choice.nextNodeId] : null
           const signal = choice.qualitySignals?.[0]
           const quality = signal?.quality ?? 'developing'
@@ -230,7 +261,10 @@ function DecisionBlock({
             }
           }
           return (
-            <div key={choice.id} className="flex items-start gap-2.5 px-3 py-2.5 border border-white/[0.06] rounded-lg bg-white/[0.02]">
+            <div
+              key={choice.id}
+              className="flex items-start gap-2.5 px-3 py-2.5 border border-white/[0.06] rounded-lg bg-white/[0.02]"
+            >
               <span className="flex-none mt-[1px] w-[22px] h-[22px] rounded-[6px] flex items-center justify-center text-[11px] font-bold bg-white/[0.06] border border-white/10">
                 {choice.id}
               </span>
@@ -238,7 +272,9 @@ function DecisionBlock({
                 {choice.text || <span className="italic text-white/30">No option text</span>}
               </span>
               {signal && (
-                <span className={`flex-none text-[11px] font-semibold border rounded-full px-2 py-0.5 capitalize ${colorClass}`}>
+                <span
+                  className={`flex-none text-[11px] font-semibold border rounded-full px-2 py-0.5 capitalize ${colorClass}`}
+                >
                   {quality}
                 </span>
               )}
@@ -256,8 +292,16 @@ function DecisionBlock({
   )
 }
 
-function TransitionBlock({ node, allNodes, onEditRequest }: { node: ScenarioNode; allNodes: ScenarioNode[]; onEditRequest: () => void }) {
-  const targetNode = node.nextNodeId ? allNodes.find(n => n.nodeId === node.nextNodeId) : null
+function TransitionBlock({
+  node,
+  allNodes,
+  onEditRequest,
+}: {
+  node: ScenarioNode
+  allNodes: ScenarioNode[]
+  onEditRequest: () => void
+}) {
+  const targetNode = node.nextNodeId ? allNodes.find((n) => n.nodeId === node.nextNodeId) : null
   const targetText = targetNode?.narrative?.trim()
   return (
     <BlockShell emoji="↩" kindLabel="Redirect / Transition" onEditRequest={onEditRequest}>
@@ -267,7 +311,10 @@ function TransitionBlock({ node, allNodes, onEditRequest }: { node: ScenarioNode
       {node.nextNodeId && (
         <div className="mt-2">
           <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300">
-            ↩ back to: {targetText ? targetText.slice(0, 45) + (targetText.length > 45 ? '…' : '') : node.nextNodeId}
+            ↩ back to:{' '}
+            {targetText
+              ? targetText.slice(0, 45) + (targetText.length > 45 ? '…' : '')
+              : node.nextNodeId}
           </span>
         </div>
       )}
@@ -297,24 +344,31 @@ function QuantBlock({ node, onEditRequest }: { node: ScenarioNode; onEditRequest
       onEditRequest={onEditRequest}
     >
       <p className="text-[14px] text-white/85 leading-relaxed mb-3">
-        {spec.prompt || node.narrative || <span className="italic text-white/30">No prompt yet</span>}
+        {spec.prompt || node.narrative || (
+          <span className="italic text-white/30">No prompt yet</span>
+        )}
       </p>
       {spec.formula?.display && (
         <div className="mb-3 px-3 py-2 rounded-lg bg-[#1a5a8a]/10 border border-[#1a5a8a]/30">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-[#1a5a8a]/80 mb-1">Formula</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-[#1a5a8a]/80 mb-1">
+            Formula
+          </p>
           <p className="text-[13px] text-sky-300 font-mono">{spec.formula.display}</p>
         </div>
       )}
       {isStructured ? (
         <div className="flex flex-col gap-1.5">
-          {spec.fields.map(f => <BandRow key={f.id} label={f.label} unit={f.unit} ideal={f.modelAnswer} />)}
+          {spec.fields.map((f) => (
+            <BandRow key={f.id} label={f.label} unit={f.unit} ideal={f.modelAnswer} />
+          ))}
         </div>
       ) : (
         <BandRow label={spec.field.label} unit={spec.field.unit} ideal={spec.field.modelAnswer} />
       )}
       {spec.hint && (
         <div className="mt-3 pl-3 border-l-2 border-amber-400/50 text-amber-300/80 text-[11.5px] leading-relaxed">
-          Hint available — reveals formula, caps at <span className="font-semibold">Proficient</span>
+          Hint available — reveals formula, caps at{' '}
+          <span className="font-semibold">Proficient</span>
         </div>
       )}
     </BlockShell>
@@ -334,7 +388,9 @@ function SqlBlock({ node, onEditRequest }: { node: ScenarioNode; onEditRequest: 
         {spec.ordered && <span>· ordered</span>}
         {spec.strictColumns && <span>· strict columns</span>}
       </div>
-      <pre className="px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.06] font-mono text-[12px] text-sky-300/90 whitespace-pre-wrap">{spec.referenceSql}</pre>
+      <pre className="px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.06] font-mono text-[12px] text-sky-300/90 whitespace-pre-wrap">
+        {spec.referenceSql}
+      </pre>
       {spec.hint && (
         <div className="mt-3 pl-3 border-l-2 border-amber-400/50 text-amber-300/80 text-[11.5px] leading-relaxed">
           Hint available — caps at <span className="font-semibold">Proficient</span>
@@ -350,7 +406,8 @@ function BandRow({ label, unit, ideal }: { label: string; unit?: string; ideal?:
       <span className="flex-1 text-[13px] text-white/75">{label}</span>
       {ideal !== undefined && (
         <span className="text-[12px] font-semibold text-emerald-300">
-          {ideal}{unit ? ` ${unit}` : ''} ideal
+          {ideal}
+          {unit ? ` ${unit}` : ''} ideal
         </span>
       )}
       <div className="w-24 h-1.5 rounded-full bg-white/[0.07] relative">
@@ -363,7 +420,13 @@ function BandRow({ label, unit, ideal }: { label: string; unit?: string; ideal?:
 
 // ── Setup block — briefing + format + track + rubric (read view) ──────────────
 
-export function SetupBlock({ scenario, onEditRequest }: { scenario: Scenario; onEditRequest: () => void }) {
+export function SetupBlock({
+  scenario,
+  onEditRequest,
+}: {
+  scenario: Scenario
+  onEditRequest: () => void
+}) {
   const { briefing } = scenario
   const dims = scenario.rubric?.dimensions ?? []
   const facts: { label: string; value: string }[] = [
@@ -374,40 +437,70 @@ export function SetupBlock({ scenario, onEditRequest }: { scenario: Scenario; on
   ]
   const chips = [
     TRACK_LABELS[scenario.track] ?? scenario.track,
-    ...(scenario.subcategory ? [BUSINESS_CASE_SUBCATEGORY_LABELS[scenario.subcategory as keyof typeof BUSINESS_CASE_SUBCATEGORY_LABELS] ?? scenario.subcategory] : []),
+    ...(scenario.subcategory
+      ? [
+          BUSINESS_CASE_SUBCATEGORY_LABELS[
+            scenario.subcategory as keyof typeof BUSINESS_CASE_SUBCATEGORY_LABELS
+          ] ?? scenario.subcategory,
+        ]
+      : []),
     `${scenario.estimatedMinutes} min`,
-    scenario.mode === 'immersive' ? (scenario.interviewer ? '🎙 Immersive · persona set' : '🎙 Immersive · no persona') : 'Text',
+    scenario.mode === 'immersive'
+      ? scenario.interviewer
+        ? '🎙 Immersive · persona set'
+        : '🎙 Immersive · no persona'
+      : 'Text',
   ]
   return (
     <BlockShell emoji="📋" kindLabel="Scenario Setup" onEditRequest={onEditRequest}>
       <div className="flex flex-wrap gap-1.5 mb-3">
-        {chips.map(c => (
-          <span key={c} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/[0.06] text-white/60 border border-white/10">{c}</span>
+        {chips.map((c) => (
+          <span
+            key={c}
+            className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/[0.06] text-white/60 border border-white/10"
+          >
+            {c}
+          </span>
         ))}
       </div>
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 mb-3">
-        {facts.map(({ label, value }) => value ? (
-          <div key={label}>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">{label}</span>
-            <p className="text-[13px] text-white/75 mt-0.5">{value}</p>
-          </div>
-        ) : null)}
+        {facts.map(({ label, value }) =>
+          value ? (
+            <div key={label}>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">
+                {label}
+              </span>
+              <p className="text-[13px] text-white/75 mt-0.5">{value}</p>
+            </div>
+          ) : null
+        )}
       </div>
       {briefing.situation ? (
         <p className="text-[13px] text-white/65 leading-relaxed border-t border-white/[0.06] pt-3 mt-1">
-          {briefing.situation.slice(0, 220)}{briefing.situation.length > 220 ? '…' : ''}
+          {briefing.situation.slice(0, 220)}
+          {briefing.situation.length > 220 ? '…' : ''}
         </p>
       ) : (
-        <p className="text-[12px] text-white/30 italic border-t border-white/[0.06] pt-3 mt-1">No situation written yet — click ✎ Edit.</p>
+        <p className="text-[12px] text-white/30 italic border-t border-white/[0.06] pt-3 mt-1">
+          No situation written yet — click ✎ Edit.
+        </p>
       )}
       <div className="border-t border-white/[0.06] pt-3 mt-3">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">Scored on</span>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">
+          Scored on
+        </span>
         {dims.length === 0 ? (
           <p className="text-[12px] text-white/30 italic mt-1">No rubric dimensions yet.</p>
         ) : (
           <div className="flex flex-wrap gap-1.5 mt-1.5">
-            {dims.map(d => (
-              <span key={d.name} title={d.description} className="text-[11px] px-2 py-0.5 rounded-md bg-emerald-400/[0.08] text-emerald-200/80 border border-emerald-400/20">{d.name}</span>
+            {dims.map((d) => (
+              <span
+                key={d.name}
+                title={d.description}
+                className="text-[11px] px-2 py-0.5 rounded-md bg-emerald-400/[0.08] text-emerald-200/80 border border-emerald-400/20"
+              >
+                {d.name}
+              </span>
             ))}
           </div>
         )}
@@ -424,12 +517,16 @@ export function SidebarBlock({ sidebar }: { sidebar: SidebarSection[] }) {
       <div className="flex flex-wrap gap-6">
         {sidebar.map((section, si) => (
           <div key={si} className="min-w-[160px]">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-2">{section.title}</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-2">
+              {section.title}
+            </p>
             <div className="flex flex-col gap-1.5">
               {section.items.map((item, ii) => (
                 <div key={ii} className="flex items-baseline justify-between gap-4">
                   <span className="text-[12px] text-white/40">{item.label}</span>
-                  <span className="text-[12px] font-semibold text-white/80 text-right">{item.value}</span>
+                  <span className="text-[12px] font-semibold text-white/80 text-right">
+                    {item.value}
+                  </span>
                 </div>
               ))}
             </div>

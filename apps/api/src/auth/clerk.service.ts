@@ -35,7 +35,9 @@ export class ClerkService {
       const payload = await verifyToken(token, { secretKey: this.secretKey })
       return payload.sub ?? null
     } catch (err) {
-      this.logger.debug(`Token verification failed: ${err instanceof Error ? err.message : 'unknown'}`)
+      this.logger.debug(
+        `Token verification failed: ${err instanceof Error ? err.message : 'unknown'}`
+      )
       return null
     }
   }
@@ -57,7 +59,9 @@ export class ClerkService {
       const role = (user.publicMetadata as { role?: string } | null)?.role
       return role ?? null
     } catch (err) {
-      this.logger.warn(`Failed to fetch Clerk user ${userId}: ${err instanceof Error ? err.message : 'unknown'}`)
+      this.logger.warn(
+        `Failed to fetch Clerk user ${userId}: ${err instanceof Error ? err.message : 'unknown'}`
+      )
       return null
     }
   }
@@ -66,7 +70,9 @@ export class ClerkService {
    * Fetches the primary email + display name for a user from Clerk.
    * Used by the User mirror table to cache contact info for analytics.
    */
-  async getUserProfile(userId: string): Promise<{ email: string | null; displayName: string | null } | null> {
+  async getUserProfile(
+    userId: string
+  ): Promise<{ email: string | null; displayName: string | null } | null> {
     if (!this.client) return null
     try {
       const user = await this.client.users.getUser(userId)
@@ -76,7 +82,9 @@ export class ClerkService {
       const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || null
       return { email: primary?.emailAddress ?? null, displayName }
     } catch (err) {
-      this.logger.warn(`Failed to fetch Clerk profile ${userId}: ${err instanceof Error ? err.message : 'unknown'}`)
+      this.logger.warn(
+        `Failed to fetch Clerk profile ${userId}: ${err instanceof Error ? err.message : 'unknown'}`
+      )
       return null
     }
   }
@@ -90,13 +98,18 @@ export class ClerkService {
     if (!this.client || userIds.length === 0) return out
     try {
       for (let i = 0; i < userIds.length; i += 100) {
-        const page = await this.client.users.getUserList({ userId: userIds.slice(i, i + 100), limit: 100 })
+        const page = await this.client.users.getUserList({
+          userId: userIds.slice(i, i + 100),
+          limit: 100,
+        })
         for (const u of page.data) {
           out.set(u.id, (u.publicMetadata as { role?: string } | null)?.role ?? null)
         }
       }
     } catch (err) {
-      this.logger.warn(`Failed to batch-fetch Clerk roles: ${err instanceof Error ? err.message : 'unknown'}`)
+      this.logger.warn(
+        `Failed to batch-fetch Clerk roles: ${err instanceof Error ? err.message : 'unknown'}`
+      )
     }
     return out
   }

@@ -30,9 +30,7 @@ export interface PhaseView {
 export function getPhases(scenario: Scenario): ScenarioPhase[] {
   if (scenario.phases?.length) return scenario.phases
 
-  const decisionNodeIds = scenario.nodes
-    .filter(n => n.type === 'decision')
-    .map(n => n.nodeId)
+  const decisionNodeIds = scenario.nodes.filter((n) => n.type === 'decision').map((n) => n.nodeId)
 
   return [
     {
@@ -48,12 +46,9 @@ export function getPhases(scenario: Scenario): ScenarioPhase[] {
  * pinned to any phase (e.g. a transition/feedback node only referenced via
  * `next` links rather than explicitly listed in `nodeIds`).
  */
-export function getPhaseForNode(
-  scenario: Scenario,
-  nodeId: string,
-): ScenarioPhase | null {
+export function getPhaseForNode(scenario: Scenario, nodeId: string): ScenarioPhase | null {
   const phases = getPhases(scenario)
-  return phases.find(p => p.nodeIds.includes(nodeId)) ?? null
+  return phases.find((p) => p.nodeIds.includes(nodeId)) ?? null
 }
 
 /**
@@ -69,37 +64,34 @@ export function getPhaseForNode(
 export function buildPhaseViews(
   scenario: Scenario,
   currentNodeId: string,
-  answeredNodeIds: Set<string>,
+  answeredNodeIds: Set<string>
 ): PhaseView[] {
   const phases = getPhases(scenario)
   const isImplicit = !scenario.phases?.length
 
-  let activeIndex = phases.findIndex(p => p.nodeIds.includes(currentNodeId))
+  let activeIndex = phases.findIndex((p) => p.nodeIds.includes(currentNodeId))
   if (activeIndex < 0) {
     activeIndex = phases.reduce(
-      (latest, p, i) =>
-        p.nodeIds.some(id => answeredNodeIds.has(id)) ? i : latest,
-      0,
+      (latest, p, i) => (p.nodeIds.some((id) => answeredNodeIds.has(id)) ? i : latest),
+      0
     )
   }
 
   const interactive = new Set(
     (scenario.nodes ?? [])
-      .filter(n => n.type === 'decision' || n.type === 'quant' || n.type === 'sql')
-      .map(n => n.nodeId),
+      .filter((n) => n.type === 'decision' || n.type === 'quant' || n.type === 'sql')
+      .map((n) => n.nodeId)
   )
   return phases.map((phase, index) => {
     const status: PhaseStatus =
-      index < activeIndex ? 'complete'
-        : index === activeIndex ? 'active'
-          : 'locked'
-    const ids = phase.nodeIds.filter(id => interactive.has(id))
+      index < activeIndex ? 'complete' : index === activeIndex ? 'active' : 'locked'
+    const ids = phase.nodeIds.filter((id) => interactive.has(id))
     return {
       phase,
       index,
       status,
       isImplicit,
-      answeredCount: ids.filter(id => answeredNodeIds.has(id)).length,
+      answeredCount: ids.filter((id) => answeredNodeIds.has(id)).length,
       totalCount: ids.length,
     }
   })

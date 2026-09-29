@@ -7,7 +7,11 @@ export function useConfig() {
   const [config, setConfig] = useState<PublicConfig>(DEFAULT_CONFIG)
 
   useEffect(() => {
-    fetchConfig().then(setConfig).catch(() => {/* use default */})
+    fetchConfig()
+      .then(setConfig)
+      .catch(() => {
+        /* use default */
+      })
   }, [])
 
   return config

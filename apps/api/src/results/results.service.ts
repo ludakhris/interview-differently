@@ -7,7 +7,7 @@ import type { CreateResultDto, CompetencyProfile } from './results.types'
 export class ResultsService {
   constructor(
     private prisma: PrismaService,
-    private aiFeedbackSvc: AiFeedbackService,
+    private aiFeedbackSvc: AiFeedbackService
   ) {}
 
   /**
@@ -131,7 +131,7 @@ export class ResultsService {
     const aiFeedback = await this.aiFeedbackSvc.generateFeedback(
       scenario.rubric.dimensions,
       result.dimensionScores,
-      decisions,
+      decisions
     )
 
     await this.prisma.simulationResult.update({

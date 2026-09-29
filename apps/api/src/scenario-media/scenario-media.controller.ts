@@ -25,7 +25,7 @@ export class ScenarioMediaController {
     // Used by the dev-only /files/* route below; never hit in prod (R2 serves
     // the MP4s directly via the custom domain).
     private readonly localStorage: LocalDiskPublicStorage,
-    private readonly scope: InstitutionScope,
+    private readonly scope: InstitutionScope
   ) {}
 
   @Get(':scenarioId')
@@ -40,7 +40,7 @@ export class ScenarioMediaController {
   async renderNode(
     @Req() req: AdminRequest,
     @Param('scenarioId') scenarioId: string,
-    @Param('nodeId') nodeId: string,
+    @Param('nodeId') nodeId: string
   ) {
     await this.scope.assertScenario(req, scenarioId)
     try {
@@ -59,7 +59,7 @@ export class ScenarioMediaController {
   async deleteAsset(
     @Req() req: AdminRequest,
     @Param('scenarioId') scenarioId: string,
-    @Param('nodeId') nodeId: string,
+    @Param('nodeId') nodeId: string
   ) {
     await this.scope.assertScenario(req, scenarioId)
     await this.service.deleteAsset(scenarioId, nodeId)
@@ -71,10 +71,7 @@ export class ScenarioMediaController {
    * Wildcard splat: /files/scenarios/abc/node1-abcdef.mp4 → key = "scenarios/abc/node1-abcdef.mp4".
    */
   @Get('files/*')
-  async serveFile(
-    @Param('0') key: string,
-    @Res() res: Response,
-  ) {
+  async serveFile(@Param('0') key: string, @Res() res: Response) {
     const buf = await this.localStorage.read(key)
     if (!buf) throw new NotFoundException(`Media not found: ${key}`)
     res.set('Content-Type', 'video/mp4')

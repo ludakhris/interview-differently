@@ -17,7 +17,7 @@ interface Props {
 /** CodeMirror SQL editor with the app theme, Postgres dialect and schema completion. */
 export const SqlEditor = forwardRef<ReactCodeMirrorRef, Props>(function SqlEditor(
   { value, onChange, onRun, tables = [], height, placeholder, readOnly },
-  ref,
+  ref
 ) {
   // Keep the Mod-Enter keymap pointed at the latest `onRun` without
   // rebuilding the editor extensions on every keystroke. Prec.highest so it
@@ -30,7 +30,7 @@ export const SqlEditor = forwardRef<ReactCodeMirrorRef, Props>(function SqlEdito
       sandboxEditorTheme,
       sql({ dialect: PostgreSQL, upperCaseKeywords: true, ...schemaForCompletion(tables) }),
     ],
-    [tables],
+    [tables]
   )
   const h = typeof height === 'number' ? `${height}px` : height
   return (
@@ -54,8 +54,16 @@ export const SqlEditor = forwardRef<ReactCodeMirrorRef, Props>(function SqlEdito
 function schemaForCompletion(tables: SchemaTable[]) {
   return {
     schema: Object.fromEntries(
-      tables.map((t) => [t.table, t.columns.map((c) => ({ label: c.name, detail: c.type, type: 'property', boost: 2 }))]),
+      tables.map((t) => [
+        t.table,
+        t.columns.map((c) => ({ label: c.name, detail: c.type, type: 'property', boost: 2 })),
+      ])
     ),
-    tables: tables.map((t) => ({ label: t.table, detail: `${t.rowCount} rows`, type: 'class', boost: 3 })),
+    tables: tables.map((t) => ({
+      label: t.table,
+      detail: `${t.rowCount} rows`,
+      type: 'class',
+      boost: 3,
+    })),
   }
 }

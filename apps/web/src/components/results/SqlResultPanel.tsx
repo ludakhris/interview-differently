@@ -15,7 +15,9 @@ export function SqlResultPanel({ result }: Props) {
     <div className="bg-[#0d0d0d] border border-white/10 rounded-xl overflow-hidden">
       <div className="px-4 py-3 border-b border-white/8 bg-white/3">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">SQL submission</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
+            SQL submission
+          </p>
           <div className="flex items-center gap-2">
             {result.hintUsed && (
               <span
@@ -25,12 +27,20 @@ export function SqlResultPanel({ result }: Props) {
                 💡 Hint used
               </span>
             )}
-            <span className={`text-[10px] font-bold uppercase tracking-widest border px-2 py-0.5 rounded-full ${tone.className}`}>{tone.label}</span>
+            <span
+              className={`text-[10px] font-bold uppercase tracking-widest border px-2 py-0.5 rounded-full ${tone.className}`}
+            >
+              {tone.label}
+            </span>
           </div>
         </div>
-        <p className="mt-0.5 text-[13px] font-medium text-[#f5f3ee] leading-snug">{result.prompt}</p>
+        <p className="mt-0.5 text-[13px] font-medium text-[#f5f3ee] leading-snug">
+          {result.prompt}
+        </p>
       </div>
-      <pre className="px-4 py-3 font-mono text-[12px] text-[#f5f3ee]/85 whitespace-pre-wrap">{result.sql}</pre>
+      <pre className="px-4 py-3 font-mono text-[12px] text-[#f5f3ee]/85 whitespace-pre-wrap">
+        {result.sql}
+      </pre>
       {!result.correct && result.reason && (
         <p className="px-4 pb-3 text-[12px] text-red-300/80">{result.reason}</p>
       )}

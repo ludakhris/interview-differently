@@ -43,20 +43,30 @@ export function drawSpecFromYaml(value: unknown): DrawSpec | null {
 export function drawCount(s: AssessmentSection): number {
   if (s.draw == null) return s.questions.length
   if (typeof s.draw === 'number') return Math.min(s.draw, s.questions.length)
-  return Object.entries(s.draw).reduce((n, [type, want]) => n + Math.min(want, countType(s, type)), 0)
+  return Object.entries(s.draw).reduce(
+    (n, [type, want]) => n + Math.min(want, countType(s, type)),
+    0
+  )
 }
 
 /** Random paper for a section — per-type pools when the spec is a map, then shuffled together. */
 export function drawSection(s: AssessmentSection): AssessmentQuestion[] {
   if (s.draw == null || typeof s.draw === 'number') return shuffle(s.questions, s.draw)
-  const picked = Object.entries(s.draw).flatMap(([type, n]) => shuffle(s.questions.filter((q) => q.type === type), n))
+  const picked = Object.entries(s.draw).flatMap(([type, n]) =>
+    shuffle(
+      s.questions.filter((q) => q.type === type),
+      n
+    )
+  )
   return shuffle(picked, null)
 }
 
 export function formatDrawSpec(spec: DrawSpec | null): string {
   if (spec == null) return 'all'
   if (typeof spec === 'number') return String(spec)
-  return Object.entries(spec).map(([t, n]) => `${t} ${n}`).join(', ')
+  return Object.entries(spec)
+    .map(([t, n]) => `${t} ${n}`)
+    .join(', ')
 }
 
 function countType(s: AssessmentSection, type: string): number {
