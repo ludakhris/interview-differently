@@ -168,7 +168,14 @@ export function AdminInstitutionSandboxPage() {
   )
 }
 
+/** Queries shown per student until expanded — keeps a busy class scannable. */
+const COLLAPSED_QUERIES = 2
+
 function StudentCard({ s }: { s: SandboxStudent }) {
+  // Local state, so it survives Refresh (cards are keyed by userId).
+  const [expanded, setExpanded] = useState(false)
+  const hidden = s.queries.length - COLLAPSED_QUERIES
+  const shown = expanded ? s.queries : s.queries.slice(0, COLLAPSED_QUERIES)
   return (
     <details open={s.queryCount > 0} className="bg-[#111111] rounded-xl border border-white/10">
       <summary className="cursor-pointer px-5 py-3 flex items-center justify-between gap-4">
@@ -193,7 +200,7 @@ function StudentCard({ s }: { s: SandboxStudent }) {
         <p className="px-5 pb-4 text-[12px] text-slate-mid">No queries yet.</p>
       ) : (
         <ul className="border-t border-white/10 divide-y divide-white/5">
-          {s.queries.map((q) => (
+          {shown.map((q) => (
             <li key={q.id} className="px-5 py-3">
               <div className="flex items-center gap-2 text-[11px] text-slate-mid mb-1.5">
                 <span className={q.ok ? 'text-green' : 'text-red-400'}>
@@ -217,6 +224,14 @@ function StudentCard({ s }: { s: SandboxStudent }) {
             </li>
           ))}
         </ul>
+      )}
+      {hidden > 0 && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="w-full border-t border-white/10 px-5 py-2 text-left text-[12px] font-semibold text-slate-mid hover:text-[#f5f3ee] transition-colors"
+        >
+          {expanded ? 'Show fewer' : `Show ${hidden} older ${hidden === 1 ? 'query' : 'queries'}`}
+        </button>
       )}
     </details>
   )
