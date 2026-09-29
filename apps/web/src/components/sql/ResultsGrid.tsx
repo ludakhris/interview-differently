@@ -2,14 +2,18 @@ import type { SandboxResult } from '@/lib/sql/sandboxDb'
 
 const NUMERIC_RE = /^-?\d+(\.\d+)?$/
 
-/** Mono data grid for query results: zebra rows, right-aligned numerics, sticky header. */
-export function ResultsGrid({ result }: { result: SandboxResult }) {
+/**
+ * Mono data grid for query results: zebra rows, right-aligned numerics, sticky header.
+ * `limit` shows that many rows from the full result; without it, the capped `rows`.
+ */
+export function ResultsGrid({ result, limit }: { result: SandboxResult; limit?: number }) {
   if (result.columns.length === 0) {
     return <p className="px-5 py-6 text-[13px] text-slate-mid font-mono">{result.command || 'OK'} — no rows returned.</p>
   }
+  const rows = limit === undefined ? result.rows : result.allRows.slice(0, limit)
   // Right-align a column when every non-null value in it looks numeric.
   const numeric = result.columns.map((_, ci) =>
-    result.rows.every((r) => r[ci] == null || typeof r[ci] === 'number' || NUMERIC_RE.test(String(r[ci]))),
+    rows.every((r) => r[ci] == null || typeof r[ci] === 'number' || NUMERIC_RE.test(String(r[ci]))),
   )
   return (
     <table className="min-w-full text-[12px] font-mono border-collapse">
@@ -29,7 +33,7 @@ export function ResultsGrid({ result }: { result: SandboxResult }) {
         </tr>
       </thead>
       <tbody>
-        {result.rows.map((row, ri) => (
+        {rows.map((row, ri) => (
           <tr key={ri} className="odd:bg-white/[0.02] hover:bg-[#2d9e5f]/10">
             <td className="px-3 py-1.5 text-right text-white/25">{ri + 1}</td>
             {row.map((v, ci) => (

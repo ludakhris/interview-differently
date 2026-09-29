@@ -14,7 +14,10 @@ import { PGlite } from '@electric-sql/pglite'
 
 export interface SandboxResult {
   columns: string[]
+  /** First ROW_CAP rows — what grading compares (see compare.ts). */
   rows: unknown[][]
+  /** Every row, for export and for a display limit above ROW_CAP (#30). */
+  allRows: unknown[][]
   rowCount: number
   command: string
   durationMs: number
@@ -52,11 +55,11 @@ export class SandboxDb {
     const results = await this.db.exec(sql)
     const durationMs = Math.round(performance.now() - started)
     const last = results[results.length - 1]
-    if (!last) return { columns: [], rows: [], rowCount: 0, command: '', durationMs }
+    if (!last) return { columns: [], rows: [], allRows: [], rowCount: 0, command: '', durationMs }
     const columns = last.fields.map((f) => f.name)
     const all = last.rows as Record<string, unknown>[]
-    const rows = all.slice(0, ROW_CAP).map((r) => columns.map((c) => r[c]))
-    return { columns, rows, rowCount: all.length, command: last.command ?? '', durationMs }
+    const allRows = all.map((r) => columns.map((c) => r[c]))
+    return { columns, rows: allRows.slice(0, ROW_CAP), allRows, rowCount: all.length, command: last.command ?? '', durationMs }
   }
 
   /**

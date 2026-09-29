@@ -7,7 +7,8 @@ import { Nav } from '@/components/Nav'
 import { SqlEditor } from '@/components/sql/SqlEditor'
 import { SchemaTree } from '@/components/sql/SchemaTree'
 import { ResultsGrid } from '@/components/sql/ResultsGrid'
-import { SandboxDb, ROW_CAP, type SandboxResult } from '@/lib/sql/sandboxDb'
+import { ResultActions } from '@/components/sql/ResultActions'
+import { SandboxDb, type SandboxResult } from '@/lib/sql/sandboxDb'
 import { fetchMyDataset, fetchMyDatasets, type DatasetDetail, type DatasetSummary } from '@/services/datasetsService'
 
 /**
@@ -20,6 +21,19 @@ import { fetchMyDataset, fetchMyDatasets, type DatasetDetail, type DatasetSummar
  */
 
 const HISTORY_LIMIT = 20
+// Display-only row limit (#30). Capped at 5,000: the grid renders every row, and
+// much more than that locks the tab. Export always writes the full result.
+const ROW_LIMITS = [100, 500, 1000, 5000]
+const ROW_LIMIT_KEY = 'sql-sandbox-row-limit'
+
+function readRowLimit(): number {
+  try {
+    const n = Number(localStorage.getItem(ROW_LIMIT_KEY))
+    return ROW_LIMITS.includes(n) ? n : 500
+  } catch {
+    return 500
+  }
+}
 const NAV_HEIGHT = 57
 const MIN_EDITOR = 120
 const MIN_RESULTS = 160
@@ -66,6 +80,7 @@ export function SqlSandboxPage() {
   const [result, setResult] = useState<SandboxResult | null>(null)
   const [queryError, setQueryError] = useState<string | null>(null)
   const [history, setHistory] = useState<string[]>([])
+  const [rowLimit, setRowLimit] = useState(readRowLimit)
   const editorRef = useRef<ReactCodeMirrorRef>(null)
 
   // ── Dataset list ──
@@ -363,7 +378,7 @@ export function SqlSandboxPage() {
 
               <div className="flex-1 min-h-0 overflow-auto">
                 {result ? (
-                  <ResultsGrid result={result} />
+                  <ResultsGrid result={result} limit={rowLimit} />
                 ) : ready ? (
                   <p className="px-5 py-8 text-[12px] text-white/30">
                     Write a query above and press <span className="font-mono">⌘↵</span>. Click a table or column in the rail to drop its name into the editor.
@@ -385,9 +400,35 @@ export function SqlSandboxPage() {
                           : dbState.status}
                 </span>
                 <span className="flex items-center gap-3">
-                  {result && result.rowCount > ROW_CAP && (
-                    <span className="text-amber-400">showing first {ROW_CAP}</span>
+                  {result && result.rowCount > rowLimit && (
+                    <span className="text-amber-400">
+                      showing first {rowLimit.toLocaleString()} of {result.rowCount.toLocaleString()}
+                    </span>
                   )}
+                  <label className="flex items-center gap-1.5" title="How many rows the grid shows. Copy and CSV always include every row.">
+                    show
+                    <select
+                      value={rowLimit}
+                      onChange={(e) => {
+                        const n = Number(e.target.value)
+                        setRowLimit(n)
+                        try {
+                          localStorage.setItem(ROW_LIMIT_KEY, String(n))
+                        } catch {
+                          /* ignore */
+                        }
+                      }}
+                      className="bg-[#111111] border border-white/10 rounded px-1 py-0.5 text-white/70 focus:outline-none focus:border-white/30"
+                    >
+                      {ROW_LIMITS.map((n) => (
+                        <option key={n} value={n}>
+                          {n.toLocaleString()}
+                        </option>
+                      ))}
+                    </select>
+                    rows
+                  </label>
+                  {result && !queryError && <ResultActions result={result} datasetName={dataset?.name ?? slug ?? 'sandbox'} />}
                   <span>postgres · pglite</span>
                 </span>
               </div>

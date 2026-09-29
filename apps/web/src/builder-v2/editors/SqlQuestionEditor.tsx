@@ -8,6 +8,7 @@ import type { ScenarioNode, SqlSpec } from '@id/types'
 import { EditShell, Field, TextInput, Textarea, SelectInput, SectionLabel } from './shared'
 import { SqlEditor } from '@/components/sql/SqlEditor'
 import { ResultsGrid } from '@/components/sql/ResultsGrid'
+import { ResultActions } from '@/components/sql/ResultActions'
 import { SandboxDb, type SandboxResult } from '@/lib/sql/sandboxDb'
 import { fetchMyDatasets, type DatasetSummary } from '@/services/datasetsService'
 import { fetchMyDataset } from '@/services/datasetsService'
@@ -116,6 +117,11 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
         {test.state === 'ok' && test.result && (
           <span className="font-mono text-[11px] text-emerald-300">
             {test.result.rowCount} row{test.result.rowCount !== 1 ? 's' : ''} · {test.result.columns.length} col{test.result.columns.length !== 1 ? 's' : ''}
+          </span>
+        )}
+        {test.state === 'ok' && test.result && (
+          <span className="text-[11px]">
+            <ResultActions result={test.result} datasetName={selected?.name ?? datasetSlug} />
           </span>
         )}
         {test.state === 'error' && <span className="font-mono text-[11px] text-red-400">{test.error}</span>}
