@@ -74,6 +74,7 @@ export interface AssessmentDetail {
   institutionId: string | null
   institutionName: string | null
   defaultDraw: number | Record<string, number> | null
+  expectedMinutes: number | null
   sections: AssessmentSection[]
   sourceMarkdown: string
   updatedAt: string
@@ -81,7 +82,15 @@ export interface AssessmentDetail {
 }
 
 export interface PreviewResult {
-  parsed: { slug: string; title: string; dataset: string | null; defaultDraw: number | Record<string, number> | null; sections: AssessmentSection[]; warnings: string[] }
+  parsed: {
+    slug: string
+    title: string
+    dataset: string | null
+    defaultDraw: number | Record<string, number> | null
+    expectedMinutes: number | null
+    sections: AssessmentSection[]
+    warnings: string[]
+  }
   datasetId: string | null
   datasetName: string | null
   sqlErrors: { questionId: string; error: string }[]
@@ -96,7 +105,15 @@ export interface DeliveryInput {
 }
 
 export interface DeliveryResults {
-  delivery: { id: string; label: string; cohortName: string | null; assessmentTitle: string }
+  delivery: {
+    id: string
+    label: string
+    cohortName: string | null
+    assessmentTitle: string
+    expectedMinutes: number | null
+    /** Median start→submit minutes over submitted attempts (#39). */
+    medianMinutes: number | null
+  }
   sections: { id: string; title: string }[]
   attempts: {
     attemptId: string
@@ -106,6 +123,8 @@ export interface DeliveryResults {
     startedAt: string
     submittedAt: string | null
     submittedLate: boolean
+    /** Start→submit wall-clock minutes; null until submitted. */
+    minutes: number | null
     sectionScores: SectionScore[] | null
     overall: OverallScore | null
   }[]
@@ -262,15 +281,18 @@ export interface PrePostStudent {
   pre: Record<string, number> | null // 'overall' + sectionId → percent
   post: Record<string, number> | null
   delta: number | null // post.overall − pre.overall, students with both only
+  preMinutes: number | null // start→submit wall-clock minutes (#39)
+  postMinutes: number | null
 }
 
 export interface PrePostPair {
   assessmentId: string
   assessmentTitle: string
+  expectedMinutes: number | null
   cohort: { id: string; name: string }
   sections: { id: string; title: string }[]
-  pre: { deliveryId: string; label: string; submittedCount: number } | null
-  post: { deliveryId: string; label: string; submittedCount: number } | null
+  pre: { deliveryId: string; label: string; submittedCount: number; medianMinutes: number | null } | null
+  post: { deliveryId: string; label: string; submittedCount: number; medianMinutes: number | null } | null
   averages: {
     pre: Record<string, number | null>
     post: Record<string, number | null>

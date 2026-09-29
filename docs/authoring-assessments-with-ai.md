@@ -12,7 +12,7 @@ The format is defined in [assessment-format.md](./assessment-format.md); this do
 
 One markdown file:
 
-- YAML frontmatter: `slug`, `title`, optional `draw`; `dataset` only when the bank has Hands-On SQL questions.
+- YAML frontmatter: `slug`, `title`, optional `draw` and `expected_minutes`; `dataset` only when the bank has Hands-On SQL questions.
 - One or more `## Section N: Title` headings. Optional `> draw: …` right under the heading.
 - Questions numbered `**N.M (Type)**` where Type is `MC`, `Scenario` or `Hands-On SQL`. `Scenario` is MC with a longer setup — paragraphs, markdown tables (data) and ```` ```sql ````/```` ```dax ```` blocks are allowed in the prompt; options and answer as MC. No free-text answers.
 - Every question ends with its answer. Nothing else is required.

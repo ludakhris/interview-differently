@@ -159,6 +159,8 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
         showNames ? 'name' : 'student',
         ...(showNames ? ['email'] : []),
         ...keys.flatMap((k) => [`${k.title} pre`, `${k.title} post`, `${k.title} improvement`]),
+        'pre minutes',
+        'post minutes',
       ],
       rows: pair.students.map((s) => [
         label(s),
@@ -168,6 +170,8 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
           const q = s.post?.[k.id] ?? null
           return [p, q, p != null && q != null ? q - p : null]
         }),
+        s.preMinutes,
+        s.postMinutes,
       ]),
     })
 
@@ -182,6 +186,9 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
             <p className="text-[12px] text-slate-mid mt-1">
               {pair.pre ? `${pair.pre.submittedCount} pre` : 'no pre delivery'} · {pair.post ? `${pair.post.submittedCount} post` : 'no post delivery'} ·{' '}
               {pair.averages.pairedCount} completed both
+              {pair.expectedMinutes != null && ` · expected ${pair.expectedMinutes} min`}
+              {pair.pre?.medianMinutes != null && ` · pre median ${pair.pre.medianMinutes} min`}
+              {pair.post?.medianMinutes != null && ` · post median ${pair.post.medianMinutes} min`}
             </p>
           </div>
           <div className="flex items-center gap-6">
@@ -254,6 +261,7 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
                     </th>
                   ))}
                   <th className="text-right py-2 pl-3 font-bold">% Improvement</th>
+                  <th className="text-right py-2 pl-3 font-bold">Time</th>
                 </tr>
               </thead>
               <tbody>
@@ -271,6 +279,12 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
                       </td>
                     ))}
                     <td className={`text-right py-2 pl-3 font-mono font-semibold ${deltaCls(s.delta)}`}>{signed(s.delta)}</td>
+                    <td className="text-right py-2 pl-3 font-mono whitespace-nowrap">
+                      <span className={s.preMinutes == null ? 'text-white/25' : 'text-[#d4830a]'}>{s.preMinutes ?? '—'}</span>
+                      <span className="text-white/25"> → </span>
+                      <span className={s.postMinutes == null ? 'text-white/25' : 'text-[#2d9e5f]'}>{s.postMinutes ?? '—'}</span>
+                      <span className="text-white/40"> min</span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

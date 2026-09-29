@@ -74,6 +74,7 @@ export class AssessmentsService {
       sourceMarkdown: markdown,
       sections: parsed.sections as unknown as object[],
       defaultDraw: parsed.defaultDraw ?? Prisma.DbNull,
+      expectedMinutes: parsed.expectedMinutes,
     }
     const row = await this.prisma.assessment.upsert({
       where: { slug: parsed.slug },
@@ -156,6 +157,7 @@ export class AssessmentsService {
       institutionId: a.institutionId,
       institutionName: a.institution?.name ?? null,
       defaultDraw: a.defaultDraw,
+      expectedMinutes: a.expectedMinutes,
       sections: a.sections as unknown as AssessmentSection[],
       sourceMarkdown: a.sourceMarkdown,
       updatedAt: a.updatedAt,
@@ -313,7 +315,7 @@ export class AssessmentsService {
     const d = await this.prisma.assessmentDelivery.findUnique({
       where: { id },
       include: {
-        assessment: { select: { id: true, title: true, sections: true } },
+        assessment: { select: { id: true, title: true, sections: true, expectedMinutes: true } },
         cohort: { select: { name: true } },
         attempts: { orderBy: { startedAt: 'asc' } },
       },
@@ -326,7 +328,14 @@ export class AssessmentsService {
     const byId = new Map(users.map((u) => [u.id, u]))
     const sections = (d.assessment.sections as unknown as AssessmentSection[]).map((s) => ({ id: s.id, title: s.title }))
     return {
-      delivery: { id: d.id, label: d.label, cohortName: d.cohort?.name ?? null, assessmentTitle: d.assessment.title },
+      delivery: {
+        id: d.id,
+        label: d.label,
+        cohortName: d.cohort?.name ?? null,
+        assessmentTitle: d.assessment.title,
+        expectedMinutes: d.assessment.expectedMinutes,
+        medianMinutes: median(d.attempts.map(minutesTaken)),
+      },
       sections,
       attempts: d.attempts.map((a) => {
         const scores = (a.sectionScores as unknown as SectionScore[] | null) ?? null
@@ -338,6 +347,7 @@ export class AssessmentsService {
           startedAt: a.startedAt,
           submittedAt: a.submittedAt,
           submittedLate: a.submittedLate,
+          minutes: minutesTaken(a),
           sectionScores: scores,
           overall: scores ? overall(scores) : null,
         }
@@ -368,9 +378,12 @@ export class AssessmentsService {
       where: { cohort: { institutionId, ...(cohortId ? { id: cohortId } : {}) } },
       orderBy: { createdAt: 'desc' },
       include: {
-        assessment: { select: { id: true, title: true, sections: true } },
+        assessment: { select: { id: true, title: true, sections: true, expectedMinutes: true } },
         cohort: { select: { id: true, name: true } },
-        attempts: { where: { submittedAt: { not: null } }, select: { userId: true, sectionScores: true } },
+        attempts: {
+          where: { submittedAt: { not: null } },
+          select: { userId: true, sectionScores: true, startedAt: true, submittedAt: true },
+        },
       },
     })
 
@@ -400,6 +413,9 @@ export class AssessmentsService {
         const side = (d?: D) => new Map((d?.attempts ?? []).map((a) => [a.userId, pctBySection(a.sectionScores as unknown as SectionScore[] | null)]))
         const pre = side(g.pre)
         const post = side(g.post)
+        const minutes = (d?: D) => new Map((d?.attempts ?? []).map((a) => [a.userId, minutesTaken(a)]))
+        const preMin = minutes(g.pre)
+        const postMin = minutes(g.post)
         const ids = [...new Set([...pre.keys(), ...post.keys()])].sort((a, b) => {
           const ua = userById.get(a), ub = userById.get(b)
           return (ua?.displayName ?? ua?.email ?? a).localeCompare(ub?.displayName ?? ub?.email ?? b)
@@ -417,6 +433,8 @@ export class AssessmentsService {
             pre: p,
             post: q,
             delta: p && q ? q.overall - p.overall : null,
+            preMinutes: preMin.get(userId) ?? null,
+            postMinutes: postMin.get(userId) ?? null,
           }
         })
         const both = students.filter((st) => st.pre && st.post)
@@ -425,10 +443,15 @@ export class AssessmentsService {
         return {
           assessmentId: g.assessment.id,
           assessmentTitle: g.assessment.title,
+          expectedMinutes: g.assessment.expectedMinutes,
           cohort: g.cohort,
           sections,
-          pre: g.pre ? { deliveryId: g.pre.id, label: g.pre.label, submittedCount: pre.size } : null,
-          post: g.post ? { deliveryId: g.post.id, label: g.post.label, submittedCount: post.size } : null,
+          pre: g.pre
+            ? { deliveryId: g.pre.id, label: g.pre.label, submittedCount: pre.size, medianMinutes: median([...preMin.values()]) }
+            : null,
+          post: g.post
+            ? { deliveryId: g.post.id, label: g.post.label, submittedCount: post.size, medianMinutes: median([...postMin.values()]) }
+            : null,
           averages: {
             pre: avg([...pre.values()]),
             post: avg([...post.values()]),
@@ -670,6 +693,21 @@ function overall(scores: SectionScore[]) {
 function stripAnswer(q: AssessmentQuestion) {
   if (q.type !== 'sql') return { id: q.id, type: q.type, prompt: q.prompt, options: q.options }
   return { id: q.id, type: 'sql' as const, prompt: q.prompt, ordered: q.ordered, strictColumns: q.strictColumns, ...(q.starterSql ? { starterSql: q.starterSql } : {}) }
+}
+
+/**
+ * Wall-clock minutes from start to submit (#39); null until submitted. Includes
+ * any idle time, which is why summaries use the median rather than the mean.
+ */
+function minutesTaken(a: { startedAt: Date; submittedAt: Date | null }): number | null {
+  return a.submittedAt ? Math.round((a.submittedAt.getTime() - a.startedAt.getTime()) / 60000) : null
+}
+
+function median(values: (number | null)[]): number | null {
+  const v = values.filter((x): x is number => x !== null).sort((a, b) => a - b)
+  if (v.length === 0) return null
+  const mid = Math.floor(v.length / 2)
+  return v.length % 2 ? v[mid] : Math.round((v[mid - 1] + v[mid]) / 2)
 }
 
 /** overall + per-section percentages for one submitted attempt. */

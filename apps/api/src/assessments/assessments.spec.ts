@@ -322,3 +322,39 @@ describe('createDelivery institution guard', () => {
     await expect(make(null).service.createDelivery('a1', { cohortId: 'other', label: 'pre' })).resolves.toEqual({ id: 'd1' })
   })
 })
+
+describe('completion times (#39)', () => {
+  it('reads expected_minutes from frontmatter', () => {
+    expect(parseAssessmentMarkdown(BANK).expectedMinutes).toBeNull()
+    expect(parseAssessmentMarkdown(BANK.replace('draw: 2\n', 'draw: 2\nexpected_minutes: 30\n')).expectedMinutes).toBe(30)
+    for (const bad of ['0', '-5', '12.5', 'soon']) {
+      expect(() => parseAssessmentMarkdown(BANK.replace('draw: 2\n', `draw: 2\nexpected_minutes: ${bad}\n`))).toThrow(/expected_minutes/)
+    }
+  })
+
+  it('reports minutes per submitted attempt and the median against expected', async () => {
+    const t0 = new Date('2026-09-29T10:00:00Z')
+    const at = (min: number) => new Date(t0.getTime() + min * 60000)
+    const attempts = [
+      { id: 'a', userId: 'u1', startedAt: t0, submittedAt: at(20), submittedLate: false, sectionScores: null },
+      { id: 'b', userId: 'u2', startedAt: t0, submittedAt: at(34), submittedLate: false, sectionScores: null },
+      { id: 'c', userId: 'u3', startedAt: t0, submittedAt: at(90), submittedLate: false, sectionScores: null },
+      { id: 'd', userId: 'u4', startedAt: t0, submittedAt: null, submittedLate: false, sectionScores: null },
+    ]
+    const prisma = {
+      assessmentDelivery: {
+        findUnique: async () => ({
+          id: 'd1',
+          label: 'pre',
+          cohort: { name: 'C' },
+          assessment: { id: 'x', title: 'T', sections: [], expectedMinutes: 30 },
+          attempts,
+        }),
+      },
+      user: { findMany: async () => [] },
+    }
+    const r = await new AssessmentsService(prisma as never, {} as never, {} as never).deliveryResults('d1')
+    expect(r.delivery).toMatchObject({ expectedMinutes: 30, medianMinutes: 34 })
+    expect(r.attempts.map((a) => a.minutes)).toEqual([20, 34, 90, null])
+  })
+})

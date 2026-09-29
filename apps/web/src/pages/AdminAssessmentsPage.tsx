@@ -290,6 +290,7 @@ function ImportPanel({
               </p>
               <p className="text-[11px] text-slate-mid">
                 dataset <span className="font-mono">{preview.parsed.dataset ?? 'none'}</span> · default draw {formatDraw(preview.parsed.defaultDraw)}
+                {preview.parsed.expectedMinutes != null && ` · expected ${preview.parsed.expectedMinutes} min`}
               </p>
             </div>
             <ul className="space-y-1">
@@ -392,8 +393,8 @@ function DetailPanel({
               <OwnerBadge institutionName={detail.institutionName} />
             </h2>
             <p className="text-[12px] text-slate-mid mt-0.5">
-              <span className="font-mono">{detail.slug}</span> · dataset {detail.dataset?.name ?? 'none'} · {totalQ} questions · imported{' '}
-              {fmt(detail.updatedAt)}
+              <span className="font-mono">{detail.slug}</span> · dataset {detail.dataset?.name ?? 'none'} · {totalQ} questions
+              {detail.expectedMinutes != null && ` · expected ${detail.expectedMinutes} min`} · imported {fmt(detail.updatedAt)}
             </p>
           </div>
           {canEdit && (
@@ -685,13 +686,14 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
   const exportCsv = () => {
     downloadCsv({
       filename: `${data.delivery.assessmentTitle} — ${data.delivery.label} — ${data.delivery.cohortName}`,
-      headers: ['Student', 'Email', 'Started', 'Submitted', 'Late', ...data.sections.map((s) => s.title), 'Overall %'],
+      headers: ['Student', 'Email', 'Started', 'Submitted', 'Late', 'Minutes', ...data.sections.map((s) => s.title), 'Overall %'],
       rows: data.attempts.map((a) => [
         a.displayName ?? '',
         a.email ?? '',
         a.startedAt,
         a.submittedAt ?? '',
         a.submittedLate ? 'yes' : '',
+        a.minutes,
         ...data.sections.map((s) => {
           const sc = a.sectionScores?.find((x) => x.sectionId === s.id)
           return sc ? `${sc.correct}/${sc.total}` : ''
@@ -704,9 +706,21 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
   return (
     <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
-          Results · {data.delivery.label} · {data.delivery.cohortName}
-        </h3>
+        <div>
+          <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+            Results · {data.delivery.label} · {data.delivery.cohortName}
+          </h3>
+          {(data.delivery.expectedMinutes != null || data.delivery.medianMinutes != null) && (
+            <p className="text-[12px] text-white/40 mt-0.5">
+              {[
+                data.delivery.expectedMinutes != null && `expected ${data.delivery.expectedMinutes} min`,
+                data.delivery.medianMinutes != null && `median ${data.delivery.medianMinutes} min`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          )}
+        </div>
         <button onClick={exportCsv} disabled={data.attempts.length === 0} className="text-[12px] font-semibold text-green-light hover:text-green disabled:opacity-40 transition-colors">
           Export CSV
         </button>
@@ -719,6 +733,7 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
             <thead>
               <tr className="text-[10px] uppercase tracking-widest text-slate-mid">
                 <th className="text-left py-2 pr-4 font-bold">Student</th>
+                <th className="text-right py-2 px-2 font-bold">Time</th>
                 {data.sections.map((s) => (
                   <th key={s.id} className="text-right py-2 px-2 font-bold whitespace-nowrap" title={s.title}>
                     {s.title.length > 14 ? `${s.title.slice(0, 13)}…` : s.title}
@@ -736,6 +751,7 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
                       {a.submittedAt ? `submitted ${fmt(a.submittedAt)}${a.submittedLate ? ' · late' : ''}` : 'in progress'}
                     </p>
                   </td>
+                  <td className="text-right py-2 px-2 font-mono text-slate-light whitespace-nowrap">{a.minutes != null ? `${a.minutes} min` : '—'}</td>
                   {data.sections.map((s) => {
                     const sc = a.sectionScores?.find((x) => x.sectionId === s.id)
                     return (

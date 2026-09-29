@@ -51,6 +51,10 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
   if (fm.draw != null && defaultDraw === null) {
     throw new AssessmentParseError('Frontmatter draw must be a positive integer or a per-type map like { mc: 3, sql: 1 }')
   }
+  const expectedMinutes = fm.expected_minutes == null ? null : Number(fm.expected_minutes)
+  if (expectedMinutes !== null && !(Number.isInteger(expectedMinutes) && expectedMinutes > 0)) {
+    throw new AssessmentParseError('Frontmatter expected_minutes must be a positive whole number of minutes')
+  }
 
   // ── Body ──
   const sections: AssessmentSection[] = []
@@ -247,7 +251,7 @@ export function parseAssessmentMarkdown(markdown: string): ParsedAssessment {
     }
   }
 
-  return { slug, title, dataset, defaultDraw, sections, warnings }
+  return { slug, title, dataset, defaultDraw, expectedMinutes, sections, warnings }
 }
 
 /** "A) foo  B) bar" (one line or several) → [{A, foo}, {B, bar}] */

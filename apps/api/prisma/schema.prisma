@@ -307,6 +307,7 @@ model Assessment {
   sourceMarkdown String                                   // last imported markdown, re-import replaces
   sections       Json                                     // ParsedSection[] — see assessments/parse-markdown.ts
   defaultDraw    Json?                                    // frontmatter `draw`: total or per-type map (DrawSpec); null = every question
+  expectedMinutes Int?                                   // frontmatter `expected_minutes`: designed duration, not a limit (#39)
   institutionId  String?                                  // null = platform-wide; see Dataset.institutionId
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt

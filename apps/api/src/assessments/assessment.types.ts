@@ -44,6 +44,7 @@ export interface ParsedAssessment {
   title: string
   dataset: string | null // Dataset.slug; null when the bank has no Hands-On SQL questions
   defaultDraw: DrawSpec | null
+  expectedMinutes: number | null // frontmatter `expected_minutes` (#39)
   sections: AssessmentSection[]
   warnings: string[]
 }
