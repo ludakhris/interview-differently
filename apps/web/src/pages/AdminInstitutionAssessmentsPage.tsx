@@ -149,6 +149,8 @@ export function AdminInstitutionAssessmentsPage() {
 function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; showNames: boolean; institutionName: string }) {
   const keys = [{ id: 'overall', title: 'Overall' }, ...pair.sections]
   const label = (s: PrePostPair['students'][number]) => (showNames ? (s.displayName ?? s.email ?? s.anonymousLabel) : s.anonymousLabel)
+  // Pre/post bars only compare once someone has both scores; alone, a pre bar reads like an improvement chart.
+  const showBars = pair.averages.pairedCount > 0
 
   const exportCsv = () =>
     downloadCsv({
@@ -205,7 +207,7 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
                 <th className="text-right py-2 px-3 font-bold">Pre</th>
                 <th className="text-right py-2 px-3 font-bold">Post</th>
                 <th className="text-right py-2 pl-3 font-bold">% Improvement</th>
-                <th className="w-1/3 py-2 pl-4" />
+                {showBars && <th className="w-1/3 py-2 pl-4" />}
               </tr>
             </thead>
             <tbody>
@@ -219,9 +221,11 @@ function PairCard({ pair, showNames, institutionName }: { pair: PrePostPair; sho
                     <td className="text-right py-2 px-3 font-mono text-[#d4830a]">{pct(p)}</td>
                     <td className="text-right py-2 px-3 font-mono text-[#2d9e5f]">{pct(q)}</td>
                     <td className={`text-right py-2 pl-3 font-mono font-semibold ${deltaCls(d)}`}>{signed(d)}</td>
-                    <td className="py-2 pl-4">
-                      <Bars pre={p} post={q} />
-                    </td>
+                    {showBars && (
+                      <td className="py-2 pl-4">
+                        <Bars pre={p} post={q} />
+                      </td>
+                    )}
                   </tr>
                 )
               })}
