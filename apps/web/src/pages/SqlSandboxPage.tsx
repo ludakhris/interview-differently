@@ -73,7 +73,8 @@ export function SqlSandboxPage() {
     fetchMyDatasets(getToken)
       .then((list) => {
         setDatasets(list)
-        if (!slug && list.length > 0) setParams({ dataset: list[0].slug }, { replace: true })
+        // Only pick for them when there's no choice to make (#38).
+        if (!slug && list.length === 1) setParams({ dataset: list[0].slug }, { replace: true })
       })
       .catch((e) => setListError(e instanceof Error ? e.message : 'Failed to load datasets'))
   }, [getToken, slug, setParams])
@@ -184,10 +185,32 @@ export function SqlSandboxPage() {
   }
 
   const ready = dbState.status === 'ready'
+  const needsPick = !slug && datasets !== null && datasets.length > 1
 
   return (
     <div className="h-screen bg-[#0a0a0a] flex flex-col overflow-hidden">
       <Nav trackLabel="SQL Sandbox" stepLabel={dataset?.name} />
+
+      {needsPick && (
+        <div className="mx-6 mt-4 rounded-xl bg-[#2d9e5f]/10 border border-[#2d9e5f]/40 px-4 py-3 flex items-center gap-3 flex-wrap">
+          <p className="text-[13px] text-[#f5f3ee]">
+            <span className="font-semibold">Choose a dataset to start.</span> Your cohort has {datasets.length} — pick the one your
+            instructor asked you to use. You can switch any time from the menu on the left.
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {datasets.map((d) => (
+              <button
+                key={d.id}
+                onClick={() => setParams({ dataset: d.slug })}
+                title={d.description ?? undefined}
+                className="rounded-full border border-[#2d9e5f]/50 hover:bg-[#2d9e5f]/20 px-3 py-1 text-[12px] font-semibold text-[#f5f3ee] transition-colors"
+              >
+                {d.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {listError && (
         <div className="mx-6 mt-4 rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3">
@@ -231,6 +254,11 @@ export function SqlSandboxPage() {
                   onChange={(e) => setParams({ dataset: e.target.value })}
                   className="w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
                 >
+                  {!slug && (
+                    <option value="" disabled>
+                      Select a dataset…
+                    </option>
+                  )}
                   {datasets.map((d) => (
                     <option key={d.id} value={d.slug}>
                       {d.name}
@@ -245,6 +273,8 @@ export function SqlSandboxPage() {
                 <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-2">Schema</p>
                 {dataset ? (
                   <SchemaTree tables={dataset.schemaSummary} onPick={insertAtCursor} />
+                ) : needsPick ? (
+                  <p className="text-[12px] text-slate-mid">Select a dataset above to see its tables.</p>
                 ) : (
                   <p className="text-[12px] text-slate-mid">Loading…</p>
                 )}
@@ -350,7 +380,9 @@ export function SqlSandboxPage() {
                       ? `${result.rowCount} row${result.rowCount !== 1 ? 's' : ''} · ${result.durationMs} ms`
                       : ready
                         ? 'ready'
-                        : dbState.status}
+                        : needsPick
+                          ? 'no dataset selected'
+                          : dbState.status}
                 </span>
                 <span className="flex items-center gap-3">
                   {result && result.rowCount > ROW_CAP && (
