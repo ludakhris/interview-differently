@@ -1,21 +1,27 @@
 /**
- * Pure aggregation for the admin usage dashboard (#42, Phase 1). No Prisma in
- * here: the service loads rows, this turns them into the response, and the
- * unit tests feed it fixtures.
+ * Pure aggregation for the admin usage dashboard (#42). No Prisma in here:
+ * the service loads rows, this turns them into the response, and the unit
+ * tests feed it fixtures.
  *
- * Everything is derived from activity we already record, so "active" means
- * "did something recorded" (started a scenario, ran a query, began an
- * assessment) — browse-only visits are invisible until Phase 2.
+ * "Actions" are things people did (started a scenario, ran a query, began an
+ * assessment). Phase 2 adds page views, so "active" now means "did something
+ * or visited", and users with views but no actions are "browse-only". Page
+ * views only exist from the day tracking shipped (`viewTrackingSince`), and
+ * are kept 90 days.
  *
  * All rows are loaded and filtered in memory. Fine at pilot scale; push the
  * range filter into SQL before the tables get large.
  */
 
+import { toolForRoute } from './usage-route'
+
 export type UsageRange = '7d' | '30d' | '90d' | 'all'
 export const USAGE_RANGES: UsageRange[] = ['7d', '30d', '90d', 'all']
-export type UsageSource = 'scenario' | 'immersive' | 'assessment' | 'sql'
+export type UsageSource = 'scenario' | 'immersive' | 'assessment' | 'sql' | 'view'
 
 const DAY_MS = 86_400_000
+/** A gap longer than this between a user's events starts a new visit (session). */
+const SESSION_GAP_MS = 30 * 60_000
 
 export interface UsageInput {
   now: Date
@@ -52,6 +58,7 @@ export interface UsageInput {
     scorePercent: number | null
   }[]
   sqlLogs: { userId: string; datasetSlug: string; ok: boolean; createdAt: Date }[]
+  pageViews: { userId: string; route: string; refId: string | null; createdAt: Date }[]
   cohorts: {
     id: string
     name: string
@@ -65,8 +72,10 @@ interface Ev {
   userId: string
   at: Date
   src: UsageSource
-  /** scenarioId | assessmentId | datasetSlug */
+  /** scenarioId | assessmentId | datasetSlug | (views) route */
   key: string
+  /** Views only: the scenario id on scenario routes. */
+  ref?: string | null
 }
 
 const round = (n: number, d = 1) => Math.round(n * 10 ** d) / 10 ** d
@@ -120,7 +129,38 @@ export function buildUsage(input: UsageInput) {
     if (keep(q.userId))
       events.push({ userId: q.userId, at: q.createdAt, src: 'sql', key: q.datasetSlug })
 
+  for (const v of input.pageViews)
+    if (keep(v.userId))
+      events.push({ userId: v.userId, at: v.createdAt, src: 'view', key: v.route, ref: v.refId })
+
   const rangeEvents = events.filter((e) => inRange(e.at))
+  const isAction = (e: Ev) => e.src !== 'view'
+  const rangeActions = rangeEvents.filter(isAction)
+  const rangeViews = rangeEvents.filter((e) => !isAction(e))
+
+  // Visits: a new one starts after a 30-minute gap in a user's activity (any
+  // source, all time, so a visit straddling the range start isn't recounted).
+  const sortedByUser = new Map<string, Ev[]>()
+  for (const e of events) sortedByUser.set(e.userId, [...(sortedByUser.get(e.userId) ?? []), e])
+  const visitStarts = new Map<string, Date[]>()
+  for (const [userId, evs] of sortedByUser) {
+    evs.sort((a, b) => a.at.getTime() - b.at.getTime())
+    const starts: Date[] = []
+    evs.forEach((e, i) => {
+      if (i === 0 || e.at.getTime() - evs[i - 1].at.getTime() > SESSION_GAP_MS) starts.push(e.at)
+    })
+    visitStarts.set(userId, starts.filter(inRange))
+  }
+  const totalVisits = [...visitStarts.values()].reduce((n, v) => n + v.length, 0)
+  const actionUsers = new Set(rangeActions.map((e) => e.userId))
+  const browseOnlyUsers = new Set(
+    rangeViews.map((e) => e.userId).filter((id) => !actionUsers.has(id))
+  ).size
+  // Earliest page view on record = when tracking began (older days have actions only).
+  const viewTrackingSince = input.pageViews.reduce<Date | null>(
+    (min, v) => (!min || v.createdAt < min ? v.createdAt : min),
+    null
+  )
 
   // ── Overview ─────────────────────────────────────────────────────────────
   const firstSeen = new Map<string, Date>()
@@ -159,7 +199,7 @@ export function buildUsage(input: UsageInput) {
     heatmap[l.getUTCDay()][l.getUTCHours()]++
   }
 
-  const eventsBySource = { scenario: 0, immersive: 0, assessment: 0, sql: 0 } as Record<
+  const eventsBySource = { scenario: 0, immersive: 0, assessment: 0, sql: 0, view: 0 } as Record<
     UsageSource,
     number
   >
@@ -175,7 +215,11 @@ export function buildUsage(input: UsageInput) {
     rangeActiveUsers: activeInRange.size,
     newUsers,
     returningUsers: activeInRange.size - newUsers,
-    totalEvents: rangeEvents.length,
+    totalEvents: rangeActions.length,
+    pageViews: rangeViews.length,
+    visits: totalVisits,
+    browseOnlyUsers,
+    viewTrackingSince: viewTrackingSince?.toISOString() ?? null,
     eventsBySource,
     perDay,
     heatmap,
@@ -201,6 +245,7 @@ export function buildUsage(input: UsageInput) {
     const completions =
       results.filter((r) => inRange(r.completedAt)).length +
       sessions.filter((s) => s.status === 'completed' && inRange(s.createdAt)).length
+    const briefings = rangeViews.filter((e) => e.key === '/scenario/:id/briefing' && e.ref === id)
     const users = new Set([
       ...attempts.filter((a) => inRange(a.startedAt)).map((a) => a.userId),
       ...results.filter((r) => inRange(r.completedAt)).map((r) => r.userId),
@@ -212,6 +257,8 @@ export function buildUsage(input: UsageInput) {
       track: meta?.track ?? null,
       mode: meta?.mode ?? null,
       status: meta?.status ?? 'unknown',
+      views: briefings.length,
+      viewers: new Set(briefings.map((e) => e.userId)).size,
       starts: startsInRange,
       prevStarts: prevStart ? starts(inPrev) : null,
       uniqueUsers: users.size,
@@ -258,6 +305,8 @@ export function buildUsage(input: UsageInput) {
   const tools = toolDefs.map((t) => {
     const evs = rangeEvents.filter((e) => e.src === t.src)
     const users = new Set(evs.map((e) => e.userId))
+    const opens = rangeViews.filter((e) => toolForRoute(e.key) === t.key)
+    const openers = new Set(opens.map((e) => e.userId))
     const cohortRows = input.cohorts
       .filter((c) => c.toolsEnabled[t.key])
       .map((c) => {
@@ -292,6 +341,9 @@ export function buildUsage(input: UsageInput) {
       enabledCohorts: cohortRows.length,
       cohortsWithUse: cohortRows.filter((c) => c.events > 0).length,
       activeUsers: users.size,
+      opens: opens.length,
+      openers: openers.size,
+      openedNotUsed: [...openers].filter((id) => !users.has(id)).length,
       events: evs.length,
       errorRate: sqlLogs.length ? pct(sqlLogs.filter((q) => !q.ok).length, sqlLogs.length) : null,
       cohorts: cohortRows,
@@ -309,6 +361,7 @@ export function buildUsage(input: UsageInput) {
   const users = [...byUser.entries()]
     .map(([userId, evs]) => {
       const count = (src: UsageSource) => evs.filter((e) => e.src === src).length
+      const actions = evs.filter(isAction)
       const top = (srcs: UsageSource[], label: (k: string) => string) => {
         const m = new Map<string, number>()
         for (const e of evs) if (srcs.includes(e.src)) m.set(e.key, (m.get(e.key) ?? 0) + 1)
@@ -321,7 +374,9 @@ export function buildUsage(input: UsageInput) {
         userId,
         name: nameOf(userId),
         email: userName.get(userId)?.email ?? null,
-        total: evs.length,
+        total: actions.length,
+        views: count('view'),
+        visits: visitStarts.get(userId)?.length ?? 0,
         scenario: count('scenario') + count('immersive'),
         assessment: count('assessment'),
         sql: count('sql'),
@@ -333,7 +388,7 @@ export function buildUsage(input: UsageInput) {
         topDatasets: top(['sql'], (k) => k),
       }
     })
-    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
+    .sort((a, b) => b.total - a.total || b.views - a.views || a.name.localeCompare(b.name))
     .slice(0, 100)
 
   return {

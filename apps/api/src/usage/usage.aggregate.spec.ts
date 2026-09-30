@@ -28,6 +28,7 @@ function base(over: Partial<UsageInput> = {}): UsageInput {
     assessments: [],
     assessmentAttempts: [],
     sqlLogs: [],
+    pageViews: [],
     cohorts: [],
     ...over,
   }
@@ -305,5 +306,105 @@ describe('buildUsage', () => {
     expect(r.users[0]).toMatchObject({ name: 'One', total: 3, scenario: 2, sql: 1, activeDays: 2 })
     expect(r.users[0].topScenarios).toEqual([{ label: 'Hot One', count: 2 }])
     expect(r.users[1].name).toBe('two@x.com') // falls back to email when no displayName
+  })
+
+  describe('page views (phase 2)', () => {
+    const view = (userId: string, route: string, at: Date, refId: string | null = null) => ({
+      userId,
+      route,
+      refId,
+      createdAt: at,
+    })
+
+    it('finds browse-only users: viewed but did nothing in the range', () => {
+      const r = buildUsage(
+        base({
+          simAttempts: [{ userId: 'u1', scenarioId: 'hot', startedAt: daysAgo(1) }],
+          pageViews: [view('u1', '/dashboard', daysAgo(1)), view('u2', '/dashboard', daysAgo(1))],
+        })
+      )
+      expect(r.overview).toMatchObject({ rangeActiveUsers: 2, browseOnlyUsers: 1, pageViews: 2 })
+      // actions exclude views; the browse-only user is still listed, with 0 actions
+      expect(r.overview.totalEvents).toBe(1)
+      expect(r.users.map((u) => [u.userId, u.total, u.views])).toEqual([
+        ['u1', 1, 1],
+        ['u2', 0, 1],
+      ])
+    })
+
+    it('counts visits as bursts of activity separated by 30+ minutes', () => {
+      const t = (min: number) => new Date(daysAgo(1, 10).getTime() + min * 60_000)
+      const r = buildUsage(
+        base({
+          pageViews: [
+            view('u1', '/dashboard', t(0)),
+            view('u1', '/tools/sql', t(10)), // same visit
+            view('u1', '/dashboard', t(90)), // new visit after 80 min gap
+            view('u2', '/dashboard', t(5)),
+          ],
+        })
+      )
+      expect(r.overview.visits).toBe(3)
+      expect(r.users.find((u) => u.userId === 'u1')?.visits).toBe(2)
+    })
+
+    it('counts scenario briefing views and unique viewers, separately from starts', () => {
+      const r = buildUsage(
+        base({
+          simAttempts: [{ userId: 'u1', scenarioId: 'hot', startedAt: daysAgo(1) }],
+          pageViews: [
+            view('u1', '/scenario/:id/briefing', daysAgo(1), 'hot'),
+            view('u2', '/scenario/:id/briefing', daysAgo(1), 'hot'),
+            view('u2', '/scenario/:id/briefing', daysAgo(2), 'hot'),
+            view('u2', '/scenario/:id/play', daysAgo(2), 'hot'), // not a briefing view
+          ],
+        })
+      )
+      expect(r.scenarios.find((s) => s.scenarioId === 'hot')).toMatchObject({
+        views: 3,
+        viewers: 2,
+        starts: 1,
+      })
+      expect(r.scenarios.find((s) => s.scenarioId === 'cold')).toMatchObject({
+        views: 0,
+        viewers: 0,
+      })
+    })
+
+    it('counts tool opens and who opened a tool but never used it', () => {
+      const r = buildUsage(
+        base({
+          sqlLogs: [{ userId: 'u1', datasetSlug: 'retail', ok: true, createdAt: daysAgo(1) }],
+          pageViews: [
+            view('u1', '/tools/sql', daysAgo(1)),
+            view('u2', '/tools/sql', daysAgo(1)),
+            view('u2', '/tools/sql', daysAgo(2)),
+            view('u2', '/tools/assessments/result', daysAgo(2)),
+          ],
+        })
+      )
+      const sql = r.tools.find((t) => t.key === 'sql-sandbox')!
+      expect(sql).toMatchObject({ opens: 3, openers: 2, openedNotUsed: 1, activeUsers: 1 })
+      expect(r.tools.find((t) => t.key === 'assessments')).toMatchObject({
+        opens: 1,
+        openers: 1,
+        openedNotUsed: 1,
+      })
+    })
+
+    it('excludes admin views, includes views in the heatmap, and reports when tracking began', () => {
+      const at = new Date('2026-09-30T02:00:00Z')
+      const r = buildUsage(
+        base({
+          tzOffsetMinutes: 0,
+          excludedUserIds: new Set(['admin']),
+          pageViews: [view('u1', '/dashboard', at), view('admin', '/dashboard', at)],
+        })
+      )
+      expect(r.overview.pageViews).toBe(1)
+      expect(r.overview.heatmap[3][2]).toBe(1)
+      expect(r.overview.viewTrackingSince).toBe(at.toISOString())
+      expect(buildUsage(base()).overview.viewTrackingSince).toBeNull()
+    })
   })
 })

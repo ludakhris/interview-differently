@@ -377,3 +377,22 @@ model SqlQueryLog {
   @@index([cohortId, createdAt])
   @@index([createdAt])
 }
+
+// ── Usage: page views (#42 Phase 2) ─────────────────────────────────────────
+//
+// One row per signed-in page view, so the admin usage dashboard can see
+// browse-only visits and tool opens. `route` is a normalised pattern
+// ("/tools/assessments/attempt/:id"), never the raw path, so ids and invite
+// codes aren't stored (see usage/usage-route.ts). `refId` is only set for
+// scenario routes. Purged after 90 days; `userId` has no FK on purpose.
+
+model UsageEvent {
+  id        String   @id @default(uuid())
+  userId    String
+  route     String
+  refId     String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+}

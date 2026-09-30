@@ -43,6 +43,8 @@ export function AdminUsagePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const tracking = data?.overview.viewTrackingSince != null
+
   const refresh = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -137,20 +139,24 @@ export function AdminUsagePage() {
           <>
             <p className="text-[12px] text-slate-mid mb-4">
               Updated {new Date(data.generatedAt).toLocaleTimeString()} ·{' '}
-              {includeAdmins ? 'including' : 'excluding'} admin accounts · "active" = did something
-              recorded (browse-only visits aren't tracked yet)
+              {includeAdmins ? 'including' : 'excluding'} admin accounts ·{' '}
+              {data.overview.viewTrackingSince
+                ? `"active" = did something or visited · page views tracked since ${new Date(data.overview.viewTrackingSince).toLocaleDateString()}, kept 90 days`
+                : '"active" = did something recorded · page views not recorded yet'}
             </p>
             {tab === 'overview' && <Overview data={data} />}
-            {tab === 'scenarios' && <Scenarios rows={data.scenarios} range={data.range} />}
+            {tab === 'scenarios' && (
+              <Scenarios rows={data.scenarios} range={data.range} tracking={tracking} />
+            )}
             {tab === 'tools' && (
               <div className="space-y-6">
                 {data.tools.map((t) => (
-                  <ToolCard key={t.key} tool={t} />
+                  <ToolCard key={t.key} tool={t} tracking={tracking} />
                 ))}
               </div>
             )}
             {tab === 'assessments' && <Assessments rows={data.assessments} range={data.range} />}
-            {tab === 'users' && <Users rows={data.users} />}
+            {tab === 'users' && <Users rows={data.users} tracking={tracking} />}
           </>
         ) : null}
       </div>
@@ -251,9 +257,20 @@ function Overview({ data }: { data: UsageReport }) {
         <Stat label="Returning" value={o.returningUsers} sub="active before the range too" />
         <Stat label="Actions in range" value={o.totalEvents.toLocaleString()} />
       </div>
+      {data.overview.viewTrackingSince && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Stat label="Visits" value={o.visits.toLocaleString()} sub="30+ min apart = new visit" />
+          <Stat label="Page views" value={o.pageViews.toLocaleString()} />
+          <Stat label="Browse-only users" value={o.browseOnlyUsers} sub="visited, did nothing" />
+          <Stat
+            label="Pages per visit"
+            value={o.visits ? (o.pageViews / o.visits).toFixed(1) : '—'}
+          />
+        </div>
+      )}
 
       <Section title="Active users per day">
-        {o.totalEvents === 0 ? (
+        {o.totalEvents + o.pageViews === 0 ? (
           <Empty>No activity in this range.</Empty>
         ) : (
           <>
@@ -281,7 +298,7 @@ function Overview({ data }: { data: UsageReport }) {
 
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
-          <Section title="When people use it (your local time)">
+          <Section title="When people use it (your local time, all activity)">
             <div className="overflow-x-auto">
               <div className="min-w-[520px]">
                 <div className="grid grid-cols-[32px_repeat(24,1fr)] gap-[2px] text-[10px] text-slate-mid mb-1">
@@ -320,6 +337,9 @@ function Overview({ data }: { data: UsageReport }) {
                 ['Immersive sessions', src.immersive],
                 ['Assessments started', src.assessment],
                 ['SQL queries run', src.sql],
+                ...(data.overview.viewTrackingSince
+                  ? ([['Page views', src.view]] as [string, number][])
+                  : []),
               ] as [string, number][]
             ).map(([label, n]) => (
               <li key={label} className="flex justify-between text-[#f5f3ee]">
@@ -336,7 +356,15 @@ function Overview({ data }: { data: UsageReport }) {
 
 // ── Scenarios ──────────────────────────────────────────────────────────────
 
-function Scenarios({ rows, range }: { rows: UsageScenario[]; range: UsageRange }) {
+function Scenarios({
+  rows,
+  range,
+  tracking,
+}: {
+  rows: UsageScenario[]
+  range: UsageRange
+  tracking: boolean
+}) {
   const [filter, setFilter] = useState<'all' | 'cold'>('all')
   // "Cold" = live scenarios nobody started in the range. Drafts aren't expected to have traffic.
   const shown =
@@ -370,6 +398,8 @@ function Scenarios({ rows, range }: { rows: UsageScenario[]; range: UsageRange }
                   'scenario',
                   'track',
                   'status',
+                  'briefing_views',
+                  'briefing_viewers',
                   'starts',
                   'prev_starts',
                   'unique_users',
@@ -382,6 +412,8 @@ function Scenarios({ rows, range }: { rows: UsageScenario[]; range: UsageRange }
                   r.title,
                   r.track,
                   r.status,
+                  r.views,
+                  r.viewers,
                   r.starts,
                   r.prevStarts,
                   r.uniqueUsers,
@@ -406,6 +438,7 @@ function Scenarios({ rows, range }: { rows: UsageScenario[]; range: UsageRange }
             <thead>
               <tr className="border-b border-white/10">
                 <th className={th}>Scenario</th>
+                {tracking && <th className={th}>Viewed</th>}
                 <th className={th}>
                   Starts
                   {range !== 'all' && <span className="normal-case font-normal"> vs prev</span>}
@@ -427,6 +460,15 @@ function Scenarios({ rows, range }: { rows: UsageScenario[]; range: UsageRange }
                         .join(' · ')}
                     </p>
                   </td>
+                  {tracking && (
+                    <td className={td} title="Briefing page views, and how many people viewed it">
+                      {r.views}
+                      <span className="text-[11px] text-slate-mid whitespace-nowrap">
+                        {' '}
+                        · {r.viewers} {r.viewers === 1 ? 'user' : 'users'}
+                      </span>
+                    </td>
+                  )}
                   <td className={td}>
                     <div className="flex items-center gap-2 min-w-[140px]">
                       <div
@@ -453,7 +495,7 @@ function Scenarios({ rows, range }: { rows: UsageScenario[]; range: UsageRange }
 
 // ── Tools ──────────────────────────────────────────────────────────────────
 
-function ToolCard({ tool }: { tool: UsageTool }) {
+function ToolCard({ tool, tracking }: { tool: UsageTool; tracking: boolean }) {
   const unused = tool.cohorts.filter((c) => c.events === 0).length
   return (
     <Section title={tool.label}>
@@ -469,6 +511,20 @@ function ToolCard({ tool }: { tool: UsageTool }) {
           sub={unused ? `${unused} enabled but unused` : undefined}
         />
         {tool.errorRate != null && <Stat label="Query error rate" value={`${tool.errorRate}%`} />}
+        {tracking && (
+          <>
+            <Stat
+              label="Opened by"
+              value={tool.openers}
+              sub={`${tool.opens.toLocaleString()} opens`}
+            />
+            <Stat
+              label="Opened, never used"
+              value={tool.openedNotUsed}
+              sub="visited the tool, no queries/attempts"
+            />
+          </>
+        )}
       </div>
 
       {tool.cohorts.length === 0 ? (
@@ -625,7 +681,7 @@ function Assessments({ rows, range }: { rows: UsageAssessment[]; range: UsageRan
 
 // ── Users ──────────────────────────────────────────────────────────────────
 
-function Users({ rows }: { rows: UsageUser[] }) {
+function Users({ rows, tracking }: { rows: UsageUser[]; tracking: boolean }) {
   const [open, setOpen] = useState<string | null>(null)
   return (
     <Section
@@ -642,6 +698,8 @@ function Users({ rows }: { rows: UsageUser[] }) {
                 'scenarios',
                 'assessments',
                 'sql_queries',
+                'visits',
+                'page_views',
                 'active_days',
                 'first_seen',
                 'last_active',
@@ -653,6 +711,8 @@ function Users({ rows }: { rows: UsageUser[] }) {
                 u.scenario,
                 u.assessment,
                 u.sql,
+                u.visits,
+                u.views,
                 u.activeDays,
                 u.firstSeenAt,
                 u.lastActiveAt,
@@ -674,6 +734,8 @@ function Users({ rows }: { rows: UsageUser[] }) {
                 <th className={th}>Scenarios</th>
                 <th className={th}>Assessments</th>
                 <th className={th}>SQL</th>
+                {tracking && <th className={th}>Visits</th>}
+                {tracking && <th className={th}>Page views</th>}
                 <th className={th}>Active days</th>
                 <th className={th}>Last active</th>
               </tr>
@@ -683,6 +745,7 @@ function Users({ rows }: { rows: UsageUser[] }) {
                 <UserRow
                   key={u.userId}
                   u={u}
+                  tracking={tracking}
                   open={open === u.userId}
                   onToggle={() => setOpen(open === u.userId ? null : u.userId)}
                 />
@@ -695,7 +758,17 @@ function Users({ rows }: { rows: UsageUser[] }) {
   )
 }
 
-function UserRow({ u, open, onToggle }: { u: UsageUser; open: boolean; onToggle: () => void }) {
+function UserRow({
+  u,
+  open,
+  onToggle,
+  tracking,
+}: {
+  u: UsageUser
+  open: boolean
+  onToggle: () => void
+  tracking: boolean
+}) {
   return (
     <>
       <tr onClick={onToggle} className="cursor-pointer hover:bg-white/[0.03]">
@@ -712,12 +785,14 @@ function UserRow({ u, open, onToggle }: { u: UsageUser; open: boolean; onToggle:
         <td className={td}>{u.scenario}</td>
         <td className={td}>{u.assessment}</td>
         <td className={td}>{u.sql}</td>
+        {tracking && <td className={td}>{u.visits}</td>}
+        {tracking && <td className={td}>{u.views}</td>}
         <td className={td}>{u.activeDays}</td>
         <td className={td}>{when(u.lastActiveAt)}</td>
       </tr>
       {open && (
         <tr className="bg-white/[0.02]">
-          <td colSpan={7} className="px-4 pb-4 pt-1">
+          <td colSpan={9} className="px-4 pb-4 pt-1">
             <p className="text-[12px] text-slate-mid mb-2 ml-4">First seen {when(u.firstSeenAt)}</p>
             <div className="grid md:grid-cols-3 gap-4 ml-4">
               <TopList title="Scenarios" items={u.topScenarios} />

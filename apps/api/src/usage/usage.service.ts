@@ -28,6 +28,7 @@ export class UsageService {
       attempts,
       sqlLogs,
       cohorts,
+      pageViews,
     ] = await Promise.all([
       this.prisma.user.findMany({ select: { id: true, email: true, displayName: true } }),
       // Pull just the few JSON fields we need — the full scenario body is huge.
@@ -80,6 +81,9 @@ export class UsageService {
           tools: { select: { toolKey: true, enabled: true } },
         },
       }),
+      this.prisma.usageEvent.findMany({
+        select: { userId: true, route: true, refId: true, createdAt: true },
+      }),
     ])
 
     const activeUserIds = new Set<string>([
@@ -88,6 +92,7 @@ export class UsageService {
       ...immersive.map((r) => r.userId),
       ...attempts.map((r) => r.userId),
       ...sqlLogs.map((r) => r.userId),
+      ...pageViews.map((r) => r.userId),
     ])
     const excludedUserIds = new Set<string>()
     if (!opts.includeAdmins) {
@@ -119,6 +124,7 @@ export class UsageService {
         scorePercent: scorePercent(a.sectionScores),
       })),
       sqlLogs,
+      pageViews,
       cohorts: cohorts.map((c) => {
         const enabled = (key: string) => c.tools.find((t) => t.toolKey === key)?.enabled ?? false
         return {

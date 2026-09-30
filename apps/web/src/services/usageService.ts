@@ -13,6 +13,9 @@ export interface UsageScenario {
   track: string | null
   mode: string | null
   status: string
+  /** Briefing page views (Phase 2) and unique viewers. */
+  views: number
+  viewers: number
   starts: number
   prevStarts: number | null
   uniqueUsers: number
@@ -42,6 +45,10 @@ export interface UsageTool {
   enabledCohorts: number
   cohortsWithUse: number
   activeUsers: number
+  /** Page views of the tool's routes (Phase 2), unique openers, and openers who never used it. */
+  opens: number
+  openers: number
+  openedNotUsed: number
   events: number
   errorRate: number | null
   cohorts: {
@@ -60,6 +67,8 @@ export interface UsageUser {
   name: string
   email: string | null
   total: number
+  views: number
+  visits: number
   scenario: number
   assessment: number
   sql: number
@@ -80,7 +89,19 @@ export interface UsageReport {
     newUsers: number
     returningUsers: number
     totalEvents: number
-    eventsBySource: { scenario: number; immersive: number; assessment: number; sql: number }
+    pageViews: number
+    visits: number
+    /** Visited in the range but did nothing. */
+    browseOnlyUsers: number
+    /** Earliest page view on record; null until tracking has data. */
+    viewTrackingSince: string | null
+    eventsBySource: {
+      scenario: number
+      immersive: number
+      assessment: number
+      sql: number
+      view: number
+    }
     perDay: { date: string; activeUsers: number; events: number }[]
     /** [weekday 0=Sun..6][hour 0..23] in the admin's local time. */
     heatmap: number[][]
@@ -118,4 +139,26 @@ export async function fetchUsage(
     throw new Error(message)
   }
   return res.json() as Promise<UsageReport>
+}
+
+/**
+ * Report a page view (#42 Phase 2). Fire-and-forget: tracking must never
+ * slow or break navigation. The server normalises the path and stores only
+ * a route pattern, so ids and invite codes in the URL aren't kept.
+ */
+export function trackPageView(getToken: GetToken, path: string): void {
+  void (async () => {
+    try {
+      const token = await getToken()
+      if (!token) return
+      await fetch(`${API_URL}/api/me/usage-events`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+        keepalive: true,
+      })
+    } catch {
+      // never surface tracking failures
+    }
+  })()
 }

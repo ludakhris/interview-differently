@@ -35,6 +35,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
 import { useUserSync } from '@/hooks/useUserSync'
 import { useRegisterToken } from '@/hooks/useRegisterToken'
+import { usePageViewTracking } from '@/hooks/usePageViewTracking'
 import { ConfirmProvider } from '@/components/ConfirmDialog'
 
 function BuilderV2Redirect() {
@@ -71,6 +72,7 @@ function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
 export default function App() {
   useUserSync()
   useRegisterToken()
+  usePageViewTracking()
   return (
     <ConfirmProvider>
       <Routes>
