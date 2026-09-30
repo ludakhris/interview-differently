@@ -18,6 +18,8 @@ import {
  */
 const AUTO_REFRESH_OPTIONS = [2, 5, 10, 30, 60] // seconds
 const AUTO_REFRESH_DEFAULT = 30
+const VISIBLE_QUERY_OPTIONS = [1, 2, 3, 5, 10] // queries shown per student before expanding
+const VISIBLE_QUERIES_DEFAULT = 2
 
 export function AdminInstitutionSandboxPage() {
   const { institutionId = '' } = useParams<{ institutionId: string }>()
@@ -33,6 +35,7 @@ export function AdminInstitutionSandboxPage() {
   const [loading, setLoading] = useState(false)
   const [auto, setAuto] = useState(false)
   const [autoSec, setAutoSec] = useState(AUTO_REFRESH_DEFAULT)
+  const [visibleQueries, setVisibleQueries] = useState(VISIBLE_QUERIES_DEFAULT)
   const inFlight = useRef(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -110,10 +113,13 @@ export function AdminInstitutionSandboxPage() {
             </h1>
           </div>
 
-          <div className="flex items-center gap-2">
-            {cohorts && cohorts.length > 0 && (
+          {cohorts && cohorts.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label htmlFor="cohort-filter" className="text-[12px] text-slate-mid">
+                Filter:
+              </label>
               <select
-                aria-label="Cohort"
+                id="cohort-filter"
                 value={cohortId}
                 onChange={(e) => setSearchParams({ cohortId: e.target.value }, { replace: true })}
                 className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
@@ -124,36 +130,8 @@ export function AdminInstitutionSandboxPage() {
                   </option>
                 ))}
               </select>
-            )}
-            <button
-              onClick={() => refresh()}
-              disabled={loading || !cohortId}
-              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-[#f5f3ee] disabled:opacity-40 transition-colors"
-            >
-              {loading ? 'Refreshing…' : 'Refresh'}
-            </button>
-            <label className="flex items-center gap-1.5 text-[12px] text-slate-mid cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={auto}
-                onChange={(e) => setAuto(e.target.checked)}
-                className="accent-[#2d9e5f]"
-              />
-              Auto-refresh every
-            </label>
-            <select
-              aria-label="Auto-refresh interval"
-              value={autoSec}
-              onChange={(e) => setAutoSec(Number(e.target.value))}
-              className="bg-[#111111] border border-white/10 rounded-lg px-2 py-1 text-[12px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
-            >
-              {AUTO_REFRESH_OPTIONS.map((sec) => (
-                <option key={sec} value={sec}>
-                  {sec}s
-                </option>
-              ))}
-            </select>
-          </div>
+            </div>
+          )}
         </div>
 
         <AnalyticsTabs
@@ -161,6 +139,52 @@ export function AdminInstitutionSandboxPage() {
           active="sandbox"
           available={['overview', 'engagement', 'heatmap', 'assessments', 'students', 'sandbox']}
         />
+
+        <div className="flex items-center flex-wrap gap-x-5 gap-y-2 mb-4">
+          <button
+            onClick={() => refresh()}
+            disabled={loading || !cohortId}
+            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-[#f5f3ee] disabled:opacity-40 transition-colors"
+          >
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </button>
+          <label className="flex items-center gap-1.5 text-[12px] text-slate-mid cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={auto}
+              onChange={(e) => setAuto(e.target.checked)}
+              className="accent-[#2d9e5f]"
+            />
+            Auto-refresh every
+          </label>
+          <select
+            aria-label="Auto-refresh interval"
+            value={autoSec}
+            onChange={(e) => setAutoSec(Number(e.target.value))}
+            className="bg-[#111111] border border-white/10 rounded-lg px-2 py-1 text-[12px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
+          >
+            {AUTO_REFRESH_OPTIONS.map((sec) => (
+              <option key={sec} value={sec}>
+                {sec}s
+              </option>
+            ))}
+          </select>
+          <label className="flex items-center gap-1.5 text-[12px] text-slate-mid">
+            Show last
+            <select
+              aria-label="Queries shown per student"
+              value={visibleQueries}
+              onChange={(e) => setVisibleQueries(Number(e.target.value))}
+              className="bg-[#111111] border border-white/10 rounded-lg px-2 py-1 text-[12px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
+            >
+              {VISIBLE_QUERY_OPTIONS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
         {error && (
           <div className="rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 mb-6">
@@ -182,7 +206,7 @@ export function AdminInstitutionSandboxPage() {
             </p>
             <div className="space-y-3">
               {data.students.map((s) => (
-                <StudentCard key={s.userId} s={s} />
+                <StudentCard key={s.userId} s={s} limit={visibleQueries} />
               ))}
               {data.students.length === 0 && (
                 <p className="text-[13px] text-slate-mid">No students in this cohort.</p>
@@ -199,7 +223,7 @@ export function AdminInstitutionSandboxPage() {
                 </p>
                 <div className="space-y-3">
                   {data.unassigned.map((s) => (
-                    <StudentCard key={s.userId} s={s} />
+                    <StudentCard key={s.userId} s={s} limit={visibleQueries} />
                   ))}
                 </div>
               </div>
@@ -211,14 +235,11 @@ export function AdminInstitutionSandboxPage() {
   )
 }
 
-/** Queries shown per student until expanded — keeps a busy class scannable. */
-const COLLAPSED_QUERIES = 2
-
-function StudentCard({ s }: { s: SandboxStudent }) {
+function StudentCard({ s, limit }: { s: SandboxStudent; limit: number }) {
   // Local state, so it survives Refresh (cards are keyed by userId).
   const [expanded, setExpanded] = useState(false)
-  const hidden = s.queries.length - COLLAPSED_QUERIES
-  const shown = expanded ? s.queries : s.queries.slice(0, COLLAPSED_QUERIES)
+  const hidden = s.queries.length - limit
+  const shown = expanded ? s.queries : s.queries.slice(0, limit)
   return (
     <details open={s.queryCount > 0} className="bg-[#111111] rounded-xl border border-white/10">
       <summary className="cursor-pointer px-5 py-3 flex items-center justify-between gap-4">
