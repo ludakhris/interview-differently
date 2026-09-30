@@ -20,6 +20,7 @@ import { AdminInstitutionAssessmentsPage } from '@/pages/AdminInstitutionAssessm
 import { AdminInstitutionStudentsPage } from '@/pages/AdminInstitutionStudentsPage'
 import { AdminStudentDetailPage } from '@/pages/AdminStudentDetailPage'
 import { AdminDatasetsPage } from '@/pages/AdminDatasetsPage'
+import { AdminUsagePage } from '@/pages/AdminUsagePage'
 import { AdminInstitutionSandboxPage } from '@/pages/AdminInstitutionSandboxPage'
 import { SqlSandboxPage } from '@/pages/SqlSandboxPage'
 import { AssessmentsPage } from '@/pages/AssessmentsPage'
@@ -201,6 +202,14 @@ export default function App() {
         />
         {/* Legacy alias — old admin-only path now goes to the unified settings page */}
         <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />
+        <Route
+          path="/admin/usage"
+          element={
+            <AdminRoute>
+              <AdminUsagePage />
+            </AdminRoute>
+          }
+        />
         <Route
           path="/admin/datasets"
           element={

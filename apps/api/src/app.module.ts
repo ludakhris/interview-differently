@@ -17,6 +17,7 @@ import { AnalyticsModule } from './analytics/analytics.module'
 import { DatasetsModule } from './datasets/datasets.module'
 import { ToolsModule } from './tools/tools.module'
 import { AssessmentsModule } from './assessments/assessments.module'
+import { UsageModule } from './usage/usage.module'
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { AssessmentsModule } from './assessments/assessments.module'
     DatasetsModule,
     ToolsModule,
     AssessmentsModule,
+    UsageModule,
   ],
 })
 export class AppModule {}

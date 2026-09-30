@@ -84,6 +84,7 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
 
 function ToolsMenu({ tools, isAnyAdmin }: { tools: ToolKey[]; isAnyAdmin: boolean }) {
   const navigate = useNavigate()
+  const { isAdmin } = useRole()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -145,6 +146,8 @@ function ToolsMenu({ tools, isAnyAdmin }: { tools: ToolKey[]; isAnyAdmin: boolea
                 { label: 'Datasets', path: '/admin/datasets' },
                 { label: 'Assessments', path: '/admin/assessments' },
                 { label: 'Institutions & Cohorts', path: '/admin/institutions' },
+                // Platform-wide, so full admins only (the API enforces it too).
+                ...(isAdmin ? [{ label: 'Usage', path: '/admin/usage' }] : []),
               ].map((item) => (
                 <button
                   key={item.path}
