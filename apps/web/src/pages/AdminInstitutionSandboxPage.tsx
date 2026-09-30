@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
@@ -16,6 +16,9 @@ import {
  * queries they've run (raw text, newest first). Manual refresh — no polling.
  * Lives at /admin/institutions/:id/sandbox?cohortId=...
  */
+const AUTO_REFRESH_OPTIONS = [2, 5, 10, 30, 60] // seconds
+const AUTO_REFRESH_DEFAULT = 30
+
 export function AdminInstitutionSandboxPage() {
   const { institutionId = '' } = useParams<{ institutionId: string }>()
   const navigate = useNavigate()
@@ -28,6 +31,9 @@ export function AdminInstitutionSandboxPage() {
   const [cohorts, setCohorts] = useState<InstitutionDetail['cohorts'] | null>(null)
   const [data, setData] = useState<SandboxActivity | null>(null)
   const [loading, setLoading] = useState(false)
+  const [auto, setAuto] = useState(false)
+  const [autoSec, setAutoSec] = useState(AUTO_REFRESH_DEFAULT)
+  const inFlight = useRef(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -49,23 +55,39 @@ export function AdminInstitutionSandboxPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [institutionId, getToken])
 
-  const refresh = useCallback(async () => {
-    if (!cohortId || !cohorts?.some((c) => c.id === cohortId)) return
-    setLoading(true)
-    setError(null)
-    try {
-      setData(await fetchSandboxActivity(getToken, cohortId))
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load activity')
-    } finally {
-      setLoading(false)
-    }
-  }, [cohortId, cohorts, getToken])
+  // `silent` (auto-refresh ticks) skips the button's loading state so it doesn't flicker.
+  const refresh = useCallback(
+    async (silent = false) => {
+      if (!cohortId || !cohorts?.some((c) => c.id === cohortId)) return
+      if (!silent) setLoading(true)
+      setError(null)
+      inFlight.current = true
+      try {
+        setData(await fetchSandboxActivity(getToken, cohortId))
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load activity')
+      } finally {
+        inFlight.current = false
+        if (!silent) setLoading(false)
+      }
+    },
+    [cohortId, cohorts, getToken]
+  )
 
   useEffect(() => {
     setData(null)
     refresh()
   }, [refresh])
+
+  // Auto-refresh: poll while enabled. Skips ticks while the tab is hidden or the
+  // previous request is still running, so a slow API never stacks up requests.
+  useEffect(() => {
+    if (!auto) return
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible' && !inFlight.current) void refresh(true)
+    }, autoSec * 1000)
+    return () => clearInterval(timer)
+  }, [auto, autoSec, refresh])
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
@@ -104,12 +126,33 @@ export function AdminInstitutionSandboxPage() {
               </select>
             )}
             <button
-              onClick={refresh}
+              onClick={() => refresh()}
               disabled={loading || !cohortId}
               className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-[#f5f3ee] disabled:opacity-40 transition-colors"
             >
               {loading ? 'Refreshing…' : 'Refresh'}
             </button>
+            <label className="flex items-center gap-1.5 text-[12px] text-slate-mid cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={auto}
+                onChange={(e) => setAuto(e.target.checked)}
+                className="accent-[#2d9e5f]"
+              />
+              Auto-refresh every
+            </label>
+            <select
+              aria-label="Auto-refresh interval"
+              value={autoSec}
+              onChange={(e) => setAutoSec(Number(e.target.value))}
+              className="bg-[#111111] border border-white/10 rounded-lg px-2 py-1 text-[12px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
+            >
+              {AUTO_REFRESH_OPTIONS.map((sec) => (
+                <option key={sec} value={sec}>
+                  {sec}s
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

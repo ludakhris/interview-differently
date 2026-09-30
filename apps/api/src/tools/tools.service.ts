@@ -151,20 +151,21 @@ export class ToolsService {
         })),
       }
     }
-    // Most recently active first; silent students at the bottom.
-    const byRecent = (a: { lastQueryAt: string | null }, b: { lastQueryAt: string | null }) =>
-      (b.lastQueryAt ?? '').localeCompare(a.lastQueryAt ?? '')
+    // Stable order (name, then id) so rows don't jump around between refreshes.
+    const byName = (a: SandboxStudent, b: SandboxStudent) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) ||
+      a.userId.localeCompare(b.userId)
 
     return {
       cohort: { id: cohort.id, name: cohort.name },
       retentionDays: RETENTION_DAYS,
       generatedAt: new Date().toISOString(),
-      students: cohortUsers.map(toStudent).sort(byRecent),
+      students: cohortUsers.map(toStudent).sort(byName),
       // Only members who actually queried — silent ones are just not-yet-in-a-cohort noise.
       unassigned: looseUsers
         .map(toStudent)
         .filter((s) => s.queryCount > 0)
-        .sort(byRecent),
+        .sort(byName),
     }
   }
 }

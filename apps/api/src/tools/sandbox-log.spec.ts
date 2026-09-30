@@ -42,13 +42,45 @@ function make(logs: Log[], loose: { id: string; email: string }[] = []) {
 }
 
 describe('sandboxActivity', () => {
-  it('lists every student once, active first, silent last, with counts', async () => {
+  it('lists every student once, with counts, newest query first', async () => {
     const { svc } = make([row('q2', 'b', 1), row('q1', 'b', 10, false)])
     const r = await svc.sandboxActivity('c1')
-    expect(r.students.map((s) => s.userId)).toEqual(['b', 'a'])
-    expect(r.students[0]).toMatchObject({ queryCount: 2, errorCount: 1, name: 'b@x.com' })
-    expect(r.students[0].queries.map((q) => q.id)).toEqual(['q2', 'q1'])
-    expect(r.students[1]).toMatchObject({ queryCount: 0, lastQueryAt: null })
+    const b = r.students.find((s) => s.userId === 'b')
+    const a = r.students.find((s) => s.userId === 'a')
+    expect(r.students).toHaveLength(2)
+    expect(b).toMatchObject({ queryCount: 2, errorCount: 1, name: 'b@x.com' })
+    expect(b?.queries.map((q) => q.id)).toEqual(['q2', 'q1'])
+    expect(a).toMatchObject({ queryCount: 0, lastQueryAt: null })
+  })
+
+  it('orders students by name, unaffected by who queried most recently', async () => {
+    const quietA = await make([row('q1', 'b', 1)]).svc.sandboxActivity('c1')
+    const quietB = await make([row('q1', 'a', 1)]).svc.sandboxActivity('c1')
+    // "Alice" (a) sorts before "b@x.com" (b) whichever of them is active
+    expect(quietA.students.map((s) => s.userId)).toEqual(['a', 'b'])
+    expect(quietB.students.map((s) => s.userId)).toEqual(['a', 'b'])
+  })
+
+  it('sorts names case-insensitively, breaking ties by id', async () => {
+    const prisma = {
+      cohort: {
+        findUnique: async () => ({
+          id: 'c1',
+          name: 'C',
+          institutionId: 'i1',
+          memberships: [
+            { user: { id: '3', email: null, displayName: 'bob' } },
+            { user: { id: '2', email: null, displayName: 'Bob' } },
+            { user: { id: '1', email: null, displayName: 'alice' } },
+            { user: { id: '4', email: null, displayName: 'Carol' } },
+          ],
+        }),
+      },
+      membership: { findMany: async () => [] },
+      sqlQueryLog: { findMany: async () => [] },
+    }
+    const r = await new ToolsService(prisma as never, {} as never).sandboxActivity('c1')
+    expect(r.students.map((s) => s.userId)).toEqual(['1', '2', '3', '4'])
   })
 
   it('only reads rows inside the 90-day window', async () => {
