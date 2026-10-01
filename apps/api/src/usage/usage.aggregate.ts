@@ -141,7 +141,11 @@ export function buildUsage(input: UsageInput) {
   // Visits: a new one starts after a 30-minute gap in a user's activity (any
   // source, all time, so a visit straddling the range start isn't recounted).
   const sortedByUser = new Map<string, Ev[]>()
-  for (const e of events) sortedByUser.set(e.userId, [...(sortedByUser.get(e.userId) ?? []), e])
+  for (const e of events) {
+    const list = sortedByUser.get(e.userId)
+    if (list) list.push(e)
+    else sortedByUser.set(e.userId, [e])
+  }
   const visitStarts = new Map<string, Date[]>()
   for (const [userId, evs] of sortedByUser) {
     evs.sort((a, b) => a.at.getTime() - b.at.getTime())
@@ -357,7 +361,11 @@ export function buildUsage(input: UsageInput) {
   const scenarioTitle = new Map(scenarios.map((s) => [s.scenarioId, s.title]))
   const assessmentTitle = new Map(input.assessments.map((a) => [a.id, a.title]))
   const byUser = new Map<string, Ev[]>()
-  for (const e of rangeEvents) byUser.set(e.userId, [...(byUser.get(e.userId) ?? []), e])
+  for (const e of rangeEvents) {
+    const list = byUser.get(e.userId)
+    if (list) list.push(e)
+    else byUser.set(e.userId, [e])
+  }
   const users = [...byUser.entries()]
     .map(([userId, evs]) => {
       const count = (src: UsageSource) => evs.filter((e) => e.src === src).length

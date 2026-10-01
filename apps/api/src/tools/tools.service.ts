@@ -128,7 +128,11 @@ export class ToolsService {
       take: 5000,
     })
     const byUser = new Map<string, typeof logs>()
-    for (const l of logs) byUser.set(l.userId, [...(byUser.get(l.userId) ?? []), l])
+    for (const l of logs) {
+      const list = byUser.get(l.userId)
+      if (list) list.push(l)
+      else byUser.set(l.userId, [l])
+    }
 
     const toStudent = (u: UserRow) => {
       const rows = byUser.get(u.id) ?? []
