@@ -2,6 +2,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   HttpCode,
   HttpException,
   HttpStatus,
@@ -17,6 +18,7 @@ import { ScenarioMediaService } from './scenario-media.service'
 import { LocalDiskPublicStorage } from '../storage/local-disk-storage'
 import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
 import { InstitutionScope, type AdminRequest } from '../auth/scope'
+import { ClerkService } from '../auth/clerk.service'
 
 @Controller('scenario-media')
 export class ScenarioMediaController {
@@ -25,12 +27,18 @@ export class ScenarioMediaController {
     // Used by the dev-only /files/* route below; never hit in prod (R2 serves
     // the MP4s directly via the custom domain).
     private readonly localStorage: LocalDiskPublicStorage,
-    private readonly scope: InstitutionScope
+    private readonly scope: InstitutionScope,
+    private readonly clerk: ClerkService
   ) {}
 
   @Get(':scenarioId')
-  async list(@Param('scenarioId') scenarioId: string) {
-    return this.service.listForScenario(scenarioId)
+  async list(@Param('scenarioId') scenarioId: string, @Headers('authorization') auth?: string) {
+    let viewer: { userId: string; role: string | null } | null = null
+    if (auth?.startsWith('Bearer ')) {
+      const userId = await this.clerk.verifyBearerToken(auth.slice(7).trim())
+      if (userId) viewer = { userId, role: await this.clerk.getRole(userId) }
+    }
+    return this.service.listForScenario(scenarioId, viewer)
   }
 
   @Post('render/:scenarioId/:nodeId')
@@ -72,6 +80,8 @@ export class ScenarioMediaController {
    */
   @Get('files/*')
   async serveFile(@Param('0') key: string, @Res() res: Response) {
+    // Local-disk storage is dev-only; in production R2 serves media, so this route must not read the server's disk.
+    if (process.env.NODE_ENV === 'production') throw new NotFoundException()
     const buf = await this.localStorage.read(key)
     if (!buf) throw new NotFoundException(`Media not found: ${key}`)
     res.set('Content-Type', 'video/mp4')

@@ -25,15 +25,24 @@ abstract class LocalDiskStorageBase {
     this.publicBase = (process.env.API_PUBLIC_URL ?? `http://localhost:${port}`).replace(/\/$/, '')
   }
 
+  /** Resolve `key` under root; null if it escapes (`..`, absolute paths, sibling-prefix dirs). */
+  protected resolveKey(key: string): string | null {
+    const target = path.resolve(this.root, key)
+    const rel = path.relative(this.root, target)
+    return rel && !rel.startsWith('..') && !path.isAbsolute(rel) ? target : null
+  }
+
   protected async writeFile(key: string, buffer: Buffer): Promise<void> {
-    const target = path.join(this.root, key)
+    const target = this.resolveKey(key)
+    if (!target) throw new Error(`Invalid storage key: ${key}`)
     await fs.mkdir(path.dirname(target), { recursive: true })
     await fs.writeFile(target, buffer)
     this.logger.log(`Wrote ${buffer.length} bytes to ${target}`)
   }
 
   async delete(key: string): Promise<void> {
-    const target = path.join(this.root, key)
+    const target = this.resolveKey(key)
+    if (!target) return
     await fs.unlink(target).catch(() => {
       /* ignore */
     })
@@ -41,8 +50,8 @@ abstract class LocalDiskStorageBase {
 
   /** Read a file from disk — used by the scenario-media controller's static handler. */
   async read(key: string): Promise<Buffer | null> {
-    const target = path.join(this.root, key)
-    if (!target.startsWith(this.root)) return null // path traversal guard
+    const target = this.resolveKey(key)
+    if (!target) return null // path traversal guard
     return fs.readFile(target).catch(() => null)
   }
 

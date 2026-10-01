@@ -92,6 +92,12 @@ export class DidService {
     return curated
   }
 
+  /** True only for image URLs of our curated presenters — stops callers pointing D-ID at arbitrary images. */
+  async isCuratedSourceUrl(url: string): Promise<boolean> {
+    const all = await this.getPresenters()
+    return all.some((p) => p.image_url === url)
+  }
+
   /** Look up a curated presenter by id; used by the pre-render pipeline to resolve source_url. */
   async getPresenterById(presenterId: string): Promise<CuratedPresenter | null> {
     const all = await this.getPresenters()

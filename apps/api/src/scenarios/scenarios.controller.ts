@@ -12,6 +12,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common'
+import { Throttle } from '@nestjs/throttler'
 import { ScenariosService, type Viewer } from './scenarios.service'
 import { ClerkService } from '../auth/clerk.service'
 import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
@@ -38,6 +39,7 @@ export class ScenariosController {
    * shape. Full scenario payloads come from GET /:id.
    */
   @Get()
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
   async findAll(@Headers('authorization') auth?: string) {
     return this.scenariosService.findAll(await viewerFrom(this.clerk, auth))
   }
@@ -52,6 +54,7 @@ export class ScenariosController {
    * body from a curl-and-scrape attack.
    */
   @Get(':id')
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
   async findOne(@Param('id') id: string, @Headers('authorization') auth?: string) {
     const viewer = await viewerFrom(this.clerk, auth)
     if (viewer) return this.scenariosService.findOne(id, viewer)

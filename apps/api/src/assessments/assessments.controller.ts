@@ -14,6 +14,7 @@ import {
 import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
 import { InstitutionScope, type AdminRequest } from '../auth/scope'
+import { Throttle } from '@nestjs/throttler'
 import { AssessmentsService, type DeliveryInput } from './assessments.service'
 
 interface AuthedRequest {
@@ -133,7 +134,9 @@ export class AssessmentsAdminController {
 export class InvitesPublicController {
   constructor(private readonly service: AssessmentsService) {}
 
+  // Codes are the secret; keep enumeration slow. Per IP, generous enough for a shared classroom NAT.
   @Get(':code')
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   info(@Param('code') code: string) {
     return this.service.inviteInfo(code)
   }
@@ -145,6 +148,7 @@ export class InvitesMeController {
   constructor(private readonly service: AssessmentsService) {}
 
   @Post(':code/accept')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   accept(@Req() req: AuthedRequest, @Param('code') code: string) {
     return this.service.acceptInvite(req.userId, code)
   }

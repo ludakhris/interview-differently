@@ -17,6 +17,13 @@ export class ClerkService {
   private readonly logger = new Logger(ClerkService.name)
   private readonly client: ClerkClient | null
   private readonly secretKey: string | null
+  /**
+   * Every admin/own-or-admin check needs the role, and each used to be a live
+   * Clerk API call — a rate-limit and latency cliff under load. Short TTL so a
+   * demoted admin loses access within a minute; setRole() invalidates at once.
+   */
+  private readonly roleCache = new Map<string, { role: string | null; expires: number }>()
+  private static readonly ROLE_TTL_MS = 60_000
 
   constructor() {
     this.secretKey = process.env.CLERK_SECRET_KEY ?? null
@@ -54,10 +61,13 @@ export class ClerkService {
    */
   async getRole(userId: string): Promise<string | null> {
     if (!this.client) return null
+    const cached = this.roleCache.get(userId)
+    if (cached && cached.expires > Date.now()) return cached.role
     try {
       const user = await this.client.users.getUser(userId)
-      const role = (user.publicMetadata as { role?: string } | null)?.role
-      return role ?? null
+      const role = (user.publicMetadata as { role?: string } | null)?.role ?? null
+      this.cacheRole(userId, role)
+      return role
     } catch (err) {
       this.logger.warn(
         `Failed to fetch Clerk user ${userId}: ${err instanceof Error ? err.message : 'unknown'}`
@@ -121,5 +131,22 @@ export class ClerkService {
   async setRole(userId: string, role: string | null): Promise<void> {
     if (!this.client) throw new Error('CLERK_SECRET_KEY not set')
     await this.client.users.updateUserMetadata(userId, { publicMetadata: { role } })
+    this.roleCache.delete(userId)
+  }
+
+  /** Permanently deletes the Clerk account. A 404 (already gone) counts as success. */
+  async deleteUser(userId: string): Promise<void> {
+    if (!this.client) throw new Error('CLERK_SECRET_KEY not set')
+    try {
+      await this.client.users.deleteUser(userId)
+    } catch (err) {
+      if ((err as { status?: number }).status !== 404) throw err
+    }
+    this.roleCache.delete(userId)
+  }
+
+  private cacheRole(userId: string, role: string | null): void {
+    if (this.roleCache.size > 5000) this.roleCache.clear()
+    this.roleCache.set(userId, { role, expires: Date.now() + ClerkService.ROLE_TTL_MS })
   }
 }

@@ -10,7 +10,24 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
+import { IsOptional, IsString, MaxLength } from 'class-validator'
 import { MeService } from './me.service'
+import { UserQuota } from '../common/user-quota'
+
+class JoinDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  joinKey?: string
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  institutionId?: string
+}
+
+// Join keys are admin-chosen and can be short — slow down guessing.
+const JOINS = new UserQuota(10, 10 * 60 * 1000, 'Too many join attempts')
 
 interface AuthedRequest {
   userId: string
@@ -46,7 +63,8 @@ export class MeController {
   }
 
   @Post('memberships')
-  join(@Req() req: AuthedRequest, @Body() body: { joinKey?: string; institutionId?: string }) {
+  join(@Req() req: AuthedRequest, @Body() body: JoinDto) {
+    JOINS.assert(req.userId)
     return this.service.join(req.userId, body)
   }
 

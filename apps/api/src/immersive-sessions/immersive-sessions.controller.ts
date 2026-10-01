@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  ForbiddenException,
   Controller,
   Post,
   Get,
@@ -14,15 +16,45 @@ import {
   UseInterceptors,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
+import { IsNotEmpty, IsNumberString, IsOptional, IsString, MaxLength } from 'class-validator'
 import { ImmersiveSessionsService } from './immersive-sessions.service'
 import { TranscriptionService } from '../transcription/transcription.service'
 import { ClerkService } from '../auth/clerk.service'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
 import { assertOwnerOrAdmin, type AuthedRequest } from '../auth/owner'
+import { UserQuota } from '../common/user-quota'
+import { ConsentService } from '../consent/consent.service'
 
-interface CreateSessionDto {
-  scenarioId: string
+class CreateSessionDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  scenarioId!: string
 }
+
+// Multipart fields arrive as strings.
+class CreateResponseDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  nodeId!: string
+
+  @IsString()
+  @MaxLength(4000)
+  questionText!: string
+
+  @IsOptional()
+  @IsNumberString()
+  @MaxLength(6)
+  durationSeconds?: string
+}
+
+// Each response is a Whisper call plus a stored recording; each summary is a Claude call.
+const SESSIONS = new UserQuota(30, 60 * 60 * 1000, 'Session limit reached')
+const RESPONSES = new UserQuota(60, 60 * 60 * 1000, 'Response upload limit reached')
+const SUMMARIES = new UserQuota(30, 60 * 60 * 1000, 'Summary limit reached')
+
+const ALLOWED_MEDIA = /^(audio|video)\/(webm|mp4|ogg|wav|x-wav|mpeg|x-m4a)(;|$)/
 
 /**
  * Immersive (avatar) sessions. Signed-in only; sessions are created for
@@ -34,12 +66,14 @@ export class ImmersiveSessionsController {
   constructor(
     private readonly service: ImmersiveSessionsService,
     private readonly transcription: TranscriptionService,
-    private readonly clerk: ClerkService
+    private readonly clerk: ClerkService,
+    private readonly consent: ConsentService
   ) {}
 
   @Post()
   @HttpCode(201)
   createSession(@Req() req: AuthedRequest, @Body() dto: CreateSessionDto) {
+    SESSIONS.assert(req.userId)
     return this.service.createSession(dto.scenarioId, req.userId)
   }
 
@@ -66,10 +100,18 @@ export class ImmersiveSessionsController {
   async createResponse(
     @Req() req: AuthedRequest,
     @Param('sessionId') sessionId: string,
-    @Body() body: Record<string, string>,
+    @Body() body: CreateResponseDto,
     @UploadedFile() file?: Express.Multer.File
   ) {
     await this.assertSession(req, sessionId)
+    RESPONSES.assert(req.userId)
+    // Server-side backstop for the web consent gate: no recordings without recorded consent.
+    if (file && !(await this.consent.hasAccepted(req.userId, 'recording'))) {
+      throw new ForbiddenException('Recording consent required')
+    }
+    if (file && !ALLOWED_MEDIA.test(file.mimetype ?? '')) {
+      throw new BadRequestException('Unsupported recording type')
+    }
     try {
       // Save immediately so the frontend can navigate without waiting for Whisper
       const response = await this.service.createResponse(
@@ -78,7 +120,7 @@ export class ImmersiveSessionsController {
         body.questionText,
         null,
         null,
-        body.durationSeconds != null ? Number(body.durationSeconds) : null
+        body.durationSeconds != null ? Math.min(Number(body.durationSeconds), 3600) : null
       )
 
       // Transcribe AND upload to private storage in parallel — both are
@@ -145,6 +187,7 @@ export class ImmersiveSessionsController {
   @Get(':sessionId/summary')
   async getSessionSummary(@Req() req: AuthedRequest, @Param('sessionId') sessionId: string) {
     await this.assertSession(req, sessionId)
+    SUMMARIES.assert(req.userId)
     try {
       return await this.service.getSessionSummary(sessionId)
     } catch (err) {
