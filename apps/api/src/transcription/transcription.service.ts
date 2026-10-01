@@ -20,7 +20,7 @@ export class TranscriptionService {
         model: 'whisper-1',
         file,
       })
-      this.logger.log(`Transcription result: "${result.text}"`)
+      this.logger.log(`Transcription complete (${result.text?.length ?? 0} chars)`)
       return result.text ?? null
     } catch (err) {
       this.logger.error('Whisper transcription failed', err instanceof Error ? err.stack : err)

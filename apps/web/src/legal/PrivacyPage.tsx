@@ -5,7 +5,11 @@ import { LEGAL } from './legalConfig'
 const PROCESSORS: [string, string, string][] = [
   ['Clerk', 'Sign-in and account identity (name, email, credentials)', 'United States'],
   ['Anthropic', 'AI-generated feedback on your answers and session summaries', 'United States'],
-  ['OpenAI', 'Speech-to-text transcription of audio you record', 'United States'],
+  [
+    'OpenAI',
+    'Speech-to-text transcription of recordings you submit (if you record video, the video file is sent; only the speech is transcribed)',
+    'United States',
+  ],
   [
     'D-ID',
     'Rendering the interviewer avatar (receives interviewer script text, not your data)',
