@@ -1,4 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
+import { useConsents } from '@/hooks/useConsents'
+import { LEGAL } from '@/legal/legalConfig'
 
 export type RecordingMode = 'audio' | 'video'
 
@@ -23,6 +26,23 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [liveStream, setLiveStream] = useState<MediaStream | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const { status: consentStatus, accept: acceptConsents } = useConsents()
+  const [agreed, setAgreed] = useState(false)
+  const [savingConsent, setSavingConsent] = useState(false)
+  // Fail closed: no recording until the API confirms recorded consent for the current version.
+  const consented = !!consentStatus?.accepted.recording
+
+  async function grantRecordingConsent() {
+    setSavingConsent(true)
+    setError(null)
+    try {
+      await acceptConsents(['recording'])
+    } catch {
+      setError('Could not save your consent. Please try again.')
+    } finally {
+      setSavingConsent(false)
+    }
+  }
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -152,6 +172,39 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
       )}
 
       <div className="p-5 space-y-4">
+        {/* Explicit consent before any recording starts */}
+        {state === 'idle' && !consented && (
+          <div className="rounded-lg border border-white/10 bg-[#111111] p-4 space-y-3">
+            <p className="text-[13px] font-semibold text-[#f5f3ee]">Before you record</p>
+            <p className="text-[12px] text-slate-light leading-relaxed">
+              If you record, your audio (and video, if you choose it) is stored privately, sent to
+              our speech-to-text and AI providers to create a transcript and feedback, and viewable
+              by you and our platform administrators — not your school. Recordings are deleted after{' '}
+              {LEGAL.recordingRetentionDays} days, and you can delete them any time by deleting your
+              account. Recording is optional: you can skip instead.{' '}
+              <Link to="/privacy" target="_blank" className="text-green-light underline">
+                Privacy Policy
+              </Link>
+            </p>
+            <label className="flex items-start gap-2.5 text-[12px] text-slate-light cursor-pointer">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-0.5"
+              />
+              I consent to my recording being processed as described.
+            </label>
+            <button
+              onClick={() => void grantRecordingConsent()}
+              disabled={!agreed || savingConsent || disabled}
+              className="px-4 py-2 rounded-lg bg-green hover:bg-green/90 text-white text-[12px] font-medium disabled:opacity-40"
+            >
+              {savingConsent ? 'Saving…' : 'I consent'}
+            </button>
+          </div>
+        )}
+
         {/* Video preview area */}
         {state === 'recording' && mode === 'video' && (
           <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
@@ -197,7 +250,7 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
             <>
               <button
                 onClick={startRecording}
-                disabled={disabled}
+                disabled={disabled || !consented}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-green hover:bg-green/90 text-white text-[13px] font-medium transition-colors disabled:opacity-40"
               >
                 <span className="w-2 h-2 rounded-full bg-white" />

@@ -2,5 +2,41 @@
   "buildCommand": "cd ../.. && npx turbo run build --filter=@id/web",
   "outputDirectory": "dist",
   "framework": "vite",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(self), geolocation=(), payment=(), usb=()"
+        },
+        {
+          "key": "Content-Security-Policy-Report-Only",
+          "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://*.clerk.accounts.dev https://*.clerk.com https://clerk.interviewdifferently.com https://challenges.cloudflare.com https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://api.interviewdifferently.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk.interviewdifferently.com https://vitals.vercel-insights.com https://va.vercel-scripts.com https://*.d-id.com wss://*.d-id.com; worker-src 'self' blob:; frame-src https://challenges.cloudflare.com https://*.clerk.accounts.dev https://*.clerk.com; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'"
+        }
+      ]
+    }
+  ]
 }

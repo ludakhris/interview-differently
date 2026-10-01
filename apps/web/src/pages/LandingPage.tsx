@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
 
 export function LandingPage() {
@@ -101,7 +101,16 @@ export function LandingPage() {
             </a>
           ))}
         </div>
-        <p>© 2026 InterviewDifferently™. All rights reserved.</p>
+        <p>
+          © 2026 InterviewDifferently™. All rights reserved. ·{' '}
+          <Link to="/privacy" className="hover:text-slate-light transition-colors">
+            Privacy
+          </Link>{' '}
+          ·{' '}
+          <Link to="/terms" className="hover:text-slate-light transition-colors">
+            Terms
+          </Link>
+        </p>
       </footer>
     </div>
   )

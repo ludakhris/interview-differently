@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useAuth, useUser } from '@clerk/clerk-react'
+import { useAuth, useClerk, useUser } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { MembershipsCard } from '@/components/MembershipsCard'
 import { fetchConfig, patchAdminConfig } from '@/services/configService'
+import { deleteMyAccount, downloadMyData } from '@/services/accountService'
 
 /**
  * Settings page — visible to any signed-in user.
@@ -42,6 +43,86 @@ function ToggleRow({ label, description, checked, saving, onChange }: ToggleRowP
           }`}
         />
       </button>
+    </div>
+  )
+}
+
+/** Self-service export + erasure (GDPR/CCPA). Deletion needs the word DELETE typed — no Enter-to-confirm. */
+function YourDataCard() {
+  const { getToken } = useAuth()
+  const { signOut } = useClerk()
+  const [busy, setBusy] = useState<'export' | 'delete' | null>(null)
+  const [typed, setTyped] = useState('')
+  const [msg, setMsg] = useState<string | null>(null)
+
+  async function onExport() {
+    setBusy('export')
+    setMsg(null)
+    try {
+      await downloadMyData(getToken)
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'Export failed. Try again.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function onDelete() {
+    setBusy('delete')
+    setMsg(null)
+    try {
+      await deleteMyAccount(getToken)
+      await signOut({ redirectUrl: '/' })
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'Deletion failed. Try again.')
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div className="bg-[#111111] rounded-xl border border-white/10 p-6 mb-4">
+      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
+        Your data
+      </p>
+      <div className="flex items-center justify-between gap-4 pb-5 border-b border-white/10">
+        <div>
+          <p className="text-[14px] font-semibold text-[#f5f3ee]">Download my data</p>
+          <p className="text-[12px] text-slate-mid mt-0.5">
+            A JSON file with your profile, results, answers, transcripts and recording links.
+          </p>
+        </div>
+        <button
+          onClick={() => void onExport()}
+          disabled={busy !== null}
+          className="shrink-0 px-4 py-2 rounded-lg border border-white/10 text-[13px] text-[#f5f3ee] hover:bg-white/5 disabled:opacity-40"
+        >
+          {busy === 'export' ? 'Preparing…' : 'Download'}
+        </button>
+      </div>
+      <div className="pt-5">
+        <p className="text-[14px] font-semibold text-red-400">Delete my account</p>
+        <p className="text-[12px] text-slate-mid mt-0.5 mb-3">
+          Permanently deletes your account, results, answers, recordings and memberships. This
+          cannot be undone. Type DELETE to confirm.
+        </p>
+        <div className="flex gap-3">
+          <input
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            placeholder="DELETE"
+            aria-label="Type DELETE to confirm account deletion"
+            className="flex-1 bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-[#f5f3ee]"
+          />
+          <button
+            onClick={() => void onDelete()}
+            disabled={typed !== 'DELETE' || busy !== null}
+            className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[13px] font-medium disabled:opacity-40"
+          >
+            {busy === 'delete' ? 'Deleting…' : 'Delete account'}
+          </button>
+        </div>
+      </div>
+      {msg && <p className="text-[12px] text-red-400 mt-3">{msg}</p>}
     </div>
   )
 }
@@ -101,6 +182,8 @@ export function SettingsPage() {
           </p>
           <MembershipsCard variant="settings" />
         </div>
+
+        <YourDataCard />
 
         {/* Admin-only sections */}
         {isAdmin && (

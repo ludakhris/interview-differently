@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useParams, useSearchParams } from 'react-router-dom'
+import { Routes, Route, Navigate, Link, useParams, useSearchParams } from 'react-router-dom'
 import { SignIn, SignUp } from '@clerk/clerk-react'
 import { LandingPage } from '@/pages/LandingPage'
 import { DashboardPage } from '@/pages/DashboardPage'
@@ -29,6 +29,9 @@ import { AssessmentResultPage } from '@/pages/AssessmentResultPage'
 import { AdminAssessmentsPage } from '@/pages/AdminAssessmentsPage'
 import { InvitePage } from '@/pages/InvitePage'
 import { RequestScenarioPage } from '@/pages/RequestScenarioPage'
+import { NotFoundPage } from '@/pages/NotFoundPage'
+import { TermsPage } from '@/legal/TermsPage'
+import { PrivacyPage } from '@/legal/PrivacyPage'
 import { ExhibitGalleryPage } from '@/pages/dev/ExhibitGalleryPage'
 import { QuantGalleryPage } from '@/pages/dev/QuantGalleryPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
@@ -59,11 +62,24 @@ function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
       : `/welcome?next=${encodeURIComponent(redirectUrl)}`
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center gap-4">
       {mode === 'sign-in' ? (
         <SignIn routing="path" path="/sign-in" forceRedirectUrl={redirectUrl} />
       ) : (
         <SignUp routing="path" path="/sign-up" forceRedirectUrl={signUpRedirect} />
+      )}
+      {mode === 'sign-up' && (
+        <p className="text-[12px] text-slate-mid max-w-xs text-center">
+          By signing up you agree to our{' '}
+          <Link to="/terms" className="underline hover:text-[#f5f3ee]">
+            Terms
+          </Link>{' '}
+          and{' '}
+          <Link to="/privacy" className="underline hover:text-[#f5f3ee]">
+            Privacy Policy
+          </Link>
+          .
+        </p>
       )}
     </div>
   )
@@ -81,6 +97,8 @@ export default function App() {
         <Route path="/scenario/:scenarioId/briefing" element={<BriefingPage />} />
         <Route path="/scenario/:scenarioId/play" element={<SimulationPage />} />
         <Route path="/request-scenario" element={<RequestScenarioPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/a/:code" element={<InvitePage />} />
 
         {/* Internal showcase pages — visual reference for authors. */}
@@ -293,7 +311,7 @@ export default function App() {
           }
         />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </ConfirmProvider>
   )

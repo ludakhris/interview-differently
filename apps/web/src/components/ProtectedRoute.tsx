@@ -1,5 +1,6 @@
 import { useAuth } from '@clerk/clerk-react'
 import { Navigate, useLocation } from 'react-router-dom'
+import { ConsentGate } from '@/components/ConsentGate'
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth()
@@ -19,5 +20,5 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     )
   }
 
-  return <>{children}</>
+  return <ConsentGate>{children}</ConsentGate>
 }
