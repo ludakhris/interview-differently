@@ -40,7 +40,8 @@ jobs:
       # printed for triage but don't fail the build: the remaining Nest/multer
       # advisories need a Nest major upgrade (tracked in #43).
       - run: npm audit --omit=dev --audit-level=critical
-      - run: npm audit --omit=dev --audit-level=high || echo "::warning::High-severity advisories remain — see #43"
+      - run: |
+          npm audit --omit=dev --audit-level=high || echo "::warning::High-severity advisories remain - see issue 43"
 
   deploy-web:
     name: Deploy Web (Vercel)
