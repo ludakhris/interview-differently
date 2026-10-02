@@ -101,6 +101,7 @@ model ImmersiveResponse {
   session         ImmersiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
+  @@index([createdAt])
 }
 
 model ScenarioRequest {
@@ -376,6 +377,7 @@ model SqlQueryLog {
 
   @@index([cohortId, createdAt])
   @@index([createdAt])
+  @@index([userId, createdAt])
 }
 
 // ── Usage: page views (#42 Phase 2) ─────────────────────────────────────────
@@ -395,4 +397,22 @@ model UsageEvent {
 
   @@index([createdAt])
   @@index([userId, createdAt])
+}
+
+// ── Consent (#43) ───────────────────────────────────────────────────────────
+//
+// Append-only record of what a user accepted and which document version.
+// `kind`: terms | privacy | recording. Bump the version constant in
+// consent/consent.versions.ts to force re-acceptance. No FK to User: the
+// mirror row may not exist yet at sign-up, and deletion is explicit anyway.
+
+model ConsentRecord {
+  id        String   @id @default(uuid())
+  userId    String
+  kind      String
+  version   String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, kind, version])
+  @@index([userId])
 }

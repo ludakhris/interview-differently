@@ -14,6 +14,11 @@ export class ImmersiveSessionsService {
   ) {}
 
   async createSession(scenarioId: string, userId: string) {
+    const scenario = await this.prisma.scenario.findUnique({
+      where: { scenarioId },
+      select: { scenarioId: true },
+    })
+    if (!scenario) throw new NotFoundException(`Scenario ${scenarioId} not found`)
     return this.prisma.immersiveSession.create({
       data: { scenarioId, userId },
     })

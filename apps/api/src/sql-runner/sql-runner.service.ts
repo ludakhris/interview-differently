@@ -1,142 +1,127 @@
 import { Injectable } from '@nestjs/common'
-import { PGlite } from '@electric-sql/pglite'
+import { Worker } from 'worker_threads'
+import * as path from 'path'
+import {
+  SqlRunnerCore,
+  type QueryOutcome,
+  type QueryResult,
+  type SchemaTable,
+} from './sql-runner.core'
+
+export type { QueryOutcome, QueryResult, SchemaTable, SchemaColumn } from './sql-runner.core'
+
+/** Setup script + one query. Generous: setup alone is ~1s, a legit query well under that. */
+const QUERY_TIMEOUT_MS = 10_000
+const SETUP_TIMEOUT_MS = 30_000
+/** After this many hung queries in one batch, stop retrying and fail the rest. */
+const MAX_RESTARTS = 10
+
+const TIMED_OUT: QueryOutcome = { ok: false, error: 'Query timed out' }
 
 /**
  * Server-side PGlite runner.
  *
+ * PGlite is WASM Postgres running on whatever thread calls it, so an
+ * unbounded student query (`WITH RECURSIVE` loop, huge `generate_series`)
+ * would block the API's event loop for everyone. Production therefore runs
+ * every call in a worker thread with a hard timeout and terminates it if it
+ * hangs. Under ts-jest (no compiled worker file) it runs in-process.
+ *
  * Every call builds a fresh in-memory Postgres from a dataset's setup script,
  * so results are always computed against pristine data — the same data the
- * browser sandbox loads. Used today to validate/introspect datasets on save;
- * Phase 2 (#25) reuses it to grade assessment SQL answers authoritatively.
- *
- * Instances are intentionally not cached: a fresh build is ~1s and caching
- * would need invalidation on setupSql edits plus rollback between runs.
+ * browser sandbox loads.
  */
-
-export interface SchemaColumn {
-  name: string
-  type: string
-}
-
-export interface SchemaTable {
-  table: string
-  columns: SchemaColumn[]
-  rowCount: number
-}
-
-export interface QueryResult {
-  columns: string[]
-  rows: unknown[][]
-  rowCount: number
-  command: string
-  truncated?: boolean
-}
-
-export type QueryOutcome = { ok: true; result: QueryResult } | { ok: false; error: string }
-
-// Grading cap — a runaway cartesian join shouldn't take the API down.
-const GRADE_ROW_CAP = 5000
-
-// Return dates / numerics as their Postgres text form instead of JS Date /
-// number so results look like psql output and compare byte-for-byte between
-// browser and server runs.
-const TEXT_PARSERS: Record<number, (v: string) => string> = {
-  1082: (v) => v, // date
-  1114: (v) => v, // timestamp
-  1184: (v) => v, // timestamptz
-  1700: (v) => v, // numeric
-}
-
 @Injectable()
 export class SqlRunnerService {
-  async build(setupSql: string): Promise<PGlite> {
-    const db = new PGlite({ parsers: TEXT_PARSERS })
-    try {
-      await db.exec(setupSql)
-    } catch (err) {
-      await db.close()
-      throw err
-    }
-    return db
-  }
+  private readonly core = new SqlRunnerCore()
+  private readonly useWorker = __filename.endsWith('.js')
 
-  /** Runs the setup script and returns the resulting public schema. Throws on SQL error. */
   async introspect(setupSql: string): Promise<SchemaTable[]> {
-    const db = await this.build(setupSql)
-    try {
-      const cols = await db.query<{ table_name: string; column_name: string; data_type: string }>(
-        `SELECT table_name, column_name, data_type
-         FROM information_schema.columns
-         WHERE table_schema = 'public'
-         ORDER BY table_name, ordinal_position`
-      )
-      const tables = new Map<string, SchemaTable>()
-      for (const c of cols.rows) {
-        let t = tables.get(c.table_name)
-        if (!t) {
-          t = { table: c.table_name, columns: [], rowCount: 0 }
-          tables.set(c.table_name, t)
-        }
-        t.columns.push({ name: c.column_name, type: c.data_type })
-      }
-      for (const t of tables.values()) {
-        const r = await db.query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM "${t.table}"`)
-        t.rowCount = r.rows[0]?.n ?? 0
-      }
-      return [...tables.values()]
-    } finally {
-      await db.close()
-    }
+    if (!this.useWorker) return this.core.introspect(setupSql)
+    return this.callWorker<SchemaTable[]>('introspect', [setupSql], SETUP_TIMEOUT_MS)
   }
 
-  /** Executes `sql` against a fresh instance of the dataset. Returns the last statement's result. */
   async execute(setupSql: string, sql: string): Promise<QueryResult> {
-    const db = await this.build(setupSql)
-    try {
-      return await this.runOne(db, sql)
-    } finally {
-      await db.close()
-    }
+    if (!this.useWorker) return this.core.execute(setupSql, sql)
+    return this.callWorker<QueryResult>('execute', [setupSql, sql], SETUP_TIMEOUT_MS)
   }
 
   /**
-   * Runs several queries against one fresh instance, each inside a rolled-
-   * back transaction so an earlier (student) statement can't alter the data
-   * a later one sees. Errors are captured per query, not thrown.
+   * Several queries against one fresh instance, each in a rolled-back
+   * transaction. A query that hangs is terminated and reported as a failed
+   * outcome; the rest re-run on a fresh worker so one bad answer can't sink
+   * the whole grading pass.
    */
   async executeMany(setupSql: string, queries: string[]): Promise<QueryOutcome[]> {
-    const db = await this.build(setupSql)
-    try {
-      const out: QueryOutcome[] = []
-      for (const sql of queries) {
-        await db.exec('BEGIN')
-        try {
-          out.push({ ok: true, result: await this.runOne(db, sql) })
-        } catch (err) {
-          out.push({ ok: false, error: (err as Error).message })
-        } finally {
-          await db.exec('ROLLBACK')
+    if (!this.useWorker) return this.core.executeMany(setupSql, queries)
+
+    const out: QueryOutcome[] = []
+    let restarts = 0
+    while (out.length < queries.length) {
+      const remaining = queries.slice(out.length)
+      const got: QueryOutcome[] = []
+      try {
+        await this.callWorker('executeMany', [setupSql, remaining], SETUP_TIMEOUT_MS, {
+          perOutcomeMs: QUERY_TIMEOUT_MS,
+          onOutcome: (o) => got.push(o),
+        })
+        out.push(...got)
+      } catch (err) {
+        if (!(err instanceof TimeoutError)) throw err
+        out.push(...got, TIMED_OUT) // `got` finished; the next query is the one that hung
+        restarts++
+        if (restarts >= MAX_RESTARTS) {
+          while (out.length < queries.length) out.push(TIMED_OUT)
         }
       }
-      return out
-    } finally {
-      await db.close()
     }
+    return out
   }
 
-  private async runOne(db: PGlite, sql: string): Promise<QueryResult> {
-    const results = await db.exec(sql)
-    const last = results[results.length - 1]
-    if (!last) return { columns: [], rows: [], rowCount: 0, command: '' }
-    const columns = last.fields.map((f) => f.name)
-    const all = last.rows as Record<string, unknown>[]
-    const rows = all.slice(0, GRADE_ROW_CAP).map((r) => columns.map((c) => r[c]))
-    return {
-      columns,
-      rows,
-      rowCount: all.length,
-      command: last.command ?? '',
-      truncated: all.length > GRADE_ROW_CAP,
-    }
+  private callWorker<T>(
+    method: string,
+    args: unknown[],
+    firstTimeoutMs: number,
+    opts: { perOutcomeMs?: number; onOutcome?: (o: QueryOutcome) => void } = {}
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const worker = new Worker(path.join(__dirname, 'sql-runner.worker.js'), {
+        workerData: { method, args },
+      })
+      let timer: NodeJS.Timeout
+      const settle = (fn: () => void) => {
+        clearTimeout(timer)
+        void worker.terminate()
+        fn()
+      }
+      const arm = (ms: number) => {
+        clearTimeout(timer)
+        timer = setTimeout(() => settle(() => reject(new TimeoutError())), ms)
+      }
+      arm(firstTimeoutMs)
+      worker.on(
+        'message',
+        (m: { type: string; outcome?: QueryOutcome; result?: T; error?: string }) => {
+          if (m.type === 'outcome') {
+            opts.onOutcome?.(m.outcome as QueryOutcome)
+            arm(opts.perOutcomeMs ?? firstTimeoutMs)
+          } else if (m.type === 'done') {
+            settle(() => resolve(m.result as T))
+          } else if (m.type === 'error') {
+            settle(() => reject(new Error(m.error)))
+          }
+        }
+      )
+      worker.on('error', (err) => settle(() => reject(err)))
+      worker.on('exit', (code) => {
+        if (code !== 0) settle(() => reject(new Error(`SQL worker exited with code ${code}`)))
+      })
+    })
+  }
+}
+
+class TimeoutError extends Error {
+  constructor() {
+    super('SQL execution timed out')
   }
 }

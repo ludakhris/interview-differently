@@ -1,156 +1,75 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, ServiceUnavailableException } from '@nestjs/common'
+import { Worker } from 'worker_threads'
+import * as path from 'path'
 import { PrismaService } from '../prisma/prisma.service'
 import { ClerkService } from '../auth/clerk.service'
-import { buildUsage, type UsageInput, type UsageRange, type UsageReport } from './usage.aggregate'
+import { type UsageRange, type UsageReport } from './usage.aggregate'
+import { UsageReportBuilder } from './usage.builder'
 
-/** Clerk roles treated as admin/test traffic and excluded unless asked for. */
-const ADMIN_ROLES = new Set(['admin', 'institution-admin'])
+/** Dashboard is polled/refreshed by admins; a short cache turns bursts into one computation. */
+const REPORT_TTL_MS = 30_000
+const REPORT_TIMEOUT_MS = 120_000
+/** Caps the worker's heap so a huge report OOMs the worker, not the API. */
+const WORKER_HEAP_MB = 2048
+
+interface ReportOpts {
+  range: UsageRange
+  includeAdmins: boolean
+  tzOffsetMinutes: number
+}
 
 @Injectable()
 export class UsageService {
+  private cache = new Map<string, { at: number; report: Promise<UsageReport> }>()
+  private readonly useWorker = __filename.endsWith('.js')
+
   constructor(
     private prisma: PrismaService,
     private clerk: ClerkService
   ) {}
 
-  async report(opts: {
-    range: UsageRange
-    includeAdmins: boolean
-    tzOffsetMinutes: number
-  }): Promise<UsageReport> {
-    const [
-      users,
-      scenarios,
-      simAttempts,
-      simResults,
-      immersive,
-      assessments,
-      attempts,
-      sqlLogs,
-      cohorts,
-      pageViews,
-    ] = await Promise.all([
-      this.prisma.user.findMany({ select: { id: true, email: true, displayName: true } }),
-      // Pull just the few JSON fields we need — the full scenario body is huge.
-      this.prisma.$queryRaw<
-        {
-          scenarioId: string
-          status: string
-          title: string | null
-          track: string | null
-          mode: string | null
-        }[]
-      >`SELECT "scenarioId", status, data->>'title' AS title, data->>'track' AS track, data->>'mode' AS mode FROM "Scenario"`,
-      this.prisma.simulationAttempt.findMany({
-        select: { userId: true, scenarioId: true, startedAt: true },
-      }),
-      this.prisma.simulationResult.findMany({
-        select: {
-          userId: true,
-          scenarioId: true,
-          scenarioTitle: true,
-          completedAt: true,
-          overallScore: true,
-        },
-      }),
-      this.prisma.immersiveSession.findMany({
-        select: { userId: true, scenarioId: true, status: true, createdAt: true },
-      }),
-      this.prisma.assessment.findMany({
-        select: { id: true, title: true, deliveries: { select: { id: true } } },
-      }),
-      this.prisma.assessmentAttempt.findMany({
-        select: {
-          userId: true,
-          deliveryId: true,
-          startedAt: true,
-          submittedAt: true,
-          submittedLate: true,
-          sectionScores: true,
-        },
-      }),
-      this.prisma.sqlQueryLog.findMany({
-        select: { userId: true, datasetSlug: true, ok: true, createdAt: true },
-      }),
-      this.prisma.cohort.findMany({
-        select: {
-          id: true,
-          name: true,
-          institution: { select: { name: true } },
-          memberships: { select: { userId: true } },
-          tools: { select: { toolKey: true, enabled: true } },
-        },
-      }),
-      this.prisma.usageEvent.findMany({
-        select: { userId: true, route: true, refId: true, createdAt: true },
-      }),
-    ])
-
-    const activeUserIds = new Set<string>([
-      ...simAttempts.map((r) => r.userId),
-      ...simResults.map((r) => r.userId),
-      ...immersive.map((r) => r.userId),
-      ...attempts.map((r) => r.userId),
-      ...sqlLogs.map((r) => r.userId),
-      ...pageViews.map((r) => r.userId),
-    ])
-    const excludedUserIds = new Set<string>()
-    if (!opts.includeAdmins) {
-      const roles = await this.clerk.getRoles([...activeUserIds])
-      for (const [id, role] of roles) if (role && ADMIN_ROLES.has(role)) excludedUserIds.add(id)
-    }
-
-    const input: UsageInput = {
-      now: new Date(),
-      range: opts.range,
-      tzOffsetMinutes: opts.tzOffsetMinutes,
-      excludedUserIds,
-      users,
-      scenarios,
-      simAttempts,
-      simResults,
-      immersive,
-      assessments: assessments.map((a) => ({
-        id: a.id,
-        title: a.title,
-        deliveryIds: a.deliveries.map((d) => d.id),
-      })),
-      assessmentAttempts: attempts.map((a) => ({
-        userId: a.userId,
-        deliveryId: a.deliveryId,
-        startedAt: a.startedAt,
-        submittedAt: a.submittedAt,
-        submittedLate: a.submittedLate,
-        scorePercent: scorePercent(a.sectionScores),
-      })),
-      sqlLogs,
-      pageViews,
-      cohorts: cohorts.map((c) => {
-        const enabled = (key: string) => c.tools.find((t) => t.toolKey === key)?.enabled ?? false
-        return {
-          id: c.id,
-          name: c.name,
-          institutionName: c.institution.name,
-          memberIds: c.memberships.map((m) => m.userId),
-          toolsEnabled: {
-            'sql-sandbox': enabled('sql-sandbox'),
-            assessments: enabled('assessments'),
-          },
-        }
-      }),
-    }
-    return buildUsage(input)
+  /**
+   * Cached + single-flight: concurrent requests for the same view share one
+   * computation, and a fresh result is reused for REPORT_TTL_MS. Building the
+   * report reads every log row in scope, so stampedes are what took it down.
+   */
+  report(opts: ReportOpts): Promise<UsageReport> {
+    const key = `${opts.range}|${opts.includeAdmins}|${opts.tzOffsetMinutes}`
+    const hit = this.cache.get(key)
+    if (hit && Date.now() - hit.at < REPORT_TTL_MS) return hit.report
+    const report = this.useWorker
+      ? this.runInWorker(opts)
+      : new UsageReportBuilder(this.prisma, this.clerk).build(opts)
+    this.cache.set(key, { at: Date.now(), report })
+    report.catch(() => this.cache.delete(key)) // never cache a failure
+    return report
   }
-}
 
-/** Overall percent from a submitted attempt's SectionScore[]; null if not submitted. */
-function scorePercent(sectionScores: unknown): number | null {
-  if (!Array.isArray(sectionScores)) return null
-  let correct = 0
-  let total = 0
-  for (const s of sectionScores as { correct?: number; total?: number }[]) {
-    correct += s.correct ?? 0
-    total += s.total ?? 0
+  /**
+   * The report is CPU-heavy (it aggregates every log row in scope), so it runs
+   * on a worker thread with a heap cap and timeout. In-process under ts-jest,
+   * where there is no compiled worker file.
+   */
+  private runInWorker(opts: ReportOpts): Promise<UsageReport> {
+    return new Promise<UsageReport>((resolve, reject) => {
+      const worker = new Worker(path.join(__dirname, 'usage.worker.js'), {
+        workerData: opts,
+        resourceLimits: { maxOldGenerationSizeMb: WORKER_HEAP_MB },
+      })
+      const timer = setTimeout(() => {
+        void worker.terminate()
+        reject(new ServiceUnavailableException('Usage report timed out'))
+      }, REPORT_TIMEOUT_MS)
+      worker.once('message', (m: { ok: boolean; report?: UsageReport; error?: string }) => {
+        clearTimeout(timer)
+        void worker.terminate()
+        if (m.ok) resolve(m.report as UsageReport)
+        else reject(new ServiceUnavailableException(`Usage report failed: ${m.error}`))
+      })
+      worker.once('error', (err) => {
+        clearTimeout(timer)
+        reject(new ServiceUnavailableException(`Usage report failed: ${err.message}`))
+      })
+    })
   }
-  return total ? Math.round((correct / total) * 100) : 0
 }

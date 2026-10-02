@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /builder
+Disallow: /tools
+Disallow: /settings
+Disallow: /dashboard
+Disallow: /welcome
+Disallow: /dev
+
+Sitemap: https://interviewdifferently.com/sitemap.xml

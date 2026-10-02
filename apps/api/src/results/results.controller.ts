@@ -11,10 +11,14 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { ResultsService } from './results.service'
-import type { CreateResultDto } from './results.types'
+import { CreateResultDto } from './results.types'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
 import { ClerkService } from '../auth/clerk.service'
 import { assertOwnerOrAdmin, type AuthedRequest } from '../auth/owner'
+import { UserQuota } from '../common/user-quota'
+
+// AI feedback is a Claude call on first view of each result.
+const AI_FEEDBACK = new UserQuota(40, 60 * 60 * 1000, 'AI feedback limit reached')
 
 /**
  * Simulation results. Every route needs a signed-in user; writes are
@@ -71,6 +75,7 @@ export class ResultsController {
   async getAiFeedback(@Req() req: AuthedRequest, @Param('id') id: string) {
     const result = await this.resultsService.getById(id)
     await assertOwnerOrAdmin(this.clerk, req, result.userId)
+    AI_FEEDBACK.assert(req.userId)
     try {
       return await this.resultsService.getOrGenerateAiFeedback(id)
     } catch (err: unknown) {

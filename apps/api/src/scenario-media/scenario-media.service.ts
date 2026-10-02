@@ -39,7 +39,31 @@ export class ScenarioMediaService {
     @Inject(PUBLIC_MEDIA_STORAGE) private storage: PublicMediaStorage
   ) {}
 
-  async listForScenario(scenarioId: string): Promise<ScenarioMediaAsset[]> {
+  /**
+   * Assets for a scenario, only if the viewer may see that scenario — same
+   * rule as ScenariosService: anonymous sees public scenarios, members see
+   * their institution's, full admins see all. Otherwise an empty list, so the
+   * endpoint can't be used to probe private scenario ids.
+   */
+  async listForScenario(
+    scenarioId: string,
+    viewer: { userId: string; role: string | null } | null
+  ): Promise<ScenarioMediaAsset[]> {
+    const visible = viewer
+      ? viewer.role === 'admin'
+        ? {}
+        : {
+            OR: [
+              { institutionId: null },
+              { institution: { memberships: { some: { userId: viewer.userId } } } },
+            ],
+          }
+      : { institutionId: null }
+    const scenario = await this.prisma.scenario.findFirst({
+      where: { scenarioId, ...visible },
+      select: { scenarioId: true },
+    })
+    if (!scenario) return []
     return this.prisma.scenarioMediaAsset.findMany({
       where: { scenarioId },
       orderBy: { nodeId: 'asc' },
