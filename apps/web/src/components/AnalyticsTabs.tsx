@@ -49,7 +49,7 @@ export function AnalyticsTabs({ institutionId, active, available }: AnalyticsTab
 
   return (
     <div className="border-b border-white/10 mb-6">
-      <nav className="flex items-center gap-1" aria-label="Analytics sections">
+      <nav className="flex flex-wrap items-center gap-x-1" aria-label="Analytics sections">
         {ALL_TABS.map((tab) => {
           const isActive = tab.key === active
           const isDisabled = !available.includes(tab.key)

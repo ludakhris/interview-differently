@@ -317,26 +317,31 @@ function BreakdownTable({
       {rows.length === 0 ? (
         <p className="text-[13px] text-slate-mid">{emptyHint}</p>
       ) : (
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="text-left text-[11px] uppercase tracking-widest text-slate-mid border-b border-white/10">
-              <th className="font-semibold py-2">{rowKey}</th>
-              <th className="font-semibold py-2 text-right">Count</th>
-              <th className="font-semibold py-2 text-right">Avg score</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.key} className="border-b border-white/5 last:border-0">
-                <td className="py-2 text-[#f5f3ee] capitalize">{r.key}</td>
-                <td className="py-2 text-right text-slate-light">{r.count}</td>
-                <td className="py-2 text-right font-semibold" style={{ color: scoreColor(r.avg) }}>
-                  {r.avg}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="text-left text-[11px] uppercase tracking-widest text-slate-mid border-b border-white/10">
+                <th className="font-semibold py-2">{rowKey}</th>
+                <th className="font-semibold py-2 text-right">Count</th>
+                <th className="font-semibold py-2 text-right">Avg score</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.key} className="border-b border-white/5 last:border-0">
+                  <td className="py-2 text-[#f5f3ee] capitalize">{r.key}</td>
+                  <td className="py-2 text-right text-slate-light">{r.count}</td>
+                  <td
+                    className="py-2 text-right font-semibold"
+                    style={{ color: scoreColor(r.avg) }}
+                  >
+                    {r.avg}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )
@@ -377,35 +382,37 @@ function CohortBreakdownTable({
       {sorted.length === 0 ? (
         <p className="text-[13px] text-slate-mid">No memberships yet.</p>
       ) : (
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="text-left text-[11px] uppercase tracking-widest text-slate-mid border-b border-white/10">
-              <th className="font-semibold py-2">Cohort</th>
-              <th className="font-semibold py-2 text-right">Students</th>
-              <th className="font-semibold py-2 text-right">Completed sims</th>
-              <th className="font-semibold py-2 text-right">Avg score</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((r) => (
-              <tr key={r.cohortId ?? 'none'} className="border-b border-white/5 last:border-0">
-                <td
-                  className={`py-2 ${r.cohortId === null ? 'italic text-slate-mid' : 'text-[#f5f3ee]'}`}
-                >
-                  {r.name}
-                </td>
-                <td className="py-2 text-right text-slate-light">{r.totalStudents}</td>
-                <td className="py-2 text-right text-slate-light">{r.completedSimulations}</td>
-                <td
-                  className="py-2 text-right font-semibold"
-                  style={{ color: scoreColor(r.avgOverallScore) }}
-                >
-                  {r.avgOverallScore ?? '—'}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="text-left text-[11px] uppercase tracking-widest text-slate-mid border-b border-white/10">
+                <th className="font-semibold py-2">Cohort</th>
+                <th className="font-semibold py-2 text-right">Students</th>
+                <th className="font-semibold py-2 text-right">Completed sims</th>
+                <th className="font-semibold py-2 text-right">Avg score</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {sorted.map((r) => (
+                <tr key={r.cohortId ?? 'none'} className="border-b border-white/5 last:border-0">
+                  <td
+                    className={`py-2 ${r.cohortId === null ? 'italic text-slate-mid' : 'text-[#f5f3ee]'}`}
+                  >
+                    {r.name}
+                  </td>
+                  <td className="py-2 text-right text-slate-light">{r.totalStudents}</td>
+                  <td className="py-2 text-right text-slate-light">{r.completedSimulations}</td>
+                  <td
+                    className="py-2 text-right font-semibold"
+                    style={{ color: scoreColor(r.avgOverallScore) }}
+                  >
+                    {r.avgOverallScore ?? '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )
