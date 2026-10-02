@@ -63,7 +63,7 @@ export function AdminInstitutionAssessmentsPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       <Nav />
-      <div className="max-w-6xl mx-auto px-6 py-12">
+      <div className="max-w-screen-2xl mx-auto px-6 py-12">
         <button
           onClick={() => navigate('/admin/institutions')}
           className="text-[12px] text-slate-mid hover:text-[#f5f3ee] transition-colors mb-3"
