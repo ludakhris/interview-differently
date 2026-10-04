@@ -519,7 +519,7 @@ export function HomePage() {
               <div className="ld-footer-brand">
                 <span className="ld-footer-name">learn/differently</span>
                 <span>Priced for a cohort, not a campus.</span>
-                <span className="ld-mono">learndifferently.online</span>
+                <span className="ld-mono">learndifferently.tech</span>
               </div>
               <nav aria-label="Footer" className="ld-footer-links">
                 <a href="#pricing">Pricing</a>

@@ -312,7 +312,7 @@ export function DelawarePage() {
           <div>
             <p className="de-footer-head">About this demo</p>
             <p id="about">
-              Built on the <strong>learn/differently</strong> platform (learndifferently.online).
+              Built on the <strong>learn/differently</strong> platform (learndifferently.tech).
               Participant progress and outcomes are tracked there and reported to the Division of
               Employment and Training. No real personal data is collected in this demo.
             </p>
