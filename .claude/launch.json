@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--workspace", "@id/api"],
       "port": 3000
+    },
+    {
+      "name": "learn",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace", "@id/learn"],
+      "port": 5174
     }
   ]
 }
