@@ -17,6 +17,7 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "prettier": "^3.2.0",
+    "railway": "^3.12.0",
     "turbo": "^2.0.0"
   },
   "engines": {

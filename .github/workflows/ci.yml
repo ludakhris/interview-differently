@@ -38,9 +38,31 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
+  railway-config:
+    name: Apply Railway config (.railway/railway.ts)
+    needs: [ci]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      # The railway SDK (root devDependency) evaluates .railway/railway.ts.
+      - run: npm install
+      - run: npm install -g @railway/cli@5.63.1
+      - run: railway config plan --verbose
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      # No --confirm-destructive: a plan that deletes anything fails here.
+      - run: railway config apply --yes
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
   deploy-api:
     name: Deploy API (Railway)
-    needs: [ci]
+    needs: [ci, railway-config]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     # A normal deploy takes ~2 min; `railway up` has hung for hours before.
