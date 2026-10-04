@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
 import { yamlToScenario, scenarioToYaml } from '@/lib/yamlScenario'
 import { validateScenarioDoc } from '../validate'
 
-const dir = join(__dirname, '../../lib/scenarios')
+const dir = join(__dirname, '../../../../api/prisma/scenarios')
 const files = readdirSync(dir).filter((f) => f.endsWith('.yaml'))
 
 describe('YAML round-trip', () => {

@@ -68,7 +68,7 @@ Planned additions: PostgreSQL (Railway), Redis session state (Railway), Anthropi
 
 ## Scenario data model
 
-All simulation content lives in `apps/web/src/lib/scenarios.ts` and is fully typed via `packages/types`. Swapping static config for API responses requires only updating `apps/web/src/services/scenariosService.ts`.
+Built-in simulation content lives in YAML files in `apps/api/prisma/scenarios/`, seeded into Postgres on every API deploy and fully typed via `packages/types`. The web app fetches scenarios from the API through `apps/web/src/services/scenariosService.ts`.
 
 Each scenario defines:
 

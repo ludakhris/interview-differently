@@ -170,7 +170,8 @@ async function main() {
   })
   console.log('✓ Platform config seeded.')
 
-  const scenariosDir = resolve(__dirname, '../../../apps/web/src/lib/scenarios')
+  // Inside apps/api so the Railway container (root /apps/api) has them.
+  const scenariosDir = resolve(__dirname, 'scenarios')
 
   console.log('🌱 Seeding scenarios from YAML files...')
 

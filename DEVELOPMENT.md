@@ -55,7 +55,7 @@ API runs at http://localhost:3000/api/health
 cd apps/api && npm run db:reset
 ```
 
-This wipes all data and re-seeds from the static YAML files in `apps/web/src/lib/scenarios/`. The YAML files are the source of truth for built-in scenarios.
+This wipes all data and re-seeds from the static YAML files in `apps/api/prisma/scenarios/`. The YAML files are the source of truth for built-in scenarios.
 
 > **After a wipe: re-render avatar media.** The reset drops the `ScenarioMediaAsset` rows so every immersive scenario node will need its D-ID clip re-rendered before students can play it. Two ways:
 >

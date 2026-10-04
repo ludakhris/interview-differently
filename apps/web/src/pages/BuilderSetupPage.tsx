@@ -291,8 +291,8 @@ export function BuilderSetupPage() {
             </button>
             <p className="text-[11px] text-white/30 mt-2">
               Write the YAML offline (AI-assisted works well — see{' '}
-              <span className="font-mono">apps/web/src/lib/scenarios/</span> for the format).
-              Imports start as drafts.
+              <span className="font-mono">apps/api/prisma/scenarios/</span> for the format). Imports
+              start as drafts.
             </p>
           </div>
         )}
