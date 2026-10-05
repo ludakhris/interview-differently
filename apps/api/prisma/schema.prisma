@@ -156,6 +156,7 @@ model User {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   memberships Membership[]
+  enrollments Enrollment[]
 
   @@index([email])
 }
@@ -170,15 +171,30 @@ model Institution {
   // share a parent domain (e.g. both "harvard.edu" and "law.harvard.edu"
   // could exist, with longest-match-wins on the suggestion side).
   emailDomain String?
+  // LearnDifferently tenancy (#46). An institution is a tenant: it owns the
+  // learner data for the cohorts it runs. 'academic' = college or university;
+  // 'member' = nonprofit or other organization that runs cohorts; 'provider' =
+  // authors courses and offers them to the others; 'agency' = oversees
+  // providers (parentId points at it) and reads outcomes. Free text, not an
+  // enum, so new kinds need no migration.
+  kind        String       @default("member") // 'academic' | 'member' | 'provider' | 'agency'
+  subdomain   String?      @unique            // {subdomain}.learndifferently.tech
+  brand       Json?                            // { primary, accent, logoUrl, ... }
+  parentId    String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  parent      Institution?  @relation("InstitutionParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Institution[] @relation("InstitutionParent")
   cohorts     Cohort[]
   memberships Membership[]
   datasets    Dataset[]
   assessments Assessment[]
   scenarios   Scenario[]
+  courses     Course[]
+  offers      CourseOffer[]
 
   @@index([emailDomain])
+  @@index([parentId])
 }
 
 model Cohort {
@@ -189,15 +205,23 @@ model Cohort {
   // (decided 2026-09-13, closes #16): a key identifies exactly one cohort, so
   // the join flow never has to disambiguate between institutions.
   joinKey       String?      @unique
+  // LearnDifferently (#46): a cohort is one course, one roster, one start date
+  // and a fixed length. All null for Interview Differently cohorts.
+  courseId      String?
+  startsAt      DateTime?
+  endsAt        DateTime?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   institution   Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  course        Course?      @relation(fields: [courseId], references: [id], onDelete: SetNull)
   memberships   Membership[]
   datasets      CohortDataset[]
   tools         CohortToolConfig[]
   deliveries    AssessmentDelivery[]
+  enrollments   Enrollment[]
 
   @@index([institutionId])
+  @@index([courseId])
 }
 
 model Membership {
@@ -353,6 +377,105 @@ model AssessmentAttempt {
 
   @@unique([deliveryId, userId])
   @@index([userId])
+}
+
+// ── LearnDifferently LMS (#46) ──────────────────────────────────────────────
+//
+// A provider institution authors Courses and offers them (CourseOffer) to
+// member institutions. A member runs a Cohort of a course; learners join via
+// Enrollment and their per-item results live in ItemProgress. One learner can
+// be enrolled through several institutions. Pre/post scores, interview scores
+// and completion all roll up from ItemProgress, so reports have one source.
+
+model Course {
+  id          String         @id @default(uuid())
+  providerId  String
+  slug        String         @unique
+  title       String
+  summary     String?
+  sector      String?
+  credential  String?
+  lengthWeeks Int?
+  status      String         @default("published") // 'draft' | 'published'
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  provider    Institution    @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  modules     CourseModule[]
+  offers      CourseOffer[]
+  cohorts     Cohort[]
+
+  @@index([providerId])
+}
+
+model CourseModule {
+  id       String       @id @default(uuid())
+  courseId String
+  title    String
+  position Int
+  course   Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  items    CourseItem[]
+
+  @@index([courseId])
+}
+
+// type: 'lesson' | 'knowledge_check' | 'assessment' | 'interview' | 'scorm'.
+// `label` marks assessments as 'pre' or 'post'. `config` holds the type's
+// payload or reference (lesson body, assessment slug, scenario id, SCORM package).
+model CourseItem {
+  id       String         @id @default(uuid())
+  moduleId String
+  type     String
+  title    String
+  position Int
+  label    String?
+  config   Json           @default("{}")
+  module   CourseModule   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress ItemProgress[]
+
+  @@index([moduleId])
+}
+
+// A provider makes a course available to a member institution.
+model CourseOffer {
+  courseId      String
+  institutionId String
+  createdAt     DateTime    @default(now())
+  course        Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, institutionId])
+  @@index([institutionId])
+}
+
+model Enrollment {
+  id          String         @id @default(uuid())
+  cohortId    String
+  userId      String
+  status      String         @default("enrolled") // 'enrolled' | 'completed' | 'withdrawn'
+  enrolledAt  DateTime       @default(now())
+  completedAt DateTime?
+  cohort      Cohort         @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  progress    ItemProgress[]
+
+  @@unique([cohortId, userId])
+  @@index([userId])
+}
+
+model ItemProgress {
+  id           String     @id @default(uuid())
+  enrollmentId String
+  itemId       String
+  status       String     @default("not_started") // 'not_started' | 'in_progress' | 'completed'
+  score        Int? // 0-100 for assessments, knowledge checks and interviews
+  attempts     Int        @default(0)
+  completedAt  DateTime?
+  updatedAt    DateTime   @updatedAt
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  item         CourseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, itemId])
+  @@index([itemId])
 }
 
 // ── Tools: SQL sandbox query log ────────────────────────────────────────────
