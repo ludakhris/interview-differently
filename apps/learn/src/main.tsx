@@ -9,6 +9,7 @@ import { PrivacyPage } from './pages/PrivacyPage'
 import { SignInPage } from './pages/SignInPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ProductPage } from './pages/ProductPage'
+import { CatalogApp } from './dashboard/CatalogApp'
 import { DashboardApp } from './dashboard/DashboardApp'
 
 const { hostname, pathname, search } = window.location
@@ -37,6 +38,10 @@ function page(): ReactNode {
         search={search}
       />
     )
+  }
+  if (pathname === '/catalog' || pathname.startsWith('/catalog/')) {
+    const context = resolveContext(hostname, search)
+    return context.tenant ? <CatalogApp context={context} pathname={pathname} /> : <NotFoundPage />
   }
   const product = /^\/products\/([a-z-]+)\/?$/.exec(pathname)
   if (product) return <ProductPage id={product[1]} />

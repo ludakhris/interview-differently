@@ -1192,3 +1192,9 @@
     display: none;
   }
 }
+
+.ld-signin-note {
+  max-width: 24em;
+  margin: 12px auto 0;
+  text-align: center;
+}

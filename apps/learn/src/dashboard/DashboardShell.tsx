@@ -15,6 +15,12 @@ import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 /** The app's navigation, defined once for both skins and the account menu. */
 function useNav(): MenuLink[] {
   const { href, tenant, current } = useApp()
+  if (window.location.pathname.startsWith('/catalog')) {
+    return [
+      { label: 'Training catalog', href: href('/catalog') },
+      { label: 'My learning', href: href('/learning') },
+    ]
+  }
   if (window.location.pathname.startsWith('/learning')) {
     return [{ label: 'My learning', href: href('/learning') }]
   }
@@ -63,6 +69,16 @@ function AccountControl() {
   return <AccountMenu signedOut={null} links={links} />
 }
 
+/** The Delaware title bar names the area the visitor is in. */
+function titleFor(pathname: string): string {
+  if (pathname.startsWith('/sign-in')) return 'Sign in'
+  if (pathname.startsWith('/catalog')) return 'Training Catalog'
+  if (pathname.startsWith('/learning')) return 'My Learning'
+  if (pathname.startsWith('/courses')) return 'Course Setup'
+  if (pathname.startsWith('/cohorts')) return 'Cohorts'
+  return 'Program Outcomes'
+}
+
 /** Page frame for the signed-in views, in the Delaware DoL or LearnDifferently skin. */
 export function DashboardShell({ children }: { children: ReactNode }) {
   const { brand } = useApp()
@@ -96,7 +112,7 @@ function DelawareFrame({ children }: { children: ReactNode }) {
       </header>
       <div className="de-titlebar">
         <div className="de-wrap de-titlebar-inner">
-          <span className="de-titlebar-name">Program Outcomes</span>
+          <span className="de-titlebar-name">{titleFor(window.location.pathname)}</span>
           <span className="de-titlebar-powered">
             Powered by{' '}
             <strong>

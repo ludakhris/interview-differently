@@ -42,9 +42,11 @@ export function DashboardApp({
 
 function Gate({ pathname, search }: { pathname: string; search: string }) {
   const { isLoaded, isSignedIn } = useAuth()
+  const { query } = useApp()
   if (isLoaded && !isSignedIn) {
-    // Come back to the same page, in the same skin, after signing in.
-    window.location.replace(`/sign-in?redirect_url=${encodeURIComponent(pathname + search)}`)
+    // Come back to the same page after signing in, and keep the same skin on the way.
+    const skin = query ? `&${query.slice(1)}` : ''
+    window.location.replace(`/sign-in?redirect_url=${encodeURIComponent(pathname + search)}${skin}`)
     return null
   }
   if (!isLoaded) return null

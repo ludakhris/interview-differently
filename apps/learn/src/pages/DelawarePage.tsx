@@ -1,4 +1,11 @@
+import { useState, type FormEvent } from 'react'
+import { AccountMenu } from '../auth'
+import { resolveContext, withContext } from '../brand'
+import { CONTACT_EMAIL } from '../contact'
+import '../dashboard/dashboard.css'
+import { usePublic } from '../public-api'
 import './delaware.css'
+import './home.css'
 
 // Demonstration tenant for the Delaware Department of Labor. All providers,
 // people and numbers here are fictional sample content.
@@ -68,28 +75,78 @@ const ROLES = [
   {
     title: 'Job Seeker',
     body: 'Practice interviews for your target job and track your readiness.',
-    href: '#practice',
+    href: '/learning',
   },
   {
     title: 'Student',
     body: 'Enrolled with an approved training provider? Add your cohort code to begin.',
-    href: '#catalog',
+    href: '/catalog',
   },
   {
     title: 'Training Provider',
     body: 'List one offering, run your cohort, and report progress and completions.',
-    href: '#providers',
+    href: '/courses',
   },
   {
     title: 'Case Manager',
     body: 'See participant progress and readiness in one place, by cohort.',
-    href: '#progress',
+    href: '/dashboard',
   },
 ]
 
+interface LiveOffering {
+  id: string
+  sector: string
+  program: string
+  provider: string
+  length: string
+  credential: string
+}
+
 export function DelawarePage() {
+  const ctx = resolveContext(window.location.hostname, window.location.search)
+  // From the Delaware page, links stay in the Delaware skin even when it is shown
+  // off the Delaware host (e.g. locally, or from the root domain with ?site=delaware).
+  const to = (path: string) => {
+    if (ctx.fixedTenant || !ctx.tenant) return withContext(ctx, path)
+    const params = new URLSearchParams(ctx.query)
+    params.set('site', ctx.tenant)
+    params.set('brand', 'delaware')
+    return `${path}?${params.toString()}`
+  }
+  const [q, setQ] = useState('')
+  // The catalog comes from the platform; the sample list below stands in until it loads.
+  const live = usePublic<
+    {
+      id: string
+      title: string
+      sector: string | null
+      provider: string
+      lengthWeeks: number | null
+      credential: string | null
+    }[]
+  >(ctx.tenant ? `/learn/public/${encodeURIComponent(ctx.tenant)}/catalog` : null)
+  const offerings: (LiveOffering | ((typeof CATALOG)[number] & { id?: undefined }))[] = live.data
+    ?.length
+    ? live.data.slice(0, 5).map((c) => ({
+        id: c.id,
+        sector: c.sector ?? 'Training',
+        program: c.title,
+        provider: c.provider,
+        length: c.lengthWeeks ? `${c.lengthWeeks} weeks` : 'Length varies',
+        credential: c.credential ?? '—',
+      }))
+    : CATALOG
+
+  function search(e: FormEvent) {
+    e.preventDefault()
+    const url = new URL(to('/catalog'), window.location.origin)
+    if (q.trim()) url.searchParams.set('q', q.trim())
+    window.location.assign(url)
+  }
+
   return (
-    <div className="de">
+    <div className="de dash-brand-delaware">
       <div className="de-proto-bar" role="note">
         <strong>Demonstration prototype</strong>
         <span>Sample content only. This is not an official State of Delaware website.</span>
@@ -111,22 +168,40 @@ export function DelawarePage() {
               <a href="#catalog">Training Catalog</a>
             </li>
             <li>
-              <a href="#progress">My Progress</a>
+              <a href={to('/learning')}>My Progress</a>
             </li>
             <li>
               <a href="#providers">For Providers</a>
             </li>
           </ul>
         </nav>
-        <form role="search" className="de-search" onSubmit={(e) => e.preventDefault()}>
+        <form role="search" className="de-search" onSubmit={search}>
           <label htmlFor="de-q" className="de-visually-hidden">
             Search
           </label>
-          <input id="de-q" type="search" placeholder="Search" />
+          <input
+            id="de-q"
+            type="search"
+            placeholder="Search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
           <button type="submit" className="de-btn">
             Go
           </button>
         </form>
+        <AccountMenu
+          signedOut={
+            <a className="de-signin" href={to('/sign-in')}>
+              Sign in
+            </a>
+          }
+          links={[
+            { label: 'My learning', href: to('/learning') },
+            { label: 'Training catalog', href: to('/catalog') },
+            { label: 'Outcomes dashboard', href: to('/dashboard') },
+          ]}
+        />
       </header>
 
       <div className="de-titlebar">
@@ -152,10 +227,10 @@ export function DelawarePage() {
               Available to Delawareans enrolled with an approved training provider.
             </p>
             <div className="de-actions">
-              <a href="#practice" className="de-btn">
+              <a href={to('/learning')} className="de-btn">
                 Start a Practice Interview
               </a>
-              <a href="#catalog" className="de-btn de-btn-outline">
+              <a href={to('/catalog')} className="de-btn de-btn-outline">
                 Browse Training
               </a>
             </div>
@@ -198,7 +273,7 @@ export function DelawarePage() {
                 The Division of Employment and Training receives completion and skill-gain records
                 in the format Delaware JobLink reporting expects.
               </p>
-              <a href="#providers" className="de-btn de-btn-white">
+              <a href={to('/courses')} className="de-btn de-btn-white">
                 For Training Providers
               </a>
             </div>
@@ -224,7 +299,7 @@ export function DelawarePage() {
               <article key={r.title} className="de-role">
                 <h3 className="de-h3">{r.title}</h3>
                 <p>{r.body}</p>
-                <a href={r.href}>Learn More</a>
+                <a href={to(r.href)}>Learn More</a>
               </article>
             ))}
           </div>
@@ -241,7 +316,7 @@ export function DelawarePage() {
                 loud or by typing, get scored feedback on each answer, and try again. Your best
                 attempt goes on your readiness record.
               </p>
-              <a href="#practice" className="de-btn de-btn-white">
+              <a href={to('/learning')} className="de-btn de-btn-white">
                 Start a Practice Interview
               </a>
             </div>
@@ -264,19 +339,19 @@ export function DelawarePage() {
             the list published September 24, 2026.
           </p>
           <div className="de-catalog">
-            {CATALOG.map((c) => (
+            {offerings.map((c) => (
               <article key={c.program} className="de-offering">
                 <p className="de-sector">{c.sector}</p>
                 <h3 className="de-h3">{c.program}</h3>
                 <p className="de-offering-meta">
                   {c.provider} · {c.length} · Credential: {c.credential}
                 </p>
-                <a href="#catalog">View Offering</a>
+                <a href={to(c.id ? `/catalog/${c.id}` : '/catalog')}>View Offering</a>
               </article>
             ))}
             <article className="de-offering de-offering-more">
               <p className="de-card-title">More providers</p>
-              <a href="#catalog">See the Full Catalog</a>
+              <a href={to('/catalog')}>See the Full Catalog</a>
             </article>
           </div>
         </section>
@@ -288,7 +363,10 @@ export function DelawarePage() {
             knowledge checks, or upload existing content in minutes. There is no course packaging
             step and no per-seat license.
           </p>
-          <a href="#providers" className="de-btn">
+          <a
+            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Provider access request')}`}
+            className="de-btn"
+          >
             Request Provider Access
           </a>
         </section>

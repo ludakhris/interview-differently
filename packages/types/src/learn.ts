@@ -306,3 +306,25 @@ export interface LearnerItem {
   /** Set when the learner can still act on it. */
   locked: string | null
 }
+
+// ── Public catalog (#49) ────────────────────────────────────────────────────
+
+/** An offering in an agency's training catalog: a published course of a provider the agency lists. */
+export interface CatalogCourse {
+  id: string
+  title: string
+  summary: string | null
+  sector: string | null
+  credential: string | null
+  lengthWeeks: number | null
+  provider: string
+  /** Start date of the next cohort that has not begun, if any. */
+  nextStart: string | null
+  openCohorts: number
+}
+
+export interface CatalogOffering extends CatalogCourse {
+  modules: { title: string; items: number }[]
+  /** Cohorts a learner could still join. Join codes are never public. */
+  cohorts: { name: string; startsAt: string | null; endsAt: string | null; status: CohortStatus }[]
+}

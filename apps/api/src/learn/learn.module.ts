@@ -9,6 +9,8 @@ import { LearnController } from './learn.controller'
 import { LearnerController } from './learner.controller'
 import { LearnerService } from './learner.service'
 import { LearnService } from './learn.service'
+import { PublicCatalogController } from './public-catalog.controller'
+import { PublicCatalogService } from './public-catalog.service'
 import { ScormController, ScormFilesController } from './scorm.controller'
 import { ScormService } from './scorm.service'
 
@@ -21,7 +23,15 @@ import { ScormService } from './scorm.service'
     LearnerController,
     ScormController,
     ScormFilesController,
+    PublicCatalogController,
   ],
-  providers: [LearnService, CoursesService, LearnCohortsService, LearnerService, ScormService],
+  providers: [
+    LearnService,
+    CoursesService,
+    LearnCohortsService,
+    LearnerService,
+    ScormService,
+    PublicCatalogService,
+  ],
 })
 export class LearnModule {}

@@ -1259,3 +1259,74 @@
   border-radius: var(--dash-radius, 0);
   background: #fff;
 }
+
+/* Catalog */
+.dash-kicker {
+  margin: 0 0 4px;
+  color: var(--orange-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.dash-catalog-search {
+  max-width: 44em;
+  margin-bottom: 24px;
+}
+.dash-btn-link {
+  display: inline-block;
+  text-decoration: none;
+  text-align: center;
+}
+.dash-offering-summary {
+  max-width: 46em;
+  margin: 0 0 24px;
+  font-size: 17px;
+  line-height: 1.6;
+}
+.dash-offering-modules,
+.dash-offering-cohorts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dash-offering-modules li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dash-offering-cohorts {
+  margin-bottom: 14px;
+}
+.dash-offering-cohorts li {
+  display: grid;
+  gap: 2px;
+}
+
+.dash-signin {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  max-width: 480px;
+  margin: 8px auto 40px;
+}
+.dash-signin .dash-sub {
+  margin-bottom: 12px;
+}
+
+/* Links styled as buttons keep their button colours (the page's link colour is more specific). */
+.dash a.dash-btn,
+.dash a.dash-btn:hover {
+  color: var(--on-dark);
+  text-decoration: none;
+}
+.dash a.dash-btn-secondary {
+  color: var(--navy);
+  text-decoration: none;
+}
+.dash .dash-offering-summary {
+  margin: 0 0 28px;
+}
