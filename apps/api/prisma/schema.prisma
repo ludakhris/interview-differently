@@ -404,6 +404,9 @@ model Course {
   // Best interview score (0-100) at or above which a learner counts as "interview
   // ready" in reports. Set by whoever authors the course.
   readinessThreshold Int         @default(70)
+  // Post-assessment score (0-100) a learner must reach to count as meeting the
+  // course target in reports. Set by whoever authors the course.
+  targetScore Int                @default(80)
   status      String         @default("published") // 'draft' | 'published'
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt

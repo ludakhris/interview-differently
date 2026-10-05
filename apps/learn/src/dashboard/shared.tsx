@@ -6,8 +6,8 @@ export function errorNotice(error: Error) {
   if (error instanceof ApiError && error.status === 403) {
     return (
       <Notice title="Your account does not have access">
-        Program outcomes are available to agency administrators and case managers. Ask the
-        administrator of this tenant to give your account the right role.
+        You can open the workspaces your account has been added to. Ask an administrator of this
+        workspace to give you access.
       </Notice>
     )
   }

@@ -13,6 +13,10 @@ export interface LearnMeasures {
   avgPost: number | null
   /** Mean pre→post change over learners with both scores, in points. */
   avgGain: number | null
+  /** Learners whose post-assessment score meets the course's target score. */
+  reachedTarget: number
+  /** Share of finished-cohort learners who reached the target; null while nothing has finished. */
+  targetRate: number | null
   /** Learners whose best interview score meets the course's readiness threshold. */
   interviewReady: number
   /** interviewReady / enrolled. */
@@ -39,6 +43,7 @@ export interface OutcomesCohortRow extends LearnMeasures {
   endsAt: string | null
   status: 'running' | 'completed'
   readinessThreshold: number
+  targetScore: number
 }
 
 export interface FunnelStage {
@@ -67,6 +72,7 @@ export interface GradebookRow {
   gain: number | null
   interviewBest: number | null
   interviewAttempts: number
+  reachedTarget: boolean
   interviewReady: boolean
   itemsDone: number
   itemsTotal: number
@@ -76,4 +82,12 @@ export interface GradebookRow {
 export interface Gradebook {
   cohort: OutcomesCohortRow
   learners: GradebookRow[]
+}
+
+/** A tenant the signed-in person may open, e.g. an agency such as the Delaware Department of Labor. */
+export interface LearnWorkspace {
+  id: string
+  name: string
+  kind: string
+  subdomain: string
 }

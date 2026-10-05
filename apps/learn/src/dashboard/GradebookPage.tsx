@@ -2,6 +2,7 @@ import type { Gradebook } from '@id/types'
 import { useLoad } from './api'
 import { Meter, StatTile } from './charts'
 import { dateShort, pct, points, score } from './format'
+import { useApp } from './app-context'
 import { errorNotice, useRole } from './shared'
 
 export function GradebookPage({ tenant, cohortId }: { tenant: string; cohortId: string }) {
@@ -15,15 +16,16 @@ export function GradebookPage({ tenant, cohortId }: { tenant: string; cohortId: 
 }
 
 export function GradebookView({ data, role }: { data: Gradebook; role?: string }) {
+  const { href } = useApp()
   const c = data.cohort
   return (
     <>
       <p className="dash-back">
-        <a href="/dashboard">← All cohorts</a>
+        <a href={href('/dashboard')}>← All cohorts</a>
       </p>
       <div className="dash-head">
         <div>
-          <h1 className="de-h2">{c.cohort}</h1>
+          <h1 className="dash-h2">{c.cohort}</h1>
           <p className="dash-sub">
             {c.provider}
             {c.host !== c.provider ? ` · run by ${c.host}` : ''} · {dateShort(c.startsAt)} to{' '}
@@ -41,9 +43,9 @@ export function GradebookView({ data, role }: { data: Gradebook; role?: string }
           note={c.status === 'running' ? 'Cohort still running' : pct(c.completionRate)}
         />
         <StatTile
-          label="Average skill growth"
-          value={`${points(c.avgGain)} pts`}
-          note={`Pre ${score(c.avgPre)} → post ${score(c.avgPost)}`}
+          label="Reached target score"
+          value={String(c.reachedTarget)}
+          note={`Post-assessment ${c.targetScore} or higher. Average score ${score(c.avgPre)} → ${score(c.avgPost)}`}
         />
         <StatTile
           label="Interview ready"
@@ -66,8 +68,9 @@ export function GradebookView({ data, role }: { data: Gradebook; role?: string }
                   Post
                 </th>
                 <th scope="col" className="num">
-                  Change
+                  Change (% points)
                 </th>
+                <th scope="col">Target score</th>
                 <th scope="col" className="num">
                   Best interview
                 </th>
@@ -90,6 +93,15 @@ export function GradebookView({ data, role }: { data: Gradebook; role?: string }
                   <td className="num">{score(l.pre)}</td>
                   <td className="num">{score(l.post)}</td>
                   <td className="num">{points(l.gain)}</td>
+                  <td>
+                    {l.reachedTarget ? (
+                      <span className="dash-pill dash-pill-ready">Met</span>
+                    ) : l.post !== null ? (
+                      <span className="dash-pill">Not met</span>
+                    ) : (
+                      <span className="dash-muted">—</span>
+                    )}
+                  </td>
                   <td className="num">
                     {score(l.interviewBest)}
                     {l.interviewAttempts > 0 && (

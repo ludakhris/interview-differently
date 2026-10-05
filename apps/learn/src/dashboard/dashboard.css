@@ -18,7 +18,8 @@
   padding-top: 32px;
   padding-bottom: 64px;
 }
-.dash .de-h2 {
+.dash-h2 {
+  margin: 0;
   font: 700 28px/1.2 var(--display);
   color: var(--navy);
 }
@@ -41,10 +42,6 @@
   flex-direction: column;
   gap: 6px;
   align-items: flex-end;
-}
-.dash .de-btn:disabled {
-  opacity: 0.6;
-  cursor: progress;
 }
 .dash-error {
   color: var(--orange-text);
@@ -470,5 +467,190 @@
   }
   .dash-plot-wrap {
     margin-right: 36px;
+  }
+}
+
+.dash-axis-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-align: right;
+}
+
+/* Skins. The Delaware skin gets its tokens from .de (delaware.css); the
+   LearnDifferently skin maps the same names onto .ld (home.css). Data colours
+   below (pre/post/ready/funnel) are shared so charts stay identical. */
+.dash-brand-delaware {
+  --dash-radius: 0;
+  --dash-notice-shadow: 10px 10px 0 var(--orange);
+  --dash-body: 'Open Sans', Helvetica, Arial, sans-serif;
+}
+.dash-brand-learn {
+  --navy: var(--ink);
+  --blue: var(--teal);
+  --sky: #e6eef4;
+  --ink-soft: var(--muted);
+  --border: var(--line);
+  --surface: #ffffff;
+  --surface-alt: #eef2f5;
+  --on-dark: #ffffff;
+  --display: 'Manrope', system-ui, sans-serif;
+  --dash-radius: 12px;
+  --dash-notice-shadow: none;
+  --dash-body: 'Manrope', system-ui, sans-serif;
+}
+.dash-brand-learn .dash-main {
+  max-width: 1240px;
+}
+.dash-brand-learn a {
+  color: var(--blue);
+}
+.dash-brand-learn a:hover {
+  color: var(--orange-text);
+}
+.dash-brand-learn .dash-tile,
+.dash-brand-learn .dash-notice,
+.dash-brand-learn .dash-readonly,
+.dash-brand-learn .dash-pill {
+  border-radius: var(--dash-radius);
+}
+.dash-brand-learn .dash-tile {
+  border-top-width: 1px;
+  background: var(--surface);
+}
+.dash-brand-learn .dash-tile-value {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.dash-brand-learn .dash-h2 {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.dash-brand-learn .dash-tip {
+  border-radius: 8px;
+}
+.dash-brand-learn .dash-group {
+  font-weight: 800;
+}
+.dash-notice {
+  box-shadow: var(--dash-notice-shadow);
+}
+.dash-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.dash-switch {
+  margin: 0;
+  padding: 24px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.dash-workspace {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+}
+.dash-switcher-label {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.dash-workspace select {
+  flex: 1;
+  min-width: 0;
+  max-width: 30em;
+  padding: 8px 12px;
+  border: 1px solid var(--ink-soft);
+  border-radius: var(--dash-radius, 0);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+}
+.dash-workspaces {
+  display: grid;
+  gap: 12px;
+  max-width: 32em;
+  margin: 24px 0;
+  padding: 0;
+  list-style: none;
+}
+.dash-workspaces a {
+  display: block;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--dash-radius, 0);
+  background: var(--surface);
+  font-weight: 700;
+  text-decoration: none;
+}
+.dash-workspaces a:hover {
+  border-color: var(--navy);
+}
+
+/* Account menu (shared with the homepage) in the dashboard skins. */
+.dash .ld-account-menu a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: var(--dash-radius, 0);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.dash .ld-account-menu a:hover,
+.dash .ld-account-menu a:focus-visible {
+  background: var(--surface-alt);
+  color: var(--ink);
+}
+.dash-brand-delaware {
+  --white: #ffffff;
+  --line: var(--border);
+  --faint: var(--ink-soft);
+  --paper: var(--surface-alt);
+}
+.dash-brand-delaware .ld-account-trigger {
+  border-color: var(--navy);
+  border-radius: 0;
+  color: var(--navy);
+}
+.dash-brand-delaware .ld-account-avatar {
+  border-radius: 0;
+  background: var(--navy);
+}
+.dash-brand-delaware .ld-account-menu,
+.dash-brand-delaware .ld-account-menu button {
+  border-radius: 0;
+}
+.dash-brand-delaware .ld-account-menu {
+  box-shadow: 6px 6px 0 var(--orange);
+}
+.dash-brand-delaware .ld-account-trigger:hover,
+.dash-brand-delaware .ld-account-trigger[aria-expanded='true'] {
+  background: var(--sky);
+}
+@media (max-width: 960px) {
+  .dash-brand-delaware .de-header > nav {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 640px) {
+  .dash-workspace {
+    flex-wrap: wrap;
+    gap: 6px;
   }
 }

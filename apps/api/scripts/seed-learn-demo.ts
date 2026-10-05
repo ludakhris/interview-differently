@@ -156,6 +156,7 @@ interface Profile {
   interview: number // mean best interview score
   lessons: string[]
   scenarioId: string
+  agency?: 'chesapeake' // omitted = the Delaware agency
 }
 
 const PROFILES: Profile[] = [
@@ -269,6 +270,75 @@ const PROFILES: Profile[] = [
     ],
     scenarioId: 'cdl-driver-interview',
   },
+  {
+    key: 'bayline',
+    agency: 'chesapeake',
+    provider: 'Bayline Logistics Academy',
+    subdomain: 'bayline',
+    program: 'Warehouse and Logistics Technician',
+    slug: 'warehouse-logistics-technician',
+    sector: 'Transportation',
+    credential: 'Forklift Certification',
+    lengthWeeks: 8,
+    pre: 56,
+    gain: 26,
+    completion: 0.86,
+    interview: 80,
+    lessons: [
+      'Warehouse safety',
+      'Receiving and put-away',
+      'Inventory and scanning systems',
+      'Forklift operation basics',
+      'Shipping and customer orders',
+    ],
+    scenarioId: 'logistics-technician-interview',
+  },
+  {
+    key: 'marsh-creek',
+    agency: 'chesapeake',
+    provider: 'Marsh Creek Community Training',
+    subdomain: 'marshcreek',
+    program: 'Food Service Management',
+    slug: 'food-service-management',
+    sector: 'Hospitality',
+    credential: 'ServSafe Manager',
+    lengthWeeks: 10,
+    pre: 60,
+    gain: 22,
+    completion: 0.9,
+    interview: 82,
+    lessons: [
+      'Food safety and sanitation',
+      'Kitchen operations',
+      'Menu costing',
+      'Scheduling and teams',
+      'Guest service',
+    ],
+    scenarioId: 'food-service-manager-interview',
+  },
+  {
+    key: 'ridgeline',
+    agency: 'chesapeake',
+    provider: 'Ridgeline Advanced Manufacturing Center',
+    subdomain: 'ridgeline',
+    program: 'CNC Machinist Trainee',
+    slug: 'cnc-machinist-trainee',
+    sector: 'Manufacturing',
+    credential: 'NIMS Level 1',
+    lengthWeeks: 14,
+    pre: 49,
+    gain: 31,
+    completion: 0.81,
+    interview: 77,
+    lessons: [
+      'Shop safety',
+      'Blueprint reading',
+      'Measuring and inspection',
+      'CNC setup and operation',
+      'Quality and teamwork',
+    ],
+    scenarioId: 'cnc-machinist-interview',
+  },
 ]
 
 // Three cohorts per provider: two finished, one running now.
@@ -280,6 +350,7 @@ const COHORT_PLAN = [
 ]
 
 const AGENCY_ID = 'demo-inst-delaware-dol'
+const CHESAPEAKE_ID = 'demo-inst-chesapeake-workforce'
 const MEMBER_ID = 'demo-inst-wilmington-workforce'
 
 // ── arg + safety checks ─────────────────────────────────────────────────────
@@ -366,6 +437,22 @@ async function load(prisma: PrismaClient) {
     },
   })
 
+  // A second agency, so one signed-in user can have more than one workspace.
+  await prisma.institution.create({
+    data: {
+      id: CHESAPEAKE_ID,
+      name: 'Chesapeake Region Workforce Board (demonstration)',
+      kind: 'agency',
+      subdomain: 'chesapeake',
+      brand: {
+        primary: '#1f4e3d',
+        accent: '#c9822b',
+        sky: '#e3f1ea',
+        name: 'Chesapeake Region Workforce Board',
+      },
+    },
+  })
+
   const learnerRows = new Map<string, string>() // id -> displayName
   const counts = { courses: 0, cohorts: 0, enrollments: 0, progress: 0 }
 
@@ -376,7 +463,7 @@ async function load(prisma: PrismaClient) {
         id: providerId,
         name: p.provider,
         kind: 'provider',
-        parentId: AGENCY_ID,
+        parentId: p.agency === 'chesapeake' ? CHESAPEAKE_ID : AGENCY_ID,
         subdomain: p.subdomain,
       },
     })
@@ -392,6 +479,7 @@ async function load(prisma: PrismaClient) {
         sector: p.sector,
         credential: p.credential,
         lengthWeeks: p.lengthWeeks,
+        targetScore: 75,
         summary: `${p.program} offered by ${p.provider}. Sample content.`,
       },
     })
@@ -492,7 +580,7 @@ async function load(prisma: PrismaClient) {
           institutionId: hostId,
           courseId,
           name: `${p.program} ${startsAt.getUTCFullYear()}-${plan.label}`,
-          joinKey: `de-${p.key}-${plan.label.toLowerCase()}`,
+          joinKey: `${p.agency === 'chesapeake' ? 'ch' : 'de'}-${p.key}-${plan.label.toLowerCase()}`,
           startsAt,
           endsAt,
         },

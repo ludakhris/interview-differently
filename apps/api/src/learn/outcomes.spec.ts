@@ -22,6 +22,7 @@ function row(over: Partial<EnrollmentRow>): EnrollmentRow {
     program: 'Medical Assistant',
     credential: 'CCMA',
     readinessThreshold: 70,
+    targetScore: 80,
     providerId: 'p1',
     providerName: 'Harbor Point',
     pre: null,
@@ -53,6 +54,20 @@ describe('measures', () => {
     expect(m.interviewReady).toBe(1) // 70 meets the threshold, 69 does not
     expect(m.readyRate).toBe(0.25)
     expect(m.completionRate).toBe(0.5)
+  })
+
+  it('counts learners who reach the course target score; the rate covers finished cohorts only', () => {
+    const m = measures(
+      [
+        row({ enrollmentId: 'a', status: 'completed', post: 80 }), // meets the target exactly
+        row({ enrollmentId: 'b', status: 'completed', post: 79 }),
+        row({ enrollmentId: 'c', status: 'withdrawn' }),
+        row({ enrollmentId: 'd', endsAt: RUNNING, post: 95 }), // running: counted, not in the rate
+      ],
+      NOW
+    )
+    expect(m.reachedTarget).toBe(2)
+    expect(m.targetRate).toBe(0.333) // 1 of the 3 learners in finished cohorts
   })
 
   it("uses each course's own readiness threshold", () => {
@@ -147,7 +162,7 @@ describe('exitFileCsv', () => {
     const [header, line] = csv.trim().split('\r\n')
     expect(header.startsWith('participant_id,participant_name,training_provider')).toBe(true)
     expect(line).toBe(
-      'u,Ann Lee,Harbor Point,Medical Assistant,CCMA,MA 2026-A,2026-04-01,2026-08-01,completed,2026-07-20,50,80,30,75,yes,10,10'
+      'u,Ann Lee,Harbor Point,Medical Assistant,CCMA,MA 2026-A,2026-04-01,2026-08-01,completed,2026-07-20,50,80,30,80,yes,75,yes,10,10'
     )
   })
 

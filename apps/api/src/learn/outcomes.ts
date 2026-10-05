@@ -25,6 +25,7 @@ export interface EnrollmentRow {
   program: string
   credential: string | null
   readinessThreshold: number
+  targetScore: number
   providerId: string
   providerName: string
   pre: number | null
@@ -44,6 +45,9 @@ const rate = (n: number, d: number): number | null =>
 export const isReady = (r: EnrollmentRow): boolean =>
   r.interviewBest !== null && r.interviewBest >= r.readinessThreshold
 
+export const reachedTarget = (r: EnrollmentRow): boolean =>
+  r.post !== null && r.post >= r.targetScore
+
 export const isFinished = (r: EnrollmentRow, now: Date): boolean =>
   r.endsAt !== null && r.endsAt.getTime() <= now.getTime()
 
@@ -62,6 +66,8 @@ export function measures(rows: EnrollmentRow[], now: Date): LearnMeasures {
     avgPre: mean(pre.map((r) => r.pre as number)),
     avgPost: mean(post.map((r) => r.post as number)),
     avgGain: mean(both.map((r) => (r.post as number) - (r.pre as number))),
+    reachedTarget: rows.filter(reachedTarget).length,
+    targetRate: rate(finished.filter(reachedTarget).length, finished.length),
     interviewReady: ready,
     readyRate: rate(ready, rows.length),
   }
@@ -94,6 +100,7 @@ export function cohortRows(rows: EnrollmentRow[], now: Date): OutcomesCohortRow[
         endsAt: f.endsAt?.toISOString() ?? null,
         status: isFinished(f, now) ? ('completed' as const) : ('running' as const),
         readinessThreshold: f.readinessThreshold,
+        targetScore: f.targetScore,
       }
     })
     .sort((a, b) => (a.startsAt ?? '').localeCompare(b.startsAt ?? ''))
@@ -167,6 +174,7 @@ export function gradebook(cohortId: string, rows: EnrollmentRow[], now: Date): G
       gain: r.pre !== null && r.post !== null ? r.post - r.pre : null,
       interviewBest: r.interviewBest,
       interviewAttempts: r.interviewAttempts,
+      reachedTarget: reachedTarget(r),
       interviewReady: isReady(r),
       itemsDone: r.itemsDone,
       itemsTotal: r.itemsTotal,

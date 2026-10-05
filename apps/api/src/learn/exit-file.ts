@@ -1,4 +1,4 @@
-import { isReady, type EnrollmentRow } from './outcomes'
+import { isReady, reachedTarget, type EnrollmentRow } from './outcomes'
 
 const COLUMNS = [
   'participant_id',
@@ -14,6 +14,8 @@ const COLUMNS = [
   'pre_assessment_score',
   'post_assessment_score',
   'score_change',
+  'target_score',
+  'reached_target',
   'best_interview_score',
   'interview_ready',
   'items_completed',
@@ -55,6 +57,8 @@ export function exitFileCsv(rows: EnrollmentRow[]): string {
       r.pre,
       r.post,
       r.pre !== null && r.post !== null ? r.post - r.pre : null,
+      r.targetScore,
+      reachedTarget(r) ? 'yes' : 'no',
       r.interviewBest,
       isReady(r) ? 'yes' : 'no',
       r.itemsDone,

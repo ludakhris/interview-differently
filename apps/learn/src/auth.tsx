@@ -29,12 +29,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 /** Header account slot: `signedOut` for visitors, the account menu once signed in. */
-export function AccountMenu({ signedOut }: { signedOut: ReactNode }) {
-  if (!authConfigured) return <>{signedOut}</>
-  return <ClerkAccountMenu signedOut={signedOut} />
+/** Links shown in the signed-in menu above Profile / Sign out. */
+export interface MenuLink {
+  label: string
+  href: string
 }
 
-function ClerkAccountMenu({ signedOut }: { signedOut: ReactNode }) {
+export function AccountMenu({ signedOut, links }: { signedOut: ReactNode; links?: MenuLink[] }) {
+  if (!authConfigured) return <>{signedOut}</>
+  return <ClerkAccountMenu signedOut={signedOut} links={links} />
+}
+
+function ClerkAccountMenu({ signedOut, links }: { signedOut: ReactNode; links?: MenuLink[] }) {
   const { isLoaded, isSignedIn, user } = useUser()
   // Most visitors are signed out, so show their links while Clerk loads.
   if (!isLoaded || !isSignedIn) return <>{signedOut}</>
@@ -45,6 +51,7 @@ function ClerkAccountMenu({ signedOut }: { signedOut: ReactNode }) {
       fullName={user.fullName ?? email}
       email={email}
       imageUrl={user.hasImage ? user.imageUrl : undefined}
+      links={links}
     />
   )
 }
@@ -54,6 +61,7 @@ function SignedInMenu(props: {
   fullName: string
   email: string
   imageUrl?: string
+  links?: MenuLink[]
 }) {
   const { openUserProfile, signOut } = useClerk()
   const [open, setOpen] = useState(false)
@@ -100,8 +108,12 @@ function SignedInMenu(props: {
             <strong>{props.fullName}</strong>
             <span>{props.email}</span>
           </div>
-          {/* App links (dashboard, courses, reports) go in this list as they are built. */}
           <ul>
+            {props.links?.map((l) => (
+              <li key={l.label}>
+                <a href={l.href}>{l.label}</a>
+              </li>
+            ))}
             <li>
               <button
                 type="button"

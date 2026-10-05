@@ -10,37 +10,46 @@ interface LearnRequest {
 const READERS = [LEARN_ROLES.agencyAdmin, LEARN_ROLES.caseManager]
 
 /**
- * Agency reporting for a LearnDifferently tenant, e.g. ?tenant=delaware.
- * Agency admins see everything; case managers get the same reads (outcomes
- * and gradebooks) but not the exit file. Demo-grade scoping: the tenant comes
- * from the query, not from the caller's membership.
+ * Reporting for LearnDifferently workspaces. `?tenant=delaware` names the
+ * workspace; every call checks the caller may open it (agency admins: every
+ * agency; others: agencies they hold a membership in). Case managers can read
+ * outcomes and gradebooks but not the exit file.
  */
-@Controller('learn/agency')
+@Controller('learn')
 @UseGuards(LearnGuard)
 export class LearnController {
   constructor(private readonly service: LearnService) {}
 
-  @Get('outcomes')
-  outcomes(@Req() req: LearnRequest, @Query('tenant') tenant: string) {
+  /** Workspaces the signed-in person may open. */
+  @Get('workspaces')
+  workspaces(@Req() req: LearnRequest) {
+    return this.service.workspaces(req.userId, req.userRole)
+  }
+
+  @Get('agency/outcomes')
+  async outcomes(@Req() req: LearnRequest, @Query('tenant') tenant: string) {
     this.service.assertRole(req.userRole, READERS)
+    await this.service.assertWorkspace(req.userId, req.userRole, tenant)
     return this.service.outcomes(tenant)
   }
 
-  @Get('cohorts/:cohortId/gradebook')
-  gradebook(
+  @Get('agency/cohorts/:cohortId/gradebook')
+  async gradebook(
     @Req() req: LearnRequest,
     @Query('tenant') tenant: string,
     @Param('cohortId') cohortId: string
   ) {
     this.service.assertRole(req.userRole, READERS)
+    await this.service.assertWorkspace(req.userId, req.userRole, tenant)
     return this.service.gradebook(tenant, cohortId)
   }
 
-  @Get('exit-file.csv')
+  @Get('agency/exit-file.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="exit-file.csv"')
-  exitFile(@Req() req: LearnRequest, @Query('tenant') tenant: string) {
+  async exitFile(@Req() req: LearnRequest, @Query('tenant') tenant: string) {
     this.service.assertRole(req.userRole, [LEARN_ROLES.agencyAdmin])
+    await this.service.assertWorkspace(req.userId, req.userRole, tenant)
     return this.service.exitFile(tenant)
   }
 }

@@ -1,5 +1,6 @@
 import React, { type ReactNode } from 'react'
 import ReactDOM from 'react-dom/client'
+import { resolveContext } from './brand'
 import { resolveSite } from './site'
 import { AuthProvider } from './auth'
 import { HomePage } from './pages/HomePage'
@@ -17,7 +18,15 @@ function page(): ReactNode {
   if (pathname === '/privacy') return <PrivacyPage />
   if (pathname === '/sign-in' || pathname.startsWith('/sign-in/')) return <SignInPage />
   if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
-    return site === 'home' ? <NotFoundPage /> : <DashboardApp tenant={site} pathname={pathname} />
+    // Same page on delaware.learndifferently.tech and on learndifferently.tech?site=delaware;
+    // only the skin differs (see brand.ts).
+    return (
+      <DashboardApp
+        context={resolveContext(hostname, search)}
+        pathname={pathname}
+        search={search}
+      />
+    )
   }
   if (pathname !== '/') return <NotFoundPage />
   if (site === 'delaware') {

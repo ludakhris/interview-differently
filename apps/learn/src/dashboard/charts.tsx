@@ -63,10 +63,12 @@ function Axis({
   suffix = '',
   ticks = TICKS,
   lo = 0,
+  valueLabel,
 }: {
   suffix?: string
   ticks?: number[]
   lo?: number
+  valueLabel?: string
 }) {
   return (
     <div className="dash-axis" aria-hidden="true">
@@ -79,7 +81,7 @@ function Axis({
           </span>
         ))}
       </div>
-      <div />
+      <div className="dash-axis-label">{valueLabel}</div>
     </div>
   )
 }
@@ -137,15 +139,17 @@ export interface DumbbellRow {
   group?: string
   pre: number | null
   post: number | null
+  /** Text for the right-hand column (e.g. share who reached the target). */
+  value?: string
 }
 
-export function Dumbbell({ rows }: { rows: DumbbellRow[] }) {
+export function Dumbbell({ rows, valueLabel }: { rows: DumbbellRow[]; valueLabel?: string }) {
   const { bind, el } = useTip()
   const { lo, ticks } = domainFor(rows.flatMap((r) => [r.pre, r.post]))
   let lastGroup: string | undefined
   return (
     <div className="dash-chart" role="list">
-      <Axis ticks={ticks} lo={lo} />
+      <Axis ticks={ticks} lo={lo} suffix="%" valueLabel={valueLabel} />
       {rows.map((r) => {
         const gain = r.pre !== null && r.post !== null ? r.post - r.pre : null
         const heading = r.group !== undefined && r.group !== lastGroup ? r.group : null
@@ -155,7 +159,7 @@ export function Dumbbell({ rows }: { rows: DumbbellRow[] }) {
             <strong className="dash-tip-title">{r.label}</strong>
             <TipRow swatch="dash-pre dash-round" label="Pre-assessment" value={score(r.pre)} />
             <TipRow swatch="dash-post dash-round" label="Post-assessment" value={score(r.post)} />
-            <TipRow label="Change" value={`${points(gain)} pts`} />
+            <TipRow label="Change in percentage points" value={points(gain)} />
           </>
         )
         return (
@@ -165,7 +169,7 @@ export function Dumbbell({ rows }: { rows: DumbbellRow[] }) {
               className="dash-row"
               role="listitem"
               tabIndex={0}
-              aria-label={`${r.label}: pre ${score(r.pre)}, post ${score(r.post)}, change ${points(gain)} points`}
+              aria-label={`${r.label}: pre ${score(r.pre)}, post ${score(r.post)}${r.value ? `, ${valueLabel ?? ''} ${r.value}` : ''}`}
               {...bind(tip)}
             >
               <RowLabel label={r.label} sub={r.sub} />
@@ -189,7 +193,7 @@ export function Dumbbell({ rows }: { rows: DumbbellRow[] }) {
                   )}
                 </div>
               </div>
-              <div className="dash-rowvalue">{gain === null ? '—' : `${points(gain)} pts`}</div>
+              <div className="dash-rowvalue">{r.value ?? (gain === null ? '—' : points(gain))}</div>
             </div>
           </div>
         )

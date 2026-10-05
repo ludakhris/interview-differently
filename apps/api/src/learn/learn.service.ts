@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
-import type { AgencyOutcomes, Gradebook } from '@id/types'
+import type { AgencyOutcomes, Gradebook, LearnWorkspace } from '@id/types'
 import { PrismaService } from '../prisma/prisma.service'
 import { agencyOutcomes, gradebook, type EnrollmentRow } from './outcomes'
 import { exitFileCsv } from './exit-file'
@@ -15,6 +15,35 @@ export class LearnService {
   /** Throws unless the caller's LearnDifferently role is one of `allowed`. */
   assertRole(role: string | undefined, allowed: string[]): void {
     if (!role || !allowed.includes(role)) throw new ForbiddenException('Insufficient role')
+  }
+
+  /**
+   * Agencies the caller may open. Agency admins see every agency; anyone else
+   * sees the agencies they hold a membership in (case managers, for example).
+   */
+  async workspaces(userId: string, role: string | undefined): Promise<LearnWorkspace[]> {
+    const rows = await this.prisma.institution.findMany({
+      where: {
+        kind: 'agency',
+        subdomain: { not: null },
+        ...(role === LEARN_ROLES.agencyAdmin ? {} : { memberships: { some: { userId } } }),
+      },
+      select: { id: true, name: true, kind: true, subdomain: true },
+      orderBy: { name: 'asc' },
+    })
+    return rows.map((r) => ({ ...r, subdomain: r.subdomain as string }))
+  }
+
+  /** Throws unless the caller may open this workspace. */
+  async assertWorkspace(
+    userId: string,
+    role: string | undefined,
+    subdomain: string
+  ): Promise<void> {
+    const list = await this.workspaces(userId, role)
+    if (!list.some((w) => w.subdomain === subdomain)) {
+      throw new ForbiddenException('No access to this workspace')
+    }
   }
 
   async agencyBySubdomain(subdomain: string): Promise<{ id: string; name: string }> {
@@ -49,6 +78,7 @@ export class LearnService {
         co."title"                     AS "program",
         co."credential"                AS "credential",
         co."readinessThreshold"        AS "readinessThreshold",
+        co."targetScore"               AS "targetScore",
         prov."id"                      AS "providerId",
         prov."name"                    AS "providerName",
         MAX(ip."score") FILTER (WHERE it."label" = 'pre'  AND ip."status" = 'completed')::int AS "pre",

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { downloadFile, useApiFetch, useLoad } from './api'
 import { Dumbbell, Funnel, Legend, Meter, PairedBars, StatTile } from './charts'
 import { dateShort, pct, points, score } from './format'
+import { useApp } from './app-context'
 import { errorNotice, useRole } from './shared'
 
 export function OutcomesPage({ tenant }: { tenant: string }) {
@@ -15,6 +16,7 @@ export function OutcomesPage({ tenant }: { tenant: string }) {
 }
 
 export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: string }) {
+  const { href } = useApp()
   const t = data.totals
   const role = useRole()
   const apiFetch = useApiFetch()
@@ -42,20 +44,12 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
     <>
       <div className="dash-head">
         <div>
-          <h1 className="de-h2">Training program outcomes</h1>
+          <h1 className="dash-h2">Training program outcomes</h1>
           <p className="dash-sub">
             {data.agency.name}. Fictional providers and sample participants, as of{' '}
             {dateShort(data.asOf)}.
           </p>
         </div>
-        {role === 'agency-admin' && (
-          <div className="dash-actions">
-            <button type="button" className="de-btn" onClick={exportCsv} disabled={exporting}>
-              {exporting ? 'Preparing…' : 'Download exit file (CSV)'}
-            </button>
-            {exportError && <p className="dash-error">The export failed. Try again.</p>}
-          </div>
-        )}
       </div>
 
       <section aria-label="Headline measures" className="dash-tiles">
@@ -66,9 +60,9 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
         />
         <StatTile label="Completion rate" value={pct(t.completionRate)} note="Finished cohorts" />
         <StatTile
-          label="Average skill growth"
-          value={`${points(t.avgGain)} pts`}
-          note={`Pre ${score(t.avgPre)} → post ${score(t.avgPost)}`}
+          label="Reached target score"
+          value={pct(t.targetRate)}
+          note={`Finished cohorts. Average score ${score(t.avgPre)} → ${score(t.avgPost)}`}
         />
         <StatTile
           label="Interview ready"
@@ -78,11 +72,12 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
       </section>
 
       <section className="dash-section" aria-labelledby="h-growth">
-        <h2 className="de-h2" id="h-growth">
-          Pre to post growth by provider
+        <h2 className="dash-h2" id="h-growth">
+          Assessment scores before and after training, by provider
         </h2>
         <p className="dash-sub">
-          Average assessment score before and after training. Longer line, bigger gain.
+          Average assessment score before and after training. The figure on the right is the share
+          of learners who reached the course&apos;s target score.
         </p>
         <Legend
           items={[
@@ -91,18 +86,20 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
           ]}
         />
         <Dumbbell
+          valueLabel="Reached target"
           rows={providers.map((p) => ({
             key: p.providerId,
             label: p.provider,
             sub: p.program,
             pre: p.avgPre,
             post: p.avgPost,
+            value: pct(p.targetRate),
           }))}
         />
       </section>
 
       <section className="dash-section" aria-labelledby="h-complete">
-        <h2 className="de-h2" id="h-complete">
+        <h2 className="dash-h2" id="h-complete">
           Completion and interview readiness by provider
         </h2>
         <p className="dash-sub">
@@ -146,7 +143,7 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
                     Post
                   </th>
                   <th scope="col" className="num">
-                    Change
+                    Change (% points)
                   </th>
                   <th scope="col" className="num">
                     Interview ready
@@ -161,7 +158,7 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
                     <td className="num">{pct(p.completionRate)}</td>
                     <td className="num">{score(p.avgPre)}</td>
                     <td className="num">{score(p.avgPost)}</td>
-                    <td className="num">{points(p.avgGain)}</td>
+                    <td className="num">{pct(p.targetRate)}</td>
                     <td className="num">{pct(p.readyRate)}</td>
                   </tr>
                 ))}
@@ -172,7 +169,7 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
       </section>
 
       <section className="dash-section" aria-labelledby="h-funnel">
-        <h2 className="de-h2" id="h-funnel">
+        <h2 className="dash-h2" id="h-funnel">
           From enrollment to completion
         </h2>
         <p className="dash-sub">
@@ -183,12 +180,21 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
       </section>
 
       <section className="dash-section" aria-labelledby="h-cohorts">
-        <h2 className="de-h2" id="h-cohorts">
+        <h2 className="dash-h2" id="h-cohorts">
           Cohorts
         </h2>
         <p className="dash-sub">
-          Pre to post growth for each cohort, grouped by provider. Open a cohort for its gradebook.
+          Assessment scores before and after training for each cohort, grouped by provider. Open a
+          cohort for its gradebook.
         </p>
+        {role === 'agency-admin' && (
+          <p className="dash-sub">
+            <button type="button" className="dash-linkbtn" onClick={exportCsv} disabled={exporting}>
+              {exporting ? 'Preparing…' : 'Export participant records (CSV)'}
+            </button>
+            {exportError && <span className="dash-error"> The export failed. Try again.</span>}
+          </p>
+        )}
         <Legend
           items={[
             { swatch: 'dash-pre dash-round', label: 'Pre-assessment' },
@@ -196,6 +202,7 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
           ]}
         />
         <Dumbbell
+          valueLabel="Reached target"
           rows={[...data.cohorts]
             .sort(
               (a, b) =>
@@ -209,6 +216,7 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
               group: c.provider,
               pre: c.avgPre,
               post: c.avgPost,
+              value: pct(c.targetRate),
             }))}
         />
         <div className="dash-tablewrap">
@@ -223,13 +231,13 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
                 </th>
                 <th scope="col">Completion</th>
                 <th scope="col" className="num">
-                  Change
+                  Change (% points)
                 </th>
                 <th scope="col" className="num">
                   Ready
                 </th>
                 <th scope="col">
-                  <span className="de-visually-hidden">Gradebook</span>
+                  <span className="dash-visually-hidden">Gradebook</span>
                 </th>
               </tr>
             </thead>
@@ -248,8 +256,8 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
                   <td className="num">{points(c.avgGain)}</td>
                   <td className="num">{c.interviewReady}</td>
                   <td>
-                    <a href={`/dashboard/cohorts/${encodeURIComponent(c.cohortId)}`}>
-                      Gradebook<span className="de-visually-hidden"> for {c.cohort}</span>
+                    <a href={href(`/dashboard/cohorts/${encodeURIComponent(c.cohortId)}`)}>
+                      Gradebook<span className="dash-visually-hidden"> for {c.cohort}</span>
                     </a>
                   </td>
                 </tr>
