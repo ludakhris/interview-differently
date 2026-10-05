@@ -6,6 +6,7 @@
     { "source": "/", "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }], "destination": "/delaware.html" },
     { "source": "/privacy", "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }], "destination": "/delaware.html" },
     { "source": "/sign-in/:path*", "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }], "destination": "/delaware.html" },
+    { "source": "/dashboard/:path*", "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }], "destination": "/delaware.html" },
     { "source": "/", "destination": "/home.html" },
     { "source": "/privacy", "destination": "/home.html" },
     { "source": "/sign-in/:path*", "destination": "/home.html" }
