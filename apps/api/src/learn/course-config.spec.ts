@@ -87,9 +87,16 @@ describe('validateItemInput', () => {
       validateItemInput({
         type: 'interview',
         title: 'Practice',
-        config: { scenarioId: 's1', extra: 1 },
+        config: { role: 'Medical Assistant', questions: ['Tell me about yourself.'], extra: 1 },
       }).config
-    ).toEqual({ scenarioId: 's1' })
+    ).toEqual({ role: 'Medical Assistant', questions: ['Tell me about yourself.'] })
+  })
+
+  it('limits a practice interview to six questions', () => {
+    const q = Array.from({ length: 7 }, (_, i) => `Question ${i}`)
+    expect(() =>
+      validateItemInput({ type: 'interview', title: 'P', config: { role: 'x', questions: q } })
+    ).toThrow(BadRequestException)
   })
 })
 

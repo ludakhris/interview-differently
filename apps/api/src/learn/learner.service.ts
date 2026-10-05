@@ -1,5 +1,11 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import type {
+  InterviewAttempt,
   KnowledgeCheckQuestion,
   LearnerCohortCard,
   LearnerItem,
@@ -13,6 +19,8 @@ import { ClerkService } from '../auth/clerk.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { cohortStatus } from './cohort-config'
 import { gradeQuiz, publicQuestions } from './grade-quiz'
+import { averageScore, MAX_ANSWER_CHARS, MAX_ATTEMPTS } from './interview-scoring'
+import { InterviewScoringService } from './interview-scoring.service'
 
 const QUIZ_TYPES = ['knowledge_check', 'assessment']
 
@@ -28,7 +36,8 @@ interface ProgressLite {
 export class LearnerService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly clerk: ClerkService
+    private readonly clerk: ClerkService,
+    private readonly scoring: InterviewScoringService
   ) {}
 
   // ── joining ───────────────────────────────────────────────────────────────
@@ -241,13 +250,15 @@ export class LearnerService {
   async item(userId: string, cohortId: string, itemId: string): Promise<LearnerItem> {
     const { e, item, progress } = await this.itemOf(userId, cohortId, itemId)
     const config = (item.config ?? {}) as Record<string, unknown>
-    let scenario: LearnerItem['scenario'] = null
-    if (item.type === 'interview' && typeof config.scenarioId === 'string' && config.scenarioId) {
-      const row = await this.prisma.scenario.findUnique({
-        where: { scenarioId: config.scenarioId },
-      })
-      const title = ((row?.data ?? {}) as { title?: string }).title
-      scenario = { id: config.scenarioId, title: title ?? config.scenarioId }
+    let interview: LearnerItem['interview'] = null
+    if (item.type === 'interview') {
+      const saved = (progress?.data ?? null) as { attempts?: InterviewAttempt[] } | null
+      interview = {
+        role: typeof config.role === 'string' ? config.role : '',
+        questions: Array.isArray(config.questions) ? config.questions.map(String) : [],
+        maxAttempts: MAX_ATTEMPTS,
+        attempts: saved?.attempts ?? [],
+      }
     }
     let scorm: LearnerItem['scorm'] = null
     if (
@@ -271,8 +282,8 @@ export class LearnerService {
       questions: QUIZ_TYPES.includes(item.type)
         ? publicQuestions((config.questions ?? []) as KnowledgeCheckQuestion[])
         : null,
-      scenario,
       scorm,
+      interview,
       status: this.statusOf(progress ?? undefined),
       score: progress?.score ?? null,
       attempts: progress?.attempts ?? 0,
@@ -339,6 +350,68 @@ export class LearnerService {
     })
     await this.completeIfDone(e.id, e.status, e.cohort.course.id)
     return { result, item: await this.item(userId, cohortId, itemId) }
+  }
+
+  /**
+   * Scores typed answers to a practice interview. Up to three attempts; the best
+   * counts toward the readiness record. A failed scoring call uses no attempt.
+   */
+  async submitInterview(
+    userId: string,
+    cohortId: string,
+    itemId: string,
+    answers: unknown
+  ): Promise<LearnerItem> {
+    const { e, item, progress } = await this.itemOf(userId, cohortId, itemId)
+    const locked = this.lockReason(e.cohort.startsAt, e.cohort.endsAt)
+    if (locked) throw new ConflictException(locked)
+    if (item.type !== 'interview')
+      throw new ConflictException('This item is not a practice interview')
+    const config = (item.config ?? {}) as { role?: string; questions?: unknown }
+    const questions = Array.isArray(config.questions) ? config.questions.map(String) : []
+    if (questions.length === 0) throw new ConflictException('This interview has no questions yet')
+    if ((progress?.attempts ?? 0) >= MAX_ATTEMPTS) {
+      throw new ConflictException(`You have used all ${MAX_ATTEMPTS} attempts.`)
+    }
+    if (!Array.isArray(answers) || answers.length !== questions.length) {
+      throw new BadRequestException('Answer every question')
+    }
+    const typed = answers.map((a) => (typeof a === 'string' ? a.trim() : ''))
+    if (typed.some((a) => !a)) throw new BadRequestException('Answer every question')
+    if (typed.some((a) => a.length > MAX_ANSWER_CHARS)) {
+      throw new BadRequestException(`Keep each answer under ${MAX_ANSWER_CHARS} characters`)
+    }
+
+    const results = await this.scoring.score(config.role ?? '', questions, typed)
+    const overall = averageScore(results)
+    const attempt: InterviewAttempt = {
+      score: overall,
+      at: new Date().toISOString(),
+      answers: results,
+    }
+    const earlier =
+      ((progress?.data ?? null) as { attempts?: InterviewAttempt[] } | null)?.attempts ?? []
+    const best = Math.max(overall, progress?.score ?? 0)
+    await this.prisma.itemProgress.upsert({
+      where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
+      create: {
+        enrollmentId: e.id,
+        itemId,
+        status: 'completed',
+        score: best,
+        attempts: 1,
+        completedAt: new Date(),
+        data: { attempts: [attempt] } as unknown as object,
+      },
+      update: {
+        status: 'completed',
+        score: best,
+        attempts: { increment: 1 },
+        completedAt: new Date(),
+        data: { attempts: [...earlier, attempt].slice(-MAX_ATTEMPTS) } as unknown as object,
+      },
+    })
+    return this.item(userId, cohortId, itemId)
   }
 
   /** Saves what a SCORM package reported: status, score and the data it needs to resume. */

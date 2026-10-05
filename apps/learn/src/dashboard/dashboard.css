@@ -1330,3 +1330,22 @@
 .dash .dash-offering-summary {
   margin: 0 0 28px;
 }
+
+.dash-feedback {
+  display: grid;
+  gap: 14px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.dash-feedback p {
+  margin: 0;
+}
+.dash-feedback-q {
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+.dash-simulator-note {
+  margin-top: 28px;
+  font-size: 14px;
+}

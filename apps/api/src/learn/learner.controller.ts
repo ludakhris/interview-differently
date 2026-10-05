@@ -55,6 +55,16 @@ export class LearnerController {
     return this.learner.saveScorm(req.userId, cohortId, itemId, body)
   }
 
+  @Post('cohorts/:cohortId/items/:itemId/interview')
+  interview(
+    @Req() req: LearnRequest,
+    @Param('cohortId') cohortId: string,
+    @Param('itemId') itemId: string,
+    @Body() body: { answers?: unknown }
+  ) {
+    return this.learner.submitInterview(req.userId, cohortId, itemId, body?.answers)
+  }
+
   @Post('cohorts/:cohortId/items/:itemId/answers')
   answers(
     @Req() req: LearnRequest,

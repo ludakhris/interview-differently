@@ -107,7 +107,7 @@ export interface KnowledgeCheckQuestion {
 
 /**
  * `config` by type: lesson { body }, knowledge_check and assessment { questions },
- * interview { scenarioId }, scorm { packageId, entry, version, files }.
+ * interview { role, questions }, scorm { packageId, entry, version, files }.
  */
 export interface CourseItemDto {
   id: string
@@ -294,12 +294,12 @@ export interface LearnerItem {
   type: string
   title: string
   label: string | null
-  /** lesson: body. quiz (knowledge check or assessment): questions. interview: scenarioId and scenarioTitle. */
+  /** lesson: body. quiz (knowledge check or assessment): questions. interview: see `interview`. */
   body: string | null
   questions: QuizQuestion[] | null
-  scenario: { id: string; title: string } | null
   /** A SCORM package: where to load it and what the learner saved last time. */
   scorm: { src: string; version: '1.2' | '2004'; cmi: Record<string, unknown> | null } | null
+  interview: LearnerInterview | null
   status: ProgressStatus
   score: number | null
   attempts: number
@@ -327,4 +327,25 @@ export interface CatalogOffering extends CatalogCourse {
   modules: { title: string; items: number }[]
   /** Cohorts a learner could still join. Join codes are never public. */
   cohorts: { name: string; startsAt: string | null; endsAt: string | null; status: CohortStatus }[]
+}
+
+// ── Practice interview ──────────────────────────────────────────────────────
+
+export interface InterviewAnswerResult {
+  score: number
+  feedback: string
+}
+
+export interface InterviewAttempt {
+  score: number
+  at: string
+  answers: InterviewAnswerResult[]
+}
+
+export interface LearnerInterview {
+  role: string
+  questions: string[]
+  maxAttempts: number
+  /** Earlier attempts, newest last. Answers are not kept, only scores and feedback. */
+  attempts: InterviewAttempt[]
 }

@@ -280,3 +280,12 @@ export function lessonBody(title: string, program: string): string {
     '- Ask for help early. Your instructor is there for it.',
   ].join('\n')
 }
+
+/** Three practice-interview questions that fit most entry-level roles. */
+export function interviewQuestions(program: string): string[] {
+  return [
+    `Tell me why you want to work as a ${program}, and what you have done to prepare.`,
+    'Describe a time you helped someone or solved a problem under pressure. What did you do, and what happened?',
+    'What would you do if you noticed a coworker making a mistake that could affect safety or quality?',
+  ]
+}

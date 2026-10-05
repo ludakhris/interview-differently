@@ -19,7 +19,7 @@
 
 import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
-import { lessonBody, questionsFor } from './seed-learn-content'
+import { interviewQuestions, lessonBody, questionsFor } from './seed-learn-content'
 
 const DEV_HOSTS = ['localhost', '127.0.0.1', 'zephyr.proxy.rlwy.net']
 const TODAY = new Date('2026-10-04T12:00:00Z')
@@ -527,7 +527,7 @@ async function load(prisma: PrismaClient) {
             type: 'interview',
             title: `Practice interview: ${p.program}`,
             label: null,
-            config: { scenarioId: p.scenarioId },
+            config: { role: p.program, questions: interviewQuestions(p.program) },
           },
         ],
       },

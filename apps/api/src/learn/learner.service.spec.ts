@@ -1,6 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common'
 import type { ClerkService } from '../auth/clerk.service'
 import type { PrismaService } from '../prisma/prisma.service'
+import type { InterviewScoringService } from './interview-scoring.service'
 import { buildRecord, LearnerService, scormResult, scormSrc } from './learner.service'
 
 const prisma = {
@@ -11,12 +12,13 @@ const prisma = {
   courseItem: { findUnique: jest.fn() },
   courseModule: { findMany: jest.fn() },
   itemProgress: { findUnique: jest.fn(), upsert: jest.fn(), count: jest.fn(), findMany: jest.fn() },
-  scenario: { findUnique: jest.fn() },
 }
 const clerk = { getUserProfile: jest.fn() }
+const scoring = { score: jest.fn() }
 const service = new LearnerService(
   prisma as unknown as PrismaService,
-  clerk as unknown as ClerkService
+  clerk as unknown as ClerkService,
+  scoring as unknown as InterviewScoringService
 )
 
 const PAST = new Date('2020-01-01T00:00:00Z')
@@ -310,5 +312,100 @@ describe('scorm', () => {
     prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
     prisma.itemProgress.findUnique.mockResolvedValue(null)
     await expect(service.saveScorm('u1', 'k1', 'i1', {})).rejects.toThrow(ConflictException)
+  })
+})
+
+describe('practice interview', () => {
+  const interviewItem = (
+    config: object = { role: 'Medical Assistant', questions: ['Q1', 'Q2'] }
+  ) => ({
+    ...item('interview'),
+    config,
+  })
+  const scored = [
+    { score: 80, feedback: 'Good example.' },
+    { score: 60, feedback: 'Add detail.' },
+  ]
+
+  it('scores the answers, records the average as the best, and keeps feedback not answers', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(interviewItem())
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    scoring.score.mockResolvedValue(scored)
+    await service.submitInterview('u1', 'k1', 'i1', ['  my first answer ', 'second'])
+    expect(scoring.score).toHaveBeenCalledWith(
+      'Medical Assistant',
+      ['Q1', 'Q2'],
+      ['my first answer', 'second']
+    )
+    const create = prisma.itemProgress.upsert.mock.calls[0][0].create
+    expect(create).toMatchObject({ status: 'completed', score: 70, attempts: 1 })
+    expect(JSON.stringify(create.data)).not.toContain('my first answer')
+    expect(create.data.attempts[0].answers).toEqual(scored)
+  })
+
+  it('keeps the best score across attempts and stops after three', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(interviewItem())
+    prisma.itemProgress.findUnique.mockResolvedValue({
+      status: 'completed',
+      score: 90,
+      attempts: 1,
+      data: { attempts: [{ score: 90, at: 'x', answers: [] }] },
+    })
+    scoring.score.mockResolvedValue(scored)
+    await service.submitInterview('u1', 'k1', 'i1', ['a', 'b'])
+    expect(prisma.itemProgress.upsert.mock.calls[0][0].update.score).toBe(90)
+    prisma.itemProgress.upsert.mockClear()
+    prisma.itemProgress.findUnique.mockResolvedValue({
+      status: 'completed',
+      score: 90,
+      attempts: 3,
+      data: { attempts: [] },
+    })
+    await expect(service.submitInterview('u1', 'k1', 'i1', ['a', 'b'])).rejects.toThrow(
+      /3 attempts/
+    )
+    expect(prisma.itemProgress.upsert).not.toHaveBeenCalled()
+  })
+
+  it('uses no attempt when scoring fails', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(interviewItem())
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    scoring.score.mockRejectedValue(new Error('model down'))
+    await expect(service.submitInterview('u1', 'k1', 'i1', ['a', 'b'])).rejects.toThrow(
+      'model down'
+    )
+    expect(prisma.itemProgress.upsert).not.toHaveBeenCalled()
+  })
+
+  it('needs every question answered, within the length limit', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(interviewItem())
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    await expect(service.submitInterview('u1', 'k1', 'i1', ['only one'])).rejects.toThrow(
+      /Answer every/
+    )
+    await expect(service.submitInterview('u1', 'k1', 'i1', ['a', '   '])).rejects.toThrow(
+      /Answer every/
+    )
+    await expect(
+      service.submitInterview('u1', 'k1', 'i1', ['a', 'x'.repeat(2001)])
+    ).rejects.toThrow(/under/)
+    expect(scoring.score).not.toHaveBeenCalled()
+  })
+
+  it('exposes the questions and earlier feedback to the learner', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(interviewItem())
+    prisma.itemProgress.findUnique.mockResolvedValue({
+      status: 'completed',
+      score: 70,
+      attempts: 1,
+      data: { attempts: [{ score: 70, at: 't', answers: scored }] },
+    })
+    const out = await service.item('u1', 'k1', 'i1')
+    expect(out.interview).toMatchObject({
+      role: 'Medical Assistant',
+      questions: ['Q1', 'Q2'],
+      maxAttempts: 3,
+    })
+    expect(out.interview?.attempts[0].answers).toEqual(scored)
   })
 })

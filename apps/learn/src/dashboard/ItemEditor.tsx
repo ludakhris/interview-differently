@@ -1,6 +1,5 @@
-import type { CatalogEntry, CourseItemDto, KnowledgeCheckQuestion } from '@id/types'
+import type { CourseItemDto, KnowledgeCheckQuestion } from '@id/types'
 import { useState } from 'react'
-import { useLoad } from './api'
 
 export interface ItemDraft {
   type: string
@@ -37,7 +36,12 @@ export function ItemEditor(props: {
   const [questions, setQuestions] = useState<KnowledgeCheckQuestion[]>(
     Array.isArray(item.config.questions) ? (item.config.questions as KnowledgeCheckQuestion[]) : []
   )
-  const [scenarioId, setScenarioId] = useState(String(item.config.scenarioId ?? ''))
+  const [role, setRole] = useState(String(item.config.role ?? ''))
+  const [questionsText, setQuestionsText] = useState(
+    Array.isArray(item.config.questions) && item.type === 'interview'
+      ? (item.config.questions as string[]).join('\n')
+      : ''
+  )
 
   function save() {
     const config: Record<string, unknown> =
@@ -45,7 +49,13 @@ export function ItemEditor(props: {
         ? { body }
         : item.type === 'knowledge_check' || item.type === 'assessment'
           ? { questions }
-          : { scenarioId }
+          : {
+              role,
+              questions: questionsText
+                .split('\n')
+                .map((q) => q.trim())
+                .filter(Boolean),
+            }
     props.onSave({
       type: item.type,
       title,
@@ -102,13 +112,32 @@ export function ItemEditor(props: {
       )}
 
       {item.type === 'interview' && (
-        <CatalogPicker
-          label="Interview scenario"
-          path="/learn/catalog/scenarios"
-          value={scenarioId}
-          onChange={setScenarioId}
-          empty="No published scenarios are available yet."
-        />
+        <>
+          <label className="dash-field">
+            <span>Role being interviewed for</span>
+            <input
+              value={role}
+              maxLength={120}
+              placeholder="Medical Assistant"
+              onChange={(e) => setRole(e.target.value)}
+            />
+          </label>
+          <label className="dash-field">
+            <span>Questions (one per line, up to 6)</span>
+            <textarea
+              rows={6}
+              value={questionsText}
+              onChange={(e) => setQuestionsText(e.target.value)}
+              placeholder={
+                'Tell me about a time you stayed calm under pressure.\nHow do you make sure you get the details right?'
+              }
+            />
+            <small className="dash-muted">
+              Learners type an answer to each. Each answer is scored and coached; they get up to 3
+              attempts and their best score counts toward interview readiness.
+            </small>
+          </label>
+        </>
       )}
 
       <div className="dash-form-actions">
@@ -120,33 +149,6 @@ export function ItemEditor(props: {
         </button>
       </div>
     </div>
-  )
-}
-
-function CatalogPicker(props: {
-  label: string
-  path: string
-  value: string
-  onChange: (v: string) => void
-  empty: string
-}) {
-  const { data, loading } = useLoad<CatalogEntry[]>(props.path)
-  const known = data?.some((d) => d.id === props.value) ?? false
-  return (
-    <label className="dash-field">
-      <span>{props.label}</span>
-      <select value={props.value} onChange={(e) => props.onChange(e.target.value)}>
-        <option value="">{loading ? 'Loading…' : 'Choose…'}</option>
-        {props.value && !known && !loading && <option value={props.value}>{props.value}</option>}
-        {data?.map((d) => (
-          <option key={d.id} value={d.id}>
-            {d.title}
-            {d.detail ? ` (${d.detail})` : ''}
-          </option>
-        ))}
-      </select>
-      {!loading && data?.length === 0 && <small className="dash-muted">{props.empty}</small>}
-    </label>
   )
 }
 

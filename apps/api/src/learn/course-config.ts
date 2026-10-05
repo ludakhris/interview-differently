@@ -156,13 +156,14 @@ export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'typ
         },
       }
     }
-    case 'interview':
-      return {
-        type,
-        title,
-        label,
-        config: { scenarioId: text(config.scenarioId, 'Scenario', 120) ?? '' },
-      }
+    case 'interview': {
+      const role = text(config.role, 'Role', 120) ?? ''
+      const raw = config.questions ?? []
+      if (!Array.isArray(raw) || raw.length > 6)
+        return bad('A practice interview has up to 6 questions')
+      const questions = raw.map((q, i) => text(q, `Question ${i + 1}`, 300, true) as string)
+      return { type, title, label, config: { role, questions } }
+    }
   }
 }
 

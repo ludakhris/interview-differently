@@ -88,6 +88,7 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
         {item.type === 'interview' && (
           <Interview
             item={item}
+            onChange={setItem}
             nextHref={nextHref}
             nextLabel={next ? 'Continue' : 'Back to course'}
           />
@@ -296,42 +297,153 @@ function Quiz(props: {
   )
 }
 
-function Interview(props: { item: LearnerItem; nextHref: string; nextLabel: string }) {
+function Interview(props: {
+  item: LearnerItem
+  onChange: (i: LearnerItem) => void
+  nextHref: string
+  nextLabel: string
+}) {
   const { item } = props
-  return (
-    <div className="dash-card dash-lesson">
-      {item.scenario ? (
-        <p>
-          Practice interview: <strong>{item.scenario.title}</strong>
-        </p>
-      ) : (
-        <p className="dash-muted">The author has not chosen a practice interview yet.</p>
-      )}
+  const iv = item.interview
+  const send = useApiSend()
+  const [answers, setAnswers] = useState<string[]>(() => (iv?.questions ?? []).map(() => ''))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [showResult, setShowResult] = useState(false)
+  if (!iv || iv.questions.length === 0) {
+    return <p className="dash-muted">The author has not added interview questions yet.</p>
+  }
+  const left = iv.maxAttempts - item.attempts
+  const latest = iv.attempts[iv.attempts.length - 1]
+  const ready = answers.every((a) => a.trim().length > 0)
+
+  async function submit() {
+    setBusy(true)
+    setError(null)
+    try {
+      props.onChange(
+        await send<LearnerItem>(
+          'POST',
+          `/learn/me/cohorts/${item.cohortId}/items/${item.id}/interview`,
+          { answers }
+        )
+      )
+      setShowResult(true)
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const results = showResult && latest && (
+    <section className="dash-card dash-quiz-result" role="status" aria-label="Your feedback">
       <p>
-        Answer realistic interview questions in Skill Simulator and get scored feedback. Your
-        instructor records your best score on your readiness record.
+        This attempt: <strong>{score(latest.score)}</strong>. Your best score:{' '}
+        <strong>{score(item.score)}</strong>.
       </p>
-      {item.status === 'completed' ? (
-        <p>
-          Recorded score: <strong>{score(item.score)}</strong>
-        </p>
-      ) : (
-        <p className="dash-muted">No score recorded yet.</p>
-      )}
+      <ol className="dash-feedback">
+        {iv.questions.map((q, i) => (
+          <li key={i}>
+            <p className="dash-feedback-q">{q}</p>
+            <p>
+              <span className="dash-chip">{score(latest.answers[i]?.score ?? null)}</span>{' '}
+              {latest.answers[i]?.feedback}
+            </p>
+          </li>
+        ))}
+      </ol>
       <Actions>
+        {left > 0 && (
+          <button
+            type="button"
+            className="dash-btn-secondary"
+            onClick={() => {
+              setShowResult(false)
+              setAnswers(iv.questions.map(() => ''))
+            }}
+          >
+            Try again ({left} left)
+          </button>
+        )}
+        <a className="dash-btn" href={props.nextHref}>
+          {props.nextLabel}
+        </a>
+      </Actions>
+    </section>
+  )
+
+  return (
+    <>
+      <div className="dash-card dash-lesson">
+        <p>
+          Practice interview for <strong>{iv.role || 'this role'}</strong>. Answer each question in
+          your own words, a few sentences each, the way you would in a real interview.
+        </p>
+        <p className="dash-muted">
+          You can try up to {iv.maxAttempts} times and your best score counts.{' '}
+          {item.attempts > 0 && `You have used ${item.attempts}. `}
+          {item.score !== null && `Best so far: ${score(item.score)}.`}
+        </p>
+      </div>
+
+      {results}
+
+      {!showResult && left > 0 && !item.locked && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            void submit()
+          }}
+        >
+          <ol className="dash-quiz">
+            {iv.questions.map((q, i) => (
+              <li key={i} className="dash-card dash-quiz-q">
+                <label className="dash-field">
+                  <span>{q}</span>
+                  <textarea
+                    rows={5}
+                    value={answers[i]}
+                    maxLength={2000}
+                    onChange={(e) =>
+                      setAnswers(answers.map((a, k) => (k === i ? e.target.value : a)))
+                    }
+                  />
+                </label>
+              </li>
+            ))}
+          </ol>
+          {error && <p className="dash-error">{error}</p>}
+          <Actions>
+            <button type="submit" className="dash-btn" disabled={busy || !ready}>
+              {busy ? 'Scoring your answers…' : 'Get my score and feedback'}
+            </button>
+            <a className="dash-btn-quiet dash-btn-link" href={props.nextHref}>
+              Skip for now
+            </a>
+          </Actions>
+        </form>
+      )}
+
+      {!showResult && left <= 0 && (
+        <p className="dash-muted">
+          You have used all {iv.maxAttempts} attempts. Your best score is {score(item.score)}.{' '}
+          <a href={props.nextHref}>{props.nextLabel}</a>
+        </p>
+      )}
+
+      <p className="dash-muted dash-simulator-note">
+        Want a longer, more realistic scenario?{' '}
         <a
-          className="dash-btn-secondary"
           href="https://interviewdifferently.com/dashboard"
           target="_blank"
           rel="noopener noreferrer"
         >
           Open Skill Simulator
         </a>
-        <a className="dash-btn" href={props.nextHref}>
-          {props.nextLabel}
-        </a>
-      </Actions>
-    </div>
+        .
+      </p>
+    </>
   )
 }
 
