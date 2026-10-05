@@ -19,6 +19,7 @@
 
 import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
+import { lessonBody, questionsFor } from './seed-learn-content'
 
 const DEV_HOSTS = ['localhost', '127.0.0.1', 'zephyr.proxy.rlwy.net']
 const TODAY = new Date('2026-10-04T12:00:00Z')
@@ -492,7 +493,7 @@ async function load(prisma: PrismaClient) {
             type: 'assessment',
             title: 'Pre-assessment',
             label: 'pre',
-            config: { assessmentSlug: `${p.slug}-pre` },
+            config: { questions: questionsFor(p.key) },
           },
         ],
       },
@@ -503,10 +504,19 @@ async function load(prisma: PrismaClient) {
             type: 'lesson',
             title,
             label: null,
-            config: { body: `Sample lesson ${i + 1}: ${title}.` },
+            config: { body: lessonBody(title, p.program) },
           },
           ...(i % 2 === 1
-            ? [{ type: 'knowledge_check', title: `Check: ${title}`, label: null, config: {} }]
+            ? [
+                {
+                  type: 'knowledge_check',
+                  title: `Check: ${title}`,
+                  label: null,
+                  config: {
+                    questions: questionsFor(p.key).slice(i === 1 ? 0 : 2, i === 1 ? 2 : 4),
+                  },
+                },
+              ]
             : []),
         ]),
       },
@@ -528,7 +538,7 @@ async function load(prisma: PrismaClient) {
             type: 'assessment',
             title: 'Post-assessment',
             label: 'post',
-            config: { assessmentSlug: `${p.slug}-post` },
+            config: { questions: questionsFor(p.key) },
           },
         ],
       },
@@ -549,7 +559,7 @@ async function load(prisma: PrismaClient) {
             title: it.title,
             position: ii + 1,
             label: it.label,
-            config: it.config,
+            config: it.config as object,
           }
         }),
       })

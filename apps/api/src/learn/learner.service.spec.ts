@@ -1,0 +1,264 @@
+import { ConflictException, NotFoundException } from '@nestjs/common'
+import type { ClerkService } from '../auth/clerk.service'
+import type { PrismaService } from '../prisma/prisma.service'
+import { buildRecord, LearnerService } from './learner.service'
+
+const prisma = {
+  user: { findUnique: jest.fn(), create: jest.fn() },
+  cohort: { findFirst: jest.fn() },
+  enrollment: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), findMany: jest.fn() },
+  membership: { upsert: jest.fn() },
+  courseItem: { findUnique: jest.fn() },
+  courseModule: { findMany: jest.fn() },
+  itemProgress: { findUnique: jest.fn(), upsert: jest.fn(), count: jest.fn(), findMany: jest.fn() },
+  scenario: { findUnique: jest.fn() },
+}
+const clerk = { getUserProfile: jest.fn() }
+const service = new LearnerService(
+  prisma as unknown as PrismaService,
+  clerk as unknown as ClerkService
+)
+
+const PAST = new Date('2020-01-01T00:00:00Z')
+const FUTURE = new Date('2099-01-01T00:00:00Z')
+const quiz = [
+  { prompt: 'Pulse?', options: ['20', '70'], correctIndex: 1 },
+  { prompt: 'IDs?', options: ['One', 'Two'], correctIndex: 1 },
+]
+
+function enrollment(over: { startsAt?: Date; endsAt?: Date; status?: string } = {}) {
+  return {
+    id: 'e1',
+    cohortId: 'k1',
+    userId: 'u1',
+    status: over.status ?? 'enrolled',
+    cohort: {
+      name: 'Fall',
+      startsAt: over.startsAt ?? PAST,
+      endsAt: over.endsAt ?? FUTURE,
+      institution: { name: 'Harbor Point' },
+      course: { id: 'c1', title: 'MA', targetScore: 75, readinessThreshold: 70 },
+    },
+  }
+}
+const item = (type: string, label: string | null = null, config: object = {}) => ({
+  id: 'i1',
+  type,
+  label,
+  title: 'Item',
+  config,
+  module: { courseId: 'c1' },
+})
+
+beforeEach(() => {
+  jest.resetAllMocks()
+  prisma.enrollment.findUnique.mockResolvedValue(enrollment())
+  prisma.courseModule.findMany.mockResolvedValue([])
+  prisma.itemProgress.count.mockResolvedValue(0)
+})
+
+describe('join', () => {
+  const cohort = {
+    id: 'k1',
+    startsAt: PAST,
+    endsAt: FUTURE,
+    institution: { id: 'h1', name: 'Harbor Point' },
+    course: { id: 'c1' },
+  }
+
+  it('rejects an unknown code and an ended cohort', async () => {
+    prisma.cohort.findFirst.mockResolvedValue(null)
+    await expect(service.join('u1', 'NOPE')).rejects.toThrow(NotFoundException)
+    prisma.cohort.findFirst.mockResolvedValue({ ...cohort, endsAt: PAST })
+    await expect(service.join('u1', 'ABCD2345')).rejects.toThrow(ConflictException)
+  })
+
+  it('matches the code case-insensitively and mirrors the user once', async () => {
+    prisma.cohort.findFirst.mockResolvedValue(cohort)
+    prisma.user.findUnique.mockResolvedValue(null)
+    clerk.getUserProfile.mockResolvedValue({ email: 'a@b.co', displayName: 'Ann' })
+    prisma.enrollment.findUnique.mockResolvedValue(null)
+    prisma.enrollment.findMany.mockResolvedValue([])
+    await service.join('u1', ' abcd2345 ').catch(() => undefined)
+    expect(prisma.cohort.findFirst.mock.calls[0][0].where.joinKey).toEqual({
+      equals: 'abcd2345',
+      mode: 'insensitive',
+    })
+    expect(clerk.getUserProfile).toHaveBeenCalledWith('u1', 'learn')
+    expect(prisma.user.create).toHaveBeenCalledWith({
+      data: { id: 'u1', source: 'learn', email: 'a@b.co', displayName: 'Ann' },
+    })
+    expect(prisma.enrollment.create).toHaveBeenCalledWith({
+      data: { cohortId: 'k1', userId: 'u1' },
+    })
+    expect(prisma.membership.upsert).toHaveBeenCalled()
+  })
+
+  it('does not enroll twice', async () => {
+    prisma.cohort.findFirst.mockResolvedValue(cohort)
+    prisma.user.findUnique.mockResolvedValue({ id: 'u1' })
+    prisma.enrollment.findUnique.mockResolvedValue({ id: 'e1', status: 'enrolled' })
+    prisma.enrollment.findMany.mockResolvedValue([])
+    await service.join('u1', 'ABCD2345').catch(() => undefined)
+    expect(prisma.enrollment.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('item', () => {
+  it('never sends the answer key', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(
+      item('knowledge_check', null, { questions: quiz })
+    )
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    const out = await service.item('u1', 'k1', 'i1')
+    expect(out.questions).toEqual([
+      { prompt: 'Pulse?', options: ['20', '70'] },
+      { prompt: 'IDs?', options: ['One', 'Two'] },
+    ])
+    expect(JSON.stringify(out)).not.toContain('correctIndex')
+  })
+
+  it('refuses an item from another course', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue({
+      ...item('lesson'),
+      module: { courseId: 'other' },
+    })
+    await expect(service.item('u1', 'k1', 'i1')).rejects.toThrow(NotFoundException)
+  })
+
+  it('says a cohort that has not started is locked', async () => {
+    prisma.enrollment.findUnique.mockResolvedValue(
+      enrollment({ startsAt: FUTURE, endsAt: new Date('2100-01-01T00:00:00Z') })
+    )
+    prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    expect((await service.item('u1', 'k1', 'i1')).locked).toMatch(/not started/)
+  })
+})
+
+describe('submitQuiz', () => {
+  it('grades on the server and records the score', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(item('assessment', 'pre', { questions: quiz }))
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    const { result } = await service.submitQuiz('u1', 'k1', 'i1', [1, 0])
+    expect(result.score).toBe(50)
+    expect(prisma.itemProgress.upsert.mock.calls[0][0].create).toMatchObject({
+      status: 'completed',
+      score: 50,
+    })
+  })
+
+  it('lets a pre or post assessment be taken only once', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(item('assessment', 'post', { questions: quiz }))
+    prisma.itemProgress.findUnique.mockResolvedValue({ status: 'completed', score: 90 })
+    await expect(service.submitQuiz('u1', 'k1', 'i1', [1, 1])).rejects.toThrow(ConflictException)
+  })
+
+  it('keeps the best score when a knowledge check is retaken', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(
+      item('knowledge_check', null, { questions: quiz })
+    )
+    prisma.itemProgress.findUnique.mockResolvedValue({
+      status: 'completed',
+      score: 100,
+      attempts: 1,
+    })
+    await service.submitQuiz('u1', 'k1', 'i1', [0, 0])
+    expect(prisma.itemProgress.upsert.mock.calls[0][0].update.score).toBe(100)
+  })
+
+  it('refuses work once the cohort has ended', async () => {
+    prisma.enrollment.findUnique.mockResolvedValue(
+      enrollment({ startsAt: PAST, endsAt: new Date('2021-01-01T00:00:00Z') })
+    )
+    prisma.courseItem.findUnique.mockResolvedValue(
+      item('knowledge_check', null, { questions: quiz })
+    )
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    await expect(service.submitQuiz('u1', 'k1', 'i1', [1, 1])).rejects.toThrow(/ended/)
+  })
+})
+
+describe('completion', () => {
+  it('completes the enrollment when everything but the interview is done', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    prisma.courseModule.findMany.mockResolvedValue([
+      {
+        id: 'm1',
+        title: 'M',
+        position: 1,
+        items: [
+          { id: 'i1', type: 'lesson' },
+          { id: 'i2', type: 'interview' },
+        ],
+      },
+    ])
+    prisma.itemProgress.count.mockResolvedValue(1) // the lesson; the interview is not required
+    await service.completeLesson('u1', 'k1', 'i1')
+    expect(prisma.enrollment.update).toHaveBeenCalledWith({
+      where: { id: 'e1' },
+      data: expect.objectContaining({ status: 'completed' }),
+    })
+  })
+
+  it('stays enrolled while required items remain', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    prisma.courseModule.findMany.mockResolvedValue([
+      {
+        id: 'm1',
+        title: 'M',
+        position: 1,
+        items: [
+          { id: 'i1', type: 'lesson' },
+          { id: 'i3', type: 'lesson' },
+        ],
+      },
+    ])
+    prisma.itemProgress.count.mockResolvedValue(1)
+    await service.completeLesson('u1', 'k1', 'i1')
+    expect(prisma.enrollment.update).not.toHaveBeenCalled()
+  })
+})
+
+describe('buildRecord', () => {
+  const items = [
+    { id: 'a', type: 'assessment', label: 'pre' },
+    { id: 'b', type: 'assessment', label: 'post' },
+    { id: 'c', type: 'interview', label: null },
+  ]
+  const course = { targetScore: 75, readinessThreshold: 70 }
+
+  it('derives gain, target and readiness from results', () => {
+    const r = buildRecord(
+      items,
+      [
+        { itemId: 'a', status: 'completed', score: 54 },
+        { itemId: 'b', status: 'completed', score: 80 },
+        { itemId: 'c', status: 'completed', score: 69 },
+      ],
+      course,
+      true
+    )
+    expect(r).toMatchObject({
+      pre: 54,
+      post: 80,
+      gain: 26,
+      reachedTarget: true,
+      interviewBest: 69,
+      interviewReady: false,
+      completed: true,
+    })
+  })
+
+  it('shows nothing earned before anything is done', () => {
+    expect(buildRecord(items, [], course, false)).toMatchObject({
+      pre: null,
+      post: null,
+      gain: null,
+      reachedTarget: false,
+      interviewReady: false,
+    })
+  })
+})

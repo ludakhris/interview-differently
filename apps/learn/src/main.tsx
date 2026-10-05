@@ -24,7 +24,9 @@ function page(): ReactNode {
     pathname === '/courses' ||
     pathname.startsWith('/courses/') ||
     pathname === '/cohorts' ||
-    pathname.startsWith('/cohorts/')
+    pathname.startsWith('/cohorts/') ||
+    pathname === '/learning' ||
+    pathname.startsWith('/learning/')
   ) {
     // Same page on delaware.learndifferently.tech and on learndifferently.tech?site=delaware;
     // only the skin differs (see brand.ts).

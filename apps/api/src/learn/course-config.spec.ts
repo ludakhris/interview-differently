@@ -57,7 +57,7 @@ describe('validateItemInput', () => {
         label: 'pre',
         config: { assessmentSlug: 'ma-pre' },
       })
-    ).toMatchObject({ label: 'pre', config: { assessmentSlug: 'ma-pre' } })
+    ).toMatchObject({ label: 'pre', config: { questions: [], assessmentSlug: 'ma-pre' } })
     expect(validateItemInput({ type: 'lesson', title: 'x', label: 'pre' }).label).toBeNull()
   })
 

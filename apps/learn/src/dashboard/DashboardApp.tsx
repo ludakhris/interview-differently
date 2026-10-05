@@ -8,6 +8,9 @@ import { CourseEditorPage } from './CourseEditorPage'
 import { CoursesPage } from './CoursesPage'
 import { DashboardShell, Notice } from './DashboardShell'
 import { GradebookPage } from './GradebookPage'
+import { LearningCoursePage } from './LearningCoursePage'
+import { LearningItemPage } from './LearningItemPage'
+import { LearningPage } from './LearningPage'
 import { OutcomesPage } from './OutcomesPage'
 import { errorNotice } from './shared'
 import { WorkspaceChooser } from './WorkspaceChooser'
@@ -55,6 +58,26 @@ function Gate({ pathname, search }: { pathname: string; search: string }) {
 /** Picks the page by the workspace's kind: agencies report, providers set up courses. */
 function Routes({ pathname }: { pathname: string }) {
   const { tenant, workspaces, workspacesError, current, href } = useApp()
+  // Learner pages need no workspace: any signed-in LearnDifferently account can use them.
+  const learnerItem = /^\/learning\/([^/]+)\/([^/]+)\/?$/.exec(pathname)
+  const learnerCourse = /^\/learning\/([^/]+)\/?$/.exec(pathname)
+  if (pathname === '/learning' || pathname.startsWith('/learning/')) {
+    return (
+      <DashboardShell>
+        {learnerItem ? (
+          <LearningItemPage
+            cohortId={decodeURIComponent(learnerItem[1])}
+            itemId={decodeURIComponent(learnerItem[2])}
+          />
+        ) : learnerCourse ? (
+          <LearningCoursePage cohortId={decodeURIComponent(learnerCourse[1])} />
+        ) : (
+          <LearningPage />
+        )}
+      </DashboardShell>
+    )
+  }
+
   if (workspacesError) return <DashboardShell>{errorNotice(workspacesError)}</DashboardShell>
   if (!workspaces) {
     return (

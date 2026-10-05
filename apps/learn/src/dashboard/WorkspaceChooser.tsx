@@ -1,4 +1,4 @@
-import { DashboardShell, Notice } from './DashboardShell'
+import { DashboardShell } from './DashboardShell'
 import { useApp } from './app-context'
 import { KIND_PLURAL, workspaceHref } from './WorkspaceSwitcher'
 
@@ -6,21 +6,16 @@ const KIND_ORDER = ['agency', 'provider', 'organization', 'academic']
 
 /** No workspace picked yet: open the only one, or let the person choose. */
 export function WorkspaceChooser() {
-  const { workspaces } = useApp()
+  const { workspaces, href } = useApp()
   if (!workspaces) return null
   if (workspaces.length === 1) {
     window.location.replace(workspaceHref(window.location.search, workspaces[0].subdomain))
     return null
   }
   if (workspaces.length === 0) {
-    return (
-      <DashboardShell>
-        <Notice title="No workspaces yet">
-          Your account is not connected to an agency or institution. Ask an administrator to add
-          you.
-        </Notice>
-      </DashboardShell>
-    )
+    // Not staff anywhere: this is a learner, so their home is My learning.
+    window.location.replace(href('/learning'))
+    return null
   }
   const kinds = KIND_ORDER.filter((k) => workspaces.some((w) => w.kind === k))
   return (

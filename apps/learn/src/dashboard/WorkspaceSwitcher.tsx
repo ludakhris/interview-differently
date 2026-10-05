@@ -24,6 +24,8 @@ export function workspaceHref(search: string, slug: string): string {
 /** Workspace bar at the top of the page. Hidden on a tenant host, where the host fixes the workspace. */
 export function WorkspaceSwitcher() {
   const { fixedTenant, tenant, workspaces: data } = useApp()
+  // The learner pages belong to the person, not to a workspace.
+  if (window.location.pathname.startsWith('/learning')) return null
   if (fixedTenant || !data || data.length === 0) return null
   return (
     <div className="dash-workspace">

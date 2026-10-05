@@ -31,7 +31,7 @@ describe('LearnService workspaces', () => {
     await service.workspaces('u2', 'provider-admin')
     expect(findMany.mock.calls[0][0].where).toEqual({
       subdomain: { not: null },
-      memberships: { some: { userId: 'u2' } },
+      memberships: { some: { userId: 'u2', cohortId: null } },
     })
   })
 

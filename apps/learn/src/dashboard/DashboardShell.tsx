@@ -15,6 +15,9 @@ import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 /** The app's navigation, defined once for both skins and the account menu. */
 function useNav(): MenuLink[] {
   const { href, tenant, current } = useApp()
+  if (window.location.pathname.startsWith('/learning')) {
+    return [{ label: 'My learning', href: href('/learning') }]
+  }
   if (current?.kind === 'provider') {
     return [
       { label: 'Courses', href: href('/courses') },

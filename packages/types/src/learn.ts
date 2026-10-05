@@ -226,3 +226,78 @@ export interface CourseOffers {
   /** Organizations that could be offered this course and have not been yet. */
   available: OfferTarget[]
 }
+
+// ── Learner path (#46) ──────────────────────────────────────────────────────
+
+export type ProgressStatus = 'not_started' | 'in_progress' | 'completed'
+
+export interface LearnerCohortCard {
+  cohortId: string
+  cohortName: string
+  courseTitle: string
+  host: string
+  status: CohortStatus
+  startsAt: string | null
+  endsAt: string | null
+  enrollmentStatus: 'enrolled' | 'completed' | 'withdrawn'
+  itemsDone: number
+  itemsTotal: number
+}
+
+export interface LearnerOutlineItem {
+  id: string
+  type: string
+  title: string
+  label: string | null
+  status: ProgressStatus
+  score: number | null
+  attempts: number
+}
+
+/** What the learner's own record shows: the same measures the agency reports on. */
+export interface ReadinessRecord {
+  pre: number | null
+  post: number | null
+  gain: number | null
+  targetScore: number
+  reachedTarget: boolean
+  interviewBest: number | null
+  readinessThreshold: number
+  interviewReady: boolean
+  completed: boolean
+}
+
+export interface LearnerOutline {
+  cohort: LearnerCohortCard
+  modules: { id: string; title: string; items: LearnerOutlineItem[] }[]
+  record: ReadinessRecord
+}
+
+/** A question as the learner sees it: no answer key. */
+export interface QuizQuestion {
+  prompt: string
+  options: string[]
+}
+
+export interface QuizResult {
+  score: number
+  correct: boolean[]
+  correctIndexes: number[]
+}
+
+export interface LearnerItem {
+  id: string
+  cohortId: string
+  type: string
+  title: string
+  label: string | null
+  /** lesson: body. quiz (knowledge check or assessment): questions. interview: scenarioId and scenarioTitle. */
+  body: string | null
+  questions: QuizQuestion[] | null
+  scenario: { id: string; title: string } | null
+  status: ProgressStatus
+  score: number | null
+  attempts: number
+  /** Set when the learner can still act on it. */
+  locked: string | null
+}

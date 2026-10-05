@@ -31,7 +31,7 @@ export class LearnService {
       where:
         role === LEARN_ROLES.agencyAdmin
           ? { subdomain: { not: null }, OR: [{ kind: 'agency' }, { parent: { kind: 'agency' } }] }
-          : { subdomain: { not: null }, memberships: { some: { userId } } },
+          : { subdomain: { not: null }, memberships: { some: { userId, cohortId: null } } },
       select: { id: true, name: true, kind: true, subdomain: true, parentId: true },
       orderBy: [{ kind: 'asc' }, { name: 'asc' }],
     })

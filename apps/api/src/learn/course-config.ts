@@ -121,13 +121,18 @@ export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'typ
         label,
         config: { questions: validateQuestions(config.questions ?? []) },
       }
-    case 'assessment':
+    case 'assessment': {
+      const slug = text(config.assessmentSlug, 'Assessment', 120)
       return {
         type,
         title,
         label,
-        config: { assessmentSlug: text(config.assessmentSlug, 'Assessment', 120) ?? '' },
+        config: {
+          questions: validateQuestions(config.questions ?? []),
+          ...(slug ? { assessmentSlug: slug } : {}),
+        },
       }
+    }
     case 'interview':
       return {
         type,

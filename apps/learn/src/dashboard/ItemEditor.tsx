@@ -36,18 +36,15 @@ export function ItemEditor(props: {
   const [questions, setQuestions] = useState<KnowledgeCheckQuestion[]>(
     Array.isArray(item.config.questions) ? (item.config.questions as KnowledgeCheckQuestion[]) : []
   )
-  const [assessmentSlug, setAssessmentSlug] = useState(String(item.config.assessmentSlug ?? ''))
   const [scenarioId, setScenarioId] = useState(String(item.config.scenarioId ?? ''))
 
   function save() {
     const config: Record<string, unknown> =
       item.type === 'lesson'
         ? { body }
-        : item.type === 'knowledge_check'
+        : item.type === 'knowledge_check' || item.type === 'assessment'
           ? { questions }
-          : item.type === 'assessment'
-            ? { assessmentSlug }
-            : { scenarioId }
+          : { scenarioId }
     props.onSave({
       type: item.type,
       title,
@@ -76,7 +73,7 @@ export function ItemEditor(props: {
         </label>
       )}
 
-      {item.type === 'knowledge_check' && (
+      {(item.type === 'knowledge_check' || item.type === 'assessment') && (
         <QuestionBuilder questions={questions} onChange={setQuestions} />
       )}
 
@@ -93,13 +90,6 @@ export function ItemEditor(props: {
               After the course (post-assessment)
             </label>
           </fieldset>
-          <CatalogPicker
-            label="Assessment"
-            path="/learn/catalog/assessments"
-            value={assessmentSlug}
-            onChange={setAssessmentSlug}
-            empty="No assessments are available yet."
-          />
         </>
       )}
 
