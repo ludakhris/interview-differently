@@ -7,13 +7,13 @@ interface LearnRequest {
   userRole?: string
 }
 
-const READERS = [LEARN_ROLES.agencyAdmin, LEARN_ROLES.caseManager]
+const READERS = [LEARN_ROLES.agencyAdmin, LEARN_ROLES.caseManager, LEARN_ROLES.providerAdmin]
 
 /**
  * Reporting for LearnDifferently workspaces. `?tenant=delaware` names the
  * workspace; every call checks the caller may open it (agency admins: every
  * agency; others: agencies they hold a membership in). Case managers can read
- * outcomes and gradebooks but not the exit file.
+ * outcomes and gradebooks but not the exit file. Providers see their own results.
  */
 @Controller('learn')
 @UseGuards(LearnGuard)
@@ -48,7 +48,7 @@ export class LearnController {
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="exit-file.csv"')
   async exitFile(@Req() req: LearnRequest, @Query('tenant') tenant: string) {
-    this.service.assertRole(req.userRole, [LEARN_ROLES.agencyAdmin])
+    this.service.assertRole(req.userRole, [LEARN_ROLES.agencyAdmin, LEARN_ROLES.providerAdmin])
     await this.service.assertWorkspace(req.userId, req.userRole, tenant)
     return this.service.exitFile(tenant)
   }

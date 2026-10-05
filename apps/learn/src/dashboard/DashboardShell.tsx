@@ -28,10 +28,14 @@ function useNav(): MenuLink[] {
     return [
       { label: 'Courses', href: href('/courses') },
       { label: 'Cohorts', href: href('/cohorts') },
+      { label: 'Outcomes', href: href('/dashboard') },
     ]
   }
   if (current?.kind === 'organization' || current?.kind === 'academic') {
-    return [{ label: 'Cohorts', href: href('/cohorts') }]
+    return [
+      { label: 'Cohorts', href: href('/cohorts') },
+      { label: 'Outcomes', href: href('/dashboard') },
+    ]
   }
   if (current?.kind === 'agency') {
     return [

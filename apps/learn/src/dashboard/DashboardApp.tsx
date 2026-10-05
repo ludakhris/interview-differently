@@ -112,6 +112,18 @@ function Routes({ pathname }: { pathname: string }) {
     current.kind === 'academic'
   ) {
     const isProvider = current.kind === 'provider'
+    // Providers and organizations see the results of their own cohorts too.
+    if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+      return (
+        <DashboardShell>
+          {cohort ? (
+            <GradebookPage tenant={current.subdomain} cohortId={decodeURIComponent(cohort[1])} />
+          ) : (
+            <OutcomesPage tenant={current.subdomain} />
+          )}
+        </DashboardShell>
+      )
+    }
     if (onCohorts) {
       return (
         <DashboardShell>

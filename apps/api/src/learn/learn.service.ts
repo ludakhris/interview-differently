@@ -50,21 +50,31 @@ export class LearnService {
     }
   }
 
-  async agencyBySubdomain(subdomain: string): Promise<{ id: string; name: string }> {
-    const agency = await this.prisma.institution.findFirst({
-      where: { subdomain, kind: 'agency' },
-      select: { id: true, name: true },
+  /**
+   * The workspace whose results to report on: an agency (everything under it),
+   * a provider (its courses and the cohorts run for it) or an organization
+   * (the cohorts it runs).
+   */
+  async reportScope(subdomain: string): Promise<{ id: string; name: string; kind: string }> {
+    const ws = await this.prisma.institution.findFirst({
+      where: { subdomain },
+      select: { id: true, name: true, kind: true },
     })
-    if (!agency) throw new NotFoundException(`No agency tenant "${subdomain}"`)
-    return agency
+    if (!ws) throw new NotFoundException(`No workspace "${subdomain}"`)
+    return ws
   }
 
   /**
-   * Every enrollment under an agency: cohorts run by the agency, by
-   * institutions that report to it, or of courses authored by those.
+   * Every enrollment in a workspace's scope (see reportScope).
    * Results are rolled up from item progress in one pass.
    */
-  async enrollmentRows(agencyId: string): Promise<EnrollmentRow[]> {
+  async enrollmentRows(scope: { id: string; kind: string }): Promise<EnrollmentRow[]> {
+    const inScope =
+      scope.kind === 'agency'
+        ? Prisma.sql`host."id" = ${scope.id} OR host."parentId" = ${scope.id} OR prov."parentId" = ${scope.id}`
+        : scope.kind === 'provider'
+          ? Prisma.sql`prov."id" = ${scope.id} OR host."id" = ${scope.id}`
+          : Prisma.sql`host."id" = ${scope.id}`
     return this.prisma.$queryRaw<EnrollmentRow[]>(Prisma.sql`
       SELECT
         e."id"                         AS "enrollmentId",
@@ -101,25 +111,29 @@ export class LearnService {
       JOIN "Institution" prov  ON prov."id" = co."providerId"
       LEFT JOIN "ItemProgress" ip ON ip."enrollmentId" = e."id"
       LEFT JOIN "CourseItem" it   ON it."id" = ip."itemId"
-      WHERE host."id" = ${agencyId} OR host."parentId" = ${agencyId} OR prov."parentId" = ${agencyId}
+      WHERE ${inScope}
       GROUP BY e."id", u."displayName", c."id", host."id", co."id", prov."id"
     `)
   }
 
   async outcomes(subdomain: string): Promise<AgencyOutcomes> {
-    const agency = await this.agencyBySubdomain(subdomain)
-    return agencyOutcomes(agency, await this.enrollmentRows(agency.id), new Date())
+    const scope = await this.reportScope(subdomain)
+    return agencyOutcomes(
+      { id: scope.id, name: scope.name },
+      await this.enrollmentRows(scope),
+      new Date()
+    )
   }
 
   async gradebook(subdomain: string, cohortId: string): Promise<Gradebook> {
-    const agency = await this.agencyBySubdomain(subdomain)
-    const book = gradebook(cohortId, await this.enrollmentRows(agency.id), new Date())
+    const scope = await this.reportScope(subdomain)
+    const book = gradebook(cohortId, await this.enrollmentRows(scope), new Date())
     if (!book) throw new NotFoundException(`Cohort ${cohortId} not found for this agency`)
     return book
   }
 
   async exitFile(subdomain: string): Promise<string> {
-    const agency = await this.agencyBySubdomain(subdomain)
-    return exitFileCsv(await this.enrollmentRows(agency.id))
+    const scope = await this.reportScope(subdomain)
+    return exitFileCsv(await this.enrollmentRows(scope))
   }
 }

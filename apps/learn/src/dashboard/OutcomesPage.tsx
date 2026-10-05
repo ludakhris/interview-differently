@@ -56,7 +56,7 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
         <StatTile
           label="Participants enrolled"
           value={String(t.enrolled)}
-          note={`${data.cohorts.length} cohorts, ${providers.length} providers`}
+          note={`${data.cohorts.length} ${data.cohorts.length === 1 ? 'cohort' : 'cohorts'}, ${providers.length} ${providers.length === 1 ? 'provider' : 'providers'}`}
         />
         <StatTile label="Completion rate" value={pct(t.completionRate)} note="Finished cohorts" />
         <StatTile
