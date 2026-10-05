@@ -173,11 +173,11 @@ model Institution {
   emailDomain String?
   // LearnDifferently tenancy (#46). An institution is a tenant: it owns the
   // learner data for the cohorts it runs. 'academic' = college or university;
-  // 'member' = nonprofit or other organization that runs cohorts; 'provider' =
+  // 'organization' = nonprofit or other organization that runs cohorts; 'provider' =
   // authors courses and offers them to the others; 'agency' = oversees
   // providers (parentId points at it) and reads outcomes. Free text, not an
   // enum, so new kinds need no migration.
-  kind        String       @default("member") // 'academic' | 'member' | 'provider' | 'agency'
+  kind        String       @default("organization") // 'academic' | 'organization' | 'provider' | 'agency'
   subdomain   String?      @unique            // {subdomain}.learndifferently.tech
   brand       Json?                            // { primary, accent, logoUrl, ... }
   parentId    String?
@@ -396,6 +396,9 @@ model Course {
   sector      String?
   credential  String?
   lengthWeeks Int?
+  // Best interview score (0-100) at or above which a learner counts as "interview
+  // ready" in reports. Set by whoever authors the course.
+  readinessThreshold Int         @default(70)
   status      String         @default("published") // 'draft' | 'published'
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt

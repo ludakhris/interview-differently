@@ -195,7 +195,7 @@ async function load(prisma: PrismaClient) {
   })
   await prisma.institution.create({
     data: {
-      id: MEMBER_ID, name: 'Wilmington Community Workforce Center', kind: 'member',
+      id: MEMBER_ID, name: 'Wilmington Community Workforce Center', kind: 'organization',
       parentId: AGENCY_ID, subdomain: 'wilmington',
     },
   })
