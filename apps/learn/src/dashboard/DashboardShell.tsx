@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { AccountMenu, type MenuLink } from '../auth'
+import { ProductsMenu } from '../components/ProductsMenu'
 import { withBrand } from '../brand'
 import '../pages/delaware.css'
 import '../pages/home.css'
@@ -20,9 +21,10 @@ function useNav(): MenuLink[] {
   ]
 }
 
-function NavLinks({ className }: { className: string }) {
+function NavLinks({ className, leading }: { className: string; leading?: ReactNode }) {
   return (
     <ul className={className}>
+      {leading && <li>{leading}</li>}
       {useNav().map((l) => (
         <li key={l.label}>
           <a href={l.href}>{l.label}</a>
@@ -94,6 +96,7 @@ function DelawareFrame({ children }: { children: ReactNode }) {
 }
 
 function LearnFrame({ children }: { children: ReactNode }) {
+  const { href } = useApp()
   return (
     <div className="ld dash dash-brand-learn">
       <header className="ld-wrap ld-header">
@@ -104,7 +107,18 @@ function LearnFrame({ children }: { children: ReactNode }) {
           </span>
         </a>
         <nav aria-label="Main">
-          <NavLinks className="ld-nav" />
+          <NavLinks
+            className="ld-nav"
+            leading={
+              <ProductsMenu
+                hrefFor={(p) =>
+                  p.status === 'available' && p.href
+                    ? { href: p.external ? p.href : href(p.href), external: p.external }
+                    : null
+                }
+              />
+            }
+          />
         </nav>
         <AccountControl />
       </header>

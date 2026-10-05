@@ -8,6 +8,7 @@ import { DelawarePage } from './pages/DelawarePage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { SignInPage } from './pages/SignInPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { ProductPage } from './pages/ProductPage'
 import { DashboardApp } from './dashboard/DashboardApp'
 
 const { hostname, pathname, search } = window.location
@@ -28,6 +29,8 @@ function page(): ReactNode {
       />
     )
   }
+  const product = /^\/products\/([a-z-]+)\/?$/.exec(pathname)
+  if (product) return <ProductPage id={product[1]} />
   if (pathname !== '/') return <NotFoundPage />
   if (site === 'delaware') {
     document.title = 'Career Readiness Tool — Delaware Department of Labor (demonstration)'

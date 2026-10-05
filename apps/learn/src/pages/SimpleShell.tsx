@@ -1,5 +1,7 @@
 import { type ReactNode } from 'react'
 import { AccountMenu } from '../auth'
+import { ProductsMenu } from '../components/ProductsMenu'
+import { productPagePath } from '../products'
 import { CONTACT_EMAIL } from '../contact'
 import './home.css'
 
@@ -14,6 +16,13 @@ export function SimpleShell({ children }: { children: ReactNode }) {
             learn<span className="ld-slash">/</span>differently
           </span>
         </a>
+        <nav aria-label="Main">
+          <ul className="ld-nav">
+            <li>
+              <ProductsMenu hrefFor={(p) => ({ href: productPagePath(p) })} />
+            </li>
+          </ul>
+        </nav>
         <AccountMenu signedOut={null} />
       </header>
       <main className="ld-wrap ld-simple-main">{children}</main>

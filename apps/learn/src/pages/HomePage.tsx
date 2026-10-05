@@ -1,6 +1,8 @@
 import { type FormEvent } from 'react'
 import { CONTACT_EMAIL } from '../contact'
 import { AccountMenu } from '../auth'
+import { ProductsMenu } from '../components/ProductsMenu'
+import { productPagePath } from '../products'
 import './home.css'
 
 // Walkthrough requests open the visitor's mail app; there is no backend form yet.
@@ -153,7 +155,10 @@ export function HomePage() {
         <nav aria-label="Main">
           <ul className="ld-nav">
             <li>
-              <a href="#product">Product</a>
+              <ProductsMenu hrefFor={(p) => ({ href: productPagePath(p) })} />
+            </li>
+            <li>
+              <a href="#product">How it works</a>
             </li>
             <li>
               <a href="#pricing">Pricing</a>
