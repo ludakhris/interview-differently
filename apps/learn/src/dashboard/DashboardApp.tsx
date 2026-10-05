@@ -2,6 +2,8 @@ import { useAuth } from '@clerk/clerk-react'
 import { authConfigured } from '../auth'
 import type { AppContext } from '../brand'
 import { AppProvider, useApp, WorkspacesProvider } from './app-context'
+import { CohortPage } from './CohortPage'
+import { CohortsPage } from './CohortsPage'
 import { CourseEditorPage } from './CourseEditorPage'
 import { CoursesPage } from './CoursesPage'
 import { DashboardShell, Notice } from './DashboardShell'
@@ -75,22 +77,40 @@ function Routes({ pathname }: { pathname: string }) {
 
   const course = /^\/courses\/([^/]+)\/?$/.exec(pathname)
   const cohort = /^\/dashboard\/cohorts\/([^/]+)\/?$/.exec(pathname)
+  const runCohort = /^\/cohorts\/([^/]+)\/?$/.exec(pathname)
   const onCourses = pathname === '/courses' || pathname.startsWith('/courses/')
+  const onCohorts = pathname === '/cohorts' || pathname.startsWith('/cohorts/')
 
-  if (current.kind === 'provider') {
-    if (!onCourses) {
-      window.location.replace(href('/courses'))
-      return null
+  if (
+    current.kind === 'provider' ||
+    current.kind === 'organization' ||
+    current.kind === 'academic'
+  ) {
+    const isProvider = current.kind === 'provider'
+    if (onCohorts) {
+      return (
+        <DashboardShell>
+          {runCohort ? (
+            <CohortPage cohortId={decodeURIComponent(runCohort[1])} />
+          ) : (
+            <CohortsPage workspace={current.subdomain} />
+          )}
+        </DashboardShell>
+      )
     }
-    return (
-      <DashboardShell>
-        {course ? (
-          <CourseEditorPage courseId={decodeURIComponent(course[1])} />
-        ) : (
-          <CoursesPage workspace={current.subdomain} />
-        )}
-      </DashboardShell>
-    )
+    if (isProvider && onCourses) {
+      return (
+        <DashboardShell>
+          {course ? (
+            <CourseEditorPage courseId={decodeURIComponent(course[1])} />
+          ) : (
+            <CoursesPage workspace={current.subdomain} />
+          )}
+        </DashboardShell>
+      )
+    }
+    window.location.replace(href(isProvider ? '/courses' : '/cohorts'))
+    return null
   }
 
   if (current.kind === 'agency') {
@@ -114,11 +134,5 @@ function Routes({ pathname }: { pathname: string }) {
     )
   }
 
-  return (
-    <DashboardShell>
-      <Notice title="Cohorts are coming next">
-        This workspace will run cohorts of the courses offered to it. That part is being built.
-      </Notice>
-    </DashboardShell>
-  )
+  return null
 }

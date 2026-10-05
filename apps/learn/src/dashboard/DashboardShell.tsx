@@ -15,7 +15,15 @@ import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 /** The app's navigation, defined once for both skins and the account menu. */
 function useNav(): MenuLink[] {
   const { href, tenant, current } = useApp()
-  if (current?.kind === 'provider') return [{ label: 'Courses', href: href('/courses') }]
+  if (current?.kind === 'provider') {
+    return [
+      { label: 'Courses', href: href('/courses') },
+      { label: 'Cohorts', href: href('/cohorts') },
+    ]
+  }
+  if (current?.kind === 'organization' || current?.kind === 'academic') {
+    return [{ label: 'Cohorts', href: href('/cohorts') }]
+  }
   if (current?.kind === 'agency') {
     return [
       { label: 'Outcomes dashboard', href: href('/dashboard') },

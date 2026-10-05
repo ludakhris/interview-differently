@@ -1,4 +1,10 @@
-import type { CourseDetail, CourseItemType, CourseModuleDto, CourseOutline } from '@id/types'
+import type {
+  CourseDetail,
+  CourseItemType,
+  CourseModuleDto,
+  CourseOffers,
+  CourseOutline,
+} from '@id/types'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
@@ -36,7 +42,12 @@ export function CourseEditorPage({ courseId }: { courseId: string }) {
   }, [data])
   if (error) return errorNotice(error)
   if (loading || !course) return <p className="dash-loading">Loading course…</p>
-  return <Editor course={course} onChange={setCourse} />
+  return (
+    <>
+      <Editor course={course} onChange={setCourse} />
+      <OffersPanel courseId={course.id} />
+    </>
+  )
 }
 
 function Editor({
@@ -420,5 +431,85 @@ function Editor({
         </button>
       </section>
     </>
+  )
+}
+
+/** Offer this course to organizations under the same agency, so they can run their own cohorts of it. */
+function OffersPanel({ courseId }: { courseId: string }) {
+  const { data, error, reload } = useLoad<CourseOffers>(`/learn/courses/${courseId}/offers`)
+  const send = useApiSend()
+  const [message, setMessage] = useState<string | null>(null)
+
+  async function change(action: () => Promise<unknown>) {
+    setMessage(null)
+    try {
+      await action()
+      reload()
+    } catch (err) {
+      setMessage((err as Error).message)
+    }
+  }
+
+  if (error || !data) return null
+  return (
+    <section className="dash-card dash-offers" aria-labelledby="h-offers">
+      <h2 className="dash-card-title" id="h-offers">
+        Offer to organizations
+      </h2>
+      <p className="dash-sub">
+        Organizations you offer this course to can run their own cohorts of it. They own their
+        learners&apos; records.
+      </p>
+      {message && <p className="dash-banner dash-banner-error">{message}</p>}
+      {data.offered.length > 0 && (
+        <ul className="dash-offered">
+          {data.offered.map((o) => (
+            <li key={o.id}>
+              <span>{o.name}</span>
+              <button
+                type="button"
+                className="dash-btn-quiet"
+                onClick={() =>
+                  change(() => send('DELETE', `/learn/courses/${courseId}/offers/${o.subdomain}`))
+                }
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {data.available.length > 0 ? (
+        <div className="dash-inline-form">
+          <label className="dash-field">
+            <span>Add an organization</span>
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                const workspace = e.target.value
+                e.target.value = ''
+                if (workspace)
+                  void change(() =>
+                    send('POST', `/learn/courses/${courseId}/offers`, { workspace })
+                  )
+              }}
+            >
+              <option value="">Choose…</option>
+              {data.available.map((o) => (
+                <option key={o.id} value={o.subdomain}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : (
+        data.offered.length === 0 && (
+          <p className="dash-muted">
+            No organizations under your agency to offer this course to yet.
+          </p>
+        )
+      )}
+    </section>
   )
 }

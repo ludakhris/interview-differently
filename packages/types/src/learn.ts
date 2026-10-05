@@ -172,3 +172,57 @@ export interface CatalogEntry {
   title: string
   detail?: string
 }
+
+// ── Cohorts (#46) ───────────────────────────────────────────────────────────
+
+export type CohortStatus = 'upcoming' | 'running' | 'completed'
+
+export interface CohortListItem {
+  id: string
+  name: string
+  courseId: string
+  courseTitle: string
+  startsAt: string | null
+  endsAt: string | null
+  status: CohortStatus
+  enrolled: number
+  /** Learners enter this to join. */
+  joinKey: string | null
+}
+
+export interface CohortRosterRow {
+  enrollmentId: string
+  userId: string
+  name: string
+  email: string | null
+  status: 'enrolled' | 'completed' | 'withdrawn'
+  enrolledAt: string
+  itemsDone: number
+  itemsTotal: number
+}
+
+export interface CohortDetail extends CohortListItem {
+  host: { id: string; name: string; subdomain: string }
+  lengthWeeks: number | null
+  roster: CohortRosterRow[]
+}
+
+/** A course a workspace can start a cohort of: its own published courses and ones offered to it. */
+export interface RunnableCourse {
+  id: string
+  title: string
+  provider: string
+  lengthWeeks: number | null
+}
+
+export interface OfferTarget {
+  id: string
+  name: string
+  subdomain: string
+}
+
+export interface CourseOffers {
+  offered: OfferTarget[]
+  /** Organizations that could be offered this course and have not been yet. */
+  available: OfferTarget[]
+}

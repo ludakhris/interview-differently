@@ -1018,3 +1018,66 @@
 .dash-danger .dash-sub {
   margin-bottom: 12px;
 }
+
+/* Cohorts */
+.dash-code {
+  font-family: var(--mono, ui-monospace, monospace);
+  letter-spacing: 0.08em;
+}
+.dash-code-big {
+  color: var(--navy);
+  font-size: 30px;
+  font-weight: 700;
+}
+.dash-joincode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 32px;
+  margin-bottom: 8px;
+}
+.dash-joincode .dash-card-title {
+  margin-bottom: 4px;
+}
+.dash-joincode-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.dash-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  max-width: 36em;
+}
+.dash-inline-form .dash-field {
+  flex: 1;
+  min-width: 220px;
+}
+.dash-hint {
+  margin: 8px 0 20px;
+  font-size: 13px;
+}
+.dash-offers {
+  margin-top: 40px;
+}
+.dash-offered {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 16px;
+  padding: 0;
+  list-style: none;
+}
+.dash-offered li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--dash-radius, 0);
+  background: var(--surface-alt);
+  font-weight: 600;
+}
