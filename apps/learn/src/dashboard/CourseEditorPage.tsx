@@ -6,7 +6,7 @@ import type {
   CourseOutline,
 } from '@id/types'
 import { useEffect, useState, type FormEvent } from 'react'
-import { useApiSend, useLoad } from './api'
+import { useApiFetch, useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { StatusChip } from './CoursesPage'
 import { ItemEditor, TYPE_LABEL, type ItemDraft } from './ItemEditor'
@@ -59,6 +59,7 @@ function Editor({
 }) {
   const { href } = useApp()
   const send = useApiSend()
+  const apiFetch = useApiFetch()
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null)
   const [editingItem, setEditingItem] = useState<string | null>(null)
@@ -148,6 +149,21 @@ function Editor({
       created = next.modules.flatMap((m) => m.items).find((i) => !before.has(i.id))?.id ?? null
       return next
     })
+    if (ok && created) setEditingItem(created)
+  }
+
+  /** Upload a SCORM zip into a module; the server checks it before keeping anything. */
+  async function uploadScorm(moduleId: string, file: File) {
+    const before = new Set(course.modules.flatMap((m) => m.items.map((i) => i.id)))
+    let created: string | null = null
+    const ok = await run(async () => {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await apiFetch(`/learn/modules/${moduleId}/scorm`, { method: 'POST', body: form })
+      const next = (await res.json()) as CourseDetail
+      created = next.modules.flatMap((m) => m.items).find((i) => !before.has(i.id))?.id ?? null
+      return next
+    }, 'Package uploaded.')
     if (ok && created) setEditingItem(created)
   }
 
@@ -402,6 +418,23 @@ function Editor({
 
               <div className="dash-additem">
                 <span className="dash-muted">Add:</span>
+                <label
+                  className={
+                    busy ? 'dash-btn-quiet dash-file-disabled' : 'dash-btn-quiet dash-file'
+                  }
+                >
+                  + SCORM package
+                  <input
+                    type="file"
+                    accept=".zip,application/zip"
+                    disabled={busy}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      e.target.value = ''
+                      if (f) void uploadScorm(m.id, f)
+                    }}
+                  />
+                </label>
                 {ADD_TYPES.map((k) => (
                   <button
                     key={k.type}

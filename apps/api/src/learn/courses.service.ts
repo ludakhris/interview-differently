@@ -70,6 +70,39 @@ export class CoursesService {
     return mod
   }
 
+  /** Checks the caller may add to this module's course, before any upload is processed. */
+  async assertModuleAccess(
+    userId: string,
+    role: string | undefined,
+    moduleId: string
+  ): Promise<void> {
+    await this.moduleFor(userId, role, moduleId)
+  }
+
+  async addScormItem(
+    userId: string,
+    role: string | undefined,
+    moduleId: string,
+    title: string,
+    config: { packageId: string; entry: string; version: '1.2' | '2004'; files: number }
+  ) {
+    const mod = await this.moduleFor(userId, role, moduleId)
+    const last = await this.prisma.courseItem.aggregate({
+      where: { moduleId },
+      _max: { position: true },
+    })
+    await this.prisma.courseItem.create({
+      data: {
+        moduleId,
+        type: 'scorm',
+        title: title.slice(0, 120),
+        config: config as object,
+        position: (last._max.position ?? 0) + 1,
+      },
+    })
+    return this.detail(userId, role, mod.courseId)
+  }
+
   private async itemFor(userId: string, role: string | undefined, itemId: string) {
     const item = await this.prisma.courseItem.findUnique({
       where: { id: itemId },
@@ -224,6 +257,9 @@ export class CoursesService {
   async addItem(userId: string, role: string | undefined, moduleId: string, body: unknown) {
     const mod = await this.moduleFor(userId, role, moduleId)
     const input = validateItemInput(body)
+    if (input.type === 'scorm') {
+      throw new BadRequestException('Upload a package file to add a SCORM item')
+    }
     const last = await this.prisma.courseItem.aggregate({
       where: { moduleId },
       _max: { position: true },
@@ -244,15 +280,17 @@ export class CoursesService {
   async updateItem(userId: string, role: string | undefined, itemId: string, body: unknown) {
     const item = await this.itemFor(userId, role, itemId)
     const input = validateItemInput(body)
-    await this.prisma.courseItem.update({
-      where: { id: itemId },
-      data: {
-        type: input.type,
-        title: input.title,
-        label: input.label,
-        config: input.config as object,
-      },
-    })
+    // A SCORM item's package cannot be swapped by editing; only its title changes.
+    const data =
+      item.type === 'scorm'
+        ? { title: input.title }
+        : {
+            type: input.type,
+            title: input.title,
+            label: input.label,
+            config: input.config as object,
+          }
+    await this.prisma.courseItem.update({ where: { id: itemId }, data })
     return this.detail(userId, role, item.module.courseId)
   }
 

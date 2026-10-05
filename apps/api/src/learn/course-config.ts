@@ -1,7 +1,13 @@
 import { BadRequestException } from '@nestjs/common'
 import type { CourseItemType, CourseStatus, ItemInput, KnowledgeCheckQuestion } from '@id/types'
 
-export const ITEM_TYPES: CourseItemType[] = ['lesson', 'knowledge_check', 'assessment', 'interview']
+export const ITEM_TYPES: CourseItemType[] = [
+  'lesson',
+  'knowledge_check',
+  'assessment',
+  'interview',
+  'scorm',
+]
 
 export interface CourseFields {
   title?: string
@@ -130,6 +136,23 @@ export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'typ
         config: {
           questions: validateQuestions(config.questions ?? []),
           ...(slug ? { assessmentSlug: slug } : {}),
+        },
+      }
+    }
+    case 'scorm': {
+      const packageId = text(config.packageId, 'Package', 60, true) as string
+      if (!/^[0-9a-f-]{36}$/.test(packageId)) return bad('That is not a valid package')
+      const entry = text(config.entry, 'Launch file', 300, true) as string
+      if (config.version !== '1.2' && config.version !== '2004') return bad('Unknown SCORM version')
+      return {
+        type,
+        title,
+        label,
+        config: {
+          packageId,
+          entry,
+          version: config.version,
+          files: whole(config.files, 'Files', 0, 100000) ?? 0,
         },
       }
     }

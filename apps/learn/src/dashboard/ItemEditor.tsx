@@ -14,6 +14,7 @@ export const TYPE_LABEL: Record<string, string> = {
   knowledge_check: 'Knowledge check',
   assessment: 'Assessment',
   interview: 'Practice interview',
+  scorm: 'SCORM package',
 }
 
 const emptyQuestion = (): KnowledgeCheckQuestion => ({
@@ -49,7 +50,7 @@ export function ItemEditor(props: {
       type: item.type,
       title,
       label: item.type === 'assessment' ? label : null,
-      config,
+      config: item.type === 'scorm' ? item.config : config,
     })
   }
 
@@ -91,6 +92,13 @@ export function ItemEditor(props: {
             </label>
           </fieldset>
         </>
+      )}
+
+      {item.type === 'scorm' && (
+        <p className="dash-muted">
+          SCORM {String(item.config.version ?? '')} package, {String(item.config.files ?? 0)} files.
+          To use a different package, delete this item and upload the new one.
+        </p>
       )}
 
       {item.type === 'interview' && (

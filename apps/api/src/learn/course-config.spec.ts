@@ -93,6 +93,26 @@ describe('validateItemInput', () => {
   })
 })
 
+describe('validateItemInput scorm', () => {
+  const ok = {
+    packageId: '8c0f6b9e-1c2d-4e3f-9a4b-5c6d7e8f9a0b',
+    entry: 'index.html',
+    version: '1.2',
+    files: 12,
+  }
+  it('accepts a package reference and rejects a made-up one', () => {
+    expect(validateItemInput({ type: 'scorm', title: 'Safe lifting', config: ok }).config).toEqual(
+      ok
+    )
+    expect(() =>
+      validateItemInput({ type: 'scorm', title: 'x', config: { ...ok, packageId: 'nope' } })
+    ).toThrow(BadRequestException)
+    expect(() =>
+      validateItemInput({ type: 'scorm', title: 'x', config: { ...ok, version: '3' } })
+    ).toThrow(BadRequestException)
+  })
+})
+
 describe('slugify', () => {
   it('makes a url-safe slug', () => {
     expect(slugify('Medical Assistant (CCMA) — 2026!')).toBe('medical-assistant-ccma-2026')

@@ -18,3 +18,6 @@ docs/business-cases-research.md
 
 # Assessment banks contain answers — never commit (repo is public)
 docs/private/
+
+# Local dev file storage (uploaded SCORM packages, rendered media)
+apps/api/storage/

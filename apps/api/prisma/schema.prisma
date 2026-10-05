@@ -481,6 +481,8 @@ model ItemProgress {
   score        Int? // 0-100 for assessments, knowledge checks and interviews
   attempts     Int        @default(0)
   completedAt  DateTime?
+  // SCORM runtime data (cmi), so a package can resume where the learner left off.
+  data         Json?
   updatedAt    DateTime   @updatedAt
   enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   item         CourseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)

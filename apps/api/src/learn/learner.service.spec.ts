@@ -1,7 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common'
 import type { ClerkService } from '../auth/clerk.service'
 import type { PrismaService } from '../prisma/prisma.service'
-import { buildRecord, LearnerService } from './learner.service'
+import { buildRecord, LearnerService, scormResult, scormSrc } from './learner.service'
 
 const prisma = {
   user: { findUnique: jest.fn(), create: jest.fn() },
@@ -260,5 +260,55 @@ describe('buildRecord', () => {
       reachedTarget: false,
       interviewReady: false,
     })
+  })
+})
+
+describe('scorm', () => {
+  it('builds a same-origin, encoded launch URL', () => {
+    expect(scormSrc('abc', 'story/my page.html?mode=1')).toBe(
+      '/scorm/abc/story/my%20page.html?mode=1'
+    )
+  })
+
+  it('reads done and a 0-100 score from what the package reported', () => {
+    expect(scormResult({ completionStatus: 'completed', score: { raw: 8, max: 10 } })).toEqual({
+      done: true,
+      score: 80,
+    })
+    expect(scormResult({ successStatus: 'passed', score: { raw: 90 } })).toEqual({
+      done: true,
+      score: 90,
+    })
+    expect(scormResult({ completionStatus: 'incomplete', score: { scaled: 0.5 } })).toEqual({
+      done: false,
+      score: 50,
+    })
+    expect(scormResult({ completionStatus: 'incomplete', successStatus: 'failed' })).toEqual({
+      done: false,
+      score: null,
+    })
+    expect(scormResult({ score: { raw: 250 } }).score).toBe(100)
+    expect(scormResult(null)).toEqual({ done: false, score: null })
+  })
+
+  it('keeps the best score and never un-completes an item', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue({
+      ...item('scorm'),
+      config: { packageId: 'p', entry: 'index.html', version: '1.2' },
+    })
+    prisma.itemProgress.findUnique.mockResolvedValue({ status: 'completed', score: 90 })
+    await service.saveScorm('u1', 'k1', 'i1', {
+      completionStatus: 'incomplete',
+      score: { raw: 40 },
+    })
+    const update = prisma.itemProgress.upsert.mock.calls[0][0].update
+    expect(update.status).toBe('completed')
+    expect(update.score).toBe(90)
+  })
+
+  it('rejects a SCORM result for an item that is not SCORM', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    await expect(service.saveScorm('u1', 'k1', 'i1', {})).rejects.toThrow(ConflictException)
   })
 })

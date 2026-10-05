@@ -21,6 +21,14 @@ export default defineConfig({
   plugins: [react(), renameHomeEntry()],
   server: {
     port: 5174,
+    // SCORM packages load from this origin so they can find the player's API.
+    // In production a Vercel rewrite sends /scorm/* to the file bucket instead.
+    proxy: {
+      '/scorm': {
+        target: 'http://localhost:3000',
+        rewrite: (path) => path.replace(/^\/scorm/, '/api/scorm-files'),
+      },
+    },
   },
   build: {
     rollupOptions: {

@@ -1,5 +1,6 @@
 import type { LearnerItem, LearnerOutline, QuizResult } from '@id/types'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Scorm12API, Scorm2004API } from 'scorm-again'
 import { useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { score } from './format'
@@ -70,6 +71,14 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
         )}
         {(item.type === 'knowledge_check' || item.type === 'assessment') && (
           <Quiz
+            item={item}
+            onChange={setItem}
+            nextHref={nextHref}
+            nextLabel={next ? 'Continue' : 'Back to course'}
+          />
+        )}
+        {item.type === 'scorm' && item.scorm && (
+          <ScormPlayer
             item={item}
             onChange={setItem}
             nextHref={nextHref}
@@ -323,5 +332,129 @@ function Interview(props: { item: LearnerItem; nextHref: string; nextLabel: stri
         </a>
       </Actions>
     </div>
+  )
+}
+
+type ScormApi = Scorm12API | Scorm2004API
+
+/**
+ * Plays a SCORM package. The package runs in an iframe on this same origin and
+ * finds the player through window.API (SCORM 1.2) or window.API_1484_11 (2004),
+ * which scorm-again provides. What the package reports is saved to our API.
+ */
+function ScormPlayer(props: {
+  item: LearnerItem
+  onChange: (i: LearnerItem) => void
+  nextHref: string
+  nextLabel: string
+}) {
+  const { item } = props
+  const scorm = item.scorm as NonNullable<LearnerItem['scorm']>
+  const send = useApiSend()
+  const sendRef = useRef(send)
+  sendRef.current = send
+  const [saved, setSaved] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [ready, setReady] = useState(false)
+  const version = scorm.version
+  const globalName = version === '2004' ? 'API_1484_11' : 'API'
+
+  useEffect(() => {
+    if (item.locked) return
+    const api: ScormApi =
+      version === '2004'
+        ? new Scorm2004API({ autocommit: true, autocommitSeconds: 8, logLevel: 5 })
+        : new Scorm12API({ autocommit: true, autocommitSeconds: 8, logLevel: 5 })
+    if (scorm.cmi) {
+      try {
+        api.loadFromJSON(scorm.cmi as Record<string, unknown>)
+      } catch {
+        /* a snapshot from an older package version: start fresh */
+      }
+    }
+    ;(window as unknown as Record<string, unknown>)[globalName] = api
+    setReady(true)
+
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const push = async () => {
+      const c = api.renderCommitObject(false)
+      setSaved('saving')
+      try {
+        const next = await sendRef.current<LearnerItem>(
+          'POST',
+          `/learn/me/cohorts/${item.cohortId}/items/${item.id}/scorm`,
+          {
+            completionStatus: c.completionStatus,
+            successStatus: c.successStatus,
+            score: c.score,
+            runtimeData: c.runtimeData,
+          }
+        )
+        props.onChange(next)
+        setSaved('saved')
+      } catch {
+        setSaved('error')
+      }
+    }
+    const soon = () => {
+      clearTimeout(timer)
+      timer = setTimeout(push, 1200)
+    }
+    const events =
+      version === '2004'
+        ? [
+            'Commit',
+            'Terminate',
+            'SetValue.cmi.completion_status',
+            'SetValue.cmi.success_status',
+            'SetValue.cmi.score.raw',
+          ]
+        : [
+            'LMSCommit',
+            'LMSFinish',
+            'LMSSetValue.cmi.core.lesson_status',
+            'LMSSetValue.cmi.core.score.raw',
+          ]
+    events.forEach((e) => api.on(e, soon))
+
+    return () => {
+      clearTimeout(timer)
+      void push()
+      delete (window as unknown as Record<string, unknown>)[globalName]
+    }
+    // The package runs for the life of this page; re-creating the API would reset it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.id, item.locked])
+
+  if (item.locked) return <p className="dash-muted">{item.locked}</p>
+  return (
+    <>
+      {ready && (
+        <iframe
+          className="dash-scorm-frame"
+          title={item.title}
+          src={scorm.src}
+          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
+        />
+      )}
+      <Actions>
+        {item.status === 'completed' && (
+          <span className="dash-chip dash-chip-on">
+            Completed{item.score !== null ? ` · ${score(item.score)}` : ''}
+          </span>
+        )}
+        <span className="dash-muted" role="status">
+          {saved === 'saving'
+            ? 'Saving…'
+            : saved === 'saved'
+              ? 'Progress saved.'
+              : saved === 'error'
+                ? 'Could not save. Your progress is kept in this window.'
+                : 'Progress saves automatically.'}
+        </span>
+        <a className="dash-btn" href={props.nextHref}>
+          {props.nextLabel}
+        </a>
+      </Actions>
+    </>
   )
 }

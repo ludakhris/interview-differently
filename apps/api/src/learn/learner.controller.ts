@@ -45,6 +45,16 @@ export class LearnerController {
     return this.learner.completeLesson(req.userId, cohortId, itemId)
   }
 
+  @Post('cohorts/:cohortId/items/:itemId/scorm')
+  scorm(
+    @Req() req: LearnRequest,
+    @Param('cohortId') cohortId: string,
+    @Param('itemId') itemId: string,
+    @Body() body: unknown
+  ) {
+    return this.learner.saveScorm(req.userId, cohortId, itemId, body)
+  }
+
   @Post('cohorts/:cohortId/items/:itemId/answers')
   answers(
     @Req() req: LearnRequest,

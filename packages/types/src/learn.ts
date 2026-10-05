@@ -96,7 +96,7 @@ export interface LearnWorkspace {
 
 // ── Course setup (#46) ──────────────────────────────────────────────────────
 
-export type CourseItemType = 'lesson' | 'knowledge_check' | 'assessment' | 'interview'
+export type CourseItemType = 'lesson' | 'knowledge_check' | 'assessment' | 'interview' | 'scorm'
 export type CourseStatus = 'draft' | 'published'
 
 export interface KnowledgeCheckQuestion {
@@ -105,7 +105,10 @@ export interface KnowledgeCheckQuestion {
   correctIndex: number
 }
 
-/** `config` by type: lesson { body }, knowledge_check { questions }, assessment { assessmentSlug }, interview { scenarioId }. */
+/**
+ * `config` by type: lesson { body }, knowledge_check and assessment { questions },
+ * interview { scenarioId }, scorm { packageId, entry, version, files }.
+ */
 export interface CourseItemDto {
   id: string
   moduleId: string
@@ -295,6 +298,8 @@ export interface LearnerItem {
   body: string | null
   questions: QuizQuestion[] | null
   scenario: { id: string; title: string } | null
+  /** A SCORM package: where to load it and what the learner saved last time. */
+  scorm: { src: string; version: '1.2' | '2004'; cmi: Record<string, unknown> | null } | null
   status: ProgressStatus
   score: number | null
   attempts: number

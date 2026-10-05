@@ -249,6 +249,18 @@ export class LearnerService {
       const title = ((row?.data ?? {}) as { title?: string }).title
       scenario = { id: config.scenarioId, title: title ?? config.scenarioId }
     }
+    let scorm: LearnerItem['scorm'] = null
+    if (
+      item.type === 'scorm' &&
+      typeof config.packageId === 'string' &&
+      typeof config.entry === 'string'
+    ) {
+      scorm = {
+        src: scormSrc(config.packageId, config.entry),
+        version: config.version === '2004' ? '2004' : '1.2',
+        cmi: (progress?.data ?? null) as Record<string, unknown> | null,
+      }
+    }
     return {
       id: item.id,
       cohortId,
@@ -260,6 +272,7 @@ export class LearnerService {
         ? publicQuestions((config.questions ?? []) as KnowledgeCheckQuestion[])
         : null,
       scenario,
+      scorm,
       status: this.statusOf(progress ?? undefined),
       score: progress?.score ?? null,
       attempts: progress?.attempts ?? 0,
@@ -328,6 +341,47 @@ export class LearnerService {
     return { result, item: await this.item(userId, cohortId, itemId) }
   }
 
+  /** Saves what a SCORM package reported: status, score and the data it needs to resume. */
+  async saveScorm(
+    userId: string,
+    cohortId: string,
+    itemId: string,
+    body: unknown
+  ): Promise<LearnerItem> {
+    const { e, item, progress } = await this.itemOf(userId, cohortId, itemId)
+    const locked = this.lockReason(e.cohort.startsAt, e.cohort.endsAt)
+    if (locked) throw new ConflictException(locked)
+    if (item.type !== 'scorm') throw new ConflictException('This item is not a SCORM package')
+    const { done, score } = scormResult(body)
+    const raw = (body as { runtimeData?: unknown } | null)?.runtimeData
+    const runtime =
+      raw && typeof raw === 'object' && !Array.isArray(raw) && JSON.stringify(raw).length < 400_000
+        ? (raw as object)
+        : undefined
+    const wasDone = progress?.status === 'completed'
+    const best = score === null ? (progress?.score ?? null) : Math.max(score, progress?.score ?? 0)
+    await this.prisma.itemProgress.upsert({
+      where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
+      create: {
+        enrollmentId: e.id,
+        itemId,
+        status: done ? 'completed' : 'in_progress',
+        score: best,
+        attempts: 1,
+        completedAt: done ? new Date() : null,
+        data: runtime,
+      },
+      update: {
+        status: done || wasDone ? 'completed' : 'in_progress',
+        score: best,
+        ...(done && !wasDone ? { completedAt: new Date() } : {}),
+        ...(runtime ? { data: runtime } : {}),
+      },
+    })
+    if (done) await this.completeIfDone(e.id, e.status, e.cohort.course.id)
+    return this.item(userId, cohortId, itemId)
+  }
+
   /**
    * A learner completes the course when every lesson, knowledge check and
    * assessment is done. Practice interviews are scored by an instructor and do
@@ -381,4 +435,29 @@ export function buildRecord(
     interviewReady: interviewBest !== null && interviewBest >= course.readinessThreshold,
     completed,
   }
+}
+
+/** The URL a package loads from: same origin as the player, so the SCORM API can be found. */
+export function scormSrc(packageId: string, entry: string): string {
+  const [path, query] = entry.split('?')
+  const encoded = path.split('/').map(encodeURIComponent).join('/')
+  return `/scorm/${packageId}/${encoded}${query ? `?${query}` : ''}`
+}
+
+/** Done and score (0-100) from what a SCORM package reported on commit. */
+export function scormResult(body: unknown): { done: boolean; score: number | null } {
+  const b = (typeof body === 'object' && body !== null ? body : {}) as {
+    completionStatus?: unknown
+    successStatus?: unknown
+    score?: { raw?: unknown; max?: unknown; scaled?: unknown }
+  }
+  const done = b.completionStatus === 'completed' || b.successStatus === 'passed'
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+  const raw = num(b.score?.raw)
+  const max = num(b.score?.max)
+  const scaled = num(b.score?.scaled)
+  let score: number | null = null
+  if (raw !== null) score = Math.round((raw / (max && max > 0 ? max : 100)) * 100)
+  else if (scaled !== null && scaled >= 0 && scaled <= 1) score = Math.round(scaled * 100)
+  return { done, score: score === null ? null : Math.max(0, Math.min(100, score)) }
 }

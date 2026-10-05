@@ -3,6 +3,7 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
+    { "source": "/scorm/:path*", "destination": "https://media.interviewdifferently.com/learn-scorm/:path*" },
     { "source": "/", "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }], "destination": "/delaware.html" },
     { "source": "/privacy", "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }], "destination": "/delaware.html" },
     { "source": "/sign-in/:path*", "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }], "destination": "/delaware.html" },
