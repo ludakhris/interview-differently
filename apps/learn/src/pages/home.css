@@ -1050,6 +1050,10 @@
   display: flex;
   flex-direction: column;
 }
+.ld-simple .ld-header,
+.ld-simple-footer {
+  width: 100%;
+}
 .ld-simple-main {
   flex: 1;
   width: 100%;
@@ -1078,4 +1082,113 @@
 }
 .ld-simple-footer a {
   text-decoration: none;
+}
+
+/* Account menu (signed in) */
+.ld-account {
+  position: relative;
+  z-index: 20;
+}
+.ld-account-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px 4px 4px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ld-account-trigger:hover,
+.ld-account-trigger[aria-expanded='true'] {
+  background: var(--white);
+}
+.ld-account-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 800;
+  object-fit: cover;
+}
+.ld-account-caret {
+  width: 7px;
+  height: 7px;
+  margin: 0 2px 3px 2px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+.ld-account-trigger[aria-expanded='true'] .ld-account-caret {
+  margin-bottom: -3px;
+  transform: rotate(-135deg);
+}
+.ld-account-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 240px;
+  padding: 8px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(11, 31, 46, 0.14);
+}
+.ld-account-who {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px 12px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+  line-height: 1.4;
+}
+.ld-account-who span {
+  color: var(--faint);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.ld-account-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ld-account-menu button {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.ld-account-menu button:hover,
+.ld-account-menu button:focus-visible {
+  background: var(--paper);
+}
+/* Narrow screens: account and actions share the logo row, nav wraps below,
+   so the right-anchored account menu stays on screen. */
+@media (max-width: 960px) {
+  .ld-header > nav {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 640px) {
+  .ld-account-name {
+    display: none;
+  }
 }

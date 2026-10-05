@@ -1,5 +1,6 @@
 import { type FormEvent } from 'react'
 import { CONTACT_EMAIL } from '../contact'
+import { AccountMenu } from '../auth'
 import './home.css'
 
 // Walkthrough requests open the visitor's mail app; there is no backend form yet.
@@ -143,7 +144,7 @@ export function HomePage() {
   return (
     <div className="ld">
       <header className="ld-wrap ld-header">
-        <a href="#top" className="ld-brand">
+        <a href="/" className="ld-brand">
           <span className="ld-mark" aria-hidden="true" />
           <span className="ld-wordmark">
             learn<span className="ld-slash">/</span>differently
@@ -172,12 +173,18 @@ export function HomePage() {
           </ul>
         </nav>
         <div className="ld-header-actions">
-          <a href="/sign-in" className="ld-signin-link">
-            Sign in
-          </a>
-          <a href="#demo" className="ld-btn ld-btn-ink">
-            Book a walkthrough
-          </a>
+          <AccountMenu
+            signedOut={
+              <>
+                <a href="/sign-in" className="ld-signin-link">
+                  Sign in
+                </a>
+                <a href="#demo" className="ld-btn ld-btn-ink">
+                  Book a walkthrough
+                </a>
+              </>
+            }
+          />
         </div>
       </header>
 

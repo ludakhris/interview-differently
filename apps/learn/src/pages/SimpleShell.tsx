@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import { AccountMenu } from '../auth'
 import { CONTACT_EMAIL } from '../contact'
 import './home.css'
 
@@ -13,6 +14,7 @@ export function SimpleShell({ children }: { children: ReactNode }) {
             learn<span className="ld-slash">/</span>differently
           </span>
         </a>
+        <AccountMenu signedOut={null} />
       </header>
       <main className="ld-wrap ld-simple-main">{children}</main>
       <footer className="ld-wrap ld-simple-footer">
