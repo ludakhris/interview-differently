@@ -1,24 +1,18 @@
-import type { LearnWorkspace } from '@id/types'
-import { useLoad } from './api'
 import { DashboardShell, Notice } from './DashboardShell'
-import { errorNotice } from './shared'
-import { workspaceHref } from './WorkspaceSwitcher'
+import { useApp } from './app-context'
+import { KIND_PLURAL, workspaceHref } from './WorkspaceSwitcher'
 
-/** /dashboard with no workspace picked: open the only one, or let the person choose. */
+const KIND_ORDER = ['agency', 'provider', 'organization', 'academic']
+
+/** No workspace picked yet: open the only one, or let the person choose. */
 export function WorkspaceChooser() {
-  const { data, error, loading } = useLoad<LearnWorkspace[]>('/learn/workspaces')
-  if (error) return <DashboardShell>{errorNotice(error)}</DashboardShell>
-  if (loading || !data)
-    return (
-      <DashboardShell>
-        <p className="dash-loading">Loading workspaces…</p>
-      </DashboardShell>
-    )
-  if (data.length === 1) {
-    window.location.replace(workspaceHref(window.location.search, data[0].subdomain))
+  const { workspaces } = useApp()
+  if (!workspaces) return null
+  if (workspaces.length === 1) {
+    window.location.replace(workspaceHref(window.location.search, workspaces[0].subdomain))
     return null
   }
-  if (data.length === 0) {
+  if (workspaces.length === 0) {
     return (
       <DashboardShell>
         <Notice title="No workspaces yet">
@@ -28,17 +22,25 @@ export function WorkspaceChooser() {
       </DashboardShell>
     )
   }
+  const kinds = KIND_ORDER.filter((k) => workspaces.some((w) => w.kind === k))
   return (
     <DashboardShell>
       <h1 className="dash-h2">Choose a workspace</h1>
-      <p className="dash-sub">Pick the agency or institution whose results you want to see.</p>
-      <ul className="dash-workspaces">
-        {data.map((w) => (
-          <li key={w.id}>
-            <a href={workspaceHref(window.location.search, w.subdomain)}>{w.name}</a>
-          </li>
-        ))}
-      </ul>
+      <p className="dash-sub">Pick the agency, provider or institution you want to work in.</p>
+      {kinds.map((k) => (
+        <section key={k} className="dash-workspace-group">
+          <h2 className="dash-group-title">{KIND_PLURAL[k]}</h2>
+          <ul className="dash-workspaces">
+            {workspaces
+              .filter((w) => w.kind === k)
+              .map((w) => (
+                <li key={w.id}>
+                  <a href={workspaceHref(window.location.search, w.subdomain)}>{w.name}</a>
+                </li>
+              ))}
+          </ul>
+        </section>
+      ))}
     </DashboardShell>
   )
 }

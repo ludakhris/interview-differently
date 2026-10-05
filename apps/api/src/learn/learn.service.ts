@@ -6,7 +6,11 @@ import { agencyOutcomes, gradebook, type EnrollmentRow } from './outcomes'
 import { exitFileCsv } from './exit-file'
 
 /** Roles on the LearnDifferently Clerk instance (publicMetadata.role). */
-export const LEARN_ROLES = { agencyAdmin: 'agency-admin', caseManager: 'case-manager' } as const
+export const LEARN_ROLES = {
+  agencyAdmin: 'agency-admin',
+  caseManager: 'case-manager',
+  providerAdmin: 'provider-admin',
+} as const
 
 @Injectable()
 export class LearnService {
@@ -18,18 +22,18 @@ export class LearnService {
   }
 
   /**
-   * Agencies the caller may open. Agency admins see every agency; anyone else
-   * sees the agencies they hold a membership in (case managers, for example).
+   * Workspaces the caller may open. Agency admins see every agency and the
+   * providers and organizations that report to one; anyone else sees the
+   * institutions they hold a membership in.
    */
   async workspaces(userId: string, role: string | undefined): Promise<LearnWorkspace[]> {
     const rows = await this.prisma.institution.findMany({
-      where: {
-        kind: 'agency',
-        subdomain: { not: null },
-        ...(role === LEARN_ROLES.agencyAdmin ? {} : { memberships: { some: { userId } } }),
-      },
-      select: { id: true, name: true, kind: true, subdomain: true },
-      orderBy: { name: 'asc' },
+      where:
+        role === LEARN_ROLES.agencyAdmin
+          ? { subdomain: { not: null }, OR: [{ kind: 'agency' }, { parent: { kind: 'agency' } }] }
+          : { subdomain: { not: null }, memberships: { some: { userId } } },
+      select: { id: true, name: true, kind: true, subdomain: true, parentId: true },
+      orderBy: [{ kind: 'asc' }, { name: 'asc' }],
     })
     return rows.map((r) => ({ ...r, subdomain: r.subdomain as string }))
   }

@@ -16,15 +16,46 @@ export class ApiError extends Error {
 export function useApiFetch() {
   const { getToken } = useAuth()
   return useCallback(
-    async (path: string): Promise<Response> => {
+    async (path: string, init: RequestInit = {}): Promise<Response> => {
       const token = await getToken()
       const res = await fetch(`${API_URL}${path}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        ...init,
+        headers: {
+          ...(init.headers ?? {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       })
-      if (!res.ok) throw new ApiError(res.status, `Request failed (${res.status})`)
+      if (!res.ok) {
+        // Nest sends { message } (or a list of messages) with the status.
+        let message = `Request failed (${res.status})`
+        try {
+          const body = (await res.json()) as { message?: string | string[] }
+          if (body.message)
+            message = Array.isArray(body.message) ? body.message.join(' ') : body.message
+        } catch {
+          /* keep the generic message */
+        }
+        throw new ApiError(res.status, message)
+      }
       return res
     },
     [getToken]
+  )
+}
+
+/** Send JSON (POST/PUT/DELETE) and get the JSON reply back, if there is one. */
+export function useApiSend() {
+  const apiFetch = useApiFetch()
+  return useCallback(
+    async <T>(method: 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> => {
+      const res = await apiFetch(path, {
+        method,
+        headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      })
+      return (res.status === 204 ? undefined : await res.json()) as T
+    },
+    [apiFetch]
   )
 }
 
@@ -32,11 +63,18 @@ export interface Loaded<T> {
   data: T | null
   error: ApiError | Error | null
   loading: boolean
+  /** Fetch again, keeping what is on screen until the new data arrives. */
+  reload: () => void
 }
 
 export function useLoad<T>(path: string): Loaded<T> {
   const apiFetch = useApiFetch()
-  const [state, setState] = useState<Loaded<T>>({ data: null, error: null, loading: true })
+  const [state, setState] = useState<Omit<Loaded<T>, 'reload'>>({
+    data: null,
+    error: null,
+    loading: true,
+  })
+  const [tick, setTick] = useState(0)
   useEffect(() => {
     let cancelled = false
     setState((s) => ({ ...s, loading: true, error: null }))
@@ -47,8 +85,8 @@ export function useLoad<T>(path: string): Loaded<T> {
     return () => {
       cancelled = true
     }
-  }, [apiFetch, path])
-  return state
+  }, [apiFetch, path, tick])
+  return { ...state, reload: () => setTick((n) => n + 1) }
 }
 
 /** Fetches a file with the session token (a plain link can't send it) and saves it. */

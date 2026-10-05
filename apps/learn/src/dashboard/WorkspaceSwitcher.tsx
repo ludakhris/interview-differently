@@ -1,6 +1,18 @@
-import type { LearnWorkspace } from '@id/types'
-import { useLoad } from './api'
 import { useApp } from './app-context'
+
+export const KIND_LABEL: Record<string, string> = {
+  agency: 'Agency',
+  provider: 'Provider',
+  organization: 'Organization',
+  academic: 'Academic',
+}
+
+export const KIND_PLURAL: Record<string, string> = {
+  agency: 'Agencies',
+  provider: 'Providers',
+  organization: 'Organizations',
+  academic: 'Academic institutions',
+}
 
 /** Where to go when another workspace is picked: its dashboard, same skin choice. */
 export function workspaceHref(search: string, slug: string): string {
@@ -11,8 +23,7 @@ export function workspaceHref(search: string, slug: string): string {
 
 /** Workspace bar at the top of the page. Hidden on a tenant host, where the host fixes the workspace. */
 export function WorkspaceSwitcher() {
-  const { fixedTenant, tenant } = useApp()
-  const { data } = useLoad<LearnWorkspace[]>('/learn/workspaces')
+  const { fixedTenant, tenant, workspaces: data } = useApp()
   if (fixedTenant || !data || data.length === 0) return null
   return (
     <div className="dash-workspace">
@@ -33,6 +44,7 @@ export function WorkspaceSwitcher() {
           {data.map((w) => (
             <option key={w.id} value={w.subdomain}>
               {w.name}
+              {w.kind === 'agency' ? '' : ` (${KIND_LABEL[w.kind] ?? w.kind})`}
             </option>
           ))}
         </select>

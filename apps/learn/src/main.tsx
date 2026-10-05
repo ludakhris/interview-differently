@@ -18,7 +18,12 @@ const site = resolveSite(hostname, search)
 function page(): ReactNode {
   if (pathname === '/privacy') return <PrivacyPage />
   if (pathname === '/sign-in' || pathname.startsWith('/sign-in/')) return <SignInPage />
-  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+  if (
+    pathname === '/dashboard' ||
+    pathname.startsWith('/dashboard/') ||
+    pathname === '/courses' ||
+    pathname.startsWith('/courses/')
+  ) {
     // Same page on delaware.learndifferently.tech and on learndifferently.tech?site=delaware;
     // only the skin differs (see brand.ts).
     return (

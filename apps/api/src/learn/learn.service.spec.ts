@@ -6,23 +6,30 @@ const findMany = jest.fn()
 const prisma = { institution: { findMany } } as unknown as PrismaService
 const service = new LearnService(prisma)
 
-const delaware = { id: 'a1', name: 'Delaware DoL', kind: 'agency', subdomain: 'delaware' }
+const delaware = {
+  id: 'a1',
+  name: 'Delaware DoL',
+  kind: 'agency',
+  subdomain: 'delaware',
+  parentId: null,
+}
 
 describe('LearnService workspaces', () => {
   beforeEach(() => jest.clearAllMocks())
 
-  it('gives agency admins every agency', async () => {
+  it('gives agency admins every agency and the institutions under one', async () => {
     findMany.mockResolvedValue([delaware])
     await expect(service.workspaces('u1', 'agency-admin')).resolves.toEqual([delaware])
-    const where = findMany.mock.calls[0][0].where
-    expect(where).toEqual({ kind: 'agency', subdomain: { not: null } })
+    expect(findMany.mock.calls[0][0].where).toEqual({
+      subdomain: { not: null },
+      OR: [{ kind: 'agency' }, { parent: { kind: 'agency' } }],
+    })
   })
 
-  it('limits everyone else to agencies they are a member of', async () => {
+  it('limits everyone else to institutions they are a member of', async () => {
     findMany.mockResolvedValue([])
-    await service.workspaces('u2', 'case-manager')
+    await service.workspaces('u2', 'provider-admin')
     expect(findMany.mock.calls[0][0].where).toEqual({
-      kind: 'agency',
       subdomain: { not: null },
       memberships: { some: { userId: 'u2' } },
     })

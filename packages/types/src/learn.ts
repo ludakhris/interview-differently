@@ -88,6 +88,87 @@ export interface Gradebook {
 export interface LearnWorkspace {
   id: string
   name: string
+  /** 'agency' | 'provider' | 'organization' | 'academic' */
   kind: string
   subdomain: string
+  parentId: string | null
+}
+
+// ── Course setup (#46) ──────────────────────────────────────────────────────
+
+export type CourseItemType = 'lesson' | 'knowledge_check' | 'assessment' | 'interview'
+export type CourseStatus = 'draft' | 'published'
+
+export interface KnowledgeCheckQuestion {
+  prompt: string
+  options: string[]
+  correctIndex: number
+}
+
+/** `config` by type: lesson { body }, knowledge_check { questions }, assessment { assessmentSlug }, interview { scenarioId }. */
+export interface CourseItemDto {
+  id: string
+  moduleId: string
+  type: string
+  title: string
+  position: number
+  /** 'pre' or 'post' for assessments, otherwise null. */
+  label: string | null
+  config: Record<string, unknown>
+}
+
+export interface CourseModuleDto {
+  id: string
+  title: string
+  position: number
+  items: CourseItemDto[]
+}
+
+export interface CourseSettings {
+  title: string
+  summary: string | null
+  sector: string | null
+  credential: string | null
+  lengthWeeks: number | null
+  /** Post-assessment score that counts as meeting the course target. */
+  targetScore: number
+  /** Best interview score that counts as interview ready. */
+  readinessThreshold: number
+  status: CourseStatus
+}
+
+export interface CourseSummary extends CourseSettings {
+  id: string
+  slug: string
+  modules: number
+  items: number
+  cohorts: number
+  updatedAt: string
+}
+
+export interface CourseDetail extends CourseSettings {
+  id: string
+  slug: string
+  provider: { id: string; name: string; subdomain: string }
+  cohorts: number
+  modules: CourseModuleDto[]
+}
+
+export interface ItemInput {
+  type: CourseItemType
+  title: string
+  label?: 'pre' | 'post' | null
+  config?: Record<string, unknown>
+}
+
+/** New order for a course: modules in order, and each module's items in order. */
+export interface CourseOutline {
+  moduleIds: string[]
+  itemIds: Record<string, string[]>
+}
+
+export interface CatalogEntry {
+  id: string
+  title: string
+  detail?: string
 }
