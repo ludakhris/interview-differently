@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { ClerkService } from '../auth/clerk.service'
+import { ClerkService, type UserSource } from '../auth/clerk.service'
 
 export interface CohortInput {
   name: string
@@ -139,14 +139,20 @@ export class CohortsService {
     const cohort = await this.prisma.cohort.findUnique({ where: { id: cohortId } })
     if (!cohort) throw new NotFoundException(`Cohort ${cohortId} not found`)
 
+    // A cohort with a course is a LearnDifferently cohort: its members come from
+    // the LearnDifferently Clerk instance, everyone else's from Interview Differently.
+    const source: UserSource = cohort.courseId ? 'learn' : 'interview'
+
     let userId: string | null = null
     if (input.userId) {
       userId = input.userId
       // Backfill the User mirror from Clerk if missing.
-      await this.upsertUserFromClerk(userId)
+      await this.upsertUserFromClerk(userId, source)
     } else if (input.email) {
       const trimmed = input.email.trim().toLowerCase()
-      const user = await this.prisma.user.findUnique({ where: { email: trimmed } })
+      const user = await this.prisma.user.findUnique({
+        where: { email_source: { email: trimmed, source } },
+      })
       if (!user) {
         throw new NotFoundException(
           `No user with email "${trimmed}" has signed in yet. Ask them to sign in once, then re-add them.`
@@ -191,13 +197,14 @@ export class CohortsService {
    * Membership can be created with just the userId; we just won't have
    * the email/name cached for analytics.
    */
-  private async upsertUserFromClerk(userId: string): Promise<void> {
+  private async upsertUserFromClerk(userId: string, source: UserSource): Promise<void> {
     const existing = await this.prisma.user.findUnique({ where: { id: userId } })
     if (existing) return
-    const profile = await this.clerk.getUserProfile(userId)
+    const profile = await this.clerk.getUserProfile(userId, source)
     await this.prisma.user.create({
       data: {
         id: userId,
+        source,
         email: profile?.email ?? null,
         displayName: profile?.displayName ?? null,
       },

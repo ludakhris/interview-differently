@@ -71,6 +71,7 @@ export default defineRailway((ctx) => {
       DATABASE_URL: preserve(),
       DID_API_KEY: preserve(),
       FRONTEND_URL: preserve(),
+      LEARN_CLERK_SECRET_KEY: preserve(),
       NODE_ENV: preserve(),
       OPENAI_API_KEY: preserve(),
       R2_ACCESS_KEY_ID: preserve(),

@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { createClerkClient, verifyToken, type ClerkClient } from '@clerk/backend'
+import { isLearnOrigin } from './learn-origin'
+
+/** Which Clerk instance issued a user id: Interview Differently or LearnDifferently. */
+export type UserSource = 'interview' | 'learn'
 
 /**
  * Thin wrapper around the Clerk backend SDK.
@@ -17,15 +21,27 @@ export class ClerkService {
   private readonly logger = new Logger(ClerkService.name)
   private readonly client: ClerkClient | null
   private readonly secretKey: string | null
+  // LearnDifferently has its own Clerk instance (#46). Its tokens are only
+  // accepted by verifyLearnToken, never by verifyBearerToken.
+  private readonly learnClient: ClerkClient | null
+  private readonly learnSecretKey: string | null
 
   constructor() {
     this.secretKey = process.env.CLERK_SECRET_KEY ?? null
     if (!this.secretKey) {
       this.client = null
       this.logger.warn('CLERK_SECRET_KEY not set — auth checks will reject all requests')
-      return
+    } else {
+      this.client = createClerkClient({ secretKey: this.secretKey })
     }
-    this.client = createClerkClient({ secretKey: this.secretKey })
+    this.learnSecretKey = process.env.LEARN_CLERK_SECRET_KEY ?? null
+    this.learnClient = this.learnSecretKey
+      ? createClerkClient({ secretKey: this.learnSecretKey })
+      : null
+  }
+
+  private clientFor(source: UserSource): ClerkClient | null {
+    return source === 'learn' ? this.learnClient : this.client
   }
 
   /** Returns the Clerk userId from a Bearer JWT, or null if invalid/expired/missing key. */
@@ -42,6 +58,24 @@ export class ClerkService {
     }
   }
 
+  /**
+   * Returns the Clerk userId from a LearnDifferently Bearer JWT, or null if it
+   * is invalid, expired, not issued by that instance, or from an unknown origin.
+   */
+  async verifyLearnToken(token: string): Promise<string | null> {
+    if (!this.learnSecretKey) return null
+    try {
+      const payload = await verifyToken(token, { secretKey: this.learnSecretKey })
+      if (payload.azp && !isLearnOrigin(payload.azp)) return null
+      return payload.sub ?? null
+    } catch (err) {
+      this.logger.debug(
+        `Learn token verification failed: ${err instanceof Error ? err.message : 'unknown'}`
+      )
+      return null
+    }
+  }
+
   /** True if the user's Clerk publicMetadata.role === 'admin'. Same flag the builder uses. */
   async isAdmin(userId: string): Promise<boolean> {
     return (await this.getRole(userId)) === 'admin'
@@ -52,10 +86,11 @@ export class ClerkService {
    * Known roles today: 'admin' (full platform admin), 'institution-admin'
    * (manages a single institution's cohorts and analytics).
    */
-  async getRole(userId: string): Promise<string | null> {
-    if (!this.client) return null
+  async getRole(userId: string, source: UserSource = 'interview'): Promise<string | null> {
+    const client = this.clientFor(source)
+    if (!client) return null
     try {
-      const user = await this.client.users.getUser(userId)
+      const user = await client.users.getUser(userId)
       const role = (user.publicMetadata as { role?: string } | null)?.role
       return role ?? null
     } catch (err) {
@@ -71,11 +106,13 @@ export class ClerkService {
    * Used by the User mirror table to cache contact info for analytics.
    */
   async getUserProfile(
-    userId: string
+    userId: string,
+    source: UserSource = 'interview'
   ): Promise<{ email: string | null; displayName: string | null } | null> {
-    if (!this.client) return null
+    const client = this.clientFor(source)
+    if (!client) return null
     try {
-      const user = await this.client.users.getUser(userId)
+      const user = await client.users.getUser(userId)
       const primary = user.primaryEmailAddressId
         ? user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)
         : user.emailAddresses[0]

@@ -151,13 +151,18 @@ model ScenarioRequest {
 
 model User {
   id          String       @id              // Clerk userId — no separate uuid
-  email       String?      @unique          // cached from Clerk; nullable until first sync
+  email       String?                       // cached from Clerk; nullable until first sync
+  // Which Clerk instance issued this id: 'interview' (Interview Differently) or
+  // 'learn' (LearnDifferently). Someone with both apps has two rows, so email is
+  // unique per source rather than globally.
+  source      String       @default("interview")
   displayName String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   memberships Membership[]
   enrollments Enrollment[]
 
+  @@unique([email, source])
   @@index([email])
 }
 
