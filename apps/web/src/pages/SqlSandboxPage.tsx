@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import type { ReactCodeMirrorRef } from '@uiw/react-codemirror'
-import { AlertTriangle, Play, RotateCcw } from 'lucide-react'
+import { AlertTriangle, PanelLeftClose, PanelLeftOpen, Play, RotateCcw } from 'lucide-react'
 import { Nav } from '@/components/Nav'
 import { SqlEditor } from '@/components/sql/SqlEditor'
 import { SchemaTree } from '@/components/sql/SchemaTree'
@@ -42,6 +42,8 @@ function readRowLimit(): number {
   }
 }
 const NAV_HEIGHT = 57
+// Below this width the 240px rail would crowd out the editor, so it starts collapsed.
+const RAIL_AUTO_COLLAPSE_PX = 768
 const MIN_EDITOR = 120
 const MIN_RESULTS = 160
 
@@ -90,6 +92,7 @@ export function SqlSandboxPage() {
   const [history, setHistory] = useState<string[]>([])
   const [rowLimit, setRowLimit] = useState(readRowLimit)
   const editorRef = useRef<ReactCodeMirrorRef>(null)
+  const [railOpen, setRailOpen] = useState(() => window.innerWidth >= RAIL_AUTO_COLLAPSE_PX)
 
   // ── Dataset list ──
   useEffect(() => {
@@ -296,7 +299,9 @@ export function SqlSandboxPage() {
       ) : (
         <div className="flex flex-1 min-h-0" style={{ height: `calc(100vh - ${NAV_HEIGHT}px)` }}>
           {/* ── Rail ── */}
-          <aside className="flex flex-col w-[240px] flex-shrink-0 bg-[#0d0d0d] border-r border-white/8">
+          <aside
+            className={`${railOpen ? 'flex' : 'hidden'} flex-col w-[240px] flex-shrink-0 bg-[#0d0d0d] border-r border-white/8`}
+          >
             <div className="h-[3px] w-full flex-shrink-0 bg-[#2d9e5f]" />
             <div className="px-5 pt-5 pb-3 flex items-center justify-between">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#2d9e5f]">
@@ -377,6 +382,15 @@ export function SqlSandboxPage() {
             {/* Toolbar */}
             <div className="flex items-center justify-between px-5 py-2.5 border-b border-white/8 bg-[#0d0d0d]">
               <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setRailOpen((o) => !o)}
+                  title={railOpen ? 'Hide workspace panel' : 'Show workspace panel'}
+                  aria-label={railOpen ? 'Hide workspace panel' : 'Show workspace panel'}
+                  aria-expanded={railOpen}
+                  className="text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                >
+                  {railOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+                </button>
                 <button
                   onClick={run}
                   disabled={!ready || running || !query.trim()}
