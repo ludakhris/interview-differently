@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { InterviewEngineService } from '../interview-engine/interview-engine.service'
 import { LearnerService } from '../learn/learner.service'
 import { PrismaService } from '../prisma/prisma.service'
+import { LTI_STORE, MemoryLtiStore } from './lti-store'
 import { LtiPlatformController } from './platform/lti-platform.controller'
 import { LtiPlatformService } from './platform/lti-platform.service'
 import { LtiToolController } from './tool/lti-tool.controller'
@@ -102,6 +103,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
       providers: [
         LtiPlatformService,
         LtiToolService,
+        { provide: LTI_STORE, useValue: new MemoryLtiStore() },
         { provide: PrismaService, useValue: prisma },
         { provide: LearnerService, useValue: { recordToolResult } },
         { provide: InterviewEngineService, useValue: {} },
@@ -277,5 +279,16 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
       expect(jwks.keys[0]).toMatchObject({ kty: 'RSA', alg: 'RS256', use: 'sig' })
       expect(jwks.keys[0].d).toBeUndefined()
     }
+  })
+
+  // Last on purpose: it uses up this client IP's login budget for the minute.
+  it('answers a flood of logins from one IP with a 429 page', async () => {
+    const start = await platform.startLaunch('u1', 'k1', 'i1')
+    let last = 0
+    for (let i = 0; i < 40 && last !== 429; i++)
+      last = (await post(start.action, start.fields)).status
+    expect(last).toBe(429)
+    const res = await post(start.action, start.fields)
+    expect(await res.text()).toContain('Too many requests')
   })
 })

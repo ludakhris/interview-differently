@@ -3,6 +3,7 @@ import { SCORE_CONTENT_TYPE } from '../lti-spec'
 import { LtiPlatformService } from './lti-platform.service'
 
 interface RawRequest {
+  ip?: string
   headers: Record<string, string | undefined>
   [Symbol.asyncIterator](): AsyncIterator<Buffer | string>
 }
@@ -39,16 +40,16 @@ export class LtiPlatformController {
   @Get('auth')
   @Header('Content-Type', 'text/html; charset=utf-8')
   @Header('Cache-Control', 'no-store')
-  authGet(@Query() params: Record<string, unknown>) {
-    return this.platform.authenticate(params)
+  authGet(@Query() params: Record<string, unknown>, @Req() req: RawRequest) {
+    return this.platform.authenticate(params, req.ip)
   }
 
   @Post('auth')
   @HttpCode(200)
   @Header('Content-Type', 'text/html; charset=utf-8')
   @Header('Cache-Control', 'no-store')
-  authPost(@Body() params: Record<string, unknown>) {
-    return this.platform.authenticate(params)
+  authPost(@Body() params: Record<string, unknown>, @Req() req: RawRequest) {
+    return this.platform.authenticate(params, req.ip)
   }
 
   @Post('token')

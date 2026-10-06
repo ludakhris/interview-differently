@@ -559,3 +559,18 @@ model UsageEvent {
   @@index([createdAt])
   @@index([userId, createdAt])
 }
+
+// Single-use and rate-limit state shared by every API instance for LTI (#63): launch hints,
+// client-assertion ids, login state, submission tokens, request counters. One row per
+// scope + key; expired rows are ignored on read and deleted opportunistically.
+model LtiSingleUse {
+  id        String   @id @default(uuid())
+  scope     String
+  key       String
+  value     Json?
+  count     Int      @default(1)
+  expiresAt DateTime
+
+  @@unique([scope, key])
+  @@index([expiresAt])
+}

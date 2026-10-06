@@ -6,9 +6,62 @@ lives in `apps/api/src/lti/platform/`, tool code in `apps/api/src/lti/tool/`. Ne
 other (enforced by `apps/api/src/lti/lti-boundary.spec.ts`). They talk only over HTTP URLs.
 
 Base URL: `LTI_API_BASE` (default `http://localhost:3000/api`). Platform issuer: `LTI_PLATFORM_ISSUER`
-(default: the origin of `LTI_API_BASE`). No database changes in this POC: keys are generated at boot
-(or loaded from `LTI_PLATFORM_PRIVATE_KEY` / `LTI_TOOL_PRIVATE_KEY` PEM env vars; `LTI_HINT_SECRET` optionally sets the platform's launch-hint HMAC secret), and registrations are
-static config in each side.
+(default: the origin of `LTI_API_BASE`). Registrations are static config in each side. The only database
+state is the `LtiSingleUse` table (see "Shared store").
+
+## Environment variables
+| Variable | Production | Purpose |
+| --- | --- | --- |
+| `LTI_PLATFORM_PRIVATE_KEY` | required | Platform RS256 signing key (PEM; `\n` escapes allowed) |
+| `LTI_TOOL_PRIVATE_KEY` | required | Tool RS256 signing key (PEM) |
+| `LTI_TOOL_SECRET` | required | Tool's HMAC secret for submission tokens |
+| `LTI_HINT_SECRET` | required | Platform's HMAC secret for `lti_message_hint` |
+| `LTI_PLATFORM_PREVIOUS_PRIVATE_KEY` | optional | Key being rotated out; published in the platform JWKS, never used to sign |
+| `LTI_TOOL_PREVIOUS_PRIVATE_KEY` | optional | Same, for the tool |
+| `TRUST_PROXY` | set behind a proxy | Express `trust proxy` (a hop count such as `1`, or `true`), so `req.ip`, which the rate limits use, is the client and not the proxy |
+
+With `NODE_ENV=production` the services refuse to boot (the constructors throw, naming every missing
+variable) unless all four required variables are set. Outside production a missing key or secret is
+generated at boot, which is only safe for one instance and loses state on restart.
+
+## Shared store
+Single-use state and rate-limit counters live in one `LtiStore` (`lti-store.ts`), backed in production by the
+Postgres table `LtiSingleUse` (`lti-store.prisma.ts`; unique on `scope` + `key`, `expiresAt` indexed). Each
+operation is one SQL statement, so it is atomic: `put`, `peek`, `take` (DELETE ... RETURNING), `claim`
+(INSERT ... ON CONFLICT, won only if no live row), `release`, `count` (upsert that increments, restarting
+after the window). Expired rows are ignored on read and deleted in batches of 500 at start and on about 2% of
+writes. `MemoryLtiStore` is for unit tests and a single local process. Uses:
+
+| Scope | Key | What |
+| --- | --- | --- |
+| `lti-hint` | hint jti | `lti_message_hint` is single use (claimed after the item checks pass) |
+| `lti-assertion` | `clientId:jti` | client-assertion `jti` replay (claimed after the signature verifies) |
+| `lti-login` | state | tool login `{nonce}`, 10 minutes, taken at launch |
+| `lti-submission` | submission jti | in-flight lock (5 minutes), replaced by a "consumed" entry for the token's remaining life after a successful score post, released if the post fails |
+| `rl:*` | IP, client id or learner | rate-limit counters |
+
+**Multiple instances are safe** provided they share the database and the four production variables
+(every instance must use the same keys and secrets, so any instance can finish what another started).
+A restart loses nothing. Operational notes: a crash while a submission is being scored leaves its lock until
+it expires (5 minutes); apply the `20261006120000_lti_single_use` migration before deploying.
+
+## Key rotation
+1. Set `LTI_PLATFORM_PREVIOUS_PRIVATE_KEY` (or `LTI_TOOL_PREVIOUS_PRIVATE_KEY`) to the current key and
+   `LTI_PLATFORM_PRIVATE_KEY` (or `LTI_TOOL_PRIVATE_KEY`) to the new key. Deploy all instances.
+2. The JWKS now lists the new key first and the old one second; every new token is signed with the new `kid`,
+   while tokens already issued with the old key still verify (the platform also accepts its own previous key on
+   score posts).
+3. After the longest token lifetime has passed (the platform access token, 1 hour), remove the PREVIOUS variable.
+Counterparties cache a JWKS for 5 minutes and refetch on an unknown `kid`, so no coordination is needed.
+
+## Rate limits
+Counted in the shared store, fixed one-minute window from the first hit; over the limit answers 429.
+| Endpoint | Limit | Key | 429 body |
+| --- | --- | --- | --- |
+| tool `GET|POST /login` | 30 / minute | client IP (`req.ip`) | HTML error page |
+| tool `POST /submit` | 10 / minute | learner `sub` from the verified submission token | HTML error page |
+| platform `GET|POST /auth` | 30 / minute | client IP (`req.ip`) | JSON |
+| platform `POST /token` | 60 / minute | client id, counted only after the assertion signature verifies | JSON `{error:'rate_limited'}` |
 
 ## Registration (static)
 - Tool id `id-interview`, client id `ld-platform`, deployment id `1`.
@@ -24,7 +77,7 @@ static config in each side.
   `client_id`, `redirect_uri` (must equal the registered launchUrl), `login_hint`, `lti_message_hint`, `state`, `nonce`,
   `response_mode=form_post`, `prompt=none`. Validates `client_id`, `redirect_uri`, and the `lti_message_hint`
   (a 60 second, single-use, HMAC-signed token the platform minted at launch time that carries
-  `{userId, cohortId, itemId, jti, exp}`; the HMAC secret is `LTI_HINT_SECRET` when set, else derived from the platform private key). Re-checks that the learner is still enrolled (not withdrawn) and the cohort still open, so a stale hint yields no id_token.
+  `{userId, cohortId, itemId, jti, exp}`; the HMAC secret is `LTI_HINT_SECRET`, required in production, else derived from the platform private key). Re-checks that the learner is still enrolled (not withdrawn) and the cohort still open, so a stale hint yields no id_token.
   Replies with an auto-submitting HTML form POSTing `id_token` and `state` to `redirect_uri`.
   The `id_token` is RS256, iss=platform issuer, aud=client id, sub=learner user id, `nonce` echoed, exp 5 minutes, with claims:
   message_type `LtiResourceLinkRequest`, version `1.3.0`, deployment_id, target_link_uri, resource_link `{id: itemId}`,
@@ -50,8 +103,7 @@ in-flight fetch between concurrent callers, times fetches out after 3 seconds an
 ## Tool endpoints (`/api/lti/tool`)
 - `GET /jwks` public keys.
 - `GET|POST /login` third-party initiated login: takes `iss, login_hint, target_link_uri, lti_message_hint, client_id`. Looks up the
-  platform registration by `iss` + `client_id`, requires non-empty `login_hint` and `lti_message_hint`, creates `state` and `nonce` (stored server-side, single use, 10 min,
-  at most 10,000 pending, oldest evicted), sets the cookie `lti_state=<state>; HttpOnly; Secure; SameSite=None; Path=/api/lti/tool; Max-Age=600`
+  platform registration by `iss` + `client_id`, requires non-empty `login_hint` and `lti_message_hint`, creates `state` and `nonce` (stored in the shared store, single use, 10 min), sets the cookie `lti_state=<state>; HttpOnly; Secure; SameSite=None; Path=/api/lti/tool; Max-Age=600`
   (the binding between the login and the browser that started it), redirects (302) to the platform `authUrl` with the OIDC params.
   Non-string parameters are treated as missing (400 page).
 - `POST /launch` receives `id_token` and `state`. Requires the request cookie `lti_state` to equal the posted `state` (otherwise refused, so a valid id_token and state cannot be
@@ -64,7 +116,7 @@ in-flight fetch between concurrent callers, times fetches out after 3 seconds an
   platform `tokenUrl` (client-credentials with a signed assertion; the timestamp is always sent), POSTs the score to the lineitem scores URL, and renders a result page
   (overall score, per-dimension scores, feedback) with a link back to the course (`LTI_RETURN_URL`, default `http://localhost:5174`). A submission token is single use: its `jti` is
   consumed only once the score post succeeds (a failed post can be retried with the same token), and a reused token gets a 409 page.
-  The consumed store holds at most 10,000 entries (oldest evicted) and expired entries are swept every minute.
+  A concurrent submit of the same token also gets the 409 (the in-flight lock).
 - Scoring: `LTI_TOOL_SCORING=stub` uses a deterministic offline scorer (for tests and local runs without an Anthropic key);
   otherwise the existing `InterviewEngineService`.
 - The tool's question store: for the POC, the tool reads ID `Scenario` rows through its own service. That is acceptable because this is

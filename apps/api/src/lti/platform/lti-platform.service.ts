@@ -8,6 +8,9 @@ import {
 } from '@nestjs/common'
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { PrismaService } from '../../prisma/prisma.service'
+import { assertLtiProductionConfig, loadSigningKeys } from '../lti-env'
+import { LTI_STORE } from '../lti-store'
+import type { LtiStore } from '../lti-store'
 import { cohortStatus } from '../../learn/cohort-config'
 import { LearnerService } from '../../learn/learner.service'
 import {
@@ -17,10 +20,8 @@ import {
   LEARNER_ROLE,
   LtiError,
   b64url,
-  generateKeyPair,
   jwksKeyResolver,
   jwksOf,
-  keyPairFromPem,
   newId,
   signJwt,
   verifyJwt,
@@ -34,6 +35,9 @@ const ACCESS_TOKEN_TTL_S = 3600
 const MAX_ASSERTION_LIFETIME_S = 10 * 60
 const MAX_SCORE_CLOCK_AHEAD_MS = 5 * 60_000
 const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/
+const RATE_WINDOW_S = 60
+const AUTH_PER_MINUTE_PER_IP = 30
+const TOKEN_PER_MINUTE_PER_CLIENT = 60
 const ASSERTION_TYPE = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
 
 type Params = Record<string, unknown>
@@ -58,36 +62,29 @@ export function autoSubmitForm(action: string, fields: Record<string, string>): 
   return `<!doctype html><html><head><meta charset="utf-8"><title>Launching</title></head><body onload="document.forms[0].submit()"><form method="POST" action="${escapeHtml(action)}">${inputs}<noscript><button type="submit">Continue</button></noscript></form></body></html>`
 }
 
-/** Remembers values until they expire, so each can be used once. In memory: fine for one POC instance. */
-class SingleUse {
-  private readonly seen = new Map<string, number>()
-  /** True the first time `key` is claimed, false on a replay. */
-  claim(key: string, expiresAtS: number): boolean {
-    const now = nowS()
-    for (const [k, exp] of this.seen) if (exp < now) this.seen.delete(k)
-    if (this.seen.has(key)) return false
-    this.seen.set(key, expiresAtS)
-    return true
-  }
-}
-
 /** LearnDifferently as an LTI 1.3 platform: signs launches, issues tokens, accepts scores. */
 @Injectable()
 export class LtiPlatformService {
   private readonly keys: KeyPair
+  /** The key `keys` replaced (LTI_PLATFORM_PREVIOUS_PRIVATE_KEY): published and verified against, never signed with. */
+  private readonly previousKeys?: KeyPair
   private readonly hintSecret: Buffer
-  private readonly usedHints = new SingleUse()
-  private readonly usedAssertions = new SingleUse()
   private readonly toolKeys = new Map<string, ReturnType<typeof jwksKeyResolver>>()
   /** Injectable for tests. */
   fetchImpl: typeof fetch = (...args) => fetch(...args)
 
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(forwardRef(() => LearnerService)) private readonly learner: LearnerService
+    @Inject(forwardRef(() => LearnerService)) private readonly learner: LearnerService,
+    @Inject(LTI_STORE) private readonly store: LtiStore
   ) {
-    const pem = process.env.LTI_PLATFORM_PRIVATE_KEY?.replace(/\\n/g, '\n')
-    this.keys = pem ? keyPairFromPem(pem) : generateKeyPair()
+    assertLtiProductionConfig()
+    const { current, previous } = loadSigningKeys(
+      'LTI_PLATFORM_PRIVATE_KEY',
+      'LTI_PLATFORM_PREVIOUS_PRIVATE_KEY'
+    )
+    this.keys = current
+    this.previousKeys = previous
     // LTI_HINT_SECRET when set, else derived from the private key; either way every instance
     // sharing it accepts the same hints.
     const secret = process.env.LTI_HINT_SECRET?.trim() || this.keys.privateKeyPem
@@ -95,7 +92,14 @@ export class LtiPlatformService {
   }
 
   jwks() {
-    return jwksOf(this.keys)
+    return jwksOf(...(this.previousKeys ? [this.keys, this.previousKeys] : [this.keys]))
+  }
+
+  /** Counts a hit and throws 429 over `limit` in the window; the key is already trusted (an IP or a verified client). */
+  private async limit(scope: string, key: string, limit: number, kind: 'json' | 'oauth' = 'json') {
+    if ((await this.store.count(`rl:${scope}`, key, RATE_WINDOW_S)) <= limit) return
+    if (kind === 'oauth') this.oauthError('rate_limited', 'Too many requests', 429)
+    throw new HttpException('Too many requests', 429)
   }
 
   // ── launch ──────────────────────────────────────────────────────────────────
@@ -189,7 +193,8 @@ export class LtiPlatformService {
   }
 
   /** OIDC authentication request from a tool: replies with a form that posts the signed id_token. */
-  async authenticate(p: Params): Promise<string> {
+  async authenticate(p: Params, ip = 'unknown'): Promise<string> {
+    await this.limit('platform-auth', ip, AUTH_PER_MINUTE_PER_IP)
     if (str(p.scope) !== 'openid') throw new HttpException('scope must be openid', 400)
     if (str(p.response_type) !== 'id_token')
       throw new HttpException('response_type must be id_token', 400)
@@ -212,7 +217,7 @@ export class LtiPlatformService {
     const { tool: itemTool, ref } = await this.toolItem(hint.cohortId, hint.itemId, hint.userId)
     if (itemTool.clientId !== tool.clientId)
       throw new HttpException('This item does not launch that client', 400)
-    if (!this.usedHints.claim(hint.jti, hint.exp))
+    if (!(await this.store.claim('lti-hint', hint.jti, Math.max(1, hint.exp - nowS() + 5))))
       throw new HttpException('lti_message_hint was already used', 400)
 
     const reg = platformRegistration()
@@ -289,7 +294,15 @@ export class LtiPlatformService {
     if (typeof payload.jti !== 'string' || !payload.jti)
       this.oauthError('invalid_client', 'jti is required', 401)
     // Only a signature-checked jti is remembered, so a stranger cannot burn a tool's ids.
-    if (!this.usedAssertions.claim(`${registered.clientId}:${payload.jti}`, payload.exp + 60))
+    await this.limit('platform-token', registered.clientId, TOKEN_PER_MINUTE_PER_CLIENT, 'oauth')
+    const assertionTtl = Math.max(1, Math.ceil(payload.exp + 60 - nowS()))
+    if (
+      !(await this.store.claim(
+        'lti-assertion',
+        `${registered.clientId}:${payload.jti}`,
+        assertionTtl
+      ))
+    )
       this.oauthError('invalid_client', 'client_assertion was already used', 401)
 
     const granted = str(p.scope)
@@ -332,7 +345,7 @@ export class LtiPlatformService {
       payload = await verifyJwt(token, {
         issuer: platformRegistration().issuer,
         audience: tool.clientId,
-        keyFor: async (kid) => (kid === this.keys.kid ? this.keys.publicJwk : undefined),
+        keyFor: async (kid) => this.jwks().keys.find((k) => k.kid === kid),
       })
     } catch (err) {
       if (err instanceof LtiError) throw new HttpException('Invalid token', 401)

@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Headers, Post, Query, Res } from '@nestjs/common'
-import type { Response } from 'express'
+import { Body, Controller, Get, Headers, Post, Query, Req, Res } from '@nestjs/common'
+import type { Request, Response } from 'express'
 import { LtiError } from '../lti-spec'
 import { returnUrl } from './lti-tool.config'
 import { errorPage } from './lti-tool.html'
@@ -35,13 +35,13 @@ export class LtiToolController {
   }
 
   @Get('login')
-  loginGet(@Query() q: unknown, @Res() res: Response) {
-    return this.html(res, () => this.redirect(res, strings(q)))
+  loginGet(@Query() q: unknown, @Req() req: Request, @Res() res: Response) {
+    return this.html(res, () => this.redirect(res, strings(q), req.ip))
   }
 
   @Post('login')
-  loginPost(@Body() b: unknown, @Res() res: Response) {
-    return this.html(res, () => this.redirect(res, strings(b)))
+  loginPost(@Body() b: unknown, @Req() req: Request, @Res() res: Response) {
+    return this.html(res, () => this.redirect(res, strings(b), req.ip))
   }
 
   @Post('launch')
@@ -63,8 +63,8 @@ export class LtiToolController {
   }
 
   /** Binds the login to this browser with a cookie holding the state, then sends it to the platform. */
-  private redirect(res: Response, p: Params) {
-    const { url, state } = this.tool.login(p)
+  private async redirect(res: Response, p: Params, ip: string | undefined) {
+    const { url, state } = await this.tool.login(p, ip)
     res.setHeader('Set-Cookie', `${STATE_COOKIE}=${state}; ${COOKIE_ATTRS}; Max-Age=600`)
     res.redirect(302, url)
   }

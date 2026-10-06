@@ -1,6 +1,9 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
-import { Injectable, OnModuleDestroy } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+import { assertLtiProductionConfig, loadSigningKeys } from '../lti-env'
+import { LTI_STORE } from '../lti-store'
+import type { LtiStore } from '../lti-store'
 import { InterviewEngineService } from '../../interview-engine/interview-engine.service'
 import {
   averageScore,
@@ -13,10 +16,8 @@ import {
   AGS_SCOPE_SCORE,
   CLAIM,
   DIMENSIONS_FIELD,
-  generateKeyPair,
   jwksKeyResolver,
   jwksOf,
-  keyPairFromPem,
   LtiError,
   newId,
   SCORE_CONTENT_TYPE,
@@ -27,10 +28,14 @@ import {
 import { launchUrl, platformRegistration, returnUrl, useStubScoring } from './lti-tool.config'
 import { errorPage, interviewPage, resultPage } from './lti-tool.html'
 
-const STATE_TTL_MS = 10 * 60_000
+const STATE_TTL_S = 10 * 60
 const SUBMISSION_TTL_S = 30 * 60
 const ASSERTION_TTL_S = 5 * 60
-const SWEEP_INTERVAL_MS = 60_000
+/** How long a submission is locked while it is being scored and posted. */
+const IN_FLIGHT_TTL_S = 5 * 60
+const RATE_WINDOW_S = 60
+const LOGIN_PER_MINUTE_PER_IP = 30
+const SUBMIT_PER_MINUTE_PER_LEARNER = 10
 
 interface SubmissionClaims {
   sub: string
@@ -41,47 +46,48 @@ interface SubmissionClaims {
 }
 
 @Injectable()
-export class LtiToolService implements OnModuleDestroy {
+export class LtiToolService {
   /** Injectable for tests. */
   fetchImpl: typeof fetch = (...args) => fetch(...args)
   now: () => number = () => Date.now()
 
-  private readonly keys: KeyPair = process.env.LTI_TOOL_PRIVATE_KEY
-    ? keyPairFromPem(process.env.LTI_TOOL_PRIVATE_KEY.replace(/\\n/g, '\n'))
-    : generateKeyPair()
-  private readonly secret = process.env.LTI_TOOL_SECRET ?? randomBytes(32).toString('hex')
-  private readonly pending = new Map<string, { nonce: string; expires: number }>()
-  /** Submission ids already scored and posted (to expiry in ms), so each token is good once. */
-  private readonly consumed = new Map<string, number>()
-  /** Submission ids being scored right now, so a double submit cannot score twice. */
-  private readonly submitting = new Set<string>()
-  /** Caps on the in-memory stores; the oldest entry goes first. Overridable for tests. */
-  maxPending = 10_000
-  maxConsumed = 10_000
-  private readonly sweeper = setInterval(() => this.sweep(), SWEEP_INTERVAL_MS).unref()
+  private readonly keys: KeyPair
+  /** The key `keys` replaced (LTI_TOOL_PREVIOUS_PRIVATE_KEY): published, never signed with. */
+  private readonly previousKeys?: KeyPair
+  private readonly secret: string
   private platformKeys?: ReturnType<typeof jwksKeyResolver>
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly engine: InterviewEngineService
-  ) {}
-
-  onModuleDestroy() {
-    clearInterval(this.sweeper)
-  }
-
-  private sweep() {
-    const now = this.now()
-    for (const [k, v] of this.pending) if (v.expires < now) this.pending.delete(k)
-    for (const [k, exp] of this.consumed) if (exp < now) this.consumed.delete(k)
+    private readonly engine: InterviewEngineService,
+    @Inject(LTI_STORE) private readonly store: LtiStore
+  ) {
+    assertLtiProductionConfig()
+    const { current, previous } = loadSigningKeys(
+      'LTI_TOOL_PRIVATE_KEY',
+      'LTI_TOOL_PREVIOUS_PRIVATE_KEY'
+    )
+    this.keys = current
+    this.previousKeys = previous
+    this.secret = process.env.LTI_TOOL_SECRET || randomBytes(32).toString('hex')
   }
 
   jwks() {
-    return jwksOf(this.keys)
+    return jwksOf(...(this.previousKeys ? [this.keys, this.previousKeys] : [this.keys]))
+  }
+
+  /** Counts a hit and throws a 429 page error over `limit` in the window. */
+  private async limit(scope: string, key: string, limit: number) {
+    if ((await this.store.count(`rl:${scope}`, key, RATE_WINDOW_S)) > limit)
+      throw new LtiError('Too many requests. Wait a minute and try again.', 429)
   }
 
   /** Third-party initiated login: stores state and nonce, returns the platform auth redirect and the state. */
-  login(p: Record<string, string | undefined>): { url: string; state: string } {
+  async login(
+    p: Record<string, string | undefined>,
+    ip = 'unknown'
+  ): Promise<{ url: string; state: string }> {
+    await this.limit('tool-login', ip, LOGIN_PER_MINUTE_PER_IP)
     const reg = platformRegistration()
     if (p.iss !== reg.issuer || p.client_id !== reg.clientId) {
       throw new LtiError('Unknown platform or client')
@@ -91,10 +97,9 @@ export class LtiToolService implements OnModuleDestroy {
     if (p.lti_deployment_id && p.lti_deployment_id !== reg.deploymentId) {
       throw new LtiError('Unknown deployment')
     }
-    if (this.pending.size >= this.maxPending) this.pending.delete(this.pending.keys().next().value!)
     const state = newId()
     const nonce = newId()
-    this.pending.set(state, { nonce, expires: this.now() + STATE_TTL_MS })
+    await this.store.put('lti-login', state, { nonce }, STATE_TTL_S)
     const url = new URL(reg.authUrl)
     const q = url.searchParams
     q.set('scope', 'openid')
@@ -122,9 +127,9 @@ export class LtiToolService implements OnModuleDestroy {
     const reg = platformRegistration()
     if (!state || cookieState !== state)
       throw new LtiError('Login state does not match this browser')
-    const entry = state ? this.pending.get(state) : undefined
-    if (state) this.pending.delete(state) // single use, even if the rest fails
-    if (!entry || entry.expires < this.now()) throw new LtiError('Unknown or expired state')
+    // single use, even if the rest fails
+    const entry = await this.store.take<{ nonce: string }>('lti-login', state)
+    if (!entry) throw new LtiError('Unknown or expired state')
     if (!idToken) throw new LtiError('Missing id_token')
     this.platformKeys ??= jwksKeyResolver(reg.jwksUrl, (...a) => this.fetchImpl(...a))
     const claims = await verifyJwt(idToken, {
@@ -170,14 +175,23 @@ export class LtiToolService implements OnModuleDestroy {
     body: Record<string, string | undefined>
   ): Promise<{ status: number; html: string }> {
     const claims = this.verifySubmission(body.submission)
-    if (this.consumed.has(claims.jti) || this.submitting.has(claims.jti)) {
+    await this.limit('tool-submit', claims.sub, SUBMIT_PER_MINUTE_PER_LEARNER)
+    // The claim is the in-flight lock; after a successful post it is replaced by a "consumed"
+    // entry that lasts as long as the token could still be presented.
+    if (!(await this.store.claim('lti-submission', claims.jti, IN_FLIGHT_TTL_S))) {
       throw new LtiError('This interview was already submitted. Relaunch it from your course.', 409)
     }
-    this.submitting.add(claims.jti)
+    let posted = false
     try {
-      return await this.scoreAndPost(claims, body)
+      const result = await this.scoreAndPost(claims, body)
+      if (result.status === 200) {
+        posted = true // from here the claim stays, even if renewing it below fails
+        const ttl = Math.max(1, Math.ceil(claims.exp - this.now() / 1000) + 60)
+        await this.store.put('lti-submission', claims.jti, true, ttl)
+      }
+      return result
     } finally {
-      this.submitting.delete(claims.jti)
+      if (!posted) await this.store.release('lti-submission', claims.jti)
     }
   }
 
@@ -206,10 +220,6 @@ export class LtiToolService implements OnModuleDestroy {
         ),
       }
     }
-    if (this.consumed.size >= this.maxConsumed) {
-      this.consumed.delete(this.consumed.keys().next().value!)
-    }
-    this.consumed.set(claims.jti, claims.exp * 1000)
     return {
       status: 200,
       html: resultPage({

@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common'
 import { LearnModule } from '../../learn/learn.module'
 import { PrismaModule } from '../../prisma/prisma.module'
+import { LtiStoreModule } from '../lti-store.module'
 import { LtiPlatformController } from './lti-platform.controller'
 import { LtiPlatformService } from './lti-platform.service'
 
@@ -10,7 +11,7 @@ import { LtiPlatformService } from './lti-platform.service'
  * references the other with forwardRef.
  */
 @Module({
-  imports: [PrismaModule, forwardRef(() => LearnModule)],
+  imports: [PrismaModule, LtiStoreModule, forwardRef(() => LearnModule)],
   controllers: [LtiPlatformController],
   providers: [LtiPlatformService],
   exports: [LtiPlatformService],

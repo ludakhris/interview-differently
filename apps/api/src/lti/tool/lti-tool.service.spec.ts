@@ -9,6 +9,7 @@ import {
   verifyJwt,
   LEARNER_ROLE,
 } from '../lti-spec'
+import { MemoryLtiStore } from '../lti-store'
 import { LtiToolService } from './lti-tool.service'
 
 const BASE = 'http://api.test/api'
@@ -34,7 +35,8 @@ const scenario = (questions: string[]) => ({
 
 function setup(questions = ['Tell me about a time you led.', 'Why this role?']) {
   const prisma = { scenario: { findUnique: jest.fn().mockResolvedValue(scenario(questions)) } }
-  const svc = new LtiToolService(prisma as any, { scoreAnswers: jest.fn() } as any)
+  const store = new MemoryLtiStore()
+  const svc = new LtiToolService(prisma as any, { scoreAnswers: jest.fn() } as any, store)
   const calls: { url: string; init?: RequestInit }[] = []
   let scoreStatus = 200
   let tokenStatus = 200
@@ -48,6 +50,7 @@ function setup(questions = ['Tell me about a time you led.', 'Why this role?']) 
   }) as any
   return {
     svc,
+    store,
     prisma,
     calls,
     setScoreStatus: (s: number) => (scoreStatus = s),
@@ -59,8 +62,14 @@ function loginParams(extra = {}) {
   return { iss: ISS, client_id: 'ld-platform', login_hint: 'u1', lti_message_hint: 'mh', ...extra }
 }
 
-function startLogin(svc: LtiToolService) {
-  const url = new URL(svc.login(loginParams()).url)
+/** Moves the tool's clock and its store's clock together. */
+function setNow(h: { svc: LtiToolService; store: MemoryLtiStore }, ms: number) {
+  h.svc.now = () => ms
+  h.store.now = () => ms
+}
+
+async function startLogin(svc: LtiToolService) {
+  const url = new URL((await svc.login(loginParams())).url)
   return { state: url.searchParams.get('state')!, nonce: url.searchParams.get('nonce')!, url }
 }
 
@@ -89,12 +98,12 @@ function idToken(nonce: string, over: Record<string, unknown> = {}, key = platfo
 const submissionOf = (html: string) => /name="submission" value="([^"]+)"/.exec(html)![1]
 
 async function launchAgain(svc: LtiToolService) {
-  const { state, nonce } = startLogin(svc)
+  const { state, nonce } = await startLogin(svc)
   return svc.launch(idToken(nonce), state, state)
 }
 
 async function launched(h = setup()) {
-  const { state, nonce } = startLogin(h.svc)
+  const { state, nonce } = await startLogin(h.svc)
   const html = await h.svc.launch(idToken(nonce), state, state)
   return { ...h, html, submission: submissionOf(html) }
 }
@@ -103,14 +112,71 @@ beforeEach(() => {
   process.env.LTI_API_BASE = BASE
   process.env.LTI_TOOL_SCORING = 'stub'
   process.env.LTI_RETURN_URL = 'http://return.test'
-  for (const k of ['LTI_PLATFORM_ISSUER', 'LTI_TOOL_PRIVATE_KEY', 'LTI_TOOL_SECRET'])
+  for (const k of [
+    'LTI_PLATFORM_ISSUER',
+    'LTI_TOOL_PRIVATE_KEY',
+    'LTI_TOOL_PREVIOUS_PRIVATE_KEY',
+    'LTI_TOOL_SECRET',
+  ])
     delete process.env[k]
 })
 
+describe('keys and secrets', () => {
+  const env = process.env
+  afterEach(() => {
+    process.env = env
+  })
+
+  it('refuses to boot in production without the four LTI keys and secrets', () => {
+    process.env = { ...env, NODE_ENV: 'production' }
+    for (const k of [
+      'LTI_PLATFORM_PRIVATE_KEY',
+      'LTI_TOOL_PRIVATE_KEY',
+      'LTI_TOOL_SECRET',
+      'LTI_HINT_SECRET',
+    ])
+      delete process.env[k]
+    expect(() => setup()).toThrow('LTI_TOOL_SECRET')
+  })
+
+  it('publishes the previous key beside the current one and signs with the current one', async () => {
+    const previous = generateKeyPair()
+    const current = generateKeyPair()
+    process.env.LTI_TOOL_PRIVATE_KEY = current.privateKeyPem
+    process.env.LTI_TOOL_PREVIOUS_PRIVATE_KEY = previous.privateKeyPem
+    const h = await launched()
+    const { keys } = h.svc.jwks()
+    expect(keys.map((k) => k.kid)).toEqual([current.kid, previous.kid])
+    expect(JSON.stringify(keys)).not.toContain('"d"')
+    // a token signed with the previous key still verifies against the published set
+    const old = signJwt({ iss: 'x', aud: 'y', exp: Math.floor(Date.now() / 1000) + 60 }, previous)
+    await expect(
+      verifyJwt(old, {
+        issuer: 'x',
+        audience: 'y',
+        keyFor: async (kid) => keys.find((k) => k.kid === kid),
+      })
+    ).resolves.toBeTruthy()
+    // new tokens use the new kid
+    await h.svc.submit({
+      submission: h.submission,
+      answer_0: 'x'.repeat(250),
+      answer_1: 'x'.repeat(250),
+    })
+    const form = new URLSearchParams(
+      h.calls.find((c) => c.url.endsWith('/token'))!.init!.body as URLSearchParams
+    )
+    const kid = JSON.parse(
+      Buffer.from(form.get('client_assertion')!.split('.')[0], 'base64url').toString()
+    ).kid
+    expect(kid).toBe(current.kid)
+  })
+})
+
 describe('login', () => {
-  it('redirects to the platform auth URL with OIDC params', () => {
+  it('redirects to the platform auth URL with OIDC params', async () => {
     const { svc } = setup()
-    const { url, state, nonce } = startLogin(svc)
+    const { url, state, nonce } = await startLogin(svc)
     expect(url.origin + url.pathname).toBe(`${BASE}/lti/platform/auth`)
     const q = url.searchParams
     expect(q.get('scope')).toBe('openid')
@@ -126,41 +192,47 @@ describe('login', () => {
     expect(state).not.toBe(nonce)
   })
 
-  it('rejects an unknown issuer or client', () => {
+  it('rejects an unknown issuer or client', async () => {
     const { svc } = setup()
-    expect(() => svc.login(loginParams({ iss: 'http://evil' }))).toThrow('Unknown platform')
-    expect(() => svc.login(loginParams({ client_id: 'x' }))).toThrow('Unknown platform')
+    await expect(svc.login(loginParams({ iss: 'http://evil' }))).rejects.toThrow('Unknown platform')
+    await expect(svc.login(loginParams({ client_id: 'x' }))).rejects.toThrow('Unknown platform')
   })
 
-  it('requires a login_hint and an lti_message_hint', () => {
+  it('requires a login_hint and an lti_message_hint', async () => {
     const { svc } = setup()
-    expect(() => svc.login(loginParams({ login_hint: '' }))).toThrow('login_hint')
-    expect(() => svc.login(loginParams({ lti_message_hint: '' }))).toThrow('lti_message_hint')
-    expect(() => svc.login(loginParams({ lti_message_hint: undefined }))).toThrow(
+    await expect(svc.login(loginParams({ login_hint: '' }))).rejects.toThrow('login_hint')
+    await expect(svc.login(loginParams({ lti_message_hint: '' }))).rejects.toThrow(
+      'lti_message_hint'
+    )
+    await expect(svc.login(loginParams({ lti_message_hint: undefined }))).rejects.toThrow(
       'lti_message_hint'
     )
   })
 
-  it('returns the state it stored, for the cookie', () => {
+  it('returns the state it stored, for the cookie', async () => {
     const { svc } = setup()
-    const { url, state } = svc.login(loginParams())
+    const { url, state } = await svc.login(loginParams())
     expect(new URL(url).searchParams.get('state')).toBe(state)
   })
 
-  it('evicts the oldest pending login when full, and sweeps expired ones on the timer', async () => {
+  it('keeps the login state in the shared store for 10 minutes', async () => {
     const h = setup()
-    h.svc.maxPending = 2
-    const first = startLogin(h.svc)
-    startLogin(h.svc)
-    startLogin(h.svc)
-    expect(h.svc['pending'].size).toBe(2)
-    await expect(h.svc.launch(idToken(first.nonce), first.state, first.state)).rejects.toThrow(
-      'Unknown or expired state'
-    )
+    const { state, nonce } = await startLogin(h.svc)
+    expect(await h.store.peek('lti-login', state)).toEqual({ nonce })
     const t = Date.now()
-    h.svc.now = () => t + 11 * 60_000
-    h.svc['sweep']()
-    expect(h.svc['pending'].size).toBe(0)
+    setNow(h, t + 9 * 60_000)
+    expect(await h.store.peek('lti-login', state)).toEqual({ nonce })
+    setNow(h, t + 11 * 60_000)
+    expect(await h.store.peek('lti-login', state)).toBeNull()
+  })
+
+  it('answers more than 30 logins a minute from one IP with a 429, and counts IPs separately', async () => {
+    const h = setup()
+    for (let i = 0; i < 30; i++) await h.svc.login(loginParams(), '1.1.1.1')
+    await expect(h.svc.login(loginParams(), '1.1.1.1')).rejects.toMatchObject({ status: 429 })
+    await expect(h.svc.login(loginParams(), '2.2.2.2')).resolves.toBeTruthy()
+    setNow(h, Date.now() + 61_000)
+    await expect(h.svc.login(loginParams(), '1.1.1.1')).resolves.toBeTruthy()
   })
 
   it('serves the public key at jwks', () => {
@@ -188,7 +260,7 @@ describe('launch', () => {
 
   it('rejects unknown state', async () => {
     const { svc } = setup()
-    const { nonce } = startLogin(svc)
+    const { nonce } = await startLogin(svc)
     await expect(svc.launch(idToken(nonce), 'nope', 'nope')).rejects.toThrow(
       'Unknown or expired state'
     )
@@ -197,8 +269,8 @@ describe('launch', () => {
 
   it('rejects a launch whose lti_state cookie is missing or belongs to another state', async () => {
     const h = setup()
-    const { state, nonce } = startLogin(h.svc)
-    const other = startLogin(h.svc)
+    const { state, nonce } = await startLogin(h.svc)
+    const other = await startLogin(h.svc)
     await expect(h.svc.launch(idToken(nonce), state, undefined)).rejects.toThrow('state')
     await expect(h.svc.launch(idToken(nonce), state, other.state)).rejects.toThrow('state')
     // the refused attempts did not burn the state: the right browser can still finish
@@ -207,7 +279,7 @@ describe('launch', () => {
 
   it('rejects a score endpoint that is not on the platform origin', async () => {
     const h = setup()
-    const { state, nonce } = startLogin(h.svc)
+    const { state, nonce } = await startLogin(h.svc)
     const lineitem = 'http://evil.test/api/lti/platform/ags/c1/lineitems/i1'
     await expect(
       h.svc.launch(
@@ -220,22 +292,21 @@ describe('launch', () => {
 
   it('rejects a reused state', async () => {
     const h = setup()
-    const { state, nonce } = startLogin(h.svc)
+    const { state, nonce } = await startLogin(h.svc)
     await h.svc.launch(idToken(nonce), state, state)
     await expect(h.svc.launch(idToken(nonce), state, state)).rejects.toThrow('state')
   })
 
   it('rejects an expired state', async () => {
     const h = setup()
-    const { state, nonce } = startLogin(h.svc)
-    const t = Date.now()
-    h.svc.now = () => t + 11 * 60_000
+    const { state, nonce } = await startLogin(h.svc)
+    setNow(h, Date.now() + 11 * 60_000)
     await expect(h.svc.launch(idToken(nonce), state, state)).rejects.toThrow('state')
   })
 
   const reject = async (token: (nonce: string) => string, msg: string) => {
     const h = setup()
-    const { state, nonce } = startLogin(h.svc)
+    const { state, nonce } = await startLogin(h.svc)
     await expect(h.svc.launch(token(nonce), state, state)).rejects.toThrow(msg)
   }
 
@@ -261,7 +332,7 @@ describe('launch', () => {
   it('404s when the scenario does not exist', async () => {
     const h = setup()
     h.prisma.scenario.findUnique.mockResolvedValue(null)
-    const { state, nonce } = startLogin(h.svc)
+    const { state, nonce } = await startLogin(h.svc)
     await expect(h.svc.launch(idToken(nonce), state, state)).rejects.toThrow('Interview not found')
   })
 })
@@ -348,26 +419,53 @@ describe('submit', () => {
   it('refuses a second submit while the first is still being scored', async () => {
     const h = await launched()
     const answers = { submission: h.submission, answer_0: long, answer_1: long }
-    const first = h.svc.submit(answers)
-    await expect(h.svc.submit(answers)).rejects.toMatchObject({ status: 409 })
-    expect((await first).status).toBe(200)
+    const [a, b] = await Promise.allSettled([h.svc.submit(answers), h.svc.submit(answers)])
+    const outcomes = [a, b].map((r) =>
+      r.status === 'fulfilled' ? r.value.status : (r.reason as { status: number }).status
+    )
+    expect(outcomes.sort()).toEqual([200, 409])
+    expect(h.calls.filter((c) => c.url.endsWith('/scores'))).toHaveLength(1)
   })
 
-  it('caps the consumed store (oldest evicted) and sweeps expired entries', async () => {
+  it('keeps a consumed token for as long as the token could be presented, then forgets it', async () => {
+    const h = await launched()
+    const answers = { submission: h.submission, answer_0: long, answer_1: long }
+    await h.svc.submit(answers)
+    const jti = JSON.parse(Buffer.from(h.submission.split('.')[0], 'base64url').toString()).jti
+    expect(await h.store.peek('lti-submission', jti)).toBe(true)
+    setNow(h, Date.now() + 32 * 60_000)
+    expect(await h.store.peek('lti-submission', jti)).toBeNull()
+  })
+
+  it('releases the lock when validation fails before anything is posted', async () => {
+    const { svc, submission, calls } = await launched()
+    await expect(svc.submit({ submission, answer_0: 'a' })).rejects.toThrow('Answer every question')
+    expect((await svc.submit({ submission, answer_0: long, answer_1: long })).status).toBe(200)
+    expect(calls.filter((c) => c.url.endsWith('/scores'))).toHaveLength(1)
+  })
+
+  it('is safe across instances: a token spent on one instance is refused on another', async () => {
+    process.env.LTI_TOOL_SECRET = 'shared-secret'
     const h = setup()
-    h.svc.maxConsumed = 1
-    const a = submissionOf(await launchAgain(h.svc))
-    const b = submissionOf(await launchAgain(h.svc))
-    await h.svc.submit({ submission: a, answer_0: long, answer_1: long })
-    await h.svc.submit({ submission: b, answer_0: long, answer_1: long })
-    expect(h.svc['consumed'].size).toBe(1)
-    await expect(h.svc.submit({ submission: b, answer_0: long, answer_1: long })).rejects.toThrow(
-      'already submitted'
-    )
-    const t = Date.now()
-    h.svc.now = () => t + 31 * 60_000
-    h.svc['sweep']()
-    expect(h.svc['consumed'].size).toBe(0)
+    const other = new LtiToolService(h.prisma as any, { scoreAnswers: jest.fn() } as any, h.store)
+    other.fetchImpl = h.svc.fetchImpl
+    const html = await launchAgain(h.svc)
+    const answers = { submission: submissionOf(html), answer_0: long, answer_1: long }
+    expect((await other.submit(answers)).status).toBe(200)
+    await expect(h.svc.submit(answers)).rejects.toMatchObject({ status: 409 })
+    // and login state written by one instance is consumed once across both
+    const { state, nonce } = await startLogin(other)
+    await h.svc.launch(idToken(nonce), state, state)
+    await expect(other.launch(idToken(nonce), state, state)).rejects.toThrow('state')
+  })
+
+  it('answers more than 10 submissions a minute from one learner with a 429', async () => {
+    const h = await launched()
+    const answers = { submission: h.submission, answer_0: long, answer_1: long }
+    expect((await h.svc.submit(answers)).status).toBe(200)
+    for (let i = 0; i < 9; i++)
+      await expect(h.svc.submit(answers)).rejects.toMatchObject({ status: 409 })
+    await expect(h.svc.submit(answers)).rejects.toMatchObject({ status: 429 })
   })
 
   it('scores by length band', async () => {
@@ -392,8 +490,7 @@ describe('submit', () => {
 
   it('rejects an expired token', async () => {
     const { svc, submission } = await launched()
-    const t = Date.now()
-    svc.now = () => t + 31 * 60_000
+    svc.now = () => Date.now() + 31 * 60_000
     await expect(svc.submit({ submission, answer_0: 'a', answer_1: 'b' })).rejects.toThrow(
       'expired'
     )

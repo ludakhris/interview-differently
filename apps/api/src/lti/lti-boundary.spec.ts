@@ -47,7 +47,28 @@ describe('LTI boundary: the platform and a tool talk over HTTP only', () => {
     }
   })
 
-  it('the shared protocol layer imports nothing from this project', () => {
+  it('the shared protocol layer and the store interface import nothing from this project', () => {
     expect(importsOf(join(ROOT, 'lti-spec.ts'))).toEqual([])
+    expect(importsOf(join(ROOT, 'lti-store.ts'))).toEqual([])
+    expect([...new Set(importsOf(join(ROOT, 'lti-env.ts')))]).toEqual([join(ROOT, 'lti-spec')])
+  })
+
+  it('only the Prisma store and its module reach outside the lti folder (for the database)', () => {
+    const shared = sourceFiles(ROOT).filter((f) => !f.startsWith(platform) && !f.startsWith(tool))
+    for (const file of shared) {
+      const outside = importsOf(file).filter((t) => !t.startsWith(ROOT))
+      const allowed = file.endsWith('lti-store.prisma.ts') || file.endsWith('lti-store.module.ts')
+      if (!allowed) expect([file, outside]).toEqual([file, []])
+    }
+  })
+
+  it('platform and tool share only lti-spec, lti-env and the store files', () => {
+    const shared = /lti-(spec|env|store(\.prisma|\.module)?)$/
+    for (const side of [platform, tool])
+      for (const file of sourceFiles(side))
+        for (const target of importsOf(file).filter(
+          (t) => t.startsWith(ROOT) && !t.startsWith(platform) && !t.startsWith(tool)
+        ))
+          expect([file, shared.test(target)]).toEqual([file, true])
   })
 })

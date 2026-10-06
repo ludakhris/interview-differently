@@ -12,6 +12,7 @@ import {
   verifyJwt,
 } from '../lti-spec'
 import { platformRegistration, registeredTools } from './lti-platform-config'
+import { MemoryLtiStore } from '../lti-store'
 import { LtiPlatformService, autoSubmitForm, escapeHtml } from './lti-platform.service'
 
 const prisma = {
@@ -29,6 +30,14 @@ const FUTURE = new Date('2099-01-01T00:00:00Z')
 const nowS = () => Math.floor(Date.now() / 1000)
 
 let service: LtiPlatformService
+let store: MemoryLtiStore
+
+const makeService = (shared = store) =>
+  new LtiPlatformService(
+    prisma as unknown as PrismaService,
+    learner as unknown as LearnerService,
+    shared
+  )
 
 beforeEach(() => {
   jest.resetAllMocks()
@@ -41,10 +50,8 @@ beforeEach(() => {
     module: { courseId: 'c1' },
   })
   learner.recordToolResult.mockResolvedValue({})
-  service = new LtiPlatformService(
-    prisma as unknown as PrismaService,
-    learner as unknown as LearnerService
-  )
+  store = new MemoryLtiStore()
+  service = makeService()
   service.fetchImpl = jest.fn(
     async () => new Response(JSON.stringify(jwksOf(toolKeys)))
   ) as unknown as typeof fetch
@@ -83,6 +90,86 @@ describe('jwks', () => {
     expect(keys).toHaveLength(1)
     expect(keys[0]).toMatchObject({ alg: 'RS256', use: 'sig' })
     expect(keys[0]).not.toHaveProperty('d')
+  })
+})
+
+describe('keys and secrets', () => {
+  const saved = { ...process.env }
+  afterEach(() => {
+    for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]
+    Object.assign(process.env, saved)
+  })
+
+  it('refuses to boot in production without the four LTI keys and secrets', () => {
+    process.env.NODE_ENV = 'production'
+    for (const k of [
+      'LTI_PLATFORM_PRIVATE_KEY',
+      'LTI_TOOL_PRIVATE_KEY',
+      'LTI_TOOL_SECRET',
+      'LTI_HINT_SECRET',
+    ])
+      delete process.env[k]
+    expect(() => makeService()).toThrow(/LTI_PLATFORM_PRIVATE_KEY.*LTI_HINT_SECRET/)
+    process.env.LTI_PLATFORM_PRIVATE_KEY = generateKeyPair().privateKeyPem
+    process.env.LTI_TOOL_PRIVATE_KEY = generateKeyPair().privateKeyPem
+    process.env.LTI_TOOL_SECRET = 's'
+    expect(() => makeService()).toThrow('LTI_HINT_SECRET')
+    process.env.LTI_HINT_SECRET = 'h'
+    expect(() => makeService()).not.toThrow()
+  })
+
+  it('publishes the previous key too, verifies tokens it signed, and signs new ones with the current key', async () => {
+    const previous = generateKeyPair()
+    const current = generateKeyPair()
+    process.env.LTI_PLATFORM_PRIVATE_KEY = current.privateKeyPem
+    process.env.LTI_PLATFORM_PREVIOUS_PRIVATE_KEY = previous.privateKeyPem
+    const rotated = makeService()
+    const { keys } = rotated.jwks()
+    expect(keys.map((k) => k.kid)).toEqual([current.kid, previous.kid])
+    expect(JSON.stringify(keys)).not.toContain('"d"')
+
+    // an access token issued before the rotation (signed with the previous key) is still accepted
+    const oldToken = signJwt(
+      {
+        iss: reg.issuer,
+        sub: tool.clientId,
+        aud: tool.clientId,
+        iat: nowS(),
+        exp: nowS() + 3600,
+        scope: AGS_SCOPE_SCORE,
+      },
+      previous
+    )
+    await verifyJwt(oldToken, {
+      issuer: reg.issuer,
+      audience: tool.clientId,
+      keyFor: async (kid) => keys.find((k) => k.kid === kid),
+    })
+    await rotated.receiveScore(`Bearer ${oldToken}`, 'k1', 'i1', {
+      userId: 'u1',
+      scoreGiven: 5,
+      scoreMaximum: 10,
+      activityProgress: 'Completed',
+      gradingProgress: 'FullyGraded',
+      timestamp: new Date().toISOString(),
+    })
+    expect(learner.recordToolResult).toHaveBeenCalled()
+
+    // new tokens carry the new kid
+    const html = await rotated.authenticate({
+      scope: 'openid',
+      response_type: 'id_token',
+      client_id: tool.clientId,
+      redirect_uri: tool.launchUrl,
+      login_hint: 'u1',
+      lti_message_hint: (await rotated.startLaunch('u1', 'k1', 'i1')).fields.lti_message_hint,
+      state: 's',
+      nonce: 'n',
+    })
+    const idToken = field(html, 'id_token')
+    expect(JSON.parse(Buffer.from(idToken.split('.')[0], 'base64url').toString()).kid).toBe(
+      current.kid
+    )
   })
 })
 
@@ -231,11 +318,7 @@ describe('auth', () => {
   })
 
   it('derives the hint secret from LTI_HINT_SECRET when set, so instances with different keys agree', async () => {
-    const make = () =>
-      new LtiPlatformService(
-        prisma as unknown as PrismaService,
-        learner as unknown as LearnerService
-      )
+    const make = () => makeService()
     process.env.LTI_HINT_SECRET = 'shared-secret'
     try {
       const a = make()
@@ -250,12 +333,29 @@ describe('auth', () => {
   })
 
   it('does not honour a hint from another service instance with a different key', async () => {
-    const other = new LtiPlatformService(
-      prisma as unknown as PrismaService,
-      learner as unknown as LearnerService
-    )
+    const other = makeService(new MemoryLtiStore())
     const foreign = (await other.startLaunch('u1', 'k1', 'i1')).fields.lti_message_hint
     await reject(service.authenticate(await authParams({ lti_message_hint: foreign })), 400)
+  })
+
+  it('keeps a hint single use across instances that share a store', async () => {
+    process.env.LTI_HINT_SECRET = 'shared-secret'
+    try {
+      const a = makeService()
+      const b = makeService()
+      const hint = (await a.startLaunch('u1', 'k1', 'i1')).fields.lti_message_hint
+      const params = await authParams({ lti_message_hint: hint })
+      expect(await a.authenticate(params)).toContain('id_token')
+      await reject(b.authenticate(params), 400, 'already used')
+    } finally {
+      delete process.env.LTI_HINT_SECRET
+    }
+  })
+
+  it('answers more than 30 auth requests a minute from one IP with a 429', async () => {
+    for (let i = 0; i < 30; i++) await service.authenticate({}, '9.9.9.9').catch(() => undefined) // 400s still count
+    await reject(service.authenticate({}, '9.9.9.9'), 429)
+    await reject(service.authenticate({}, '8.8.8.8'), 400) // another IP is unaffected
   })
 
   it('rejects a hint whose item no longer launches a registered tool', async () => {
@@ -310,6 +410,29 @@ describe('token', () => {
     })
     expect(claims.scope).toBe(AGS_SCOPE_SCORE)
     expect(service.fetchImpl).toHaveBeenCalledWith(tool.jwksUrl, expect.anything())
+  })
+
+  it('rejects a replayed jti across instances that share a store', async () => {
+    const other = makeService()
+    other.fetchImpl = service.fetchImpl
+    const b = body({ client_assertion: assertion({ jti: 'shared' }) })
+    await service.token(b)
+    await reject(other.token(b), 401, 'already used')
+  })
+
+  it('answers more than 60 token requests a minute per client with a 429', async () => {
+    for (let i = 0; i < 60; i++) await service.token(body({ client_assertion: assertion() }))
+    await reject(service.token(body({ client_assertion: assertion() })), 429, 'rate_limited')
+    store.now = () => Date.now() + 61_000
+    await service.token(body({ client_assertion: assertion() }))
+  })
+
+  it("does not let unsigned requests use up a client's token budget", async () => {
+    for (let i = 0; i < 70; i++)
+      await service
+        .token(body({ client_assertion: assertion({}, generateKeyPair()) }))
+        .catch(() => 0)
+    await service.token(body())
   })
 
   it('rejects a replayed jti', async () => {
