@@ -341,12 +341,12 @@ describe('scorm', () => {
 })
 
 describe('interview attempts setting', () => {
-  it('uses the author setting from 1 to 5 and falls back to 3', () => {
+  it('uses the author setting from 1 to 5 and falls back to 1', () => {
     expect(attemptsAllowed({ maxAttempts: 2 })).toBe(2)
     expect(attemptsAllowed({ maxAttempts: 5 })).toBe(5)
     for (const bad of [0, 6, 2.5, '3', undefined])
-      expect(attemptsAllowed({ maxAttempts: bad })).toBe(3)
-    expect(attemptsAllowed({})).toBe(3)
+      expect(attemptsAllowed({ maxAttempts: bad })).toBe(1)
+    expect(attemptsAllowed({})).toBe(1)
   })
 
   it("stops a learner at the author's limit", async () => {
@@ -366,7 +366,7 @@ describe('interview attempts setting', () => {
 
 describe('practice interview', () => {
   const interviewItem = (
-    config: object = { role: 'Medical Assistant', questions: ['Q1', 'Q2'] }
+    config: object = { role: 'Medical Assistant', questions: ['Q1', 'Q2'], maxAttempts: 3 }
   ) => ({
     ...item('interview'),
     config,

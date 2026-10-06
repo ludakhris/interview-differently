@@ -381,9 +381,11 @@ function Interview(props: {
           your own words, a few sentences each, the way you would in a real interview.
         </p>
         <p className="dash-muted">
-          You can try up to {iv.maxAttempts} times and your best score counts.{' '}
-          {item.attempts > 0 && `You have used ${item.attempts}. `}
-          {item.score !== null && `Best so far: ${score(item.score)}.`}
+          {iv.maxAttempts === 1
+            ? 'You have one attempt, so take your time. Your score counts toward your readiness record.'
+            : `You can try up to ${iv.maxAttempts} times and your best score counts.`}{' '}
+          {iv.maxAttempts > 1 && item.attempts > 0 && `You have used ${item.attempts}. `}
+          {iv.maxAttempts > 1 && item.score !== null && `Best so far: ${score(item.score)}.`}
         </p>
       </div>
 

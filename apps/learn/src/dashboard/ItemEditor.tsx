@@ -46,7 +46,7 @@ export function ItemEditor(props: {
     Array.isArray(item.config.questions) ? (item.config.questions as KnowledgeCheckQuestion[]) : []
   )
   const [role, setRole] = useState(String(item.config.role ?? ''))
-  const [attempts, setAttempts] = useState(String(item.config.maxAttempts ?? 3))
+  const [attempts, setAttempts] = useState(String(item.config.maxAttempts ?? 1))
   const [questionsText, setQuestionsText] = useState(
     Array.isArray(item.config.questions) && item.type === 'interview'
       ? (item.config.questions as string[]).join('\n')
@@ -61,7 +61,7 @@ export function ItemEditor(props: {
           ? { questions }
           : {
               role,
-              maxAttempts: Number(attempts) || 3,
+              maxAttempts: Number(attempts) || 1,
               questions: questionsText
                 .split('\n')
                 .map((q) => q.trim())
@@ -142,7 +142,9 @@ export function ItemEditor(props: {
               value={attempts}
               onChange={(e) => setAttempts(e.target.value)}
             />
-            <small className="dash-muted">1 to 5. The learner's best score counts.</small>
+            <small className="dash-muted">
+              1 to 5. The default is 1. With more than one, the best score counts.
+            </small>
           </label>
           <label className="dash-field">
             <span>Questions (one per line, up to 6)</span>

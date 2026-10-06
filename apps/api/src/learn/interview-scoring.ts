@@ -1,7 +1,8 @@
 import { BadGatewayException } from '@nestjs/common'
 import type { InterviewAnswerResult } from '@id/types'
 
-export const MAX_ATTEMPTS = 3
+/** Tries a learner gets at a practice interview unless the author allows more (1 to 5). */
+export const DEFAULT_ATTEMPTS = 1
 export const MAX_ANSWER_CHARS = 2000
 
 /**

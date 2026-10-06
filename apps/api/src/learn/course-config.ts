@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common'
+import { DEFAULT_ATTEMPTS } from './interview-scoring'
 import type { CourseItemType, CourseStatus, ItemInput, KnowledgeCheckQuestion } from '@id/types'
 
 export const ITEM_TYPES: CourseItemType[] = [
@@ -179,7 +180,7 @@ export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'typ
       if (!Array.isArray(raw) || raw.length > 6)
         return bad('A practice interview has up to 6 questions')
       const questions = raw.map((q, i) => text(q, `Question ${i + 1}`, 300, true) as string)
-      const maxAttempts = whole(config.maxAttempts, 'Attempts', 1, 5) ?? 3
+      const maxAttempts = whole(config.maxAttempts, 'Attempts', 1, 5) ?? DEFAULT_ATTEMPTS
       return { type, title, label, config: { role, questions, maxAttempts } }
     }
   }

@@ -92,7 +92,7 @@ describe('validateItemInput', () => {
     ).toEqual({
       role: 'Medical Assistant',
       questions: ['Tell me about yourself.'],
-      maxAttempts: 3,
+      maxAttempts: 1,
     })
   })
 
@@ -126,11 +126,11 @@ describe('validateItemInput scorm', () => {
 
 describe('interview attempts and course lists', () => {
   const base = { type: 'interview', title: 'P', config: { role: 'x', questions: ['Q'] } }
-  it('lets the author set 1 to 5 attempts, default 3', () => {
+  it('lets the author set 1 to 5 attempts, default 1', () => {
     expect(
       validateItemInput({ ...base, config: { ...base.config, maxAttempts: 5 } }).config
     ).toMatchObject({ maxAttempts: 5 })
-    expect(validateItemInput(base).config).toMatchObject({ maxAttempts: 3 })
+    expect(validateItemInput(base).config).toMatchObject({ maxAttempts: 1 })
     expect(() =>
       validateItemInput({ ...base, config: { ...base.config, maxAttempts: 9 } })
     ).toThrow(BadRequestException)

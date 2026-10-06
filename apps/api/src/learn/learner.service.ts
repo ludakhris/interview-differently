@@ -19,7 +19,7 @@ import { ClerkService } from '../auth/clerk.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { cohortStatus } from './cohort-config'
 import { gradeQuiz, publicQuestions } from './grade-quiz'
-import { averageScore, MAX_ANSWER_CHARS, MAX_ATTEMPTS } from './interview-scoring'
+import { averageScore, DEFAULT_ATTEMPTS, MAX_ANSWER_CHARS } from './interview-scoring'
 import { InterviewScoringService } from './interview-scoring.service'
 
 const QUIZ_TYPES = ['knowledge_check', 'assessment']
@@ -547,10 +547,10 @@ export function scormResult(body: unknown): { done: boolean; score: number | nul
   return { done, score: score === null ? null : Math.max(0, Math.min(100, score)) }
 }
 
-/** How many tries a learner gets at a practice interview: the author's setting, 1 to 5, default 3. */
+/** How many tries a learner gets at a practice interview: the author's setting, 1 to 5, default 1. */
 export function attemptsAllowed(
   config: Record<string, unknown> | { maxAttempts?: unknown }
 ): number {
   const n = (config as { maxAttempts?: unknown }).maxAttempts
-  return typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 5 ? n : MAX_ATTEMPTS
+  return typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 5 ? n : DEFAULT_ATTEMPTS
 }
