@@ -787,6 +787,15 @@
   padding: 0;
   border: 0;
 }
+.dash-check {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 8px;
+  align-items: center;
+}
+.dash-check small {
+  grid-column: 2;
+}
 .dash-field > span,
 .dash-field > legend {
   padding: 0;
@@ -1164,6 +1173,10 @@
   margin: 0;
   font-weight: 700;
   text-align: right;
+}
+.dash-record-sub {
+  margin: 16px 0 0;
+  font-size: 14px;
 }
 .dash-record-yes {
   color: var(--orange-text);

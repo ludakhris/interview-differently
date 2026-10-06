@@ -1,4 +1,4 @@
-import { isLearnOrigin } from './lti-env'
+import { isLearnOrigin, resolveLearnOrigin } from './lti-env'
 
 describe('isLearnOrigin', () => {
   const learn = 'https://learndifferently.tech'
@@ -60,4 +60,24 @@ describe('isLearnOrigin', () => {
   it('rejects everything when the learn URL is not a URL', () => {
     expect(isLearnOrigin('https://learndifferently.tech', 'nope')).toBe(false)
   })
+})
+
+describe('resolveLearnOrigin', () => {
+  it('uses LTI_LEARN_URL with trailing slashes trimmed, whatever the database host', () => {
+    expect(resolveLearnOrigin('https://learndifferently.tech/', 'db.rlwy.net')).toBe(
+      'https://learndifferently.tech'
+    )
+  })
+
+  it.each([['localhost'], ['127.0.0.1']])('falls back to localhost for a %s database', (host) => {
+    expect(resolveLearnOrigin(undefined, host)).toBe('http://localhost:5174')
+    expect(resolveLearnOrigin('  ', host)).toBe('http://localhost:5174')
+  })
+
+  it.each([['zephyr.proxy.rlwy.net'], ['db.example.com']])(
+    'throws for a %s database when LTI_LEARN_URL is unset',
+    (host) => {
+      expect(() => resolveLearnOrigin(undefined, host)).toThrow('LTI_LEARN_URL is not set')
+    }
+  )
 })

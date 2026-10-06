@@ -97,8 +97,8 @@ export class LearnService {
         prov."name"                    AS "providerName",
         MAX(ip."score") FILTER (WHERE it."label" = 'pre'  AND ip."status" = 'completed')::int AS "pre",
         MAX(ip."score") FILTER (WHERE it."label" = 'post' AND ip."status" = 'completed')::int AS "post",
-        MAX(ip."score") FILTER (WHERE (it."type" = 'interview' OR (it."type" = 'tool' AND it."label" IS NULL)) AND ip."status" = 'completed')::int AS "interviewBest",
-        COALESCE(MAX(ip."attempts") FILTER (WHERE (it."type" = 'interview' OR (it."type" = 'tool' AND it."label" IS NULL))), 0)::int AS "interviewAttempts",
+        MAX(ip."score") FILTER (WHERE (it."type" = 'interview' OR (it."type" = 'tool' AND it."label" IS NULL AND it."config"->>'countsAsInterview' = 'true')) AND ip."status" = 'completed')::int AS "interviewBest",
+        COALESCE(MAX(ip."attempts") FILTER (WHERE (it."type" = 'interview' OR (it."type" = 'tool' AND it."label" IS NULL AND it."config"->>'countsAsInterview' = 'true'))), 0)::int AS "interviewAttempts",
         -- Completed items, plus plan slots for course content sent back for review that were redone
         -- since they were added (the item's own completion already counts once).
         ((COUNT(ip."id") FILTER (WHERE ip."status" = 'completed'))

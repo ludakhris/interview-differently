@@ -347,6 +347,43 @@ describe('tool items', () => {
     ).toThrow('Skill is not valid')
   })
 
+  it('refuses an empty or blank reference', () => {
+    for (const ref of ['', '   ', null]) {
+      expect(() => validateItemInput({ ...base, config: { toolId: 'id-interview', ref } })).toThrow(
+        'Tool reference is required'
+      )
+    }
+  })
+
+  describe('countsAsInterview', () => {
+    it('is kept as true for an unlabelled interview tool and defaults to absent', () => {
+      expect(
+        validateItemInput({ ...base, config: { ...base.config, countsAsInterview: true } }).config
+      ).toEqual({ toolId: 'id-interview', ref: 'cna', countsAsInterview: true })
+      expect(
+        validateItemInput({ ...base, config: { ...base.config, countsAsInterview: false } }).config
+      ).toEqual({ toolId: 'id-interview', ref: 'cna' })
+      expect(validateItemInput(base).config).toEqual({ toolId: 'id-interview', ref: 'cna' })
+    })
+
+    it('refuses a value that is not a boolean', () => {
+      expect(() =>
+        validateItemInput({ ...base, config: { ...base.config, countsAsInterview: 'yes' } })
+      ).toThrow('true or false')
+    })
+
+    it('is dropped for an assessment tool', () => {
+      expect(
+        validateItemInput({
+          type: 'tool',
+          title: 'Pre',
+          label: 'pre',
+          config: { toolId: 'id-assessment', ref: 'cna-pre', countsAsInterview: true },
+        }).config
+      ).toEqual({ toolId: 'id-assessment', ref: 'cna-pre', maxAttempts: 1 })
+    })
+  })
+
   it('cannot be remediation or review content', () => {
     expect(
       validateItemInput({ ...base, config: { ...base.config, remediationFor: 'comms' } }).config

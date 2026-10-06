@@ -72,6 +72,27 @@ export function getLtiToken(): string | null {
   return memoryToken ?? readStored()
 }
 
+/**
+ * The course link the API signed into the session token (`returnUrl`), for when a hand-back answer
+ * carries none. The payload is only read, never trusted: any decode problem, or a value that is not
+ * http(s), gives null. (The API is what verifies the token's signature.)
+ */
+export function getLtiReturnUrl(): string | null {
+  const body = getLtiToken()?.split('.')[0]
+  if (!body) return null
+  try {
+    const b64 = body.replace(/-/g, '+').replace(/_/g, '/')
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
+    const payload: unknown = JSON.parse(new TextDecoder().decode(bytes))
+    const raw = (payload as { returnUrl?: unknown } | null)?.returnUrl
+    if (typeof raw !== 'string') return null
+    const u = new URL(raw)
+    return u.protocol === 'https:' || u.protocol === 'http:' ? raw : null
+  } catch {
+    return null
+  }
+}
+
 /** True only on an /lti/play/ or /lti/assessment/ route with a token present for this tab. */
 export function isLtiSession(pathname: string = window.location.pathname): boolean {
   return isLtiPath(pathname) && getLtiToken() !== null

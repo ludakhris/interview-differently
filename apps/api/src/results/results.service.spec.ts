@@ -44,6 +44,9 @@ const dim = (over = {}) => ({
   ...over,
 })
 
+const savedCompletedAt = (h: ReturnType<typeof setup>) =>
+  (h.prisma.simulationResult.create.mock.calls[0][0].data as { completedAt: Date }).completedAt
+
 describe('ResultsService.create validation', () => {
   it('stores a valid result', async () => {
     const h = setup()
@@ -73,7 +76,6 @@ describe('ResultsService.create validation', () => {
     ['long choice', { choiceSequence: ['x'.repeat(201)] }],
     ['bad completedAt', { completedAt: 'nope' }],
     ['missing completedAt', { completedAt: undefined }],
-    ['future completedAt', { completedAt: new Date(Date.now() + 10 * 60_000).toISOString() }],
     ['missing id', { id: undefined }],
   ])('400s %s without touching the database', async (_n, over) => {
     const h = setup()
@@ -82,10 +84,21 @@ describe('ResultsService.create validation', () => {
     expect(h.prisma.simulationResult.findUnique).not.toHaveBeenCalled()
   })
 
-  it('allows a completedAt up to 5 minutes ahead', async () => {
+  it('clamps a completedAt in the future to the server time instead of rejecting it', async () => {
     const h = setup()
-    const at = new Date(Date.now() + 4 * 60_000).toISOString()
-    await expect(h.svc.create(dto({ completedAt: at }))).resolves.toBeDefined()
+    const before = Date.now()
+    await h.svc.create(dto({ completedAt: new Date(before + 3 * 3600_000).toISOString() }))
+    const saved = savedCompletedAt(h)
+    expect(saved.getTime()).toBeGreaterThanOrEqual(before)
+    expect(saved.getTime()).toBeLessThanOrEqual(Date.now())
+  })
+
+  it('keeps a past completedAt as sent', async () => {
+    const h = setup()
+    const at = new Date(Date.now() - 60_000)
+    await h.svc.create(dto({ completedAt: at.toISOString() }))
+    const saved = savedCompletedAt(h)
+    expect(saved).toEqual(at)
   })
 })
 

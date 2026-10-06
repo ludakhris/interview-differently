@@ -1,12 +1,6 @@
 import type { CourseItemDto, CourseSkill, KnowledgeCheckQuestion } from '@id/types'
 import { useState } from 'react'
-import {
-  TOOL_OPTIONS,
-  parseAttempts,
-  parseTimeLimit,
-  toolItemLabel,
-  toolLabelable,
-} from './toolKinds'
+import { TOOL_OPTIONS, toolConfig, toolItemLabel, toolLabelable, toolRefProblem } from './toolKinds'
 
 export interface ItemDraft {
   type: string
@@ -49,6 +43,8 @@ export function ItemEditor(props: {
   skills: CourseSkill[]
   busy: boolean
   onSave: (draft: ItemDraft) => void
+  /** True for a new item that is not saved yet: nothing exists until the author saves it. */
+  isNew?: boolean
   onCancel: () => void
   /** Upload a preview image, or remove it with null. Only external course items use it. */
   onImage?: (file: File | null) => void
@@ -80,6 +76,8 @@ export function ItemEditor(props: {
   const [planSkill, setPlanSkill] = useState(
     String(item.config.remediationFor ?? item.config.reviewFor ?? '')
   )
+  const [countsAsInterview, setCountsAsInterview] = useState(item.config.countsAsInterview === true)
+  const [problem, setProblem] = useState<string | null>(null)
   const [attempts, setAttempts] = useState(String(item.config.maxAttempts ?? 1))
   const [timeLimit, setTimeLimit] = useState(
     item.config.timeLimitMinutes ? String(item.config.timeLimitMinutes) : ''
@@ -109,19 +107,14 @@ export function ItemEditor(props: {
                   imageKey: item.config.imageKey,
                 }
               : item.type === 'tool'
-                ? {
+                ? toolConfig({
                     toolId,
-                    ref: toolRef.trim(),
-                    ...(skill ? { skill } : {}),
-                    ...(toolLabelable(toolId)
-                      ? {
-                          maxAttempts: parseAttempts(attempts),
-                          ...(parseTimeLimit(timeLimit)
-                            ? { timeLimitMinutes: parseTimeLimit(timeLimit) }
-                            : {}),
-                        }
-                      : {}),
-                  }
+                    ref: toolRef,
+                    skill,
+                    attempts,
+                    timeLimit,
+                    countsAsInterview,
+                  })
                 : {
                     role,
                     ...(skill ? { skill } : {}),
@@ -136,6 +129,9 @@ export function ItemEditor(props: {
     delete saved.reviewFor
     if (planSkill && canBeRemediation && planMode === 'extra') saved.remediationFor = planSkill
     if (planSkill && canBeRemediation && planMode === 'review') saved.reviewFor = planSkill
+    const refProblem = item.type === 'tool' ? toolRefProblem(toolRef) : null
+    setProblem(refProblem)
+    if (refProblem) return
     props.onSave({
       type: item.type,
       title,
@@ -405,6 +401,22 @@ export function ItemEditor(props: {
               </small>
             )}
           </label>
+          {!toolLabelable(toolId) && (
+            <label className="dash-check">
+              <input
+                type="checkbox"
+                checked={countsAsInterview}
+                onChange={(e) => setCountsAsInterview(e.target.checked)}
+              />
+              <span>Counts toward interview readiness</span>
+              <small className="dash-muted">
+                Tick this if the learner's best score here should count as their practice interview
+                score. Leave it unticked for a simulation or other practice: it still appears as its
+                own line on the learner's record. The item title is shown to learners as the name of
+                this line.
+              </small>
+            </label>
+          )}
         </>
       )}
 
@@ -447,9 +459,14 @@ export function ItemEditor(props: {
         </>
       )}
 
+      {problem && (
+        <p className="dash-banner dash-banner-error" role="alert">
+          {problem}
+        </p>
+      )}
       <div className="dash-form-actions">
         <button type="button" className="dash-btn" onClick={save} disabled={props.busy}>
-          {props.busy ? 'Saving…' : 'Save item'}
+          {props.busy ? 'Saving…' : props.isNew ? 'Add item' : 'Save item'}
         </button>
         <button type="button" className="dash-btn-quiet" onClick={props.onCancel}>
           Cancel

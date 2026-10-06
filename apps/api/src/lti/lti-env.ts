@@ -10,6 +10,7 @@ export const REQUIRED_IN_PRODUCTION = [
   'LTI_TOOL_PRIVATE_KEY',
   'LTI_TOOL_SECRET',
   'LTI_HINT_SECRET',
+  'LTI_API_BASE',
   'LTI_LEARN_URL',
   'LTI_ID_WEB_URL',
 ] as const
@@ -64,4 +65,21 @@ export function isLearnOrigin(value: unknown, learnUrl: string): boolean {
   } catch {
     return false
   }
+}
+
+const LOCAL_DB_HOSTS = ['localhost', '127.0.0.1', '[::1]', '::1']
+
+/**
+ * The LearnDifferently origin the demo seed bakes into the brand logo URL. The localhost fallback is
+ * only for a laptop-local database; against any other host (including the shared dev database) an
+ * unset LTI_LEARN_URL would store an unreachable logo, so it throws instead.
+ */
+export function resolveLearnOrigin(learnUrl: string | undefined, dbHost: string): string {
+  const url = learnUrl?.trim()
+  if (url) return url.replace(/\/+$/, '')
+  if (LOCAL_DB_HOSTS.includes(dbHost)) return 'http://localhost:5174'
+  throw new Error(
+    `LTI_LEARN_URL is not set and the database host is "${dbHost}", not localhost. ` +
+      'Set LTI_LEARN_URL to the public LearnDifferently URL so the brand logo URL is reachable.'
+  )
 }

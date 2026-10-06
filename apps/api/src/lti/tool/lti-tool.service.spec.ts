@@ -1586,6 +1586,39 @@ describe('assessment launch', () => {
     })
   })
 
+  describe('session lifetime', () => {
+    const lifetime = (r: { redirect: string }) => {
+      const s = sessionOf(r)
+      return s.exp - s.iat
+    }
+    const custom = (minutes?: number) => ({
+      ref: 'sql-basics',
+      tool: 'id-assessment',
+      ...(minutes === undefined ? {} : { timeLimitMinutes: minutes }),
+    })
+
+    it('is the default two hours without a time limit', async () => {
+      const h = ready()
+      expect(lifetime(await launchWith(h, custom()))).toBe(2 * 3600)
+    })
+
+    it.each([[180], [240]])('covers a %i minute limit plus 15 minutes grace', async (m) => {
+      const h = ready()
+      expect(lifetime(await launchWith(h, custom(m)))).toBe(m * 60 + 15 * 60)
+    })
+
+    it('stays at the default for a short limit', async () => {
+      const h = ready()
+      expect(lifetime(await launchWith(h, custom(30)))).toBe(2 * 3600)
+    })
+
+    it('uses the limit stored on an existing delivery, not the relaunch claim', async () => {
+      const h = ready()
+      await launchWith(h, custom(240))
+      expect(lifetime(await launchWith(h, custom(30)))).toBe(240 * 60 + 15 * 60)
+    })
+  })
+
   it('reuses the delivery on a second launch and matches by id as a fallback', async () => {
     const h = ready()
     await launchWith(h)
@@ -1710,12 +1743,17 @@ describe('completeAssessment', () => {
     ['another delivery', { deliveryId: 'd2' }, 404],
     ['an unsubmitted attempt', { submittedAt: null }, 400],
     ['an ungraded attempt', { sectionScores: null }, 400],
-    ['a stale attempt', { startedAt: new Date(Date.now() - 3 * 3600 * 1000) }, 400],
   ])('refuses %s and posts nothing', async (_n, over, status) => {
     const h = ready(over ?? {})
     if (over === null) h.prisma.assessmentAttempt.findUnique.mockResolvedValue(null)
     await expect(h.svc.completeAssessment(session, 'at1')).rejects.toMatchObject({ status })
     expect(h.calls).toHaveLength(0)
+  })
+
+  it('posts an attempt started before the session began (a relaunch resumes it)', async () => {
+    const h = ready({ startedAt: new Date(Date.now() - 3 * 3600 * 1000) })
+    await expect(h.svc.completeAssessment(session, 'at1')).resolves.toMatchObject({ score: 60 })
+    expect(h.calls).not.toHaveLength(0)
   })
 
   it('sends an attempt once, per session and across sessions', async () => {

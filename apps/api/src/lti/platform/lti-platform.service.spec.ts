@@ -111,6 +111,7 @@ describe('keys and secrets', () => {
       'LTI_TOOL_PRIVATE_KEY',
       'LTI_TOOL_SECRET',
       'LTI_HINT_SECRET',
+      'LTI_API_BASE',
       'LTI_LEARN_URL',
       'LTI_ID_WEB_URL',
     ])
@@ -121,6 +122,8 @@ describe('keys and secrets', () => {
     process.env.LTI_TOOL_SECRET = 's'
     expect(() => makeService()).toThrow('LTI_HINT_SECRET')
     process.env.LTI_HINT_SECRET = 'h'
+    expect(() => makeService()).toThrow('LTI_API_BASE')
+    process.env.LTI_API_BASE = 'https://api.test/api'
     expect(() => makeService()).toThrow('LTI_LEARN_URL')
     process.env.LTI_LEARN_URL = 'https://learn.test'
     expect(() => makeService()).toThrow('LTI_ID_WEB_URL')

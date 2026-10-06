@@ -68,11 +68,25 @@ export const toolById = (id: unknown): PlatformTool | undefined =>
   registeredTools().find((t) => t.toolId === id)
 
 /**
- * Whether a course item counts as a practice interview (readiness, not required for completion):
- * an interview, or a tool item that is not labelled as a pre/post assessment.
+ * Whether a course item is practice rather than required work (not needed for completion): an
+ * interview, or a tool item that is not labelled as a pre/post assessment.
  */
-export const isInterviewLike = (i: { type: string; label: string | null }): boolean =>
+export const isPracticeItem = (i: { type: string; label: string | null }): boolean =>
   i.type === 'interview' || (i.type === 'tool' && !i.label)
+
+/**
+ * Whether a course item feeds interview readiness: a native interview, or an unlabelled tool item
+ * whose author flagged it `countsAsInterview`. Any other tool item is its own line item.
+ */
+export const isInterviewLike = (i: {
+  type: string
+  label: string | null
+  config?: unknown
+}): boolean =>
+  i.type === 'interview' ||
+  (i.type === 'tool' &&
+    !i.label &&
+    (i.config as { countsAsInterview?: unknown } | null | undefined)?.countsAsInterview === true)
 
 /** Attempt rules for an assessment-kind tool item, read from its stored config (defaults: one attempt, no time limit). */
 export function assessmentLimits(config: unknown): {

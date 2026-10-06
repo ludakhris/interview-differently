@@ -282,6 +282,26 @@ describe('completion', () => {
     })
   })
 
+  it('does not require unlabelled tool items, flagged as an interview or not', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    prisma.courseModule.findMany.mockResolvedValue([
+      {
+        id: 'm1',
+        title: 'M',
+        position: 1,
+        items: [
+          { id: 'i1', type: 'lesson' },
+          { id: 'i2', type: 'tool', label: null, config: { countsAsInterview: true } },
+          { id: 'i3', type: 'tool', label: null, config: {} },
+        ],
+      },
+    ])
+    finished('i1')
+    await service.completeLesson('u1', 'k1', 'i1')
+    expect(prisma.enrollment.update).toHaveBeenCalled()
+  })
+
   it('stays enrolled while required items remain', async () => {
     prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
     prisma.itemProgress.findUnique.mockResolvedValue(null)
@@ -332,14 +352,63 @@ describe('buildRecord', () => {
     })
   })
 
-  it('counts a connected interview tool toward interview readiness', () => {
+  it('counts a connected interview tool toward interview readiness only when flagged', () => {
     const r = buildRecord(
-      [{ id: 't', type: 'tool', label: null }],
+      [{ id: 't', type: 'tool', label: null, config: { countsAsInterview: true } }],
       [{ itemId: 't', status: 'completed', score: 88 }],
       course,
       false
     )
     expect(r).toMatchObject({ interviewBest: 88, interviewReady: true })
+  })
+
+  it('keeps an unflagged tool item out of interview readiness and lists it as a practice line', () => {
+    const r = buildRecord(
+      [
+        { id: 'd', type: 'tool', label: null, title: 'Decision simulation', config: {} },
+        { id: 's', type: 'tool', label: null, title: 'SQL simulation', config: {} },
+        {
+          id: 'v',
+          type: 'tool',
+          label: null,
+          title: 'Voice interview',
+          config: { countsAsInterview: true },
+        },
+        { id: 'n', type: 'tool', label: null, title: 'Not done yet', config: {} },
+        { id: 'p', type: 'tool', label: 'pre', title: 'Pre', config: {} },
+        { id: 'i', type: 'interview', label: null, title: 'Native' },
+      ],
+      [
+        { itemId: 'd', status: 'completed', score: 95 },
+        { itemId: 's', status: 'completed', score: 60 },
+        { itemId: 'v', status: 'completed', score: 72 },
+        { itemId: 'n', status: 'in_progress', score: null },
+        { itemId: 'p', status: 'completed', score: 40 },
+      ],
+      course,
+      false
+    )
+    expect(r.interviewBest).toBe(72)
+    expect(r.interviewReady).toBe(true)
+    expect(r.practice).toEqual([
+      { itemId: 'd', title: 'Decision simulation', score: 95 },
+      { itemId: 's', title: 'SQL simulation', score: 60 },
+      { itemId: 'v', title: 'Voice interview', score: 72 },
+    ])
+  })
+
+  it('shows a high unflagged simulation as no interview score at all', () => {
+    const r = buildRecord(
+      [{ id: 'd', type: 'tool', label: null, title: 'Decision simulation' }],
+      [{ itemId: 'd', status: 'completed', score: 99 }],
+      course,
+      false
+    )
+    expect(r).toMatchObject({ interviewBest: null, interviewReady: false })
+  })
+
+  it('has an empty practice list before anything is done', () => {
+    expect(buildRecord(items, [], course, false).practice).toEqual([])
   })
 
   it('feeds a labelled tool item into pre, post and gain, not interview readiness', () => {

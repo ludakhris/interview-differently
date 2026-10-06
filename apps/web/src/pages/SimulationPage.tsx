@@ -16,6 +16,7 @@ import { QuantNode } from '@/components/quant/QuantNode'
 import { SqlNode } from '@/components/sql/SqlNode'
 import { saveResult, saveResultStrict, recordSimulationAttempt } from '@/services/resultsService'
 import { completeLtiAttempt } from '@/services/ltiService'
+import { LtiScoreSent } from '@/components/LtiScoreSent'
 import { useSimulation } from '@/hooks/useSimulation'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import { buildPhaseViews, getPhaseForNode } from '@/lib/phases'
@@ -208,7 +209,8 @@ function SimulationContent({
 
   // LTI hand-back: save the result, then report it to LearnDifferently and
   // return the learner there. Retry re-runs both (the API de-dupes by id).
-  const [ltiStatus, setLtiStatus] = useState<'idle' | 'sending' | 'error'>('idle')
+  const [ltiStatus, setLtiStatus] = useState<'idle' | 'sending' | 'error' | 'sent'>('idle')
+  const [ltiCourseUrl, setLtiCourseUrl] = useState<string | null>(null)
   const ltiResult = useRef<ReturnType<typeof computeResult> | null>(null)
   const sendLtiScore = useCallback(async () => {
     if (!ltiResult.current) ltiResult.current = computeResult()
@@ -216,8 +218,15 @@ function SimulationContent({
     setLtiStatus('sending')
     try {
       await saveResultStrict({ ...result, scenarioTitle: scenario.title })
-      const { returnUrl } = await completeLtiAttempt(result.id)
-      window.location.assign(returnUrl)
+      const done = await completeLtiAttempt(result.id)
+      if (!done.ok) {
+        setLtiStatus('error')
+      } else if (done.navigateTo) {
+        window.location.assign(done.navigateTo)
+      } else {
+        setLtiCourseUrl(done.courseUrl)
+        setLtiStatus('sent')
+      }
     } catch (err) {
       console.warn('LTI score hand-back failed:', err)
       setLtiStatus('error')
@@ -294,6 +303,8 @@ function SimulationContent({
                 Retry
               </button>
             </>
+          ) : ltiStatus === 'sent' ? (
+            <LtiScoreSent courseUrl={ltiCourseUrl} />
           ) : (
             <p className="font-display font-bold text-[18px] text-fg">Sending your score...</p>
           )}

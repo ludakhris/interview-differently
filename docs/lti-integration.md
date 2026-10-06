@@ -17,6 +17,7 @@ state is the `LtiSingleUse` table (see "Shared store").
 | `LTI_TOOL_PRIVATE_KEY`              | required           | Tool RS256 signing key (PEM)                                                                                                                                                                                                                                                                                                                      |
 | `LTI_TOOL_SECRET`                   | required           | Tool's HMAC secret for submission tokens                                                                                                                                                                                                                                                                                                          |
 | `LTI_HINT_SECRET`                   | required           | Platform's HMAC secret for `lti_message_hint`                                                                                                                                                                                                                                                                                                     |
+| `LTI_API_BASE`                      | required           | Public base URL of this API (default `http://localhost:3000/api`; drives every issuer, auth, token, JWKS and launch URL, so a production boot without it would publish localhost URLs)                                                                                                                                                            |
 | `LTI_LEARN_URL`                     | required           | Public URL of the LearnDifferently web app (default `http://localhost:5174`, trailing slash trimmed); the platform sends `${origin}/lms/learning/${cohortId}/${itemId}` as the launch `return_url`, where `origin` is the host the learner launched from when it is an accepted LearnDifferently origin (see "Return host"), else `LTI_LEARN_URL` |
 | `LTI_ID_WEB_URL`                    | required           | Public URL of the Interview Differently web app (default `http://localhost:5173`, trailing slash trimmed); text scenarios are played at `${LTI_ID_WEB_URL}/lti/play/${ref}`                                                                                                                                                                       |
 | `LTI_RETURN_URL`                    | optional           | Tool's fallback return link (default `http://localhost:5174`) when a launch carries no usable `return_url`                                                                                                                                                                                                                                        |
@@ -25,7 +26,7 @@ state is the `LtiSingleUse` table (see "Shared store").
 | `TRUST_PROXY`                       | set behind a proxy | Express `trust proxy` (a hop count such as `1`, or `true`), so `req.ip`, which the rate limits use, is the client and not the proxy                                                                                                                                                                                                               |
 
 With `NODE_ENV=production` the services refuse to boot (the constructors throw, naming every missing
-variable) unless all six required variables (every row marked required) are set. Outside production a missing key or secret is
+variable) unless all seven required variables (every row marked required) are set. Outside production a missing key or secret is
 generated at boot, which is only safe for one instance and loses state on restart.
 
 ## Shared store
@@ -80,7 +81,7 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
   was launched: `{ ref, tool }` (plus `attempt` and `timeLimitMinutes?` for `id-assessment`, see "Attempts and time limits"), where `tool` is the LearnDifferently tool id and, for `id-assessment`, `ref` is the Assessment slug.
 - Platform-only properties per tool (never on the wire): `kind` (`interview` | `assessment`), `retries` (registry default only; the learner view derives `retries` per item, see "Attempts and time limits") and `labelable` (assessment true). A `tool` course item may carry the `pre`/`post`
   label only when its tool is labelable; such an item stands in for LearnDifferently's own assessment (required for course
-  completion, its best score feeds pre/post/gain, not counted as an interview). An unlabelled tool item is interview-like.
+  completion, its best score feeds pre/post/gain, not counted as an interview). An unlabelled tool item is practice: never required for completion, and shown as its own line (author's item title, best score) under "Practice and simulations" on the learner's record. It feeds interview readiness (`interviewBest`, `interviewAttempts`, "Ready to interview") only when its config has `countsAsInterview: true` (interview-kind tools only; dropped for assessments and labelled items). Native `interview` items always feed readiness.
 - Platform side config (`ToolRegistration`): loginUrl `${BASE}/lti/tool/login`, launchUrl `${BASE}/lti/tool/launch`,
   jwksUrl `${BASE}/lti/tool/jwks`.
 - Tool side config (`PlatformRegistration`): issuer, authUrl `${BASE}/lti/platform/auth`,
@@ -185,7 +186,7 @@ in-flight fetch between concurrent callers, times fetches out after 3 seconds an
 - Retakes and time limits (assessments only). The custom claim is `{ref, tool, attempt?, timeLimitMinutes?}`, both extras validated strictly
   (any other value answers a 400 page and creates nothing):
   - `attempt`: integer 1 to 100, the 1-based attempt number for this launch; missing means 1.
-  - `timeLimitMinutes`: integer 5 to 240, optional. It is written to the delivery **only when the delivery is created**; an existing delivery keeps its limit.
+  - `timeLimitMinutes`: integer 5 to 240, optional. It is written to the delivery **only when the delivery is created**; an existing delivery keeps its limit. An assessment session lasts `max(2 hours, the delivery's stored limit + 15 minutes)`, so a long limit cannot outlive the session that posts its score.
   - Each attempt number has its own delivery (label above), so each draws a fresh paper through `startAttemptForLti`, and the session's `deliveryId`
     is for that attempt only (the guard allowlist is unchanged). Relaunching an attempt number whose delivery already holds the learner's attempt
     resumes it, submitted or not. Deliveries made before retakes existed carry `lti:<link>` and are attempt 1.
@@ -196,8 +197,8 @@ in-flight fetch between concurrent callers, times fetches out after 3 seconds an
     reject a late `submit`: it grades and stores it with `submittedLate = true` when it arrives more than 2 minutes after the deadline (grace for
     client timers), so `POST /complete` still posts that score. Saving answers is not blocked by the deadline either.
   - `POST /complete` is unchanged and single use per `attemptId`, so each attempt posts its own score and per-section dimensions from its own stored scores.
-- `POST /complete` also takes `{attemptId}` for an assessment: the attempt must belong to `sub`, to the session's `deliveryId`, be submitted (graded on the server) and have been
-  created no earlier than the session `iat` minus 60 s. Score = the overall percent of its stored section scores (correct / total, rounded), with `DIMENSIONS_FIELD`
+- `POST /complete` also takes `{attemptId}` for an assessment: the attempt must belong to `sub`, to the session's `deliveryId`, be submitted (graded on the server). It may have been
+  started in an earlier session: a relaunch resumes it under a new session, so there is no check against the session `iat`. Score = the overall percent of its stored section scores (correct / total, rounded), with `DIMENSIONS_FIELD`
   = one entry per section `{dimension: section title, score: round(correct / total * 100)}`. Locks: `lti-complete` per LTI session and `lti-result` keyed `assessment:<attemptId>` (30 days); both are
   released if the post fails (502); reuse answers 409. Rate limit as the others (10 per minute per `sub`).
 - `POST /submit` takes the `submission` token and answers, scores them with the tool's own scorer, obtains an access token from the

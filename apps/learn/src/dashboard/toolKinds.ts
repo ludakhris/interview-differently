@@ -52,3 +52,37 @@ export function attemptLine(used: number, allowed: number, completed: boolean): 
 /** The time-limit note, or null when there is no limit. */
 export const timeLimitNote = (minutes: number | null): string | null =>
   minutes === null ? null : `Time limit: ${minutes} minutes`
+
+/** Reference values the add menu used to save as placeholders; never a real reference. */
+const PLACEHOLDER_REFS = ['assessment-slug', 'interview-id']
+
+/** Why a tool reference cannot be saved, or null when it can. */
+export function toolRefProblem(ref: string): string | null {
+  const r = ref.trim()
+  if (!r || PLACEHOLDER_REFS.includes(r)) {
+    return 'Enter the reference of the assessment or interview this opens before saving.'
+  }
+  return null
+}
+
+/** The config a tool item is saved with. Attempt rules apply to assessment tools only; the interview flag to others only. */
+export function toolConfig(f: {
+  toolId: string
+  ref: string
+  skill: string
+  attempts: string
+  timeLimit: string
+  countsAsInterview: boolean
+}): Record<string, unknown> {
+  const limit = parseTimeLimit(f.timeLimit)
+  return {
+    toolId: f.toolId,
+    ref: f.ref.trim(),
+    ...(f.skill ? { skill: f.skill } : {}),
+    ...(toolLabelable(f.toolId)
+      ? { maxAttempts: parseAttempts(f.attempts), ...(limit ? { timeLimitMinutes: limit } : {}) }
+      : f.countsAsInterview
+        ? { countsAsInterview: true }
+        : {}),
+  }
+}

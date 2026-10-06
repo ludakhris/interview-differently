@@ -24,7 +24,12 @@ import { gradeQuiz, publicQuestions } from './grade-quiz'
 import { averageScore, DEFAULT_ATTEMPTS, MAX_ANSWER_CHARS } from './interview-scoring'
 import { InterviewScoringService } from './interview-scoring.service'
 import { parseExternalLink } from './external-link'
-import { assessmentLimits, isInterviewLike, toolById } from '../lti/platform/lti-platform-config'
+import {
+  assessmentLimits,
+  isInterviewLike,
+  isPracticeItem,
+  toolById,
+} from '../lti/platform/lti-platform-config'
 import { imageUrl, isImageKey } from './item-image'
 import { isSupportedItemType } from './course-config'
 import { doneSince, parseSkills, remediationOf, reviewOf, skillResults } from './skills'
@@ -283,7 +288,13 @@ export class LearnerService {
           ),
       })),
       record: buildRecord(
-        items.map((i) => ({ id: i.id, type: i.type, label: i.label })),
+        items.map((i) => ({
+          id: i.id,
+          type: i.type,
+          label: i.label,
+          title: i.title,
+          config: i.config,
+        })),
         progress,
         course,
         e.status === 'completed'
@@ -783,7 +794,7 @@ export class LearnerService {
     // (a review) must be done in the outline and again since it was added to the plan.
     const outline = modules
       .flatMap((m) => m.items)
-      .filter((i) => !isInterviewLike(i) && !remediationOf(i.config))
+      .filter((i) => !isPracticeItem(i) && !remediationOf(i.config))
       .map((i) => i.id)
     const finished = await this.prisma.itemProgress.findMany({
       where: {
@@ -831,12 +842,14 @@ export function videoEvidence(body: unknown): {
 
 /** The record a learner (and their agency) sees, from item results and the course's thresholds. */
 export function buildRecord(
-  items: { id: string; type: string; label: string | null }[],
+  items: { id: string; type: string; label: string | null; title?: string; config?: unknown }[],
   progress: { itemId: string; status: string; score: number | null }[],
   course: { targetScore: number; readinessThreshold: number },
   completed: boolean
 ): ReadinessRecord {
-  const scoreOf = (pick: (i: { type: string; label: string | null }) => boolean) => {
+  const scoreOf = (
+    pick: (i: { type: string; label: string | null; config?: unknown }) => boolean
+  ) => {
     const ids = new Set(items.filter(pick).map((i) => i.id))
     const scores = progress
       .filter((p) => ids.has(p.itemId) && p.status === 'completed' && p.score !== null)
@@ -846,6 +859,11 @@ export function buildRecord(
   const pre = scoreOf((i) => i.label === 'pre')
   const post = scoreOf((i) => i.label === 'post')
   const interviewBest = scoreOf(isInterviewLike)
+  // Each completed unlabelled tool item (simulation, interview, practice) is its own line.
+  const done = new Map(progress.filter((p) => p.status === 'completed').map((p) => [p.itemId, p]))
+  const practice = items
+    .filter((i) => i.type === 'tool' && !i.label && done.has(i.id))
+    .map((i) => ({ itemId: i.id, title: i.title ?? '', score: done.get(i.id)?.score ?? null }))
   return {
     pre,
     post,
@@ -855,6 +873,7 @@ export function buildRecord(
     interviewBest,
     readinessThreshold: course.readinessThreshold,
     interviewReady: interviewBest !== null && interviewBest >= course.readinessThreshold,
+    practice,
     completed,
   }
 }

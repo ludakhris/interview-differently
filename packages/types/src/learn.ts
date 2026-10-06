@@ -292,6 +292,14 @@ export interface LearnerOutlineItem {
   attempts: number
 }
 
+/** A completed simulation or practice item: its own line on the learner's record. */
+export interface PracticeLine {
+  itemId: string
+  /** The course author's item title, shown to the learner as the line's name. */
+  title: string
+  score: number | null
+}
+
 /** What the learner's own record shows: the same measures the agency reports on. */
 export interface ReadinessRecord {
   pre: number | null
@@ -302,6 +310,8 @@ export interface ReadinessRecord {
   interviewBest: number | null
   readinessThreshold: number
   interviewReady: boolean
+  /** Completed unlabelled tool items (simulations, interviews, practice), empty before any is done. */
+  practice: PracticeLine[]
   completed: boolean
 }
 

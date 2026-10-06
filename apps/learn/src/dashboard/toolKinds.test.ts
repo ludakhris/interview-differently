@@ -4,9 +4,11 @@ import {
   parseAttempts,
   parseTimeLimit,
   timeLimitNote,
+  toolConfig,
   toolCopy,
   toolItemLabel,
   toolLabelable,
+  toolRefProblem,
 } from './toolKinds'
 
 describe('toolKinds', () => {
@@ -59,5 +61,47 @@ describe('toolKinds', () => {
     expect(attemptLine(3, 3, true)).toBe('Attempts used: 3 of 3')
     expect(timeLimitNote(30)).toBe('Time limit: 30 minutes')
     expect(timeLimitNote(null)).toBeNull()
+  })
+})
+
+describe('toolRefProblem', () => {
+  it('refuses an empty, blank or placeholder reference', () => {
+    for (const ref of ['', '   ', 'assessment-slug', ' interview-id ']) {
+      expect(toolRefProblem(ref)).toMatch(/reference/)
+    }
+  })
+  it('accepts a real reference', () => {
+    expect(toolRefProblem('cna-pre')).toBeNull()
+    expect(toolRefProblem(' decision-sim ')).toBeNull()
+  })
+})
+
+describe('toolConfig', () => {
+  const f = {
+    toolId: 'id-interview',
+    ref: ' voice ',
+    skill: '',
+    attempts: '3',
+    timeLimit: '30',
+    countsAsInterview: false,
+  }
+  it('keeps the interview flag only when ticked on a non-assessment tool', () => {
+    expect(toolConfig(f)).toEqual({ toolId: 'id-interview', ref: 'voice' })
+    expect(toolConfig({ ...f, countsAsInterview: true })).toEqual({
+      toolId: 'id-interview',
+      ref: 'voice',
+      countsAsInterview: true,
+    })
+  })
+  it('keeps attempt rules, not the interview flag, for an assessment tool', () => {
+    expect(
+      toolConfig({ ...f, toolId: 'id-assessment', skill: 'sql', countsAsInterview: true })
+    ).toEqual({
+      toolId: 'id-assessment',
+      ref: 'voice',
+      skill: 'sql',
+      maxAttempts: 3,
+      timeLimitMinutes: 30,
+    })
   })
 })

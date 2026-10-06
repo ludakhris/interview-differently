@@ -18,6 +18,7 @@ import {
   submitImmersiveResponse,
 } from '@/services/immersiveService'
 import { completeLtiInterview } from '@/services/ltiService'
+import { LtiScoreSent } from '@/components/LtiScoreSent'
 import { transcriptsReady } from '@/lib/immersiveLti'
 import { listScenarioMedia } from '@/services/scenarioMediaService'
 import type { ScenarioMediaAsset, ScenarioNode } from '@id/types'
@@ -62,6 +63,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
   const sessionCreatedRef = useRef(false)
   // LTI only: what went wrong, and a counter that remounts the recorder after a failed upload
   const [ltiError, setLtiError] = useState<string | null>(null)
+  const [scoreSent, setScoreSent] = useState<{ courseUrl: string | null } | null>(null)
   const [recorderKey, setRecorderKey] = useState(0)
   const [finishing, setFinishing] = useState(false)
 
@@ -204,8 +206,14 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
         }
         await new Promise((r) => setTimeout(r, TRANSCRIPT_POLL_MS))
       }
-      const { returnUrl } = await completeLtiInterview(sessionId)
-      window.location.assign(returnUrl)
+      const done = await completeLtiInterview(sessionId)
+      if (!done.ok) throw new Error('Score hand-back was not accepted')
+      if (done.navigateTo) {
+        window.location.assign(done.navigateTo)
+      } else {
+        setScoreSent({ courseUrl: done.courseUrl })
+        setFinishing(false)
+      }
     } catch (err) {
       console.warn('LTI score hand-back failed:', err)
       setLtiError(
@@ -275,7 +283,9 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center px-6">
         <div className="text-center animate-fade-in max-w-md">
-          {finishing || !ltiError ? (
+          {scoreSent ? (
+            <LtiScoreSent courseUrl={scoreSent.courseUrl} />
+          ) : finishing || !ltiError ? (
             <p className="font-display font-bold text-[18px] text-fg">Sending your score...</p>
           ) : (
             <>

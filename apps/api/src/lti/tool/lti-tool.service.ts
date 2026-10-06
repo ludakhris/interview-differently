@@ -50,6 +50,8 @@ import {
 const MAX_ATTEMPT = 100
 const MIN_TIME_LIMIT_MIN = 5
 const MAX_TIME_LIMIT_MIN = 240
+/** Slack past an assessment's time limit before its LTI session expires. */
+const SESSION_GRACE_S = 15 * 60
 const STATE_TTL_S = 10 * 60
 const SUBMISSION_TTL_S = 30 * 60
 const ASSERTION_TTL_S = 5 * 60
@@ -331,27 +333,32 @@ export class LtiToolService {
         throw new LtiError('That attempt is not available yet. Finish your earlier attempt first.')
       }
     }
-    const deliveryId = await this.findOrCreateDelivery(
+    const delivery = await this.findOrCreateDelivery(
       assessment.id,
       cohort?.id ?? null,
       attempt === 1 ? baseLabel : `${baseLabel}#${attempt}`,
       limit
     )
     const iat = Math.floor(this.now() / 1000)
+    // the session must outlive the delivery's own time limit (the stored one, not this claim's)
+    const ttl = Math.max(
+      SESSION_TTL_S,
+      delivery.timeLimitMinutes ? delivery.timeLimitMinutes * 60 + SESSION_GRACE_S : 0
+    )
     const token = signSession({
       sub: l.sub,
       ref: assessment.slug,
       lineitem: l.lineitem,
       returnUrl: l.returnUrl,
       datasets: assessment.dataset ? [assessment.dataset.slug] : [],
-      deliveryId,
+      deliveryId: delivery.id,
       ...(l.brand ? { brand: l.brand } : {}),
       jti: newId(),
       iat,
-      exp: iat + SESSION_TTL_S,
+      exp: iat + ttl,
     })
     return {
-      redirect: `${idWebUrl()}/lti/assessment/${encodeURIComponent(deliveryId)}#session=${token}`,
+      redirect: `${idWebUrl()}/lti/assessment/${encodeURIComponent(delivery.id)}#session=${token}`,
     }
   }
 
@@ -390,21 +397,21 @@ export class LtiToolService {
     cohortId: string | null,
     label: string,
     timeLimitMinutes?: number
-  ): Promise<string> {
+  ): Promise<{ id: string; timeLimitMinutes: number | null }> {
     const find = () =>
       this.prisma.assessmentDelivery.findFirst({
         where: { assessmentId, cohortId, label },
         orderBy: { createdAt: 'asc' },
-        select: { id: true },
+        select: { id: true, timeLimitMinutes: true },
       })
     const found = await find()
-    if (found) return found.id
+    if (found) return found
     const lockKey = `${assessmentId}:${cohortId ?? '-'}:${label}`
     for (let i = 0; i < DELIVERY_LOCK_TRIES; i++) {
       if (await this.store.claim('lti-delivery', lockKey, DELIVERY_LOCK_TTL_S)) {
         try {
           const again = await find()
-          if (again) return again.id
+          if (again) return again
           const created = await this.prisma.assessmentDelivery.create({
             data: {
               assessmentId,
@@ -412,16 +419,16 @@ export class LtiToolService {
               label,
               ...(timeLimitMinutes === undefined ? {} : { timeLimitMinutes }),
             },
-            select: { id: true },
+            select: { id: true, timeLimitMinutes: true },
           })
-          return created.id
+          return created
         } finally {
           await this.store.release('lti-delivery', lockKey)
         }
       }
       await this.sleep(DELIVERY_LOCK_WAIT_MS)
       const other = await find()
-      if (other) return other.id
+      if (other) return other
     }
     throw new LtiError('The assessment is being set up. Please try again.', 503)
   }
@@ -693,8 +700,8 @@ export class LtiToolService {
 
   /**
    * Posts the percent score of a graded assessment attempt to the session's lineitem. The attempt
-   * must be the learner's, on the session's delivery, submitted (graded server-side), and created in
-   * this session; the score is computed here from its stored section scores, never from the client.
+   * must be the learner's, on the session's delivery and submitted (graded server-side), and may have
+   * been started in an earlier session (a relaunch resumes it); the score is computed here from its stored section scores, never from the client.
    * Single use per LTI session and per attempt; a failed post can be retried.
    */
   async completeAssessment(
@@ -712,10 +719,8 @@ export class LtiToolService {
     if (!attempt.submittedAt || !Array.isArray(attempt.sectionScores)) {
       throw new LtiError('Submit the assessment before finishing', 400)
     }
-    // an attempt created before the LTI session began cannot be the work done in it
-    if (attempt.startedAt.getTime() < session.iat * 1000 - RESULT_CLOCK_SKEW_MS) {
-      throw new LtiError('This assessment was not started in this session', 400)
-    }
+    // no startedAt-vs-iat check: a relaunch resumes the earlier attempt under a new session, and
+    // the delivery pin, ownership and server-side grading above already scope what is posted
     const scores = attempt.sectionScores as unknown as SectionScore[]
     if (!(await this.store.claim('lti-complete', session.jti, IN_FLIGHT_TTL_S))) {
       throw new LtiError('This score was already sent. Relaunch it from your course.', 409)

@@ -1,6 +1,6 @@
 import type {
   CourseDetail,
-  CourseItemType,
+  CourseItemDto,
   CourseModuleDto,
   CourseOffers,
   CourseOutline,
@@ -11,49 +11,9 @@ import { useApiFetch, useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { StatusChip } from './CoursesPage'
 import { ItemEditor, TYPE_LABEL, type ItemDraft } from './ItemEditor'
+import { ADD_TYPES, draftItem, type AddKind } from './newItem'
 import { SkillsEditor } from './SkillsEditor'
 import { errorNotice } from './shared'
-
-/**
- * `ask`: the item needs a link before it can exist, so the author is asked for it first.
- * `start`: what a new item is created with when it cannot exist empty (a connected tool needs a
- * tool and a reference; the placeholder reference is replaced in the editor that opens next).
- */
-const ADD_TYPES: {
-  type: CourseItemType
-  label: string
-  title: string
-  ask?: string
-  start?: { label?: 'pre'; config: Record<string, unknown> }
-}[] = [
-  { type: 'lesson', label: 'Lesson', title: 'New lesson' },
-  { type: 'knowledge_check', label: 'Knowledge check', title: 'New knowledge check' },
-  {
-    type: 'tool',
-    label: 'Interview Differently assessment',
-    title: 'New assessment',
-    start: { label: 'pre', config: { toolId: 'id-assessment', ref: 'assessment-slug' } },
-  },
-  { type: 'interview', label: 'Practice interview', title: 'Practice interview' },
-  {
-    type: 'tool',
-    label: 'Connected tool',
-    title: 'Connected tool',
-    start: { config: { toolId: 'id-interview', ref: 'interview-id' } },
-  },
-  {
-    type: 'video',
-    label: 'YouTube video',
-    title: 'New video',
-    ask: 'Paste the YouTube link for this video',
-  },
-  {
-    type: 'external_link',
-    label: 'External course link',
-    title: 'New external course',
-    ask: 'Paste the link to the course (Udemy, Coursera, Khan Academy, edX, Microsoft Learn, Skillshop, Pluralsight or LinkedIn Learning)',
-  },
-]
 
 /** Lines of a textarea as a list, blanks dropped. */
 const asLines = (v: FormDataEntryValue | null): string[] =>
@@ -106,6 +66,8 @@ function Editor({
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null)
   const [editingItem, setEditingItem] = useState<string | null>(null)
+  // A new connected-tool item the author is filling in. It exists only here until it is saved.
+  const [newItem, setNewItem] = useState<{ moduleId: string; item: CourseItemDto } | null>(null)
   const [skills, setSkills] = useState<CourseSkill[]>(course.skills)
 
   /** Runs a change; shows the server's message if it is refused. */
@@ -184,7 +146,13 @@ function Editor({
     }
   }
 
-  async function addItem(moduleId: string, kind: (typeof ADD_TYPES)[number]) {
+  async function addItem(moduleId: string, kind: AddKind) {
+    if (kind.start) {
+      // Needs a real reference: open the editor on an unsaved draft; nothing is created until saved.
+      setEditingItem(null)
+      setNewItem({ moduleId, item: draftItem(moduleId, kind) })
+      return
+    }
     let url: string | null = null
     if (kind.ask) {
       url = window.prompt(kind.ask)
@@ -196,13 +164,21 @@ function Editor({
       const next = await send<CourseDetail>('POST', `/learn/modules/${moduleId}/items`, {
         type: kind.type,
         title: kind.title,
-        ...(kind.start?.label ? { label: kind.start.label } : {}),
-        ...(kind.start ? { config: kind.start.config } : url ? { config: { url } } : {}),
+        ...(url ? { config: { url } } : {}),
       })
       created = next.modules.flatMap((m) => m.items).find((i) => !before.has(i.id))?.id ?? null
       return next
     })
     if (ok && created) setEditingItem(created)
+  }
+
+  /** Creates the item the author just filled in. The editor refuses an empty reference; the API does too. */
+  async function createItem(moduleId: string, draft: ItemDraft) {
+    const ok = await run(
+      () => send<CourseDetail>('POST', `/learn/modules/${moduleId}/items`, draft),
+      'Item added.'
+    )
+    if (ok) setNewItem(null)
   }
 
   /** Upload a SCORM zip into a module; the server checks it before keeping anything. */
@@ -532,6 +508,18 @@ function Editor({
                   </li>
                 ))}
               </ol>
+
+              {newItem?.moduleId === m.id && (
+                <ItemEditor
+                  key={`new-${newItem.item.type}-${newItem.item.label}`}
+                  item={newItem.item}
+                  skills={course.skills}
+                  busy={busy}
+                  isNew
+                  onSave={(draft) => createItem(m.id, draft)}
+                  onCancel={() => setNewItem(null)}
+                />
+              )}
 
               <div className="dash-additem">
                 <span className="dash-muted">Add:</span>

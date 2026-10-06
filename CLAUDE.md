@@ -8,6 +8,14 @@
 - Reference the issue in commit messages with `Closes #N` (or `Refs #N` for partial work) so the issue auto-closes when the commit lands on `main`.
 - Don't reintroduce a sprawling `TASKS.md` — drift across edits is the failure mode that motivated the migration on 2026-05-03.
 
+## Reviewing larger PRs
+
+For a PR over about 500 changed lines (`git diff --stat origin/main...HEAD`), review it with parallel read-only subagents, one per area of the diff, before merging:
+
+1. Split the diff by area (for example protocol and server side, rules and data model, other API and config, web apps). Each reviewer reads every hunk in its area and reports at most 8 ranked findings, each with a concrete failure scenario. Tell each what earlier reviews already fixed.
+2. Verify the top claims against the code, then report at most 15 findings, one line each (`file:line — summary`).
+3. Fix in parallel by area with disjoint file lists, then run the CI gates locally (`npm run lint`, `npm run format:check`, `npm run typecheck`, `npm run build`, tests) before pushing. After a clean build confirm `apps/api/dist/main.js` exists.
+
 ## Posting screenshots to GitHub issues / PRs
 
 When the user asks for screenshots of running UI to be attached to a GitHub issue or PR, use this pattern:

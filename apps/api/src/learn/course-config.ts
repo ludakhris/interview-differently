@@ -303,11 +303,23 @@ function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | '
         const limit = whole(config.timeLimitMinutes, 'Time limit', 5, 240)
         if (limit !== undefined) rules.timeLimitMinutes = limit
       }
+      // Whether the item feeds interview readiness. Only an unlabelled interview-kind tool can; for
+      // anything else the flag is dropped.
+      const flag = config.countsAsInterview
+      if (flag !== undefined && typeof flag !== 'boolean')
+        return bad('Counts toward interview readiness must be true or false')
+      const counts = flag === true && tool.kind === 'interview' && given === null
       return {
         type,
         title,
         label: given,
-        config: { toolId, ref, ...(skill ? { skill } : {}), ...rules },
+        config: {
+          toolId,
+          ref,
+          ...(skill ? { skill } : {}),
+          ...rules,
+          ...(counts ? { countsAsInterview: true } : {}),
+        },
       }
     }
   }

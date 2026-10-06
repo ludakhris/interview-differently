@@ -202,6 +202,7 @@ describe('assertLtiProductionConfig', () => {
     LTI_TOOL_PRIVATE_KEY: 'b',
     LTI_TOOL_SECRET: 'c',
     LTI_HINT_SECRET: 'd',
+    LTI_API_BASE: 'https://api.test/api',
     LTI_LEARN_URL: 'https://learn.test',
     LTI_ID_WEB_URL: 'https://id.test',
   }
@@ -213,7 +214,7 @@ describe('assertLtiProductionConfig', () => {
 
   it('names every missing variable in production, blank counts as missing', () => {
     expect(() => assertLtiProductionConfig({ NODE_ENV: 'production' })).toThrow(
-      'LTI_PLATFORM_PRIVATE_KEY, LTI_TOOL_PRIVATE_KEY, LTI_TOOL_SECRET, LTI_HINT_SECRET, LTI_LEARN_URL, LTI_ID_WEB_URL'
+      'LTI_PLATFORM_PRIVATE_KEY, LTI_TOOL_PRIVATE_KEY, LTI_TOOL_SECRET, LTI_HINT_SECRET, LTI_API_BASE, LTI_LEARN_URL, LTI_ID_WEB_URL'
     )
     expect(() =>
       assertLtiProductionConfig({ NODE_ENV: 'production', ...all, LTI_TOOL_SECRET: '  ' })
@@ -222,6 +223,14 @@ describe('assertLtiProductionConfig', () => {
     delete withoutLearnUrl.LTI_LEARN_URL
     expect(() => assertLtiProductionConfig({ NODE_ENV: 'production', ...withoutLearnUrl })).toThrow(
       'LTI_LEARN_URL'
+    )
+  })
+
+  it('requires LTI_API_BASE in production', () => {
+    const withoutApiBase: Record<string, string> = { ...all }
+    delete withoutApiBase.LTI_API_BASE
+    expect(() => assertLtiProductionConfig({ NODE_ENV: 'production', ...withoutApiBase })).toThrow(
+      'LTI_API_BASE'
     )
   })
 

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   captureLtiSession,
   clearLtiSession,
+  getLtiReturnUrl,
   getLtiToken,
   isLtiPath,
   isLtiSession,
@@ -134,5 +135,38 @@ describe('preferLtiToken', () => {
   it('falls through to Clerk when there is no LTI token', async () => {
     stubBrowser('')
     expect(await preferLtiToken(async () => null)()).toBeNull()
+  })
+})
+
+describe('getLtiReturnUrl', () => {
+  const tokenWith = (payload: unknown) =>
+    `${Buffer.from(JSON.stringify(payload)).toString('base64url')}.sig12345`
+  const load = (token: string) => {
+    stubBrowser(`#session=${token}`)
+    captureLtiSession()
+  }
+  beforeEach(() => clearLtiSession())
+  afterEach(() => {
+    clearLtiSession()
+    vi.unstubAllGlobals()
+  })
+
+  it('reads an http(s) returnUrl from the token payload', () => {
+    load(tokenWith({ returnUrl: 'https://ld.test/lms/learning/1/2' }))
+    expect(getLtiReturnUrl()).toBe('https://ld.test/lms/learning/1/2')
+  })
+  it('gives null for a missing, non-http(s) or non-string link', () => {
+    load(tokenWith({ sub: 'u' }))
+    expect(getLtiReturnUrl()).toBeNull()
+    load(tokenWith({ returnUrl: 'javascript:alert(1)' }))
+    expect(getLtiReturnUrl()).toBeNull()
+    load(tokenWith({ returnUrl: 7 }))
+    expect(getLtiReturnUrl()).toBeNull()
+  })
+  it('gives null for garbage or no token', () => {
+    load('!!notbase64!!.sig12345')
+    expect(getLtiReturnUrl()).toBeNull()
+    clearLtiSession()
+    expect(getLtiReturnUrl()).toBeNull()
   })
 })

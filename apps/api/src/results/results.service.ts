@@ -12,7 +12,6 @@ const MAX_DIMENSIONS = 12
 const MAX_CHOICES = 60
 const MAX_SHORT = 200
 const MAX_FEEDBACK = 5000
-const MAX_FUTURE_MS = 5 * 60 * 1000
 
 const isString = (v: unknown, max: number, min = 0): v is string =>
   typeof v === 'string' && v.length >= min && v.length <= max
@@ -23,7 +22,7 @@ const isScore = (v: unknown): v is number =>
  * Stopgap integrity checks on a client-submitted result (scores are still the client's; recomputing
  * them server-side is tracked separately). Throws a 400 for anything malformed.
  */
-function validateResult(dto: CreateResultDto, nowMs: number): void {
+function validateResult(dto: CreateResultDto): void {
   const bad = (what: string): never => {
     throw new BadRequestException(`Invalid result: ${what}`)
   }
@@ -51,7 +50,7 @@ function validateResult(dto: CreateResultDto, nowMs: number): void {
   )
     bad('choiceSequence')
   const at = typeof dto.completedAt === 'string' ? Date.parse(dto.completedAt) : NaN
-  if (Number.isNaN(at) || at > nowMs + MAX_FUTURE_MS) bad('completedAt')
+  if (Number.isNaN(at)) bad('completedAt')
 }
 
 @Injectable()
@@ -80,7 +79,7 @@ export class ResultsService {
 
   /** `opts.lti`: also hold the result to the launched scenario's rubric and decision count. */
   async create(dto: CreateResultDto, opts: { lti?: boolean } = {}) {
-    validateResult(dto, Date.now())
+    validateResult(dto)
     if (opts.lti) await this.assertMatchesScenario(dto)
     const existing = await this.prisma.simulationResult.findUnique({ where: { id: dto.id } })
     if (existing) {
@@ -95,7 +94,8 @@ export class ResultsService {
         scenarioId: dto.scenarioId,
         scenarioTitle: dto.scenarioTitle,
         track: dto.track,
-        completedAt: new Date(dto.completedAt),
+        // a fast device clock must not lose the result: a future time is clamped to now
+        completedAt: new Date(Math.min(Date.parse(dto.completedAt), Date.now())),
         overallScore: dto.overallScore,
         choiceSequence: dto.choiceSequence,
         dimensionScores: {

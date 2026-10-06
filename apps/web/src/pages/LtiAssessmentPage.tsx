@@ -5,6 +5,7 @@ import { LtiNav } from '@/components/LtiNav'
 import { LtiBrandProvider } from '@/components/LtiBrandProvider'
 import { captureLtiSession, preferLtiToken } from '@/services/ltiSession'
 import { completeLtiAssessment, fetchLtiToolSession } from '@/services/ltiService'
+import { LtiScoreSent } from '@/components/LtiScoreSent'
 import { startAttempt } from '@/services/assessmentsService'
 import { applyBrand, NO_BRAND, type AppliedBrand } from '@/lib/brand'
 
@@ -140,6 +141,7 @@ function LtiAssessment({ token }: { token: string | null }) {
 function ScoreHandoff({ attemptId }: { attemptId: string }) {
   const [tries, setTries] = useState(0)
   const [status, setStatus] = useState<'sending' | 'error' | 'sent'>('sending')
+  const [courseUrl, setCourseUrl] = useState<string | null>(null)
   const ranFor = useRef(-1)
 
   useEffect(() => {
@@ -149,8 +151,12 @@ function ScoreHandoff({ attemptId }: { attemptId: string }) {
     completeLtiAssessment(attemptId)
       .then((r) => {
         if (!r.ok) return setStatus('error')
-        if (r.returnUrl) window.location.assign(r.returnUrl)
-        else setStatus('sent') // already sent earlier and no link given
+        if (r.navigateTo) {
+          window.location.assign(r.navigateTo)
+        } else {
+          setCourseUrl(r.courseUrl) // already sent earlier and no link given
+          setStatus('sent')
+        }
       })
       .catch(() => setStatus('error'))
   }, [attemptId, tries])
@@ -165,9 +171,7 @@ function ScoreHandoff({ attemptId }: { attemptId: string }) {
           </button>
         </>
       ) : status === 'sent' ? (
-        <p className="text-fg text-[15px]">
-          Your score was already sent. Go back to your course to continue.
-        </p>
+        <LtiScoreSent courseUrl={courseUrl} />
       ) : (
         <p className="text-slate-mid text-[14px]">Sending your score...</p>
       )}

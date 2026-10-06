@@ -1,4 +1,4 @@
-import { isInterviewLike, registeredTools, toolById } from './lti-platform-config'
+import { isInterviewLike, isPracticeItem, registeredTools, toolById } from './lti-platform-config'
 
 describe('registered tools', () => {
   it('registers an interview and an assessment on the same client, URLs and deployment', () => {
@@ -22,10 +22,26 @@ describe('registered tools', () => {
     })
   })
 
-  it('treats a tool item as interview-like only when it has no pre/post label', () => {
+  it('counts a native interview, or an unlabelled tool item flagged countsAsInterview, as interview-like', () => {
     expect(isInterviewLike({ type: 'interview', label: null })).toBe(true)
-    expect(isInterviewLike({ type: 'tool', label: null })).toBe(true)
-    expect(isInterviewLike({ type: 'tool', label: 'pre' })).toBe(false)
+    expect(isInterviewLike({ type: 'tool', label: null })).toBe(false)
+    expect(isInterviewLike({ type: 'tool', label: null, config: { toolId: 'x' } })).toBe(false)
+    expect(
+      isInterviewLike({ type: 'tool', label: null, config: { countsAsInterview: false } })
+    ).toBe(false)
+    expect(
+      isInterviewLike({ type: 'tool', label: null, config: { countsAsInterview: true } })
+    ).toBe(true)
+    expect(
+      isInterviewLike({ type: 'tool', label: 'pre', config: { countsAsInterview: true } })
+    ).toBe(false)
     expect(isInterviewLike({ type: 'assessment', label: 'pre' })).toBe(false)
+  })
+
+  it('treats an interview or any unlabelled tool item as practice (not required)', () => {
+    expect(isPracticeItem({ type: 'interview', label: null })).toBe(true)
+    expect(isPracticeItem({ type: 'tool', label: null })).toBe(true)
+    expect(isPracticeItem({ type: 'tool', label: 'post' })).toBe(false)
+    expect(isPracticeItem({ type: 'lesson', label: null })).toBe(false)
   })
 })

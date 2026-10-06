@@ -163,7 +163,7 @@ export function RecordCard({ record }: { record: ReadinessRecord }) {
     ['Post-assessment', score(record.post)],
     ['Change', record.gain === null ? '—' : `${points(record.gain)} % points`],
     ['Course target', `${record.targetScore}%`],
-    ['Practice interview, best', score(record.interviewBest)],
+    ['Practice interview (best)', score(record.interviewBest)],
   ]
   return (
     <div className="dash-card dash-record">
@@ -202,6 +202,19 @@ export function RecordCard({ record }: { record: ReadinessRecord }) {
           </dd>
         </div>
       </dl>
+      {record.practice.length > 0 && (
+        <>
+          <h3 className="dash-record-sub">Practice and simulations</h3>
+          <dl className="dash-record-rows">
+            {record.practice.map((p) => (
+              <div key={p.itemId}>
+                <dt>{p.title}</dt>
+                <dd>{score(p.score)}</dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      )}
       <p className="dash-muted dash-record-note">
         Your instructor and training provider see this record. Sample content only.
       </p>

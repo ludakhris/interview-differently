@@ -28,6 +28,7 @@ import {
   summaryFor,
 } from './seed-learn-content'
 import { planItem, toolConfig } from './demo-assessment-bank'
+import { resolveLearnOrigin } from '../src/lti/lti-env'
 
 const DEV_HOSTS = ['localhost', '127.0.0.1', 'zephyr.proxy.rlwy.net']
 const TODAY = new Date('2026-10-04T12:00:00Z')
@@ -449,7 +450,7 @@ function makeLearners(
 
 async function load(prisma: PrismaClient) {
   // Brand tokens v1 (src/lti/lti-brand.ts): sent to tools in the LTI launch, so the logo must be an absolute URL.
-  const learnOrigin = (process.env.LTI_LEARN_URL || 'http://localhost:5174').replace(/\/+$/, '')
+  const learnOrigin = resolveLearnOrigin(process.env.LTI_LEARN_URL, dbHost())
   const brand = {
     name: 'Delaware Department of Labor',
     logoUrl: `${learnOrigin}/tenants/delaware/dol-logo.png`,
@@ -960,7 +961,7 @@ async function load(prisma: PrismaClient) {
           type: 'tool',
           title: 'Incident response interview (voice)',
           label: null,
-          config: { toolId: 'id-interview', ref: 'ops-001-immersive' },
+          config: { toolId: 'id-interview', ref: 'ops-001-immersive', countsAsInterview: true },
         },
       ],
     },

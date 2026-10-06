@@ -62,6 +62,12 @@ Pre and post assessments are Interview Differently assessments; the course item 
 
 There is no Assessment button with questions typed into the course: pre and post assessments are always Interview Differently assessments. Knowledge checks (questions typed into the course) are unchanged.
 
+### How do I add a simulation or practice interview from Interview Differently?
+
+1. Under the module, click **+ Connected tool**. An editor opens for a new item; nothing is added to the course until you save with a real **Reference** (the interview's id, the last part of its builder address). Cancel adds nothing.
+2. Set the **Title**. Learners see it as the name of this line on their readiness record, under **Practice and simulations**, with their best score. Each simulation or practice item is its own line.
+3. Tick **Counts toward interview readiness** only for the item that should count as the learner's practice interview score. Unticked items are not required to finish the course and do not feed "Ready to interview".
+
 ### How do I add a SCORM package to a course?
 
 In the dashboard (staff only, signed in to LearnDifferently):

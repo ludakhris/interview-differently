@@ -21,7 +21,7 @@ export function ResultsGrid({ result, limit }: { result: SandboxResult; limit?: 
   )
   return (
     <table className="min-w-full text-[12px] font-mono border-collapse">
-      <thead className="sticky top-0 z-10 bg-surface-alt shadow-[0_1px_0_rgba(255,255,255,0.08)]">
+      <thead className="sticky top-0 z-10 bg-surface-alt shadow-[0_1px_0_rgb(var(--ld-edge,255_255_255)/0.08)]">
         <tr>
           <th className="px-3 py-2 text-right text-[10px] text-ink/25 font-normal w-10">#</th>
           {result.columns.map((c, i) => (
