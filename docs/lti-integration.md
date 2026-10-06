@@ -1,7 +1,7 @@
-# LTI 1.3 proof of concept: contract between LearnDifferently (platform) and a tool (#63)
+# LTI 1.3 integration: LearnDifferently (platform) and tools (#63)
 
-Goal: prove LD can launch a tool and get a score back using LTI 1.3 message shapes, with the two
-sides sharing only `apps/api/src/lti/lti-spec.ts` (standing in for an LTI library). Platform code
+Reference for how LearnDifferently launches a tool and gets a score back using LTI 1.3 message shapes,
+with the two sides sharing only `apps/api/src/lti/lti-spec.ts` (standing in for an LTI library). Platform code
 lives in `apps/api/src/lti/platform/`, tool code in `apps/api/src/lti/tool/`. Neither may import the
 other (enforced by `apps/api/src/lti/lti-boundary.spec.ts`). They talk only over HTTP URLs.
 
