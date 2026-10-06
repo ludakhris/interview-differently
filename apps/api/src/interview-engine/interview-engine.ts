@@ -39,19 +39,23 @@ const clamp = (n: number): number => Math.max(0, Math.min(100, Math.round(n)))
 const plain = (v: unknown, max: number): string =>
   typeof v === 'string' ? v.replace(/[*_`]/g, '').trim().slice(0, max) : ''
 
+/** Output-token budget: grows with the questions and with the rubric dimensions scored per question. */
+export function scoringMaxTokens(questions: number, dimensions: number): number {
+  return Math.min(8000, 300 + questions * (150 + 60 * dimensions))
+}
+
 /** Parses the model's reply into clamped dimension scores and short text per question. */
 export function parseAnswerScores(
   text: string,
   count: number,
   rubric: RubricDimensionInput[]
 ): ScoredAnswer[] {
-  const cleaned = text
-    .replace(/^```json\s*/i, '')
-    .replace(/```\s*$/i, '')
-    .trim()
+  const cleaned = text.trim().replace(/^```[a-z0-9_-]*[ \t]*\r?\n?/i, '')
+  const close = cleaned.lastIndexOf('```')
+  const body = (close === -1 ? cleaned : cleaned.slice(0, close)).trim()
   let parsed: unknown
   try {
-    parsed = JSON.parse(cleaned)
+    parsed = JSON.parse(body)
   } catch {
     throw new BadGatewayException(FAILED)
   }

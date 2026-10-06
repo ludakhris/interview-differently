@@ -1,6 +1,11 @@
 import { BadGatewayException } from '@nestjs/common'
 import { buildAnswerScoringPrompt } from '../config/prompts.config'
-import { averageScore, DEFAULT_RUBRIC, parseAnswerScores } from './interview-engine'
+import {
+  averageScore,
+  DEFAULT_RUBRIC,
+  parseAnswerScores,
+  scoringMaxTokens,
+} from './interview-engine'
 
 const rubric = [
   { name: 'Clarity', description: 'Is it clear?' },
@@ -58,6 +63,16 @@ describe('parseAnswerScores', () => {
     ).toBe(70)
   })
 
+  it('accepts a bare fence, no fence, and trailing prose after the fence', () => {
+    const json = reply([one(60, 60)])
+    expect(parseAnswerScores('```\n' + json + '\n```', 1, rubric)[0].score).toBe(60)
+    expect(parseAnswerScores('  ```JSON\r\n' + json + '\r\n```  \n', 1, rubric)[0].score).toBe(60)
+    expect(parseAnswerScores(json, 1, rubric)[0].score).toBe(60)
+    expect(
+      parseAnswerScores('```json\n' + json + '\n```\nHope that helps!', 1, rubric)[0].score
+    ).toBe(60)
+  })
+
   it('rejects non-JSON, a wrong count, a missing dimension or a non-numeric score', () => {
     for (const bad of [
       'not json',
@@ -93,5 +108,13 @@ describe('averageScore and the default rubric', () => {
   it('has named dimensions so a scenario with no rubric is still scored', () => {
     expect(DEFAULT_RUBRIC.length).toBeGreaterThan(0)
     expect(DEFAULT_RUBRIC.every((d) => d.name && d.description)).toBe(true)
+  })
+})
+
+describe('scoringMaxTokens', () => {
+  it('grows with questions and with rubric dimensions, up to a ceiling', () => {
+    expect(scoringMaxTokens(3, 8)).toBeGreaterThan(scoringMaxTokens(3, 4))
+    expect(scoringMaxTokens(6, 4)).toBeGreaterThan(scoringMaxTokens(3, 4))
+    expect(scoringMaxTokens(1000, 20)).toBe(8000)
   })
 })

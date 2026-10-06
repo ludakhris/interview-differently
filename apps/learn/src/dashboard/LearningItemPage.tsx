@@ -6,7 +6,7 @@ import { useApp } from './app-context'
 import { score } from './format'
 import { LEARNER_TYPE_LABEL } from './ItemEditor'
 import { errorNotice } from './shared'
-import { attemptLine, timeLimitNote, toolCopy } from './toolKinds'
+import { attemptLine, onPageRestore, timeLimitNote, toolCopy } from './toolKinds'
 
 /** Plain text with blank-line paragraphs and "- " bullets. */
 function RichText({ text }: { text: string }) {
@@ -523,6 +523,17 @@ function ToolItem(props: {
   const send = useApiSend()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // The launch leaves this page in the same window; Back can restore it from the browser's cache
+  // exactly as it was, with the button still on "Opening…".
+  useEffect(
+    () =>
+      onPageRestore(window, () => {
+        setBusy(false)
+        setError(null)
+      }),
+    []
+  )
 
   async function open() {
     setBusy(true)

@@ -411,9 +411,8 @@ export function ItemEditor(props: {
               <span>Counts toward interview readiness</span>
               <small className="dash-muted">
                 Tick this if the learner's best score here should count as their practice interview
-                score. Leave it unticked for a simulation or other practice: it still appears as its
-                own line on the learner's record. The item title is shown to learners as the name of
-                this line.
+                score. Leave it unticked for a simulation or other practice: the learner still sees
+                its own score beside it in the course outline, but it does not feed their readiness.
               </small>
             </label>
           )}

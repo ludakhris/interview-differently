@@ -4,8 +4,9 @@ import { useLoad } from './api'
 import { useApp } from './app-context'
 import { Meter } from './charts'
 import { CohortStatusChip } from './CohortsPage'
-import { dateOnly, points, score } from './format'
+import { dateOnly, score } from './format'
 import { LEARNER_TYPE_LABEL } from './ItemEditor'
+import { recordGroups } from './recordGroups'
 import { errorNotice } from './shared'
 
 const STATUS_WORD = { not_started: 'To do', in_progress: 'Started', completed: 'Done' } as const
@@ -158,63 +159,22 @@ function AddedList({ items, cohortId }: { items: LearnerAddedItem[]; cohortId: s
 
 /** The learner's own readiness record: the same measures their agency reports on. */
 export function RecordCard({ record }: { record: ReadinessRecord }) {
-  const rows: [string, string][] = [
-    ['Pre-assessment', score(record.pre)],
-    ['Post-assessment', score(record.post)],
-    ['Change', record.gain === null ? '—' : `${points(record.gain)} % points`],
-    ['Course target', `${record.targetScore}%`],
-    ['Practice interview (best)', score(record.interviewBest)],
-  ]
   return (
     <div className="dash-card dash-record">
       <h2 className="dash-card-title">Your readiness record</h2>
-      <dl className="dash-record-rows">
-        {rows.map(([k, v]) => (
-          <div key={k}>
-            <dt>{k}</dt>
-            <dd>{v}</dd>
-          </div>
-        ))}
-        <div>
-          <dt>Target score</dt>
-          <dd className={record.reachedTarget ? 'dash-record-yes' : ''}>
-            {record.reachedTarget
-              ? 'Reached'
-              : record.post === null
-                ? 'Not yet taken'
-                : 'Not reached'}
-          </dd>
-        </div>
-        <div>
-          <dt>Interview readiness</dt>
-          <dd className={record.interviewReady ? 'dash-record-yes' : ''}>
-            {record.interviewReady
-              ? 'Ready to interview'
-              : record.interviewBest === null
-                ? 'Not yet scored'
-                : 'Keep practicing'}
-          </dd>
-        </div>
-        <div>
-          <dt>Course</dt>
-          <dd className={record.completed ? 'dash-record-yes' : ''}>
-            {record.completed ? 'Completed' : 'In progress'}
-          </dd>
-        </div>
-      </dl>
-      {record.practice.length > 0 && (
-        <>
-          <h3 className="dash-record-sub">Practice and simulations</h3>
+      {recordGroups(record).map((g) => (
+        <Fragment key={g.heading ?? 'course'}>
+          {g.heading && <h3 className="dash-record-sub">{g.heading}</h3>}
           <dl className="dash-record-rows">
-            {record.practice.map((p) => (
-              <div key={p.itemId}>
-                <dt>{p.title}</dt>
-                <dd>{score(p.score)}</dd>
+            {g.rows.map((r) => (
+              <div key={r.label}>
+                <dt>{r.label}</dt>
+                <dd className={r.yes ? 'dash-record-yes' : ''}>{r.value}</dd>
               </div>
             ))}
           </dl>
-        </>
-      )}
+        </Fragment>
+      ))}
       <p className="dash-muted dash-record-note">
         Your instructor and training provider see this record. Sample content only.
       </p>

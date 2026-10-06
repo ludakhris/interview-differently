@@ -573,6 +573,25 @@ describe('submit', () => {
     expect(h.calls.some((c) => c.url.endsWith('/scores'))).toBe(false)
   })
 
+  describe.each(['/token', '/scores'])('a platform that stalls on %s', (stalled) => {
+    it('times out into a 502 and releases the claims, so a retry is not a 409', async () => {
+      const h = await launched()
+      h.svc.platformTimeoutMs = 20
+      const real = h.svc.fetchImpl
+      let stall = true
+      h.svc.fetchImpl = ((url: string, init?: RequestInit) =>
+        stall && url.endsWith(stalled)
+          ? new Promise((_, reject) => {
+              init?.signal?.addEventListener('abort', () => reject(init.signal?.reason))
+            })
+          : real(url, init)) as never
+      const answers = { submission: h.submission, answer_0: long, answer_1: long }
+      expect((await h.svc.submit(answers)).status).toBe(502)
+      stall = false
+      expect((await h.svc.submit(answers)).status).toBe(200)
+    })
+  })
+
   it('escapes the questions on the result page', async () => {
     const h = await launched(setup(['<img src=x onerror=1>']))
     const { html } = await h.svc.submit({ submission: h.submission, answer_0: long })

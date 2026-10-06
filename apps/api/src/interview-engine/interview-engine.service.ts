@@ -1,7 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { BadGatewayException, Injectable, Logger } from '@nestjs/common'
 import { buildAnswerScoringPrompt, type RubricDimensionInput } from '../config/prompts.config'
-import { DEFAULT_RUBRIC, parseAnswerScores, type ScoredAnswer } from './interview-engine'
+import {
+  DEFAULT_RUBRIC,
+  parseAnswerScores,
+  scoringMaxTokens,
+  type ScoredAnswer,
+} from './interview-engine'
 
 const TIMEOUT_MS = 30000
 
@@ -32,7 +37,7 @@ export class InterviewEngineService {
       const message = await this.client.messages.create(
         {
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 400 + 450 * input.questions.length,
+          max_tokens: scoringMaxTokens(input.questions.length, rubric.length),
           messages: [
             {
               role: 'user',

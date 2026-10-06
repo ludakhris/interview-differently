@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   attemptLine,
+  onPageRestore,
   parseAttempts,
   parseTimeLimit,
   timeLimitNote,
@@ -103,5 +104,28 @@ describe('toolConfig', () => {
       maxAttempts: 3,
       timeLimitMinutes: 30,
     })
+  })
+})
+
+describe('onPageRestore', () => {
+  const pageshow = (persisted: boolean) =>
+    Object.assign(new Event('pageshow'), { persisted }) as Event
+
+  it('resets only when the page comes back from the back/forward cache', () => {
+    const target = new EventTarget()
+    const reset = vi.fn()
+    onPageRestore(target, reset)
+    target.dispatchEvent(pageshow(false))
+    expect(reset).not.toHaveBeenCalled()
+    target.dispatchEvent(pageshow(true))
+    expect(reset).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops listening once cleaned up', () => {
+    const target = new EventTarget()
+    const reset = vi.fn()
+    onPageRestore(target, reset)()
+    target.dispatchEvent(pageshow(true))
+    expect(reset).not.toHaveBeenCalled()
   })
 })

@@ -86,3 +86,15 @@ export function toolConfig(f: {
         : {}),
   }
 }
+
+/**
+ * Calls `reset` when the browser restores the page from its back/forward cache (`pageshow` with
+ * `persisted`), where React state is kept as it was when the learner left. Returns the cleanup.
+ */
+export function onPageRestore(target: EventTarget, reset: () => void): () => void {
+  const handler = (e: Event) => {
+    if ((e as PageTransitionEvent).persisted) reset()
+  }
+  target.addEventListener('pageshow', handler)
+  return () => target.removeEventListener('pageshow', handler)
+}

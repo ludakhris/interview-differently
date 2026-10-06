@@ -262,6 +262,14 @@ export class LtiPlatformService {
     } = await this.toolItem(hint.cohortId, hint.itemId, hint.userId)
     if (itemTool.clientId !== tool.clientId)
       throw new HttpException('This item does not launch that client', 400)
+    // An assessment's attempts may have run out since the hint was minted (another tab); a hint is not a way around the cap.
+    let used = 0
+    if (itemTool.kind === 'assessment') {
+      const { maxAttempts } = assessmentLimits(itemConfig)
+      used = await this.attemptsUsed(hint.userId, hint.cohortId, hint.itemId)
+      if (used >= maxAttempts)
+        throw new ConflictException(`You have used all ${maxAttempts} attempts.`)
+    }
     if (!(await this.store.claim('lti-hint', hint.jti, Math.max(1, hint.exp - nowS() + 5))))
       throw new HttpException('lti_message_hint was already used', 400)
 
@@ -269,7 +277,6 @@ export class LtiPlatformService {
     let custom: Record<string, unknown> = { ref, tool: itemTool.toolId }
     if (itemTool.kind === 'assessment') {
       const { timeLimitMinutes } = assessmentLimits(itemConfig)
-      const used = await this.attemptsUsed(hint.userId, hint.cohortId, hint.itemId)
       custom = { ...custom, attempt: used + 1, ...(timeLimitMinutes ? { timeLimitMinutes } : {}) }
     }
     const brand = await this.brandOf(hint.cohortId)

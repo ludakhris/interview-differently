@@ -26,6 +26,7 @@ const prisma = {
   courseModule: { findMany: jest.fn() },
   itemProgress: { findUnique: jest.fn(), upsert: jest.fn(), count: jest.fn(), findMany: jest.fn() },
   planItem: { findMany: jest.fn(), findUnique: jest.fn(), createMany: jest.fn() },
+  $queryRawUnsafe: jest.fn(),
 }
 const clerk = { getUserProfile: jest.fn() }
 const scoring = { score: jest.fn() }
@@ -362,21 +363,20 @@ describe('buildRecord', () => {
     expect(r).toMatchObject({ interviewBest: 88, interviewReady: true })
   })
 
-  it('keeps an unflagged tool item out of interview readiness and lists it as a practice line', () => {
+  it('keeps an unflagged tool item out of interview readiness', () => {
     const r = buildRecord(
       [
-        { id: 'd', type: 'tool', label: null, title: 'Decision simulation', config: {} },
-        { id: 's', type: 'tool', label: null, title: 'SQL simulation', config: {} },
+        { id: 'd', type: 'tool', label: null, config: {} },
+        { id: 's', type: 'tool', label: null, config: {} },
         {
           id: 'v',
           type: 'tool',
           label: null,
-          title: 'Voice interview',
           config: { countsAsInterview: true },
         },
-        { id: 'n', type: 'tool', label: null, title: 'Not done yet', config: {} },
-        { id: 'p', type: 'tool', label: 'pre', title: 'Pre', config: {} },
-        { id: 'i', type: 'interview', label: null, title: 'Native' },
+        { id: 'n', type: 'tool', label: null, config: {} },
+        { id: 'p', type: 'tool', label: 'pre', config: {} },
+        { id: 'i', type: 'interview', label: null },
       ],
       [
         { itemId: 'd', status: 'completed', score: 95 },
@@ -390,25 +390,17 @@ describe('buildRecord', () => {
     )
     expect(r.interviewBest).toBe(72)
     expect(r.interviewReady).toBe(true)
-    expect(r.practice).toEqual([
-      { itemId: 'd', title: 'Decision simulation', score: 95 },
-      { itemId: 's', title: 'SQL simulation', score: 60 },
-      { itemId: 'v', title: 'Voice interview', score: 72 },
-    ])
+    expect(r).not.toHaveProperty('practice')
   })
 
   it('shows a high unflagged simulation as no interview score at all', () => {
     const r = buildRecord(
-      [{ id: 'd', type: 'tool', label: null, title: 'Decision simulation' }],
+      [{ id: 'd', type: 'tool', label: null }],
       [{ itemId: 'd', status: 'completed', score: 99 }],
       course,
       false
     )
     expect(r).toMatchObject({ interviewBest: null, interviewReady: false })
-  })
-
-  it('has an empty practice list before anything is done', () => {
-    expect(buildRecord(items, [], course, false).practice).toEqual([])
   })
 
   it('feeds a labelled tool item into pre, post and gain, not interview readiness', () => {
@@ -1058,21 +1050,42 @@ describe('practice interview', () => {
 describe('recordToolResult', () => {
   const tool = item('tool', null, { toolId: 'id-interview', ref: 'cna-interview' })
 
-  it('keeps the best score, counts an attempt, completes the item and checks course completion', async () => {
+  // The statement's arguments: id, enrollment, item, score, data (json), reportedAt, attempt cap.
+  const statement = () => {
+    const [sql, , enrollmentId, itemId, score, json, reportedAt, cap] =
+      prisma.$queryRawUnsafe.mock.calls[0]
+    return { sql, enrollmentId, itemId, score, data: JSON.parse(json), reportedAt, cap }
+  }
+
+  beforeEach(() => {
+    prisma.$queryRawUnsafe.mockResolvedValue([{ attempts: 1 }])
+  })
+
+  it('records the score in one statement (best, attempt count and data are decided in SQL), then checks the plan and course completion', async () => {
     prisma.courseItem.findUnique.mockResolvedValue(tool)
     prisma.itemProgress.findUnique.mockResolvedValue({ status: 'completed', score: 90 })
     const out = await service.recordToolResult('u1', 'k1', 'i1', {
       scorePct: 72.4,
       dimensions: { Clarity: 70 },
+      reportedAt: '2026-10-06T12:00:00Z',
     })
-    const call = prisma.itemProgress.upsert.mock.calls[0][0]
-    expect(call.update).toMatchObject({
-      status: 'completed',
-      score: 90,
-      attempts: { increment: 1 },
+    expect(prisma.itemProgress.upsert).not.toHaveBeenCalled() // no read-modify-write
+    expect(prisma.$queryRawUnsafe).toHaveBeenCalledTimes(1)
+    const st = statement()
+    expect(st).toMatchObject({
+      enrollmentId: 'e1',
+      itemId: 'i1',
+      score: 72,
+      reportedAt: '2026-10-06T12:00:00.000Z',
+      cap: null,
     })
-    expect(call.update.data).toMatchObject({ lastScore: 72, dimensions: { Clarity: 70 } })
-    expect(call.create).toMatchObject({ status: 'completed', score: 72, attempts: 1 })
+    expect(st.data).toMatchObject({
+      lastScore: 72,
+      reportedAt: '2026-10-06T12:00:00.000Z',
+      dimensions: { Clarity: 70 },
+    })
+    expect(st.sql).toContain('GREATEST(')
+    expect(st.sql).toContain('ON CONFLICT')
     expect(out.tool).toEqual({
       toolId: 'id-interview',
       name: 'Interview Differently',
@@ -1096,24 +1109,159 @@ describe('recordToolResult', () => {
     )
   })
 
-  it('ignores a repeated report of the same moment, so a retry is not a second attempt', async () => {
+  it('ignores a repeat of a report already recorded, so a retry is not a second attempt', async () => {
     prisma.courseItem.findUnique.mockResolvedValue(tool)
     prisma.itemProgress.findUnique.mockResolvedValue({
       status: 'completed',
       score: 80,
+      attempts: 2,
+      data: {
+        reportedAt: '2026-10-06T12:05:00.000Z',
+        recentReportedAt: ['2026-10-06T12:00:00.000Z', '2026-10-06T12:05:00.000Z'],
+      },
+    })
+    for (const at of ['2026-10-06T12:05:00Z', '2026-10-06T12:00:00Z']) {
+      await service.recordToolResult('u1', 'k1', 'i1', { scorePct: 80, reportedAt: at })
+    }
+    expect(prisma.$queryRawUnsafe).not.toHaveBeenCalled()
+    await service.recordToolResult('u1', 'k1', 'i1', {
+      scorePct: 85,
+      reportedAt: '2026-10-06T12:10:00Z',
+    })
+    expect(prisma.$queryRawUnsafe).toHaveBeenCalledTimes(1)
+  })
+
+  it('counts a real score reported after one that carried a later timestamp', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(tool)
+    prisma.itemProgress.findUnique.mockResolvedValue({
+      status: 'completed',
+      score: 60,
       attempts: 1,
-      data: { reportedAt: '2026-10-06T12:00:00.000Z' },
+      data: { reportedAt: '2099-01-01T00:00:00.000Z' },
     })
     await service.recordToolResult('u1', 'k1', 'i1', {
       scorePct: 80,
       reportedAt: '2026-10-06T12:00:00Z',
     })
-    expect(prisma.itemProgress.upsert).not.toHaveBeenCalled()
+    expect(prisma.$queryRawUnsafe).toHaveBeenCalledTimes(1)
+  })
+
+  it('treats a report that lost a race to its own twin as already recorded', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(tool)
+    prisma.itemProgress.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValue({ attempts: 1, data: { recentReportedAt: ['2026-10-06T12:00:00.000Z'] } })
+    prisma.$queryRawUnsafe.mockResolvedValue([]) // the statement skipped the repeat
     await service.recordToolResult('u1', 'k1', 'i1', {
-      scorePct: 85,
-      reportedAt: '2026-10-06T12:05:00Z',
+      scorePct: 80,
+      reportedAt: '2026-10-06T12:00:00Z',
     })
-    expect(prisma.itemProgress.upsert).toHaveBeenCalledTimes(1)
+    expect(prisma.courseModule.findMany).not.toHaveBeenCalled() // no plan or completion work
+  })
+
+  describe('concurrent reports', () => {
+    /** Stands in for Postgres running the statement: one atomic step per call, on the live row. */
+    function fakePostgres() {
+      const row = { score: null as number | null, attempts: 0, recent: [] as string[] }
+      let reads = 0
+      prisma.itemProgress.findUnique.mockImplementation(async () =>
+        // Both requests read before either writes; later reads see the row.
+        ++reads <= 2 || row.attempts === 0
+          ? null
+          : { attempts: row.attempts, score: row.score, data: { recentReportedAt: row.recent } }
+      )
+      prisma.$queryRawUnsafe.mockImplementation(async (...a: unknown[]) => {
+        const [score, reportedAt, limit] = [
+          a[4] as number,
+          a[6] as string | null,
+          a[7] as number | null,
+        ]
+        if (reportedAt && row.recent.includes(reportedAt)) return []
+        if (limit !== null && row.attempts >= limit) return []
+        row.score = Math.max(row.score ?? 0, score)
+        row.attempts += 1
+        if (reportedAt) row.recent.push(reportedAt)
+        return [{ attempts: row.attempts }]
+      })
+      return { row }
+    }
+
+    it('counts the same result reported twice at once only once', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(tool)
+      const { row } = fakePostgres()
+      const report = () =>
+        service.recordToolResult('u1', 'k1', 'i1', {
+          scorePct: 80,
+          reportedAt: '2026-10-06T12:00:00Z',
+        })
+      await Promise.all([report(), report()])
+      expect(row).toMatchObject({ score: 80, attempts: 1 })
+    })
+
+    it('keeps both attempts and the true best when different results arrive at once', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(tool)
+      const { row } = fakePostgres()
+      await Promise.all([
+        service.recordToolResult('u1', 'k1', 'i1', {
+          scorePct: 90,
+          reportedAt: '2026-10-06T12:00:00Z',
+        }),
+        service.recordToolResult('u1', 'k1', 'i1', {
+          scorePct: 60,
+          reportedAt: '2026-10-06T12:01:00Z',
+        }),
+      ])
+      expect(row).toMatchObject({ score: 90, attempts: 2 })
+    })
+
+    it('lets only one of two tabs take the single attempt of an assessment', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(
+        item('tool', 'pre', { toolId: 'id-assessment', ref: 'cna-pre' })
+      )
+      const { row } = fakePostgres()
+      const settled = await Promise.allSettled([
+        service.recordToolResult('u1', 'k1', 'i1', {
+          scorePct: 90,
+          reportedAt: '2026-10-06T12:00:00Z',
+        }),
+        service.recordToolResult('u1', 'k1', 'i1', {
+          scorePct: 60,
+          reportedAt: '2026-10-06T12:01:00Z',
+        }),
+      ])
+      expect(settled.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected'])
+      expect(row.attempts).toBe(1)
+    })
+  })
+
+  describe('when scores are accepted', () => {
+    const endedAgo = (ms: number) =>
+      enrollment({ startsAt: PAST, endsAt: new Date(Date.now() - ms) })
+    const HOUR = 3_600_000
+
+    it('still takes a score for a cohort that ended within the last 24 hours', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(tool)
+      prisma.enrollment.findUnique.mockResolvedValue(endedAgo(HOUR))
+      await service.recordToolResult('u1', 'k1', 'i1', { scorePct: 70 })
+      expect(prisma.$queryRawUnsafe).toHaveBeenCalledTimes(1)
+    })
+
+    it('refuses a score more than 24 hours after the cohort ended', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(tool)
+      prisma.enrollment.findUnique.mockResolvedValue(endedAgo(25 * HOUR))
+      await expect(service.recordToolResult('u1', 'k1', 'i1', { scorePct: 70 })).rejects.toThrow(
+        'This cohort has ended.'
+      )
+      expect(prisma.$queryRawUnsafe).not.toHaveBeenCalled()
+    })
+
+    it('refuses a score before the cohort starts', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(tool)
+      prisma.enrollment.findUnique.mockResolvedValue(enrollment({ startsAt: FUTURE }))
+      await expect(service.recordToolResult('u1', 'k1', 'i1', { scorePct: 70 })).rejects.toThrow(
+        ConflictException
+      )
+    })
   })
 
   it('refuses other item types, a closed window, a stranger and a bad score', async () => {
@@ -1134,7 +1282,7 @@ describe('recordToolResult', () => {
     await expect(service.recordToolResult('u1', 'k1', 'i1', { scorePct: 101 })).rejects.toThrow(
       BadRequestException
     )
-    expect(prisma.itemProgress.upsert).not.toHaveBeenCalled()
+    expect(prisma.$queryRawUnsafe).not.toHaveBeenCalled()
   })
 
   it('shows a learner the tool and its name on the item', async () => {
@@ -1210,25 +1358,62 @@ describe('recordToolResult', () => {
       expect((await service.item('u1', 'k1', 'i1')).tool?.retries).toBe(false)
     })
 
-    it('keeps the best score when a later attempt scores lower, and counts each recorded score', async () => {
+    it('passes the attempt cap to the statement for an assessment, none for an interview', async () => {
       prisma.courseItem.findUnique.mockResolvedValue(assess({ maxAttempts: 3 }))
-      prisma.itemProgress.findUnique.mockResolvedValue({
-        status: 'completed',
-        score: 85,
-        attempts: 1,
-      })
-      await service.recordToolResult('u1', 'k1', 'i1', { scorePct: 60 })
-      const up = prisma.itemProgress.upsert.mock.calls[0][0]
-      expect(up.update).toMatchObject({ score: 85, attempts: { increment: 1 } })
-      expect(up.update.data.lastScore).toBe(60)
-      prisma.itemProgress.upsert.mockClear()
       prisma.itemProgress.findUnique.mockResolvedValue({
         status: 'completed',
         score: 85,
         attempts: 2,
       })
-      await service.recordToolResult('u1', 'k1', 'i1', { scorePct: 92 })
-      expect(prisma.itemProgress.upsert.mock.calls[0][0].update.score).toBe(92)
+      await service.recordToolResult('u1', 'k1', 'i1', { scorePct: 60 })
+      expect(statement().cap).toBe(3)
+    })
+
+    it('refuses a score with 409 once all attempts are used, so a second tab cannot take another', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(assess())
+      prisma.itemProgress.findUnique.mockResolvedValue({
+        status: 'completed',
+        score: 85,
+        attempts: 1,
+      })
+      await expect(
+        service.recordToolResult('u1', 'k1', 'i1', {
+          scorePct: 99,
+          reportedAt: '2026-10-06T12:00:00Z',
+        })
+      ).rejects.toThrow('You have used all 1 attempts.')
+      expect(prisma.$queryRawUnsafe).not.toHaveBeenCalled()
+    })
+
+    it('refuses with 409 when the statement finds the attempts used up by a request that ran first', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(assess())
+      prisma.itemProgress.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue({ attempts: 1, data: { recentReportedAt: ['other'] } })
+      prisma.$queryRawUnsafe.mockResolvedValue([])
+      await expect(
+        service.recordToolResult('u1', 'k1', 'i1', {
+          scorePct: 99,
+          reportedAt: '2026-10-06T12:00:00Z',
+        })
+      ).rejects.toThrow(ConflictException)
+    })
+
+    it('accepts a retry of the report that used the last attempt as already recorded', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(assess())
+      prisma.itemProgress.findUnique.mockResolvedValue({
+        status: 'completed',
+        score: 85,
+        attempts: 1,
+        data: { recentReportedAt: ['2026-10-06T12:00:00.000Z'] },
+      })
+      await expect(
+        service.recordToolResult('u1', 'k1', 'i1', {
+          scorePct: 85,
+          reportedAt: '2026-10-06T12:00:00Z',
+        })
+      ).resolves.toBeTruthy()
+      expect(prisma.$queryRawUnsafe).not.toHaveBeenCalled()
     })
 
     it('does not count a repeated report of the same result as another attempt', async () => {
@@ -1243,7 +1428,7 @@ describe('recordToolResult', () => {
         scorePct: 40,
         reportedAt: '2026-10-06T12:00:00Z',
       })
-      expect(prisma.itemProgress.upsert).not.toHaveBeenCalled()
+      expect(prisma.$queryRawUnsafe).not.toHaveBeenCalled()
     })
   })
 

@@ -346,6 +346,14 @@ describe('assessment attempts and time limit', () => {
     await reject(service.startLaunch('u1', 'k1', 'i1'), 409, 'You have used all 1 attempts.')
   })
 
+  it('refuses the OIDC step with 409 when the attempts ran out after the hint was minted', async () => {
+    assessment()
+    prisma.itemProgress.findFirst.mockResolvedValue(null)
+    const params = await authParams() // minted while an attempt was left (e.g. another tab)
+    prisma.itemProgress.findFirst.mockResolvedValue({ attempts: 1 })
+    await reject(service.authenticate(params), 409, 'You have used all 1 attempts.')
+  })
+
   it('leaves interview tools unlimited and without attempt or time-limit claims', async () => {
     prisma.itemProgress.findFirst.mockResolvedValue({ attempts: 50 })
     await expect(service.startLaunch('u1', 'k1', 'i1')).resolves.toBeTruthy()

@@ -57,6 +57,8 @@ const SUBMISSION_TTL_S = 30 * 60
 const ASSERTION_TTL_S = 5 * 60
 /** How long a submission is locked while it is being scored and posted. */
 const IN_FLIGHT_TTL_S = 5 * 60
+/** A stalled platform must not hold the single-use claims until they expire. */
+export const PLATFORM_FETCH_TIMEOUT_MS = 10_000
 const RATE_WINDOW_S = 60
 /** How long a sent result stays consumed. */
 const RESULT_TTL_S = 30 * 24 * 60 * 60
@@ -109,6 +111,8 @@ export function safeReturnUrl(value: unknown): string | undefined {
 export class LtiToolService {
   /** Injectable for tests. */
   fetchImpl: typeof fetch = (...args) => fetch(...args)
+  /** Injectable for tests. */
+  platformTimeoutMs = PLATFORM_FETCH_TIMEOUT_MS
   now: () => number = () => Date.now()
   sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -780,6 +784,7 @@ export class LtiToolService {
         client_assertion: assertion,
         scope: AGS_SCOPE_SCORE,
       }),
+      signal: AbortSignal.timeout(this.platformTimeoutMs),
     })
     if (!tokenRes.ok) throw new Error(`platform token endpoint answered ${tokenRes.status}`)
     const { access_token } = (await tokenRes.json()) as { access_token?: string }
@@ -796,6 +801,7 @@ export class LtiToolService {
         timestamp: new Date(this.now()).toISOString(),
         [DIMENSIONS_FIELD]: dimensions,
       }),
+      signal: AbortSignal.timeout(this.platformTimeoutMs),
     })
     if (!scoreRes.ok) throw new Error(`platform rejected the score (${scoreRes.status})`)
   }
