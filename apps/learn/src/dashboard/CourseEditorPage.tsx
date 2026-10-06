@@ -19,6 +19,13 @@ const ADD_TYPES: { type: CourseItemType; label: string; title: string }[] = [
   { type: 'interview', label: 'Practice interview', title: 'Practice interview' },
 ]
 
+/** Lines of a textarea as a list, blanks dropped. */
+const asLines = (v: FormDataEntryValue | null): string[] =>
+  String(v ?? '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+
 /** Moves `id` one place within `ids`. */
 function shift(ids: string[], id: string, by: -1 | 1): string[] {
   const i = ids.indexOf(id)
@@ -95,6 +102,8 @@ function Editor({
           lengthWeeks: weeks ? Number(weeks) : null,
           targetScore: Number(f.get('targetScore')),
           readinessThreshold: Number(f.get('readinessThreshold')),
+          outcomes: asLines(f.get('outcomes')),
+          targetRoles: asLines(f.get('targetRoles')),
         }),
       'Settings saved.'
     )
@@ -237,6 +246,32 @@ function Editor({
             <span>Summary</span>
             <textarea name="summary" rows={2} maxLength={500} defaultValue={course.summary ?? ''} />
           </label>
+          <div className="dash-field-row">
+            <label className="dash-field">
+              <span>What learners will be able to do (one per line)</span>
+              <textarea
+                name="outcomes"
+                rows={5}
+                defaultValue={course.outcomes.join('\n')}
+                placeholder={'Take and record vital signs accurately\nPrepare patients for an exam'}
+              />
+              <small className="dash-muted">
+                Shown in the catalog. Up to 8, short and concrete.
+              </small>
+            </label>
+            <label className="dash-field">
+              <span>Jobs this prepares for (one per line)</span>
+              <textarea
+                name="targetRoles"
+                rows={5}
+                defaultValue={course.targetRoles.join('\n')}
+                placeholder={'Medical assistant\nClinical assistant'}
+              />
+              <small className="dash-muted">
+                Shown in the catalog so learners can see where it leads.
+              </small>
+            </label>
+          </div>
           <div className="dash-field-row">
             <label className="dash-field">
               <span>Sector</span>

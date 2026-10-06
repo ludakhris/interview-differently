@@ -1349,3 +1349,23 @@
   margin-top: 28px;
   font-size: 14px;
 }
+
+.dash-leads {
+  margin: 6px 0 0;
+  font-size: 14px;
+}
+.dash-outcomes {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 24px;
+  padding-left: 1.2em;
+  line-height: 1.5;
+}
+.dash-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 28px;
+  padding: 0;
+  list-style: none;
+}

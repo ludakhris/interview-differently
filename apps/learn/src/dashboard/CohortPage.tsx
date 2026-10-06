@@ -69,7 +69,11 @@ function Cohort({
   async function saveDetails(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
-    const body: Record<string, unknown> = { name: f.get('name') }
+    const limit = String(f.get('maxLearners') ?? '').trim()
+    const body: Record<string, unknown> = {
+      name: f.get('name'),
+      maxLearners: limit ? Number(limit) : null,
+    }
     if (f.get('startsAt')) body.startsAt = f.get('startsAt')
     await run(() => send<CohortDetail>('PUT', `/learn/cohorts/${cohort.id}`, body), 'Saved.')
   }
@@ -139,7 +143,9 @@ function Cohort({
               Roster
             </h2>
             <p className="dash-sub">
-              {cohort.enrolled} {cohort.enrolled === 1 ? 'learner' : 'learners'}
+              {cohort.maxLearners !== null
+                ? `${cohort.enrolled} of ${cohort.maxLearners} places taken`
+                : `${cohort.enrolled} ${cohort.enrolled === 1 ? 'learner' : 'learners'}`}
             </p>
           </div>
         </div>
@@ -234,6 +240,23 @@ function Cohort({
                   The start date can only change before the cohort starts.
                 </small>
               )}
+            </label>
+            <label className="dash-field">
+              <span>End date</span>
+              <input type="text" readOnly disabled value={dateShort(cohort.endsAt)} />
+              <small className="dash-muted">Follows the start date and the course length.</small>
+            </label>
+            <label className="dash-field">
+              <span>Maximum learners</span>
+              <input
+                name="maxLearners"
+                type="number"
+                min={1}
+                max={5000}
+                defaultValue={cohort.maxLearners ?? ''}
+                placeholder="No limit"
+              />
+              <small className="dash-muted">Blank means no limit.</small>
             </label>
           </div>
           <div className="dash-form-actions">

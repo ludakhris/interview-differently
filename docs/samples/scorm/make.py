@@ -11,7 +11,7 @@ PAGE = """<!doctype html>
   button{font:inherit;font-weight:700;padding:10px 20px;border:0;border-radius:8px;background:#0b1f2e;color:#fff;cursor:pointer}
   #result{margin-top:16px;font-weight:700} .tag{display:inline-block;font-size:12px;color:#4a5d6c;letter-spacing:.06em;text-transform:uppercase}
 </style></head><body>
-<span class="tag">Sample SCORM __VERSION__ package</span>
+<span class="tag">Sample lesson</span>
 <h1>__TITLE__</h1>
 <p class="sub">A short lesson and three questions. Your score goes to the learning platform.</p>
 <p><strong>Key idea:</strong> __IDEA__</p>

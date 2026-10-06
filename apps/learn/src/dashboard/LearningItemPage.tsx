@@ -4,7 +4,7 @@ import { Scorm12API, Scorm2004API } from 'scorm-again'
 import { useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { score } from './format'
-import { TYPE_LABEL } from './ItemEditor'
+import { LEARNER_TYPE_LABEL } from './ItemEditor'
 import { errorNotice } from './shared'
 
 /** Plain text with blank-line paragraphs and "- " bullets. */
@@ -54,7 +54,7 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
         </a>
       </p>
       <p className="dash-item-type dash-item-kicker">
-        {TYPE_LABEL[item.type] ?? item.type}
+        {LEARNER_TYPE_LABEL[item.type] ?? item.type}
         {item.label ? ` · ${item.label}-assessment` : ''}
       </p>
       <h1 className="dash-h2">{item.title}</h1>

@@ -4,7 +4,7 @@ import { useApp } from './app-context'
 import { Meter } from './charts'
 import { CohortStatusChip } from './CohortsPage'
 import { dateShort, points, score } from './format'
-import { TYPE_LABEL } from './ItemEditor'
+import { LEARNER_TYPE_LABEL } from './ItemEditor'
 import { errorNotice } from './shared'
 
 const STATUS_WORD = { not_started: 'To do', in_progress: 'Started', completed: 'Done' } as const
@@ -56,7 +56,7 @@ export function LearningCoursePage({ cohortId }: { cohortId: string }) {
                     <li key={i.id} className="dash-item">
                       <a className="dash-item-link" href={href(`/learning/${cohortId}/${i.id}`)}>
                         <span className="dash-item-type">
-                          {TYPE_LABEL[i.type] ?? i.type}
+                          {LEARNER_TYPE_LABEL[i.type] ?? i.type}
                           {i.label ? ` · ${i.label}` : ''}
                         </span>
                         <span className="dash-item-title">{i.title}</span>

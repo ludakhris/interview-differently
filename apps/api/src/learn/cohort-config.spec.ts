@@ -53,6 +53,18 @@ describe('validateCohortFields', () => {
     ).toThrow(BadRequestException)
   })
 
+  it('takes an optional size limit, or null to clear it', () => {
+    const base = { courseId: 'c1', name: 'x', startsAt: '2026-11-03' }
+    expect(validateCohortFields({ ...base, maxLearners: 30 }, false).maxLearners).toBe(30)
+    expect(validateCohortFields({ ...base, maxLearners: null }, false).maxLearners).toBeNull()
+    expect(validateCohortFields(base, false).maxLearners).toBeUndefined()
+    for (const bad of [0, -1, 2.5, 5001, '30']) {
+      expect(() => validateCohortFields({ ...base, maxLearners: bad }, false)).toThrow(
+        BadRequestException
+      )
+    }
+  })
+
   it('lets an update leave fields out', () => {
     expect(validateCohortFields({ name: 'New name' }, true)).toEqual({ name: 'New name' })
   })

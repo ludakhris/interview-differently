@@ -36,10 +36,13 @@ export function CohortsPage({ workspace }: { workspace: string }) {
   const [startsAt, setStartsAt] = useState('')
   const [name, setName] = useState('')
   const [nameTouched, setNameTouched] = useState(false)
+  const [maxLearners, setMaxLearners] = useState('')
 
   const course = courses.data?.find((c) => c.id === courseId) ?? null
   const suggested = course && startsAt ? `${course.title} ${startsAt.slice(0, 4)}` : ''
   const shownName = nameTouched ? name : suggested
+  const endIso = course?.lengthWeeks && startsAt ? addWeeks(startsAt, course.lengthWeeks) : null
+  const endText = endIso ? dateShort(endIso) : ''
 
   async function create(e: FormEvent) {
     e.preventDefault()
@@ -50,6 +53,7 @@ export function CohortsPage({ workspace }: { workspace: string }) {
         courseId,
         startsAt,
         name: shownName,
+        maxLearners: maxLearners.trim() ? Number(maxLearners) : null,
       })
       window.location.assign(href(`/cohorts/${created.id}`))
     } catch (err) {
@@ -111,15 +115,37 @@ export function CohortsPage({ workspace }: { workspace: string }) {
                   />
                 </label>
               </div>
-              {course && startsAt && (
-                <p className="dash-muted">
-                  {!course.lengthWeeks
-                    ? 'This course has no length yet. Set its length in the course settings first.'
-                    : addWeeks(startsAt, course.lengthWeeks)
-                      ? `Runs ${course.lengthWeeks} weeks and ends ${dateShort(addWeeks(startsAt, course.lengthWeeks))}.`
-                      : ''}
-                </p>
-              )}
+              <div className="dash-field-row">
+                <label className="dash-field">
+                  <span>End date</span>
+                  <input
+                    type="text"
+                    readOnly
+                    disabled
+                    value={endText}
+                    placeholder="Set by the course length"
+                  />
+                  <small className="dash-muted">
+                    {course && !course.lengthWeeks
+                      ? 'This course has no length yet. Set it in the course settings first.'
+                      : 'A cohort lasts as long as its course. The end date follows the start date.'}
+                  </small>
+                </label>
+                <label className="dash-field">
+                  <span>Maximum learners</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={5000}
+                    value={maxLearners}
+                    onChange={(e) => setMaxLearners(e.target.value)}
+                    placeholder="No limit"
+                  />
+                  <small className="dash-muted">
+                    Leave blank for no limit. Once full, the join code stops working.
+                  </small>
+                </label>
+              </div>
               <label className="dash-field">
                 <span>Cohort name</span>
                 <input
@@ -172,7 +198,12 @@ export function CohortsPage({ workspace }: { workspace: string }) {
               <dl className="dash-course-stats">
                 <div>
                   <dt>Learners</dt>
-                  <dd>{c.enrolled}</dd>
+                  <dd>
+                    {c.enrolled}
+                    {c.maxLearners !== null && (
+                      <span className="dash-muted"> / {c.maxLearners}</span>
+                    )}
+                  </dd>
                 </div>
                 <div>
                   <dt>Join code</dt>

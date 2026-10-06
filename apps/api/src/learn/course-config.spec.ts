@@ -89,7 +89,11 @@ describe('validateItemInput', () => {
         title: 'Practice',
         config: { role: 'Medical Assistant', questions: ['Tell me about yourself.'], extra: 1 },
       }).config
-    ).toEqual({ role: 'Medical Assistant', questions: ['Tell me about yourself.'] })
+    ).toEqual({
+      role: 'Medical Assistant',
+      questions: ['Tell me about yourself.'],
+      maxAttempts: 3,
+    })
   })
 
   it('limits a practice interview to six questions', () => {
@@ -117,6 +121,41 @@ describe('validateItemInput scorm', () => {
     expect(() =>
       validateItemInput({ type: 'scorm', title: 'x', config: { ...ok, version: '3' } })
     ).toThrow(BadRequestException)
+  })
+})
+
+describe('interview attempts and course lists', () => {
+  const base = { type: 'interview', title: 'P', config: { role: 'x', questions: ['Q'] } }
+  it('lets the author set 1 to 5 attempts, default 3', () => {
+    expect(
+      validateItemInput({ ...base, config: { ...base.config, maxAttempts: 5 } }).config
+    ).toMatchObject({ maxAttempts: 5 })
+    expect(validateItemInput(base).config).toMatchObject({ maxAttempts: 3 })
+    expect(() =>
+      validateItemInput({ ...base, config: { ...base.config, maxAttempts: 9 } })
+    ).toThrow(BadRequestException)
+  })
+
+  it('keeps outcomes and target jobs as short trimmed lists', () => {
+    expect(
+      validateCourseFields(
+        {
+          outcomes: [' Take vital signs ', '', 'Chart accurately'],
+          targetRoles: ['Medical assistant'],
+        },
+        true
+      )
+    ).toEqual({
+      outcomes: ['Take vital signs', 'Chart accurately'],
+      targetRoles: ['Medical assistant'],
+    })
+    expect(() =>
+      validateCourseFields({ outcomes: Array.from({ length: 9 }, (_, i) => `o${i}`) }, true)
+    ).toThrow(BadRequestException)
+    expect(() => validateCourseFields({ targetRoles: ['x'.repeat(161)] }, true)).toThrow(
+      BadRequestException
+    )
+    expect(() => validateCourseFields({ outcomes: 'text' }, true)).toThrow(BadRequestException)
   })
 })
 

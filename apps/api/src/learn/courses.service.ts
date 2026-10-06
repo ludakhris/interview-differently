@@ -27,6 +27,8 @@ type CourseRow = {
   lengthWeeks: number | null
   targetScore: number
   readinessThreshold: number
+  outcomes: string[]
+  targetRoles: string[]
   status: string
 }
 
@@ -38,6 +40,8 @@ const settings = (c: CourseRow) => ({
   lengthWeeks: c.lengthWeeks,
   targetScore: c.targetScore,
   readinessThreshold: c.readinessThreshold,
+  outcomes: c.outcomes,
+  targetRoles: c.targetRoles,
   status: c.status as 'draft' | 'published',
 })
 

@@ -8,6 +8,15 @@ export interface ItemDraft {
   config: Record<string, unknown>
 }
 
+/** What learners see. Authors see TYPE_LABEL; "SCORM" means nothing to a learner. */
+export const LEARNER_TYPE_LABEL: Record<string, string> = {
+  lesson: 'Lesson',
+  knowledge_check: 'Knowledge check',
+  assessment: 'Assessment',
+  interview: 'Practice interview',
+  scorm: 'Interactive lesson',
+}
+
 export const TYPE_LABEL: Record<string, string> = {
   lesson: 'Lesson',
   knowledge_check: 'Knowledge check',
@@ -37,6 +46,7 @@ export function ItemEditor(props: {
     Array.isArray(item.config.questions) ? (item.config.questions as KnowledgeCheckQuestion[]) : []
   )
   const [role, setRole] = useState(String(item.config.role ?? ''))
+  const [attempts, setAttempts] = useState(String(item.config.maxAttempts ?? 3))
   const [questionsText, setQuestionsText] = useState(
     Array.isArray(item.config.questions) && item.type === 'interview'
       ? (item.config.questions as string[]).join('\n')
@@ -51,6 +61,7 @@ export function ItemEditor(props: {
           ? { questions }
           : {
               role,
+              maxAttempts: Number(attempts) || 3,
               questions: questionsText
                 .split('\n')
                 .map((q) => q.trim())
@@ -123,6 +134,17 @@ export function ItemEditor(props: {
             />
           </label>
           <label className="dash-field">
+            <span>Attempts allowed</span>
+            <input
+              type="number"
+              min={1}
+              max={5}
+              value={attempts}
+              onChange={(e) => setAttempts(e.target.value)}
+            />
+            <small className="dash-muted">1 to 5. The learner's best score counts.</small>
+          </label>
+          <label className="dash-field">
             <span>Questions (one per line, up to 6)</span>
             <textarea
               rows={6}
@@ -133,8 +155,8 @@ export function ItemEditor(props: {
               }
             />
             <small className="dash-muted">
-              Learners type an answer to each. Each answer is scored and coached; they get up to 3
-              attempts and their best score counts toward interview readiness.
+              Learners type an answer to each. Each answer is scored and coached, and their best
+              score counts toward interview readiness.
             </small>
           </label>
         </>

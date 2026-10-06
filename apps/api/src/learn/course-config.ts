@@ -17,6 +17,8 @@ export interface CourseFields {
   lengthWeeks?: number | null
   targetScore?: number
   readinessThreshold?: number
+  outcomes?: string[]
+  targetRoles?: string[]
   status?: CourseStatus
 }
 
@@ -66,12 +68,27 @@ export function validateCourseFields(input: unknown, partial: boolean): CourseFi
   if (target !== undefined) out.targetScore = target
   const ready = whole(input.readinessThreshold, 'Readiness threshold', 0, 100)
   if (ready !== undefined) out.readinessThreshold = ready
+  for (const key of ['outcomes', 'targetRoles'] as const) {
+    if (input[key] !== undefined) {
+      out[key] = lines(input[key], key === 'outcomes' ? 'Outcomes' : 'Target jobs', 8, 160)
+    }
+  }
   if (input.status !== undefined) {
     if (input.status !== 'draft' && input.status !== 'published') {
       return bad('Status must be draft or published')
     }
     out.status = input.status
   }
+  return out
+}
+
+/** A short list of text lines (outcomes, jobs). Blank lines are dropped. */
+function lines(v: unknown, field: string, max: number, maxLen: number): string[] {
+  if (!Array.isArray(v) || v.length > max * 4) return bad(`${field} must be a short list`)
+  const out = v.map((x) => (typeof x === 'string' ? x.trim() : '')).filter(Boolean)
+  if (out.length > max) return bad(`${field}: up to ${max}`)
+  if (out.some((x) => x.length > maxLen))
+    return bad(`${field}: each line up to ${maxLen} characters`)
   return out
 }
 
@@ -162,7 +179,8 @@ export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'typ
       if (!Array.isArray(raw) || raw.length > 6)
         return bad('A practice interview has up to 6 questions')
       const questions = raw.map((q, i) => text(q, `Question ${i + 1}`, 300, true) as string)
-      return { type, title, label, config: { role, questions } }
+      const maxAttempts = whole(config.maxAttempts, 'Attempts', 1, 5) ?? 3
+      return { type, title, label, config: { role, questions, maxAttempts } }
     }
   }
 }

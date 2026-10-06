@@ -24,6 +24,8 @@ export class PublicCatalogService {
     sector: string | null
     credential: string | null
     lengthWeeks: number | null
+    outcomes: string[]
+    targetRoles: string[]
     provider: { name: string }
     cohorts: { startsAt: Date | null; endsAt: Date | null }[]
   }): CatalogCourse {
@@ -40,6 +42,8 @@ export class PublicCatalogService {
       credential: c.credential,
       lengthWeeks: c.lengthWeeks,
       provider: c.provider.name,
+      outcomes: c.outcomes,
+      targetRoles: c.targetRoles,
       nextStart: upcoming ? new Date(upcoming).toISOString() : null,
       openCohorts: open.length,
     }
@@ -79,7 +83,13 @@ export class PublicCatalogService {
       include: {
         provider: { select: { name: true } },
         cohorts: {
-          select: { name: true, startsAt: true, endsAt: true },
+          select: {
+            name: true,
+            startsAt: true,
+            endsAt: true,
+            maxLearners: true,
+            _count: { select: { enrollments: { where: { status: { not: 'withdrawn' } } } } },
+          },
           orderBy: { startsAt: 'asc' },
         },
         modules: {
@@ -98,6 +108,8 @@ export class PublicCatalogService {
           startsAt: k.startsAt?.toISOString() ?? null,
           endsAt: k.endsAt?.toISOString() ?? null,
           status: cohortStatus(k.startsAt, k.endsAt),
+          seatsLeft:
+            k.maxLearners === null ? null : Math.max(0, k.maxLearners - k._count.enrollments),
         }))
         .filter((k) => k.status !== 'completed'),
     }

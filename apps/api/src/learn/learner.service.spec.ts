@@ -2,12 +2,24 @@ import { ConflictException, NotFoundException } from '@nestjs/common'
 import type { ClerkService } from '../auth/clerk.service'
 import type { PrismaService } from '../prisma/prisma.service'
 import type { InterviewScoringService } from './interview-scoring.service'
-import { buildRecord, LearnerService, scormResult, scormSrc } from './learner.service'
+import {
+  attemptsAllowed,
+  buildRecord,
+  LearnerService,
+  scormResult,
+  scormSrc,
+} from './learner.service'
 
 const prisma = {
   user: { findUnique: jest.fn(), create: jest.fn() },
   cohort: { findFirst: jest.fn() },
-  enrollment: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), findMany: jest.fn() },
+  enrollment: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    findMany: jest.fn(),
+    count: jest.fn(),
+  },
   membership: { upsert: jest.fn() },
   courseItem: { findUnique: jest.fn() },
   courseModule: { findMany: jest.fn() },
@@ -94,6 +106,19 @@ describe('join', () => {
       data: { cohortId: 'k1', userId: 'u1' },
     })
     expect(prisma.membership.upsert).toHaveBeenCalled()
+  })
+
+  it('refuses a new learner when the cohort is full, but not someone already in it', async () => {
+    prisma.cohort.findFirst.mockResolvedValue({ ...cohort, maxLearners: 2 })
+    prisma.user.findUnique.mockResolvedValue({ id: 'u1' })
+    prisma.enrollment.findMany.mockResolvedValue([])
+    prisma.enrollment.count.mockResolvedValue(2)
+    prisma.enrollment.findUnique.mockResolvedValue(null)
+    await expect(service.join('u1', 'ABCD2345')).rejects.toThrow(/full/)
+    expect(prisma.enrollment.create).not.toHaveBeenCalled()
+    prisma.enrollment.findUnique.mockResolvedValue({ id: 'e1', status: 'enrolled' })
+    await service.join('u1', 'ABCD2345').catch(() => undefined)
+    expect(prisma.enrollment.create).not.toHaveBeenCalled()
   })
 
   it('does not enroll twice', async () => {
@@ -312,6 +337,30 @@ describe('scorm', () => {
     prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
     prisma.itemProgress.findUnique.mockResolvedValue(null)
     await expect(service.saveScorm('u1', 'k1', 'i1', {})).rejects.toThrow(ConflictException)
+  })
+})
+
+describe('interview attempts setting', () => {
+  it('uses the author setting from 1 to 5 and falls back to 3', () => {
+    expect(attemptsAllowed({ maxAttempts: 2 })).toBe(2)
+    expect(attemptsAllowed({ maxAttempts: 5 })).toBe(5)
+    for (const bad of [0, 6, 2.5, '3', undefined])
+      expect(attemptsAllowed({ maxAttempts: bad })).toBe(3)
+    expect(attemptsAllowed({})).toBe(3)
+  })
+
+  it("stops a learner at the author's limit", async () => {
+    prisma.courseItem.findUnique.mockResolvedValue({
+      ...item('interview'),
+      config: { role: 'MA', questions: ['Q1'], maxAttempts: 1 },
+    })
+    prisma.itemProgress.findUnique.mockResolvedValue({
+      status: 'completed',
+      score: 80,
+      attempts: 1,
+      data: { attempts: [] },
+    })
+    await expect(service.submitInterview('u1', 'k1', 'i1', ['a'])).rejects.toThrow(/1 attempts/)
   })
 })
 

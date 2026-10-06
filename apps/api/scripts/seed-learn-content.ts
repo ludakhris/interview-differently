@@ -289,3 +289,77 @@ export function interviewQuestions(program: string): string[] {
     'What would you do if you noticed a coworker making a mistake that could affect safety or quality?',
   ]
 }
+
+const OUTCOMES: Record<string, string[]> = {
+  'harbor-point': [
+    'Take and record vital signs accurately',
+    'Prepare patients and rooms for an exam',
+    'Chart visits and update records clearly',
+    'Follow infection-control and patient-safety steps',
+    'Communicate calmly with patients and the care team',
+  ],
+  tidewater: [
+    'Assist residents with moving, bathing and meals safely',
+    'Follow infection-prevention steps every time',
+    'Document care and report changes promptly',
+    'Treat every resident with dignity',
+  ],
+  'lantern-hill': [
+    'Diagnose common hardware and network problems',
+    'Walk users through fixes in plain language',
+    'Verify identity before resetting an account',
+    'Document tickets and escalate when needed',
+  ],
+  'cedar-mill': [
+    'Work safely around electrical systems',
+    'Read basic electrical drawings',
+    'Use hand and power tools correctly',
+    'Work as part of a crew',
+  ],
+  'open-road': [
+    'Complete a thorough pre-trip inspection',
+    'Operate a commercial vehicle safely',
+    'Follow hours-of-service rules',
+    'Plan routes and handle loads',
+  ],
+  bayline: [
+    'Receive, store and pick orders accurately',
+    'Use scanners and inventory systems',
+    'Operate equipment safely',
+    'Meet safety and shipping standards',
+  ],
+  'marsh-creek': [
+    'Apply food-safety rules in a working kitchen',
+    'Cost a menu and control waste',
+    'Schedule and lead a small team',
+    'Handle guest and allergy requests',
+  ],
+  ridgeline: [
+    'Set up and run CNC machines safely',
+    'Read blueprints and measure to tolerance',
+    'Inspect parts for quality',
+    'Work with a production team',
+  ],
+}
+
+const ROLES: Record<string, string[]> = {
+  'harbor-point': ['Medical assistant', 'Clinical assistant', 'Patient care technician'],
+  tidewater: ['Certified nursing assistant', 'Home health aide', 'Patient care assistant'],
+  'lantern-hill': ['Help desk technician', 'IT support specialist', 'Desktop support technician'],
+  'cedar-mill': ["Electrician's apprentice", 'Electrical helper', 'Maintenance technician'],
+  'open-road': ['Commercial truck driver', 'Local delivery driver', 'Regional driver'],
+  bayline: ['Warehouse associate', 'Logistics technician', 'Forklift operator'],
+  'marsh-creek': ['Kitchen supervisor', 'Shift manager', 'Food service manager trainee'],
+  ridgeline: ['CNC machinist trainee', 'Machine operator', 'Quality inspector'],
+}
+
+export const outcomesFor = (key: string): string[] => OUTCOMES[key] ?? []
+export const rolesFor = (key: string): string[] => ROLES[key] ?? []
+
+/** What the course is for, written for the learner. */
+export function summaryFor(key: string, program: string): string {
+  const first = (ROLES[key] ?? [])[0]?.toLowerCase()
+  return first
+    ? `Hands-on training for entry-level ${first} roles. Learn the core skills, check your progress as you go, and finish with a practice interview, so you walk into the job interview ready. Sample content.`
+    : `${program}. Sample content.`
+}

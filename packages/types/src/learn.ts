@@ -137,6 +137,10 @@ export interface CourseSettings {
   targetScore: number
   /** Best interview score that counts as interview ready. */
   readinessThreshold: number
+  /** What a learner will be able to do after the course. Shown in the catalog. */
+  outcomes: string[]
+  /** Jobs the course prepares for. Shown in the catalog. */
+  targetRoles: string[]
   status: CourseStatus
 }
 
@@ -191,6 +195,8 @@ export interface CohortListItem {
   enrolled: number
   /** Learners enter this to join. */
   joinKey: string | null
+  /** Most learners that may be enrolled. Null = no limit. */
+  maxLearners: number | null
 }
 
 export interface CohortRosterRow {
@@ -318,6 +324,8 @@ export interface CatalogCourse {
   credential: string | null
   lengthWeeks: number | null
   provider: string
+  outcomes: string[]
+  targetRoles: string[]
   /** Start date of the next cohort that has not begun, if any. */
   nextStart: string | null
   openCohorts: number
@@ -326,7 +334,14 @@ export interface CatalogCourse {
 export interface CatalogOffering extends CatalogCourse {
   modules: { title: string; items: number }[]
   /** Cohorts a learner could still join. Join codes are never public. */
-  cohorts: { name: string; startsAt: string | null; endsAt: string | null; status: CohortStatus }[]
+  cohorts: {
+    name: string
+    startsAt: string | null
+    endsAt: string | null
+    status: CohortStatus
+    /** Seats left, or null when the cohort has no limit. */
+    seatsLeft: number | null
+  }[]
 }
 
 // ── Practice interview ──────────────────────────────────────────────────────

@@ -32,6 +32,8 @@ export interface CohortFields {
   courseId?: string
   name?: string
   startsAt?: Date
+  /** Most learners allowed; null clears the limit. */
+  maxLearners?: number | null
 }
 
 /** Cohort fields from a request body; a start date is YYYY-MM-DD. `partial` allows leaving fields out. */
@@ -62,6 +64,17 @@ export function validateCohortFields(input: unknown, partial: boolean): CohortFi
       throw new BadRequestException('That start date does not exist')
     }
     out.startsAt = d
+  }
+  if (body.maxLearners !== undefined) {
+    if (body.maxLearners === null || body.maxLearners === '') out.maxLearners = null
+    else if (
+      typeof body.maxLearners !== 'number' ||
+      !Number.isInteger(body.maxLearners) ||
+      body.maxLearners < 1 ||
+      body.maxLearners > 5000
+    ) {
+      throw new BadRequestException('Maximum learners must be a whole number from 1 to 5000')
+    } else out.maxLearners = body.maxLearners
   }
   return out
 }

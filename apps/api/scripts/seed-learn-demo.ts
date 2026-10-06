@@ -19,7 +19,14 @@
 
 import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
-import { interviewQuestions, lessonBody, questionsFor } from './seed-learn-content'
+import {
+  interviewQuestions,
+  lessonBody,
+  outcomesFor,
+  questionsFor,
+  rolesFor,
+  summaryFor,
+} from './seed-learn-content'
 
 const DEV_HOSTS = ['localhost', '127.0.0.1', 'zephyr.proxy.rlwy.net']
 const TODAY = new Date('2026-10-04T12:00:00Z')
@@ -481,7 +488,9 @@ async function load(prisma: PrismaClient) {
         credential: p.credential,
         lengthWeeks: p.lengthWeeks,
         targetScore: 75,
-        summary: `${p.program} offered by ${p.provider}. Sample content.`,
+        summary: summaryFor(p.key, p.program),
+        outcomes: outcomesFor(p.key),
+        targetRoles: rolesFor(p.key),
       },
     })
     const items: { id: string; type: string; label: string | null }[] = []
@@ -593,6 +602,7 @@ async function load(prisma: PrismaClient) {
           joinKey: `${p.agency === 'chesapeake' ? 'ch' : 'de'}-${p.key}-${plan.label.toLowerCase()}`,
           startsAt,
           endsAt,
+          maxLearners: 30,
         },
       })
       counts.cohorts++

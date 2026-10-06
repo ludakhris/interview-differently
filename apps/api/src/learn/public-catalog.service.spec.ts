@@ -18,6 +18,8 @@ const course = {
   sector: 'Healthcare',
   credential: 'CCMA',
   lengthWeeks: 16,
+  outcomes: ['Take vital signs'],
+  targetRoles: ['Medical assistant'],
   provider: { name: 'Harbor Point' },
   cohorts: [
     { startsAt: PAST, endsAt: new Date('2020-06-01T00:00:00Z') }, // finished
@@ -63,12 +65,21 @@ describe('offering', () => {
   it('shows the outline and joinable cohorts, never join codes', async () => {
     prisma.course.findFirst.mockResolvedValue({
       ...course,
-      cohorts: course.cohorts.map((k, i) => ({ ...k, name: `Cohort ${i}`, joinKey: 'SECRET123' })),
+      cohorts: course.cohorts.map((k, i) => ({
+        ...k,
+        name: `Cohort ${i}`,
+        joinKey: 'SECRET123',
+        maxLearners: i === 1 ? 10 : null,
+        _count: { enrollments: i === 1 ? 4 : 0 },
+      })),
       modules: [{ title: 'Start here', _count: { items: 1 } }],
     })
     const out = await service.offering('delaware', 'c1')
     expect(out.modules).toEqual([{ title: 'Start here', items: 1 }])
     expect(out.cohorts).toHaveLength(2) // the finished cohort is left out
+    expect(out.cohorts.map((k) => k.seatsLeft)).toEqual([6, null])
+    expect(out.outcomes).toEqual(['Take vital signs'])
+    expect(out.targetRoles).toEqual(['Medical assistant'])
     expect(JSON.stringify(out)).not.toContain('SECRET123')
   })
 

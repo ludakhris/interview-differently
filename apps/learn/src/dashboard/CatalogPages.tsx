@@ -83,6 +83,12 @@ export function CatalogPage() {
                   {c.title}
                 </a>
                 <p className="dash-sub">{meta(c)}</p>
+                {c.targetRoles.length > 0 && (
+                  <p className="dash-leads">
+                    <span className="dash-muted">Prepares you for:</span>{' '}
+                    {c.targetRoles.slice(0, 3).join(' · ')}
+                  </p>
+                )}
               </div>
               <div className="dash-learner-progress">
                 <span className="dash-muted">
@@ -137,9 +143,33 @@ export function OfferingPage({ courseId }: { courseId: string }) {
       {data.summary && <p className="dash-offering-summary">{data.summary}</p>}
 
       <div className="dash-learner-grid">
-        <section aria-labelledby="h-covers">
+        <section aria-labelledby="h-outcomes">
+          {data.outcomes.length > 0 && (
+            <>
+              <h2 className="dash-card-title" id="h-outcomes">
+                What you will be able to do
+              </h2>
+              <ul className="dash-outcomes">
+                {data.outcomes.map((o, i) => (
+                  <li key={i}>{o}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          {data.targetRoles.length > 0 && (
+            <>
+              <h2 className="dash-card-title">Jobs this prepares you for</h2>
+              <ul className="dash-roles">
+                {data.targetRoles.map((r, i) => (
+                  <li key={i} className="dash-chip">
+                    {r}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
           <h2 className="dash-card-title" id="h-covers">
-            What you will do
+            How the course runs
           </h2>
           {data.modules.length === 0 ? (
             <p className="dash-muted">The outline is being prepared.</p>
@@ -169,6 +199,8 @@ export function OfferingPage({ courseId }: { courseId: string }) {
                     <span className="dash-muted">
                       {k.status === 'running' ? 'In progress' : `Starts ${dateShort(k.startsAt)}`} ·
                       ends {dateShort(k.endsAt)}
+                      {k.seatsLeft !== null &&
+                        (k.seatsLeft > 0 ? ` · ${k.seatsLeft} places left` : ' · Full')}
                     </span>
                   </li>
                 ))}

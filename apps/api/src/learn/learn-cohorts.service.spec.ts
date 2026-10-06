@@ -6,8 +6,20 @@ import type { LearnService } from './learn.service'
 const prisma = {
   institution: { findFirst: jest.fn(), findMany: jest.fn() },
   course: { findMany: jest.fn(), findUnique: jest.fn() },
-  cohort: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), count: jest.fn() },
-  enrollment: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
+  cohort: {
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    count: jest.fn(),
+  },
+  enrollment: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    count: jest.fn(),
+  },
   membership: { upsert: jest.fn() },
   user: { findUnique: jest.fn() },
   courseOffer: { findMany: jest.fn(), upsert: jest.fn(), deleteMany: jest.fn() },
@@ -39,7 +51,8 @@ beforeEach(() => {
   jest.resetAllMocks()
   prisma.institution.findFirst.mockResolvedValue(ws)
   prisma.course.findMany.mockResolvedValue(runnable)
-  prisma.cohort.findUnique.mockResolvedValue(null) // join key free
+  prisma.cohort.findFirst.mockResolvedValue(null) // join key free
+  prisma.cohort.findUnique.mockResolvedValue(null)
   prisma.enrollment.findMany.mockResolvedValue([])
 })
 
@@ -60,12 +73,20 @@ describe('create', () => {
 
   it('sets the end from the start and course length, and generates a join code', async () => {
     prisma.cohort.create.mockResolvedValue({ id: 'k1' })
-    prisma.cohort.findUnique.mockResolvedValueOnce(null).mockResolvedValue(cohortRow())
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
     await service.create('u', 'agency-admin', 'harborpoint', body)
     const data = prisma.cohort.create.mock.calls[0][0].data
     expect(data.institutionId).toBe('w1')
     expect(data.endsAt.toISOString()).toBe('2099-04-23T00:00:00.000Z')
     expect(data.joinKey).toMatch(/^[A-Z2-9]{8}$/)
+  })
+
+  it('stores the size limit, and checks codes without regard to case', async () => {
+    prisma.cohort.create.mockResolvedValue({ id: 'k1' })
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    await service.create('u', 'agency-admin', 'harborpoint', { ...body, maxLearners: 30 })
+    expect(prisma.cohort.create.mock.calls[0][0].data.maxLearners).toBe(30)
+    expect(prisma.cohort.findFirst.mock.calls[0][0].where.joinKey.mode).toBe('insensitive')
   })
 
   it('does not let an agency run cohorts', async () => {
@@ -156,5 +177,43 @@ describe('unoffer', () => {
     await expect(service.unoffer('u', 'agency-admin', 'c1', 'nope')).rejects.toThrow(
       NotFoundException
     )
+  })
+})
+
+describe('size limit', () => {
+  beforeEach(() => prisma.cohort.findUnique.mockResolvedValue(cohortRow({ maxLearners: 2 })))
+
+  it('will not add a learner to a full cohort', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'l1' })
+    prisma.enrollment.findUnique.mockResolvedValue(null)
+    prisma.enrollment.count.mockResolvedValue(2)
+    await expect(
+      service.addLearner('u', 'agency-admin', 'k1', { email: 'a@b.co' })
+    ).rejects.toThrow(/full/)
+    expect(prisma.enrollment.create).not.toHaveBeenCalled()
+  })
+
+  it('adds a learner while there is room, counting only people who have not withdrawn', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'l1' })
+    prisma.enrollment.findUnique.mockResolvedValue(null)
+    prisma.enrollment.count.mockResolvedValue(1)
+    await service.addLearner('u', 'agency-admin', 'k1', { email: 'a@b.co' })
+    expect(prisma.enrollment.count).toHaveBeenCalledWith({
+      where: { cohortId: 'k1', status: { not: 'withdrawn' } },
+    })
+    expect(prisma.enrollment.create).toHaveBeenCalled()
+  })
+
+  it('will not lower the limit below the people already in', async () => {
+    prisma.enrollment.count.mockResolvedValue(5)
+    await expect(service.update('u', 'agency-admin', 'k1', { maxLearners: 3 })).rejects.toThrow(
+      /5 learners/
+    )
+    expect(prisma.cohort.update).not.toHaveBeenCalled()
+  })
+
+  it('lets the limit be cleared', async () => {
+    await service.update('u', 'agency-admin', 'k1', { maxLearners: null })
+    expect(prisma.cohort.update.mock.calls[0][0].data.maxLearners).toBeNull()
   })
 })

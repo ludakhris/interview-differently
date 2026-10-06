@@ -103,7 +103,7 @@ export class LearnCohortsService {
       where: { institutionId: ws.id, courseId: { not: null } },
       include: {
         course: { select: { id: true, title: true } },
-        _count: { select: { enrollments: true } },
+        _count: { select: { enrollments: { where: { status: { not: 'withdrawn' } } } } },
       },
       orderBy: { startsAt: 'desc' },
     })
@@ -117,6 +117,7 @@ export class LearnCohortsService {
       status: cohortStatus(c.startsAt, c.endsAt),
       enrolled: c._count.enrollments,
       joinKey: c.joinKey,
+      maxLearners: c.maxLearners,
     }))
   }
 
@@ -139,8 +140,16 @@ export class LearnCohortsService {
         'Set the course length (weeks) first. A cohort lasts exactly that long.'
       )
     }
+    // Codes are unique across both products and matched without regard to case.
     let joinKey = newJoinKey()
-    while (await this.prisma.cohort.findUnique({ where: { joinKey } })) joinKey = newJoinKey()
+    while (
+      await this.prisma.cohort.findFirst({
+        where: { joinKey: { equals: joinKey, mode: 'insensitive' } },
+        select: { id: true },
+      })
+    ) {
+      joinKey = newJoinKey()
+    }
     const startsAt = fields.startsAt as Date
     const cohort = await this.prisma.cohort.create({
       data: {
@@ -150,6 +159,7 @@ export class LearnCohortsService {
         joinKey,
         startsAt,
         endsAt: endsAtFor(startsAt, course.lengthWeeks),
+        maxLearners: fields.maxLearners ?? null,
       },
     })
     return this.detail(userId, role, cohort.id)
@@ -188,6 +198,7 @@ export class LearnCohortsService {
       status: cohortStatus(c.startsAt, c.endsAt),
       enrolled: roster.filter((r) => r.status !== 'withdrawn').length,
       joinKey: c.joinKey,
+      maxLearners: c.maxLearners,
       host: {
         id: c.institution.id,
         name: c.institution.name,
@@ -207,8 +218,19 @@ export class LearnCohortsService {
   ): Promise<CohortDetail> {
     const c = await this.cohortFor(userId, role, cohortId)
     const fields = validateCohortFields(body, true)
-    const data: { name?: string; startsAt?: Date; endsAt?: Date } = {}
+    const data: { name?: string; startsAt?: Date; endsAt?: Date; maxLearners?: number | null } = {}
     if (fields.name) data.name = fields.name
+    if (fields.maxLearners !== undefined) {
+      if (fields.maxLearners !== null) {
+        const active = await this.activeCount(cohortId)
+        if (fields.maxLearners < active) {
+          throw new ConflictException(
+            `${active} learners are already in this cohort, so the limit cannot go below ${active}.`
+          )
+        }
+      }
+      data.maxLearners = fields.maxLearners
+    }
     if (fields.startsAt) {
       if (cohortStatus(c.startsAt, c.endsAt) !== 'upcoming') {
         throw new ConflictException('The start date can only change before the cohort starts.')
@@ -219,6 +241,15 @@ export class LearnCohortsService {
     }
     await this.prisma.cohort.update({ where: { id: cohortId }, data })
     return this.detail(userId, role, cohortId)
+  }
+
+  /** Learners currently in a cohort: everyone not withdrawn. */
+  private activeCount(cohortId: string): Promise<number> {
+    return this.prisma.enrollment.count({ where: { cohortId, status: { not: 'withdrawn' } } })
+  }
+
+  private async isFull(cohortId: string, max: number | null): Promise<boolean> {
+    return typeof max === 'number' && (await this.activeCount(cohortId)) >= max
   }
 
   // ── roster ────────────────────────────────────────────────────────────────
@@ -245,6 +276,8 @@ export class LearnCohortsService {
     })
     if (existing && existing.status !== 'withdrawn')
       throw new ConflictException('That person is already in this cohort.')
+    if (await this.isFull(cohortId, c.maxLearners))
+      throw new ConflictException('This cohort is full.')
     if (existing) {
       await this.prisma.enrollment.update({
         where: { id: existing.id },

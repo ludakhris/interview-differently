@@ -83,6 +83,13 @@ export class LearnerService {
     const existing = await this.prisma.enrollment.findUnique({
       where: { cohortId_userId: { cohortId: cohort.id, userId } },
     })
+    // A seat is needed unless this person already holds one.
+    if (typeof cohort.maxLearners === 'number' && (!existing || existing.status === 'withdrawn')) {
+      const taken = await this.prisma.enrollment.count({
+        where: { cohortId: cohort.id, status: { not: 'withdrawn' } },
+      })
+      if (taken >= cohort.maxLearners) throw new ConflictException('This cohort is full.')
+    }
     if (existing && existing.status === 'withdrawn') {
       await this.prisma.enrollment.update({
         where: { id: existing.id },
@@ -256,7 +263,7 @@ export class LearnerService {
       interview = {
         role: typeof config.role === 'string' ? config.role : '',
         questions: Array.isArray(config.questions) ? config.questions.map(String) : [],
-        maxAttempts: MAX_ATTEMPTS,
+        maxAttempts: attemptsAllowed(config),
         attempts: saved?.attempts ?? [],
       }
     }
@@ -367,11 +374,16 @@ export class LearnerService {
     if (locked) throw new ConflictException(locked)
     if (item.type !== 'interview')
       throw new ConflictException('This item is not a practice interview')
-    const config = (item.config ?? {}) as { role?: string; questions?: unknown }
+    const config = (item.config ?? {}) as {
+      role?: string
+      questions?: unknown
+      maxAttempts?: unknown
+    }
     const questions = Array.isArray(config.questions) ? config.questions.map(String) : []
     if (questions.length === 0) throw new ConflictException('This interview has no questions yet')
-    if ((progress?.attempts ?? 0) >= MAX_ATTEMPTS) {
-      throw new ConflictException(`You have used all ${MAX_ATTEMPTS} attempts.`)
+    const allowed = attemptsAllowed(config)
+    if ((progress?.attempts ?? 0) >= allowed) {
+      throw new ConflictException(`You have used all ${allowed} attempts.`)
     }
     if (!Array.isArray(answers) || answers.length !== questions.length) {
       throw new BadRequestException('Answer every question')
@@ -408,7 +420,7 @@ export class LearnerService {
         score: best,
         attempts: { increment: 1 },
         completedAt: new Date(),
-        data: { attempts: [...earlier, attempt].slice(-MAX_ATTEMPTS) } as unknown as object,
+        data: { attempts: [...earlier, attempt].slice(-allowed) } as unknown as object,
       },
     })
     return this.item(userId, cohortId, itemId)
@@ -533,4 +545,12 @@ export function scormResult(body: unknown): { done: boolean; score: number | nul
   if (raw !== null) score = Math.round((raw / (max && max > 0 ? max : 100)) * 100)
   else if (scaled !== null && scaled >= 0 && scaled <= 1) score = Math.round(scaled * 100)
   return { done, score: score === null ? null : Math.max(0, Math.min(100, score)) }
+}
+
+/** How many tries a learner gets at a practice interview: the author's setting, 1 to 5, default 3. */
+export function attemptsAllowed(
+  config: Record<string, unknown> | { maxAttempts?: unknown }
+): number {
+  const n = (config as { maxAttempts?: unknown }).maxAttempts
+  return typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 5 ? n : MAX_ATTEMPTS
 }

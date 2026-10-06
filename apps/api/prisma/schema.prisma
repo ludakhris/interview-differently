@@ -215,6 +215,8 @@ model Cohort {
   courseId      String?
   startsAt      DateTime?
   endsAt        DateTime?
+  // Most learners that may be enrolled (withdrawn ones do not count). Null = no limit.
+  maxLearners   Int?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   institution   Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
@@ -407,6 +409,9 @@ model Course {
   // Post-assessment score (0-100) a learner must reach to count as meeting the
   // course target in reports. Set by whoever authors the course.
   targetScore Int                @default(80)
+  // What a learner will be able to do, and the jobs the course prepares for. Shown in the catalog.
+  outcomes    String[]           @default([])
+  targetRoles String[]           @default([])
   status      String         @default("published") // 'draft' | 'published'
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
