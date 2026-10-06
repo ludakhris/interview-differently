@@ -47,6 +47,37 @@ None, until they choose. With two or more datasets, the Sandbox shows a **Choose
 
 ## LearnDifferently courses
 
+### How do I add a pre or post assessment to a course?
+
+Pre and post assessments are Interview Differently assessments; the course item launches one and brings the score back. Knowledge checks are unchanged: they stay inside the course (**+ Knowledge check**).
+
+1. An Interview Differently admin imports the assessment (**Tools ▾ → Admin → Assessments → + Import**; format in [assessment-format.md](assessment-format.md)) and tells you its **slug**.
+2. In LearnDifferently, open **Courses**, click the course, and under the module that should hold it click **+ Interview Differently assessment**.
+3. In the item editor that opens, set the title, then:
+   - **When it runs**: Before the course (pre-assessment) or After the course (post-assessment). It is required to finish the course and counts toward the gain.
+   - **Attempts allowed**: 1 to 5. The best score counts.
+   - **Time limit (minutes, optional)**: 5 to 240. The timer starts when the learner opens the attempt.
+   - **Reference**: the assessment's slug. A wrong slug only shows up when a learner opens it, so open it yourself first.
+4. **Save**.
+
+There is no longer an **Assessment** button with questions typed into the course. Existing ones keep working and can still be edited until they are migrated (below).
+
+### Migrating existing assessments
+
+`apps/api/scripts/migrate-assessment-items.ts` converts every old in-course Assessment item into an Interview Differently assessment. Each item's questions become a bank with slug `ld-<item id>` (one section, every question asked, owned by the course's provider) and the item becomes a connected assessment with 1 attempt, keeping its Pre/Post label. Learners' existing scores, statuses and attempts are untouched. Rerunning converts nothing twice.
+
+From `apps/api`:
+
+```
+npm run migrate:assessment-items                       # dry run: report only
+npm run migrate:assessment-items -- --apply            # convert
+npm run migrate:assessment-items -- --allow-host <host>   # a database that is not local or the dev database
+```
+
+The report lists items converted, questions converted, learners with progress on them, items skipped and why, and items whose questions carried a skill tag: their per-question results are no longer read, so that evidence stops feeding the remediation plan (re-tag the skill on a knowledge check or interview if it matters).
+
+Production needs the owner's OK, and run it only after the API with connected-tool support is deployed; until then the converted items would not open.
+
 ### How do I add a SCORM package to a course?
 
 In the dashboard (staff only, signed in to LearnDifferently):

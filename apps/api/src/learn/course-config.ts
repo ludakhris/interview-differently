@@ -160,11 +160,21 @@ function validateQuestions(v: unknown): KnowledgeCheckQuestion[] {
   })
 }
 
-/** Item fields from a request body, with the config checked for its type. */
-export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'type' | 'title'>> & {
+/**
+ * Item fields from a request body, with the config checked for its type. `creating` is set when
+ * the item is new: the native assessment type is no longer offered (pre and post assessments are
+ * Interview Differently assessments), but an existing one can still be saved.
+ */
+export function validateItemInput(
+  input: unknown,
+  creating = false
+): Required<Pick<ItemInput, 'type' | 'title'>> & {
   label: 'pre' | 'post' | null
   config: Record<string, unknown>
 } {
+  if (creating && isObject(input) && input.type === 'assessment') {
+    return bad('Add an Interview Differently assessment instead')
+  }
   const item = validateItemByType(input)
   // Remediation content: kept out of the outline until a flagged skill adds it to a learner's plan.
   // A scored assessment or an interview cannot be remediation.

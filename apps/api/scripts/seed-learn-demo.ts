@@ -27,6 +27,7 @@ import {
   rolesFor,
   summaryFor,
 } from './seed-learn-content'
+import { planItem, toolConfig } from '../src/learn/assessment-migration'
 
 const DEV_HOSTS = ['localhost', '127.0.0.1', 'zephyr.proxy.rlwy.net']
 const TODAY = new Date('2026-10-04T12:00:00Z')
@@ -403,11 +404,13 @@ function guard(allowHost: string | undefined): string {
 // ── remove ──────────────────────────────────────────────────────────────────
 
 async function removeDemo(prisma: PrismaClient) {
+  // Assessment banks restrict deleting their owner institution, so they go first.
+  const banks = await prisma.assessment.deleteMany({ where: { id: { startsWith: 'demo-' } } })
   // Institution deletes cascade to cohorts, courses, enrollments and progress.
   const inst = await prisma.institution.deleteMany({ where: { id: { startsWith: 'demo-' } } })
   const users = await prisma.user.deleteMany({ where: { id: { startsWith: 'demo-learner-' } } })
   console.log(
-    `Removed ${inst.count} institutions and ${users.count} demo learners (with their data).`
+    `Removed ${inst.count} institutions, ${banks.count} assessments and ${users.count} demo learners (with their data).`
   )
 }
 
@@ -504,6 +507,29 @@ async function load(prisma: PrismaClient) {
       },
     })
 
+    // One assessment bank per program, shared by its pre and post items: the same questions as the
+    // knowledge checks draw on, written as an Interview Differently assessment. Owned by the provider.
+    const bankSlug = `demo-assessment-${p.key}`
+    const bank = planItem(
+      {
+        id: bankSlug,
+        title: `${p.program} assessment`,
+        config: { questions: questionsFor(p.key) },
+      },
+      bankSlug
+    )
+    if (!bank.ok) throw new Error(`Demo assessment for ${p.key}: ${bank.reason}`)
+    await prisma.assessment.create({
+      data: {
+        id: bankSlug,
+        slug: bankSlug,
+        title: bank.parsed.title,
+        institutionId: providerId,
+        sourceMarkdown: bank.markdown,
+        sections: bank.parsed.sections as unknown as object[],
+      },
+    })
+
     // Course: pre-assessment, five lessons with knowledge checks, interview, post-assessment.
     // The two lessons that have a check are skills: a missed check adds extra content and sends
     // the lesson back for review (adaptive remediation, #56).
@@ -537,10 +563,10 @@ async function load(prisma: PrismaClient) {
         title: 'Start here',
         items: [
           {
-            type: 'assessment',
+            type: 'tool',
             title: 'Pre-assessment',
             label: 'pre',
-            config: { questions: questionsFor(p.key) },
+            config: toolConfig(bankSlug),
           },
         ],
       },
@@ -607,10 +633,10 @@ async function load(prisma: PrismaClient) {
         title: 'Finish',
         items: [
           {
-            type: 'assessment',
+            type: 'tool',
             title: 'Post-assessment',
             label: 'post',
-            config: { questions: questionsFor(p.key) },
+            config: toolConfig(bankSlug),
           },
         ],
       },

@@ -61,6 +61,13 @@ describe('validateItemInput', () => {
     expect(validateItemInput({ type: 'lesson', title: 'x', label: 'pre' }).label).toBeNull()
   })
 
+  it('refuses a new native assessment but keeps saving an existing one', () => {
+    const body = { type: 'assessment', title: 'Pre', label: 'pre', config: {} }
+    expect(() => validateItemInput(body, true)).toThrow('Add an Interview Differently assessment')
+    expect(validateItemInput(body).type).toBe('assessment')
+    expect(validateItemInput({ type: 'lesson', title: 'x' }, true).type).toBe('lesson')
+  })
+
   it('checks knowledge-check questions', () => {
     const q = { prompt: 'Normal adult pulse?', options: ['20-40', '60-100'], correctIndex: 1 }
     expect(

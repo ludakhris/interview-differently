@@ -16,6 +16,7 @@
     "seed:fake": "ts-node -r tsconfig-paths/register scripts/seed-fake-cohort.ts",
     "remap:user": "ts-node -r tsconfig-paths/register scripts/remap-user-ids.ts",
     "seed:learn-demo": "ts-node -r tsconfig-paths/register scripts/seed-learn-demo.ts",
+    "migrate:assessment-items": "ts-node -r tsconfig-paths/register scripts/migrate-assessment-items.ts",
     "sync:types": "node scripts/sync-learn-types.mjs"
   },
   "prisma": {

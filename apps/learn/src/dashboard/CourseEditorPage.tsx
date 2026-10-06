@@ -14,13 +14,33 @@ import { ItemEditor, TYPE_LABEL, type ItemDraft } from './ItemEditor'
 import { SkillsEditor } from './SkillsEditor'
 import { errorNotice } from './shared'
 
-/** `ask`: the item needs a link before it can exist, so the author is asked for it first. */
-const ADD_TYPES: { type: CourseItemType; label: string; title: string; ask?: string }[] = [
+/**
+ * `ask`: the item needs a link before it can exist, so the author is asked for it first.
+ * `start`: what a new item is created with when it cannot exist empty (a connected tool needs a
+ * tool and a reference; the placeholder reference is replaced in the editor that opens next).
+ */
+const ADD_TYPES: {
+  type: CourseItemType
+  label: string
+  title: string
+  ask?: string
+  start?: { label?: 'pre'; config: Record<string, unknown> }
+}[] = [
   { type: 'lesson', label: 'Lesson', title: 'New lesson' },
   { type: 'knowledge_check', label: 'Knowledge check', title: 'New knowledge check' },
-  { type: 'assessment', label: 'Assessment', title: 'New assessment' },
+  {
+    type: 'tool',
+    label: 'Interview Differently assessment',
+    title: 'New assessment',
+    start: { label: 'pre', config: { toolId: 'id-assessment', ref: 'assessment-slug' } },
+  },
   { type: 'interview', label: 'Practice interview', title: 'Practice interview' },
-  { type: 'tool', label: 'Connected tool', title: 'Connected tool' },
+  {
+    type: 'tool',
+    label: 'Connected tool',
+    title: 'Connected tool',
+    start: { config: { toolId: 'id-interview', ref: 'interview-id' } },
+  },
   {
     type: 'video',
     label: 'YouTube video',
@@ -176,8 +196,8 @@ function Editor({
       const next = await send<CourseDetail>('POST', `/learn/modules/${moduleId}/items`, {
         type: kind.type,
         title: kind.title,
-        ...(kind.type === 'assessment' ? { label: 'pre' } : {}),
-        ...(url ? { config: { url } } : {}),
+        ...(kind.start?.label ? { label: kind.start.label } : {}),
+        ...(kind.start ? { config: kind.start.config } : url ? { config: { url } } : {}),
       })
       created = next.modules.flatMap((m) => m.items).find((i) => !before.has(i.id))?.id ?? null
       return next
@@ -527,7 +547,7 @@ function Editor({
                 </label>
                 {ADD_TYPES.map((k) => (
                   <button
-                    key={k.type}
+                    key={k.label}
                     type="button"
                     className="dash-btn-quiet"
                     disabled={busy}
