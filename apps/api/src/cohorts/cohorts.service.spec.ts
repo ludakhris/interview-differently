@@ -30,7 +30,11 @@ describe('CohortsService.addMember user source', () => {
   })
 
   it('looks a LearnDifferently cohort member up among learn users', async () => {
-    prisma.cohort.findUnique.mockResolvedValue({ id: 'c2', institutionId: 'i2', courseId: 'course1' })
+    prisma.cohort.findUnique.mockResolvedValue({
+      id: 'c2',
+      institutionId: 'i2',
+      courseId: 'course1',
+    })
     prisma.user.findUnique.mockResolvedValue({ id: 'user_ld1' })
     await service.addMember('c2', { email: 'ann@example.com' })
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
@@ -39,7 +43,11 @@ describe('CohortsService.addMember user source', () => {
   })
 
   it('does not match the same email on the other app', async () => {
-    prisma.cohort.findUnique.mockResolvedValue({ id: 'c2', institutionId: 'i2', courseId: 'course1' })
+    prisma.cohort.findUnique.mockResolvedValue({
+      id: 'c2',
+      institutionId: 'i2',
+      courseId: 'course1',
+    })
     prisma.user.findUnique.mockResolvedValue(null)
     await expect(service.addMember('c2', { email: 'ann@example.com' })).rejects.toThrow(
       NotFoundException
@@ -47,7 +55,11 @@ describe('CohortsService.addMember user source', () => {
   })
 
   it('backfills a missing user from the Clerk instance matching the cohort', async () => {
-    prisma.cohort.findUnique.mockResolvedValue({ id: 'c2', institutionId: 'i2', courseId: 'course1' })
+    prisma.cohort.findUnique.mockResolvedValue({
+      id: 'c2',
+      institutionId: 'i2',
+      courseId: 'course1',
+    })
     prisma.user.findUnique.mockResolvedValue(null)
     clerk.getUserProfile.mockResolvedValue({ email: 'ann@example.com', displayName: 'Ann' })
     await service.addMember('c2', { userId: 'user_ld1' })

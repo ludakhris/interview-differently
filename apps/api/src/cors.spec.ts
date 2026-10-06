@@ -25,8 +25,12 @@ describe('corsOrigin', () => {
   })
 
   it('allows learndifferently.tech and any tenant subdomain', () => {
-    expect(check('https://app.interviewdifferently.com', 'https://learndifferently.tech')).toBe(true)
-    expect(check('https://app.interviewdifferently.com', 'https://delaware.learndifferently.tech')).toBe(true)
+    expect(check('https://app.interviewdifferently.com', 'https://learndifferently.tech')).toBe(
+      true
+    )
+    expect(
+      check('https://app.interviewdifferently.com', 'https://delaware.learndifferently.tech')
+    ).toBe(true)
   })
 
   it('rejects lookalike hosts', () => {

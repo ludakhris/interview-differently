@@ -31,7 +31,10 @@ describe('ClerkService with two Clerk instances', () => {
   })
 
   it('verifyLearnToken uses the LearnDifferently key and accepts learn origins', async () => {
-    verifyToken.mockResolvedValueOnce({ sub: 'user_ld1', azp: 'https://delaware.learndifferently.tech' })
+    verifyToken.mockResolvedValueOnce({
+      sub: 'user_ld1',
+      azp: 'https://delaware.learndifferently.tech',
+    })
     const svc = new ClerkService()
     await expect(svc.verifyLearnToken('t')).resolves.toBe('user_ld1')
     expect(verifyToken).toHaveBeenCalledWith('t', { secretKey: 'sk_learn' })
