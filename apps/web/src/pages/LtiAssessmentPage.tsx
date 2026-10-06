@@ -69,11 +69,11 @@ function Message({
 const BUTTON =
   'px-4 py-2 rounded-md bg-green hover:bg-green-light text-[13px] font-semibold text-on-primary disabled:opacity-50 transition-colors'
 
-type Phase = 'intro' | 'taking' | 'sending'
+type Phase = 'starting' | 'taking' | 'sending'
 
 function LtiAssessment({ token }: { token: string | null }) {
   const { deliveryId } = useParams<{ deliveryId: string }>()
-  const [phase, setPhase] = useState<Phase>('intro')
+  const [phase, setPhase] = useState<Phase>('starting')
   const [attemptId, setAttemptId] = useState<string | null>(null)
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
@@ -96,6 +96,15 @@ function LtiAssessment({ token }: { token: string | null }) {
 
   const onSubmitted = useCallback(() => setPhase('sending'), [])
 
+  // The learner already chose to start in the course, so the attempt starts (or resumes) on arrival.
+  const started = useRef(false)
+  useEffect(() => {
+    if (!token || !deliveryId || started.current) return
+    started.current = true
+    void begin()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, deliveryId])
+
   if (!token || !deliveryId) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center px-6">
@@ -113,16 +122,16 @@ function LtiAssessment({ token }: { token: string | null }) {
 
   return (
     <Message>
-      <h1 className="font-display font-extrabold text-[22px] text-fg tracking-tight mb-3">
-        Your assessment
-      </h1>
-      <p className="text-slate-mid text-[14px] leading-relaxed mb-6">
-        Answers save as you go. When you submit, your score is sent back to your course.
-      </p>
-      {startError && <p className="text-red-400 text-[13px] mb-4">{startError}</p>}
-      <button onClick={() => void begin()} disabled={starting} className={BUTTON}>
-        {starting ? 'Starting…' : startError ? 'Retry' : 'Start assessment'}
-      </button>
+      {startError ? (
+        <>
+          <p className="text-red-400 text-[13px] mb-4">{startError}</p>
+          <button onClick={() => void begin()} disabled={starting} className={BUTTON}>
+            {starting ? 'Starting…' : 'Retry'}
+          </button>
+        </>
+      ) : (
+        <p className="text-slate-mid text-[14px]">Starting your assessment…</p>
+      )}
     </Message>
   )
 }

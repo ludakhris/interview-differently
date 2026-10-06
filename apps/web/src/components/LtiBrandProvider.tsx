@@ -1,4 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react'
+import { ConfirmProvider } from '@/components/ConfirmDialog'
 import type { AppliedBrand } from '@/lib/brand'
 
 const BrandContext = createContext<AppliedBrand | null>(null)
@@ -22,7 +23,8 @@ export function LtiBrandProvider({
         data-lti-brand={brand.name ? brand.scheme : 'default'}
         style={brand.cssVars}
       >
-        {children}
+        {/* its own confirm dialog, inside the brand scope, so it wears the tenant's look */}
+        <ConfirmProvider>{children}</ConfirmProvider>
       </div>
     </BrandContext.Provider>
   )
