@@ -20,6 +20,7 @@ const ADD_TYPES: { type: CourseItemType; label: string; title: string; ask?: str
   { type: 'knowledge_check', label: 'Knowledge check', title: 'New knowledge check' },
   { type: 'assessment', label: 'Assessment', title: 'New assessment' },
   { type: 'interview', label: 'Practice interview', title: 'Practice interview' },
+  { type: 'tool', label: 'Connected tool', title: 'Connected tool' },
   {
     type: 'video',
     label: 'YouTube video',

@@ -24,6 +24,7 @@ import { gradeQuiz, publicQuestions } from './grade-quiz'
 import { averageScore, DEFAULT_ATTEMPTS, MAX_ANSWER_CHARS } from './interview-scoring'
 import { InterviewScoringService } from './interview-scoring.service'
 import { parseExternalLink } from './external-link'
+import { toolById } from '../lti/platform/lti-platform-config'
 import { imageUrl, isImageKey } from './item-image'
 import { doneSince, parseSkills, remediationOf, reviewOf, skillResults } from './skills'
 import { isVideoId, VIDEO_COMPLETE_PCT } from './youtube'
@@ -372,6 +373,11 @@ export class LearnerService {
         imageUrl: isImageKey(config.imageKey) ? imageUrl(config.imageKey) : null,
       }
     }
+    const registered = item.type === 'tool' ? toolById(config.toolId) : undefined
+    const tool: LearnerItem['tool'] =
+      registered && typeof config.ref === 'string'
+        ? { toolId: registered.toolId, name: registered.name, ref: config.ref }
+        : null
     return {
       id: item.id,
       cohortId,
@@ -388,6 +394,7 @@ export class LearnerService {
       review,
       video,
       link,
+      tool,
       status: review ? 'not_started' : this.statusOf(progress ?? undefined),
       score: progress?.score ?? null,
       attempts: progress?.attempts ?? 0,
@@ -591,6 +598,68 @@ export class LearnerService {
     return this.item(userId, cohortId, itemId, added)
   }
 
+  /**
+   * Records a score an LTI tool sent back (0-100): the best counts, every report is an attempt,
+   * and the plan and course completion are updated like after any other scored item.
+   */
+  async recordToolResult(
+    userId: string,
+    cohortId: string,
+    itemId: string,
+    result: { scorePct: number; dimensions?: unknown; reportedAt?: string }
+  ): Promise<LearnerItem> {
+    const { e, item, progress } = await this.itemOf(userId, cohortId, itemId)
+    const locked = this.lockReason(e.cohort.startsAt, e.cohort.endsAt)
+    if (locked) throw new ConflictException(locked)
+    if (item.type !== 'tool') throw new ConflictException('This item is not a connected tool')
+    const pct = result.scorePct
+    if (typeof pct !== 'number' || !Number.isFinite(pct) || pct < 0 || pct > 100)
+      throw new BadRequestException('Score must be from 0 to 100')
+    // A tool may report the same result twice (a retry after a timeout): the later report of the
+    // same or an older moment is not counted again.
+    const reportedAt = typeof result.reportedAt === 'string' ? Date.parse(result.reportedAt) : NaN
+    const lastAt = Date.parse(
+      String(((progress?.data ?? null) as { reportedAt?: string } | null)?.reportedAt ?? '')
+    )
+    if (!Number.isNaN(reportedAt) && !Number.isNaN(lastAt) && reportedAt <= lastAt) {
+      return this.item(userId, cohortId, itemId)
+    }
+    const score = Math.round(pct)
+    const best = Math.max(score, progress?.score ?? 0)
+    const dims = result.dimensions
+    const data = {
+      lastScore: score,
+      at: new Date().toISOString(),
+      ...(!Number.isNaN(reportedAt) ? { reportedAt: new Date(reportedAt).toISOString() } : {}),
+      ...(dims && typeof dims === 'object' && JSON.stringify(dims).length < 20_000
+        ? { dimensions: dims }
+        : {}),
+    } as unknown as object
+    await this.prisma.itemProgress.upsert({
+      where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
+      create: {
+        enrollmentId: e.id,
+        itemId,
+        status: 'completed',
+        score,
+        attempts: 1,
+        completedAt: new Date(),
+        data,
+      },
+      update: {
+        status: 'completed',
+        score: best,
+        attempts: { increment: 1 },
+        completedAt: new Date(),
+        data,
+      },
+    })
+    // Plan first, so a skill flagged by this result holds the course open.
+    const added = await this.updatePlan(e.id, e.cohort.course, itemId)
+    await this.completeIfDone(e.id, e.status, e.cohort.course.id)
+    return this.item(userId, cohortId, itemId, added)
+  }
+
   /** Saves what a SCORM package reported: status, score and the data it needs to resume. */
   async saveScorm(
     userId: string,
@@ -684,8 +753,8 @@ export class LearnerService {
 
   /**
    * A learner completes the course when every lesson, knowledge check and
-   * assessment is done. Practice interviews are scored by an instructor and do
-   * not hold completion back.
+   * assessment is done. Practice interviews and connected tools (an interview in
+   * Interview Differently) are practice and do not hold completion back.
    */
   private async completeIfDone(
     enrollmentId: string,
@@ -704,7 +773,7 @@ export class LearnerService {
     // (a review) must be done in the outline and again since it was added to the plan.
     const outline = modules
       .flatMap((m) => m.items)
-      .filter((i) => i.type !== 'interview' && !remediationOf(i.config))
+      .filter((i) => i.type !== 'interview' && i.type !== 'tool' && !remediationOf(i.config))
       .map((i) => i.id)
     const finished = await this.prisma.itemProgress.findMany({
       where: {
@@ -766,7 +835,7 @@ export function buildRecord(
   }
   const pre = scoreOf((i) => i.label === 'pre')
   const post = scoreOf((i) => i.label === 'post')
-  const interviewBest = scoreOf((i) => i.type === 'interview')
+  const interviewBest = scoreOf((i) => i.type === 'interview' || i.type === 'tool')
   return {
     pre,
     post,

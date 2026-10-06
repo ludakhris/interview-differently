@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { DEFAULT_ATTEMPTS } from './interview-scoring'
 import { ALLOWED_LINK_SITES, parseExternalLink } from './external-link'
 import { isImageKey } from './item-image'
+import { registeredToolIds } from '../lti/platform/lti-platform-config'
 import { parseYouTube } from './youtube'
 import type {
   CourseItemType,
@@ -20,6 +21,7 @@ export const ITEM_TYPES: CourseItemType[] = [
   'scorm',
   'video',
   'external_link',
+  'tool',
 ]
 
 export interface CourseFields {
@@ -174,7 +176,13 @@ export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'typ
   if (remedial && review) return bad('An item is either extra content or a review, not both')
   const mode = remedial ? 'remediationFor' : review ? 'reviewFor' : null
   const skill = remedial || review
-  if (mode && skill && item.type !== 'assessment' && item.type !== 'interview') {
+  if (
+    mode &&
+    skill &&
+    item.type !== 'assessment' &&
+    item.type !== 'interview' &&
+    item.type !== 'tool'
+  ) {
     if (!SKILL_ID.test(skill)) return bad('Skill is not valid')
     item.config = { ...item.config, [mode]: skill }
   }
@@ -288,6 +296,14 @@ function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | '
         label,
         config: { role, questions, maxAttempts, ...(skill ? { skill } : {}) },
       }
+    }
+    case 'tool': {
+      const toolId = text(config.toolId, 'Tool', 60, true) as string
+      if (!registeredToolIds().includes(toolId)) return bad('That tool is not connected')
+      const ref = text(config.ref, 'Tool reference', 200, true) as string
+      const skill = text(config.skill, 'Skill', 60)
+      if (skill && !SKILL_ID.test(skill)) return bad('Skill is not valid')
+      return { type, title, label, config: { toolId, ref, ...(skill ? { skill } : {}) } }
     }
   }
 }

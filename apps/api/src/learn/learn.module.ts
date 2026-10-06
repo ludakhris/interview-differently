@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common'
+import { Module, forwardRef } from '@nestjs/common'
+import { LtiPlatformModule } from '../lti/platform/lti-platform.module'
 import { PrismaModule } from '../prisma/prisma.module'
 import { StorageModule } from '../storage/storage.module'
 import { CoursesController } from './courses.controller'
@@ -18,7 +19,7 @@ import { ScormController, ScormFilesController } from './scorm.controller'
 import { ScormService } from './scorm.service'
 
 @Module({
-  imports: [PrismaModule, StorageModule],
+  imports: [PrismaModule, StorageModule, forwardRef(() => LtiPlatformModule)],
   controllers: [
     LearnController,
     CoursesController,
@@ -29,6 +30,7 @@ import { ScormService } from './scorm.service'
     ItemImageController,
     PublicCatalogController,
   ],
+  exports: [LearnerService],
   providers: [
     LearnService,
     CoursesService,

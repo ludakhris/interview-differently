@@ -297,6 +297,16 @@ describe('buildRecord', () => {
     })
   })
 
+  it('counts a connected interview tool toward interview readiness', () => {
+    const r = buildRecord(
+      [{ id: 't', type: 'tool', label: null }],
+      [{ itemId: 't', status: 'completed', score: 88 }],
+      course,
+      false
+    )
+    expect(r).toMatchObject({ interviewBest: 88, interviewReady: true })
+  })
+
   it('shows nothing earned before anything is done', () => {
     expect(buildRecord(items, [], course, false)).toMatchObject({
       pre: null,
@@ -903,5 +913,95 @@ describe('practice interview', () => {
       maxAttempts: 3,
     })
     expect(out.interview?.attempts[0].answers).toEqual(scored)
+  })
+})
+
+describe('recordToolResult', () => {
+  const tool = item('tool', null, { toolId: 'id-interview', ref: 'cna-interview' })
+
+  it('keeps the best score, counts an attempt, completes the item and checks course completion', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(tool)
+    prisma.itemProgress.findUnique.mockResolvedValue({ status: 'completed', score: 90 })
+    const out = await service.recordToolResult('u1', 'k1', 'i1', {
+      scorePct: 72.4,
+      dimensions: { Clarity: 70 },
+    })
+    const call = prisma.itemProgress.upsert.mock.calls[0][0]
+    expect(call.update).toMatchObject({
+      status: 'completed',
+      score: 90,
+      attempts: { increment: 1 },
+    })
+    expect(call.update.data).toMatchObject({ lastScore: 72, dimensions: { Clarity: 70 } })
+    expect(call.create).toMatchObject({ status: 'completed', score: 72, attempts: 1 })
+    expect(out.tool).toEqual({
+      toolId: 'id-interview',
+      name: 'Interview Differently',
+      ref: 'cna-interview',
+    })
+    expect(prisma.courseModule.findMany).toHaveBeenCalled() // plan and completion checks ran
+  })
+
+  it('does not hold course completion back, like a practice interview', async () => {
+    const lesson = item('lesson')
+    prisma.courseItem.findUnique.mockResolvedValue(tool)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    prisma.courseModule.findMany.mockResolvedValue([{ items: [{ ...lesson, id: 'l1' }, tool] }])
+    finished('l1')
+    await service.recordToolResult('u1', 'k1', 'i1', { scorePct: 80 })
+    expect(prisma.enrollment.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'completed' }) })
+    )
+  })
+
+  it('ignores a repeated report of the same moment, so a retry is not a second attempt', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(tool)
+    prisma.itemProgress.findUnique.mockResolvedValue({
+      status: 'completed',
+      score: 80,
+      attempts: 1,
+      data: { reportedAt: '2026-10-06T12:00:00.000Z' },
+    })
+    await service.recordToolResult('u1', 'k1', 'i1', {
+      scorePct: 80,
+      reportedAt: '2026-10-06T12:00:00Z',
+    })
+    expect(prisma.itemProgress.upsert).not.toHaveBeenCalled()
+    await service.recordToolResult('u1', 'k1', 'i1', {
+      scorePct: 85,
+      reportedAt: '2026-10-06T12:05:00Z',
+    })
+    expect(prisma.itemProgress.upsert).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuses other item types, a closed window, a stranger and a bad score', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
+    await expect(service.recordToolResult('u1', 'k1', 'i1', { scorePct: 50 })).rejects.toThrow(
+      ConflictException
+    )
+    prisma.courseItem.findUnique.mockResolvedValue(tool)
+    prisma.enrollment.findUnique.mockResolvedValue(enrollment({ endsAt: PAST }))
+    await expect(service.recordToolResult('u1', 'k1', 'i1', { scorePct: 50 })).rejects.toThrow(
+      ConflictException
+    )
+    prisma.enrollment.findUnique.mockResolvedValue(null)
+    await expect(service.recordToolResult('u1', 'k1', 'i1', { scorePct: 50 })).rejects.toThrow(
+      NotFoundException
+    )
+    prisma.enrollment.findUnique.mockResolvedValue(enrollment())
+    await expect(service.recordToolResult('u1', 'k1', 'i1', { scorePct: 101 })).rejects.toThrow(
+      BadRequestException
+    )
+    expect(prisma.itemProgress.upsert).not.toHaveBeenCalled()
+  })
+
+  it('shows a learner the tool and its name on the item', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(tool)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    expect((await service.item('u1', 'k1', 'i1')).tool).toEqual({
+      toolId: 'id-interview',
+      name: 'Interview Differently',
+      ref: 'cna-interview',
+    })
   })
 })

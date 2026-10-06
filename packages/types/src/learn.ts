@@ -104,6 +104,7 @@ export type CourseItemType =
   | 'scorm'
   | 'video'
   | 'external_link'
+  | 'tool'
 export type CourseStatus = 'draft' | 'published'
 
 export interface KnowledgeCheckQuestion {
@@ -127,8 +128,9 @@ export interface CourseSkill {
  * `config` by type: lesson { body }, knowledge_check and assessment { questions },
  * interview { role, questions, skill? }, scorm { packageId, entry, version, files },
  * video { provider: 'youtube', videoId, startSeconds? },
- * external_link { url, summary?, instructions?, imageKey? } (authors also receive `imageUrl`).
- * Any item except an assessment or interview may carry `remediationFor` (a skill id): it is then
+ * external_link { url, summary?, instructions?, imageKey? } (authors also receive `imageUrl`),
+ * tool { toolId, ref, skill? } (an LTI tool launched from the course; it reports a score back).
+ * Any item except an assessment, interview or tool may carry `remediationFor` (a skill id): it is then
  * extra content, kept out of the outline and added to a learner's plan when that skill is flagged.
  * Or `reviewFor`: it stays in the outline and is also added back to a flagged learner's plan, who
  * must complete it again.
@@ -367,6 +369,8 @@ export interface LearnerItem {
     instructions: string | null
     imageUrl: string | null
   } | null
+  /** A connected tool (LTI): which one and the tool-specific reference. */
+  tool: { toolId: string; name: string; ref: string } | null
   status: ProgressStatus
   score: number | null
   attempts: number

@@ -330,3 +330,38 @@ describe('slugify', () => {
     expect(slugify('!!!')).toBe('course')
   })
 })
+
+describe('tool items', () => {
+  const base = { type: 'tool', title: 'Practice', config: { toolId: 'id-interview', ref: ' cna ' } }
+
+  it('keeps a registered tool, its trimmed reference and an optional skill', () => {
+    expect(validateItemInput(base)).toMatchObject({
+      type: 'tool',
+      config: { toolId: 'id-interview', ref: 'cna' },
+    })
+    expect(
+      validateItemInput({ ...base, config: { ...base.config, skill: 'comms', extra: 1 } }).config
+    ).toEqual({ toolId: 'id-interview', ref: 'cna', skill: 'comms' })
+  })
+
+  it('rejects an unregistered tool, a missing or long reference and a bad skill', () => {
+    expect(() => validateItemInput({ ...base, config: { toolId: 'nope', ref: 'x' } })).toThrow(
+      'not connected'
+    )
+    expect(() => validateItemInput({ ...base, config: { toolId: 'id-interview' } })).toThrow(
+      'required'
+    )
+    expect(() =>
+      validateItemInput({ ...base, config: { toolId: 'id-interview', ref: 'x'.repeat(201) } })
+    ).toThrow('too long')
+    expect(() =>
+      validateItemInput({ ...base, config: { ...base.config, skill: 'Bad Skill' } })
+    ).toThrow('Skill is not valid')
+  })
+
+  it('cannot be remediation or review content', () => {
+    expect(
+      validateItemInput({ ...base, config: { ...base.config, remediationFor: 'comms' } }).config
+    ).toEqual({ toolId: 'id-interview', ref: 'cna' })
+  })
+})

@@ -1,0 +1,397 @@
+import {
+  ConflictException,
+  HttpException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  forwardRef,
+} from '@nestjs/common'
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
+import { PrismaService } from '../../prisma/prisma.service'
+import { cohortStatus } from '../../learn/cohort-config'
+import { LearnerService } from '../../learn/learner.service'
+import {
+  AGS_SCOPE_SCORE,
+  CLAIM,
+  DIMENSIONS_FIELD,
+  LEARNER_ROLE,
+  LtiError,
+  b64url,
+  generateKeyPair,
+  jwksKeyResolver,
+  jwksOf,
+  keyPairFromPem,
+  newId,
+  signJwt,
+  verifyJwt,
+} from '../lti-spec'
+import type { KeyPair, ToolRegistration } from '../lti-spec'
+import { apiBase, platformRegistration, registeredTools, toolById } from './lti-platform-config'
+
+const HINT_TTL_S = 60
+const ID_TOKEN_TTL_S = 5 * 60
+const ACCESS_TOKEN_TTL_S = 3600
+const MAX_ASSERTION_LIFETIME_S = 10 * 60
+const MAX_SCORE_CLOCK_AHEAD_MS = 5 * 60_000
+const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/
+const ASSERTION_TYPE = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+
+type Params = Record<string, unknown>
+
+const str = (v: unknown): string => (typeof v === 'string' ? v : '')
+const nowS = (): number => Math.floor(Date.now() / 1000)
+
+/** Every value in the auto-submit form goes through this. */
+export function escapeHtml(v: string): string {
+  return v
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+export function autoSubmitForm(action: string, fields: Record<string, string>): string {
+  const inputs = Object.entries(fields)
+    .map(([k, v]) => `<input type="hidden" name="${escapeHtml(k)}" value="${escapeHtml(v)}">`)
+    .join('')
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Launching</title></head><body onload="document.forms[0].submit()"><form method="POST" action="${escapeHtml(action)}">${inputs}<noscript><button type="submit">Continue</button></noscript></form></body></html>`
+}
+
+/** Remembers values until they expire, so each can be used once. In memory: fine for one POC instance. */
+class SingleUse {
+  private readonly seen = new Map<string, number>()
+  /** True the first time `key` is claimed, false on a replay. */
+  claim(key: string, expiresAtS: number): boolean {
+    const now = nowS()
+    for (const [k, exp] of this.seen) if (exp < now) this.seen.delete(k)
+    if (this.seen.has(key)) return false
+    this.seen.set(key, expiresAtS)
+    return true
+  }
+}
+
+/** LearnDifferently as an LTI 1.3 platform: signs launches, issues tokens, accepts scores. */
+@Injectable()
+export class LtiPlatformService {
+  private readonly keys: KeyPair
+  private readonly hintSecret: Buffer
+  private readonly usedHints = new SingleUse()
+  private readonly usedAssertions = new SingleUse()
+  private readonly toolKeys = new Map<string, ReturnType<typeof jwksKeyResolver>>()
+  /** Injectable for tests. */
+  fetchImpl: typeof fetch = (...args) => fetch(...args)
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => LearnerService)) private readonly learner: LearnerService
+  ) {
+    const pem = process.env.LTI_PLATFORM_PRIVATE_KEY?.replace(/\\n/g, '\n')
+    this.keys = pem ? keyPairFromPem(pem) : generateKeyPair()
+    // LTI_HINT_SECRET when set, else derived from the private key; either way every instance
+    // sharing it accepts the same hints.
+    const secret = process.env.LTI_HINT_SECRET?.trim() || this.keys.privateKeyPem
+    this.hintSecret = createHash('sha256').update(`lti-hint:${secret}`).digest()
+  }
+
+  jwks() {
+    return jwksOf(this.keys)
+  }
+
+  // ── launch ──────────────────────────────────────────────────────────────────
+
+  /** Checks the learner may open this tool item and returns the form that starts the OIDC login. */
+  async startLaunch(userId: string, cohortId: string, itemId: string) {
+    const { tool } = await this.toolItem(cohortId, itemId, userId)
+    const hint = this.signHint({ userId, cohortId, itemId })
+    return {
+      action: tool.loginUrl,
+      fields: {
+        iss: platformRegistration().issuer,
+        login_hint: userId,
+        target_link_uri: tool.launchUrl,
+        lti_message_hint: hint,
+        client_id: tool.clientId,
+        lti_deployment_id: tool.deploymentId,
+      },
+    }
+  }
+
+  /**
+   * The item as a tool item, with its tool and ref. With `userId`, the learner must also be
+   * enrolled and the cohort open (launching); without, the item need only belong to the cohort's course.
+   */
+  private async toolItem(cohortId: string, itemId: string, userId?: string) {
+    const cohort = await this.prisma.cohort.findUnique({
+      where: { id: cohortId },
+      select: { courseId: true, startsAt: true, endsAt: true },
+    })
+    if (!cohort?.courseId) throw new NotFoundException('Item not found')
+    if (userId) {
+      const e = await this.prisma.enrollment.findUnique({
+        where: { cohortId_userId: { cohortId, userId } },
+        select: { status: true },
+      })
+      if (!e || e.status === 'withdrawn') throw new NotFoundException('You are not in this cohort')
+      if (cohortStatus(cohort.startsAt, cohort.endsAt) !== 'running')
+        throw new ConflictException('This cohort is not open.')
+    }
+    const item = await this.prisma.courseItem.findUnique({
+      where: { id: itemId },
+      include: { module: { select: { courseId: true } } },
+    })
+    if (!item || item.module.courseId !== cohort.courseId || item.type !== 'tool')
+      throw new NotFoundException('Item not found')
+    const config = (item.config ?? {}) as { toolId?: unknown; ref?: unknown }
+    const tool = toolById(config.toolId)
+    if (!tool || typeof config.ref !== 'string')
+      throw new ConflictException('This item has no valid tool')
+    return { tool, ref: config.ref }
+  }
+
+  private signHint(claims: { userId: string; cohortId: string; itemId: string }): string {
+    const body = b64url(JSON.stringify({ ...claims, jti: newId(), exp: nowS() + HINT_TTL_S }))
+    const mac = createHmac('sha256', this.hintSecret).update(body).digest('base64url')
+    return `${body}.${mac}`
+  }
+
+  private readHint(hint: string) {
+    const [body, mac, extra] = hint.split('.')
+    if (!body || !mac || extra !== undefined)
+      throw new HttpException('Invalid lti_message_hint', 400)
+    const want = createHmac('sha256', this.hintSecret).update(body).digest()
+    const got = Buffer.from(mac, 'base64url')
+    if (got.length !== want.length || !timingSafeEqual(got, want))
+      throw new HttpException('Invalid lti_message_hint', 400)
+    let claims: {
+      userId?: unknown
+      cohortId?: unknown
+      itemId?: unknown
+      jti?: unknown
+      exp?: unknown
+    }
+    try {
+      claims = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'))
+    } catch {
+      throw new HttpException('Invalid lti_message_hint', 400)
+    }
+    const { userId, cohortId, itemId, jti, exp } = claims
+    if (
+      typeof userId !== 'string' ||
+      typeof cohortId !== 'string' ||
+      typeof itemId !== 'string' ||
+      typeof jti !== 'string' ||
+      typeof exp !== 'number'
+    )
+      throw new HttpException('Invalid lti_message_hint', 400)
+    if (exp < nowS()) throw new HttpException('lti_message_hint expired', 400)
+    return { userId, cohortId, itemId, jti, exp }
+  }
+
+  /** OIDC authentication request from a tool: replies with a form that posts the signed id_token. */
+  async authenticate(p: Params): Promise<string> {
+    if (str(p.scope) !== 'openid') throw new HttpException('scope must be openid', 400)
+    if (str(p.response_type) !== 'id_token')
+      throw new HttpException('response_type must be id_token', 400)
+    if (p.response_mode !== undefined && str(p.response_mode) !== 'form_post')
+      throw new HttpException('response_mode must be form_post', 400)
+    if (p.prompt !== undefined && str(p.prompt) !== 'none')
+      throw new HttpException('prompt must be none', 400)
+    const state = str(p.state)
+    const nonce = str(p.nonce)
+    if (!state || !nonce) throw new HttpException('state and nonce are required', 400)
+
+    const tool = registeredTools().find((t) => t.clientId === str(p.client_id))
+    if (!tool) throw new HttpException('Unknown client_id', 400)
+    if (str(p.redirect_uri) !== tool.launchUrl)
+      throw new HttpException('redirect_uri does not match the registered launch URL', 400)
+
+    const hint = this.readHint(str(p.lti_message_hint))
+    if (str(p.login_hint) !== hint.userId) throw new HttpException('login_hint mismatch', 400)
+    // The learner must still be allowed in, and the hint must belong to a tool item that launches this client; it is good for one use.
+    const { tool: itemTool, ref } = await this.toolItem(hint.cohortId, hint.itemId, hint.userId)
+    if (itemTool.clientId !== tool.clientId)
+      throw new HttpException('This item does not launch that client', 400)
+    if (!this.usedHints.claim(hint.jti, hint.exp))
+      throw new HttpException('lti_message_hint was already used', 400)
+
+    const reg = platformRegistration()
+    const iat = nowS()
+    const lineitem = `${apiBase()}/lti/platform/ags/${hint.cohortId}/lineitems/${hint.itemId}`
+    const idToken = signJwt(
+      {
+        iss: reg.issuer,
+        aud: tool.clientId,
+        sub: hint.userId,
+        iat,
+        exp: iat + ID_TOKEN_TTL_S,
+        nonce,
+        jti: newId(),
+        [CLAIM.messageType]: 'LtiResourceLinkRequest',
+        [CLAIM.version]: '1.3.0',
+        [CLAIM.deploymentId]: tool.deploymentId,
+        [CLAIM.targetLinkUri]: tool.launchUrl,
+        [CLAIM.resourceLink]: { id: hint.itemId },
+        [CLAIM.context]: { id: hint.cohortId },
+        [CLAIM.roles]: [LEARNER_ROLE],
+        [CLAIM.custom]: { ref },
+        [CLAIM.agsEndpoint]: { scope: [AGS_SCOPE_SCORE], lineitem },
+      },
+      this.keys
+    )
+    return autoSubmitForm(tool.launchUrl, { id_token: idToken, state })
+  }
+
+  // ── token ───────────────────────────────────────────────────────────────────
+
+  private oauthError(error: string, description: string, status = 400): never {
+    throw new HttpException({ error, error_description: description }, status)
+  }
+
+  private toolKeyResolver(tool: ToolRegistration) {
+    let resolve = this.toolKeys.get(tool.jwksUrl)
+    if (!resolve) {
+      resolve = jwksKeyResolver(tool.jwksUrl, (...a) => this.fetchImpl(...a))
+      this.toolKeys.set(tool.jwksUrl, resolve)
+    }
+    return resolve
+  }
+
+  /** OAuth2 client_credentials with a signed client assertion; returns a platform-signed access token. */
+  async token(p: Params) {
+    if (str(p.grant_type) !== 'client_credentials')
+      this.oauthError('unsupported_grant_type', 'grant_type must be client_credentials')
+    if (str(p.client_assertion_type) !== ASSERTION_TYPE)
+      this.oauthError('invalid_request', 'client_assertion_type is not supported')
+    const assertion = str(p.client_assertion)
+    const claimed = decodePayload(assertion)
+    const tool = registeredTools().find((t) => t.clientId === str(claimed?.iss))
+    if (!tool) this.oauthError('invalid_client', 'Unknown client', 401)
+    const registered = tool as ToolRegistration
+
+    const reg = platformRegistration()
+    let payload: Record<string, any>
+    try {
+      payload = await verifyJwt(assertion, {
+        issuer: registered.clientId,
+        audience: reg.tokenUrl,
+        keyFor: this.toolKeyResolver(registered),
+      })
+    } catch (err) {
+      if (err instanceof LtiError)
+        this.oauthError('invalid_client', 'Client authentication failed', 401)
+      throw err
+    }
+    if (payload.sub !== registered.clientId)
+      this.oauthError('invalid_client', 'sub must be the client id', 401)
+    if (payload.exp - nowS() > MAX_ASSERTION_LIFETIME_S)
+      this.oauthError('invalid_client', 'client_assertion lifetime is too long', 401)
+    if (typeof payload.jti !== 'string' || !payload.jti)
+      this.oauthError('invalid_client', 'jti is required', 401)
+    // Only a signature-checked jti is remembered, so a stranger cannot burn a tool's ids.
+    if (!this.usedAssertions.claim(`${registered.clientId}:${payload.jti}`, payload.exp + 60))
+      this.oauthError('invalid_client', 'client_assertion was already used', 401)
+
+    const granted = str(p.scope)
+      .split(/\s+/)
+      .filter((s) => s === AGS_SCOPE_SCORE)
+    if (granted.length === 0)
+      this.oauthError('invalid_scope', 'Only the AGS score scope is offered')
+    const scope = granted.join(' ')
+    const iat = nowS()
+    return {
+      access_token: signJwt(
+        {
+          iss: reg.issuer,
+          sub: registered.clientId,
+          aud: registered.clientId,
+          iat,
+          exp: iat + ACCESS_TOKEN_TTL_S,
+          jti: newId(),
+          scope,
+        },
+        this.keys
+      ),
+      token_type: 'Bearer',
+      expires_in: ACCESS_TOKEN_TTL_S,
+      scope,
+    }
+  }
+
+  // ── scores ──────────────────────────────────────────────────────────────────
+
+  /** The registered tool a platform-issued Bearer token with the score scope was issued to. */
+  private async clientOf(authorization: string | undefined): Promise<ToolRegistration> {
+    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7).trim() : ''
+    if (!token) throw new HttpException('Missing Bearer token', 401)
+    const aud = decodePayload(token)?.aud
+    const tool = registeredTools().find((t) => t.clientId === aud)
+    if (!tool) throw new HttpException('Invalid token', 401)
+    let payload: Record<string, any>
+    try {
+      payload = await verifyJwt(token, {
+        issuer: platformRegistration().issuer,
+        audience: tool.clientId,
+        keyFor: async (kid) => (kid === this.keys.kid ? this.keys.publicJwk : undefined),
+      })
+    } catch (err) {
+      if (err instanceof LtiError) throw new HttpException('Invalid token', 401)
+      throw err
+    }
+    if (payload.sub !== tool.clientId) throw new HttpException('Invalid token', 401)
+    if (!str(payload.scope).split(/\s+/).includes(AGS_SCOPE_SCORE))
+      throw new HttpException('Token lacks the score scope', 403)
+    return tool
+  }
+
+  /** An LTI AGS score for a tool item. Returns nothing the tool does not already know. */
+  async receiveScore(
+    authorization: string | undefined,
+    cohortId: string,
+    itemId: string,
+    body: unknown
+  ): Promise<{ recorded: true }> {
+    const client = await this.clientOf(authorization)
+    const { tool } = await this.toolItem(cohortId, itemId)
+    if (tool.toolId !== client.toolId) throw new HttpException('Token is not for this tool', 403)
+
+    const s = (body ?? {}) as Record<string, unknown>
+    if (typeof s.userId !== 'string' || !s.userId)
+      throw new HttpException('userId is required', 400)
+    const given = s.scoreGiven
+    const max = s.scoreMaximum
+    if (
+      typeof given !== 'number' ||
+      typeof max !== 'number' ||
+      !Number.isFinite(given) ||
+      !Number.isFinite(max) ||
+      max <= 0 ||
+      given < 0 ||
+      given > max
+    )
+      throw new HttpException('scoreGiven and scoreMaximum must be numbers, 0 <= given <= max', 422)
+    if (s.activityProgress !== 'Completed' || s.gradingProgress !== 'FullyGraded')
+      throw new HttpException('Only a Completed, FullyGraded score is recorded', 422)
+    const reportedMs = typeof s.timestamp === 'string' ? Date.parse(s.timestamp) : NaN
+    if (!ISO_TIMESTAMP.test(str(s.timestamp)) || Number.isNaN(reportedMs))
+      throw new HttpException('timestamp must be an ISO 8601 date-time', 422)
+    if (reportedMs > Date.now() + MAX_SCORE_CLOCK_AHEAD_MS)
+      throw new HttpException('timestamp is in the future', 422)
+    const dims = s[DIMENSIONS_FIELD]
+    await this.learner.recordToolResult(s.userId, cohortId, itemId, {
+      scorePct: Math.round((given / max) * 100),
+      reportedAt: s.timestamp as string,
+      ...(dims && typeof dims === 'object' ? { dimensions: dims } : {}),
+    })
+    return { recorded: true }
+  }
+}
+
+/** A JWT's claims without checking anything; used only to pick which key and client to verify with. */
+function decodePayload(token: string): Record<string, any> | undefined {
+  try {
+    return JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8'))
+  } catch {
+    return undefined
+  }
+}

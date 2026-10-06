@@ -1,7 +1,7 @@
 import type { LearnerItem, LearnerOutline, PlanAddition, QuizResult } from '@id/types'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Scorm12API, Scorm2004API } from 'scorm-again'
-import { useApiSend, useLoad } from './api'
+import { useApiFetch, useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { score } from './format'
 import { LEARNER_TYPE_LABEL } from './ItemEditor'
@@ -103,6 +103,14 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
         )}
         {item.type === 'external_link' && item.link && (
           <ExternalLinkItem
+            item={item}
+            onChange={setItem}
+            nextHref={nextHref}
+            nextLabel={next ? 'Continue' : 'Back to course'}
+          />
+        )}
+        {item.type === 'tool' && (
+          <ToolItem
             item={item}
             onChange={setItem}
             nextHref={nextHref}
@@ -500,6 +508,127 @@ function Interview(props: {
         .
       </p>
     </>
+  )
+}
+
+const TOOL_WINDOW = 'ld-tool'
+
+/**
+ * Posts the launch fields to the tool in the named window. Values are set as properties, never
+ * as HTML. The window is opened by the click itself (before any request), so browsers that block
+ * pop-ups opened after a wait still allow it.
+ */
+function submitLaunchForm(action: string, fields: Record<string, string>) {
+  const form = document.createElement('form')
+  form.method = 'POST'
+  form.action = action
+  form.target = TOOL_WINDOW
+  form.style.display = 'none'
+  for (const [name, value] of Object.entries(fields)) {
+    const input = document.createElement('input')
+    input.type = 'hidden'
+    input.name = name
+    input.value = value
+    form.appendChild(input)
+  }
+  document.body.appendChild(form)
+  form.submit()
+  form.remove()
+}
+
+/** An activity in a connected tool: the learner opens it in a new tab and the score comes back. */
+function ToolItem(props: {
+  item: LearnerItem
+  onChange: (i: LearnerItem) => void
+  nextHref: string
+  nextLabel: string
+}) {
+  const { item } = props
+  const tool = item.tool
+  const send = useApiSend()
+  const apiFetch = useApiFetch()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function open() {
+    // Open the window now, from the click; the launch form fills it once the API answers.
+    const win = window.open('', TOOL_WINDOW)
+    setBusy(true)
+    setError(null)
+    try {
+      const out = await send<{ action: string; fields: Record<string, string> }>(
+        'POST',
+        `/learn/me/cohorts/${item.cohortId}/items/${item.id}/tool-launch`
+      )
+      submitLaunchForm(out.action, out.fields)
+    } catch (err) {
+      win?.close()
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** Fetches the item again in place, so the page does not blank while the score comes back. */
+  async function refresh() {
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await apiFetch(`/learn/me/cohorts/${item.cohortId}/items/${item.id}`)
+      props.onChange((await res.json()) as LearnerItem)
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!tool) {
+    return (
+      <article className="dash-card dash-lesson">
+        <p>This activity is not available right now. Tell your instructor.</p>
+        <Actions>
+          <a className="dash-btn" href={props.nextHref}>
+            {props.nextLabel}
+          </a>
+        </Actions>
+      </article>
+    )
+  }
+
+  return (
+    <article className="dash-card dash-lesson">
+      <p>
+        This activity runs in <strong>{tool.name}</strong>, which opens in a new tab. Finish it
+        there, then come back and refresh your score.
+      </p>
+      <p className="dash-muted">
+        {item.score !== null ? `Your best score: ${score(item.score)}.` : 'No score yet.'}{' '}
+        {item.attempts > 0 && `Attempts: ${item.attempts}.`}
+      </p>
+      {error && <p className="dash-error">{error}</p>}
+      <Actions>
+        <button
+          type="button"
+          className={item.status === 'completed' ? 'dash-btn-secondary' : 'dash-btn'}
+          onClick={open}
+          disabled={busy || !!item.locked}
+        >
+          {busy ? 'Opening…' : `Open ${tool.name}`}
+        </button>
+        <button type="button" className="dash-btn-secondary" onClick={refresh} disabled={busy}>
+          Refresh my score
+        </button>
+        {item.status === 'completed' && (
+          <>
+            <span className="dash-chip dash-chip-on">Completed</span>
+            <a className="dash-btn" href={props.nextHref}>
+              {props.nextLabel}
+            </a>
+          </>
+        )}
+      </Actions>
+    </article>
   )
 }
 

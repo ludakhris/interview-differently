@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common'
 import { LearnGuard } from '../auth/learn.guard'
+import { LtiPlatformService } from '../lti/platform/lti-platform.service'
 import { LearnerService } from './learner.service'
 
 interface LearnRequest {
@@ -10,7 +11,10 @@ interface LearnRequest {
 @Controller('learn/me')
 @UseGuards(LearnGuard)
 export class LearnerController {
-  constructor(private readonly learner: LearnerService) {}
+  constructor(
+    private readonly learner: LearnerService,
+    private readonly lti: LtiPlatformService
+  ) {}
 
   @Get('learning')
   learning(@Req() req: LearnRequest) {
@@ -92,5 +96,14 @@ export class LearnerController {
     @Body() body: { answers?: unknown }
   ) {
     return this.learner.submitQuiz(req.userId, cohortId, itemId, body?.answers)
+  }
+
+  @Post('cohorts/:cohortId/items/:itemId/tool-launch')
+  toolLaunch(
+    @Req() req: LearnRequest,
+    @Param('cohortId') cohortId: string,
+    @Param('itemId') itemId: string
+  ) {
+    return this.lti.startLaunch(req.userId, cohortId, itemId)
   }
 }

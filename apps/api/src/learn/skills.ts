@@ -89,7 +89,11 @@ export function skillResults(
           const hit = results.map(obj).find((r) => r.id === question.id)
           if (hit && typeof hit.correct === 'boolean') points.push(hit.correct ? 1 : 0)
         }
-      } else if (item.type === 'interview' && config.skill === skill.id && p.score !== null) {
+      } else if (
+        (item.type === 'interview' || item.type === 'tool') &&
+        config.skill === skill.id &&
+        p.score !== null
+      ) {
         points.push(p.score / 100)
       }
     }

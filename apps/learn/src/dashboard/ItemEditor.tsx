@@ -17,6 +17,7 @@ export const LEARNER_TYPE_LABEL: Record<string, string> = {
   scorm: 'Interactive lesson',
   video: 'Video',
   external_link: 'External course',
+  tool: 'Connected tool',
 }
 
 export const TYPE_LABEL: Record<string, string> = {
@@ -27,6 +28,7 @@ export const TYPE_LABEL: Record<string, string> = {
   scorm: 'SCORM package',
   video: 'Video',
   external_link: 'Link to an external course',
+  tool: 'Connected tool',
 }
 
 const emptyQuestion = (): KnowledgeCheckQuestion => ({
@@ -63,6 +65,8 @@ export function ItemEditor(props: {
   const [linkSummary, setLinkSummary] = useState(String(item.config.summary ?? ''))
   const [role, setRole] = useState(String(item.config.role ?? ''))
   const [skill, setSkill] = useState(String(item.config.skill ?? ''))
+  const [toolId, setToolId] = useState(String(item.config.toolId ?? 'id-interview'))
+  const [toolRef, setToolRef] = useState(String(item.config.ref ?? ''))
   // How this item is used in a learner's plan: ordinary content, extra content only flagged
   // learners get, or ordinary content that flagged learners must complete again.
   const [planMode, setPlanMode] = useState<'none' | 'extra' | 'review'>(
@@ -79,7 +83,8 @@ export function ItemEditor(props: {
   )
 
   // An assessment or a practice interview is evidence, so it cannot be remediation content.
-  const canBeRemediation = item.type !== 'assessment' && item.type !== 'interview'
+  const canBeRemediation =
+    item.type !== 'assessment' && item.type !== 'interview' && item.type !== 'tool'
 
   function save() {
     const config: Record<string, unknown> =
@@ -96,15 +101,17 @@ export function ItemEditor(props: {
                   instructions: linkNote,
                   imageKey: item.config.imageKey,
                 }
-              : {
-                  role,
-                  ...(skill ? { skill } : {}),
-                  maxAttempts: Number(attempts) || 1,
-                  questions: questionsText
-                    .split('\n')
-                    .map((q) => q.trim())
-                    .filter(Boolean),
-                }
+              : item.type === 'tool'
+                ? { toolId, ref: toolRef.trim(), ...(skill ? { skill } : {}) }
+                : {
+                    role,
+                    ...(skill ? { skill } : {}),
+                    maxAttempts: Number(attempts) || 1,
+                    questions: questionsText
+                      .split('\n')
+                      .map((q) => q.trim())
+                      .filter(Boolean),
+                  }
     const saved: Record<string, unknown> = { ...(item.type === 'scorm' ? item.config : config) }
     delete saved.remediationFor
     delete saved.reviewFor
@@ -320,9 +327,35 @@ export function ItemEditor(props: {
         </>
       )}
 
-      {item.type === 'interview' && (
+      {item.type === 'tool' && (
+        <>
+          <label className="dash-field">
+            <span>Tool</span>
+            <select value={toolId} onChange={(e) => setToolId(e.target.value)}>
+              <option value="id-interview">Interview Differently interview</option>
+            </select>
+          </label>
+          <label className="dash-field">
+            <span>Reference</span>
+            <input
+              value={toolRef}
+              maxLength={200}
+              placeholder="Interview scenario id"
+              onChange={(e) => setToolRef(e.target.value)}
+            />
+            <small className="dash-muted">
+              Which interview this opens. In Interview Differently, open the interview in the
+              builder: its id is the last part of the page address (.../builder/your-interview-id).
+              Check it before saving, since a wrong id only shows up when a learner opens it. The
+              learner opens the tool in a new tab and the score comes back here.
+            </small>
+          </label>
+        </>
+      )}
+
+      {(item.type === 'interview' || item.type === 'tool') && (
         <SkillSelect
-          label="Skill this interview builds"
+          label={item.type === 'tool' ? 'Skill this builds' : 'Skill this interview builds'}
           skills={props.skills}
           value={skill}
           onChange={setSkill}
