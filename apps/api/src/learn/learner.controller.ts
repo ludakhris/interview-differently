@@ -45,6 +45,25 @@ export class LearnerController {
     return this.learner.completeLesson(req.userId, cohortId, itemId)
   }
 
+  @Post('cohorts/:cohortId/items/:itemId/video')
+  video(
+    @Req() req: LearnRequest,
+    @Param('cohortId') cohortId: string,
+    @Param('itemId') itemId: string,
+    @Body() body: unknown
+  ) {
+    return this.learner.completeVideo(req.userId, cohortId, itemId, body)
+  }
+
+  @Post('cohorts/:cohortId/items/:itemId/external')
+  external(
+    @Req() req: LearnRequest,
+    @Param('cohortId') cohortId: string,
+    @Param('itemId') itemId: string
+  ) {
+    return this.learner.completeExternal(req.userId, cohortId, itemId)
+  }
+
   @Post('cohorts/:cohortId/items/:itemId/scorm')
   scorm(
     @Req() req: LearnRequest,

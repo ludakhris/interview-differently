@@ -21,6 +21,9 @@ import { cohortStatus } from './cohort-config'
 import { gradeQuiz, publicQuestions } from './grade-quiz'
 import { averageScore, DEFAULT_ATTEMPTS, MAX_ANSWER_CHARS } from './interview-scoring'
 import { InterviewScoringService } from './interview-scoring.service'
+import { parseExternalLink } from './external-link'
+import { imageUrl, isImageKey } from './item-image'
+import { isVideoId, VIDEO_COMPLETE_PCT } from './youtube'
 
 const QUIZ_TYPES = ['knowledge_check', 'assessment']
 
@@ -279,6 +282,25 @@ export class LearnerService {
         cmi: (progress?.data ?? null) as Record<string, unknown> | null,
       }
     }
+    let video: LearnerItem['video'] = null
+    if (item.type === 'video' && isVideoId(config.videoId)) {
+      video = {
+        videoId: config.videoId,
+        startSeconds: typeof config.startSeconds === 'number' ? config.startSeconds : null,
+        minWatchedPct: VIDEO_COMPLETE_PCT,
+      }
+    }
+    let link: LearnerItem['link'] = null
+    const parsed = item.type === 'external_link' ? parseExternalLink(config.url) : null
+    if (parsed) {
+      link = {
+        url: parsed.url,
+        host: parsed.host,
+        summary: typeof config.summary === 'string' ? config.summary : null,
+        instructions: typeof config.instructions === 'string' ? config.instructions : null,
+        imageUrl: isImageKey(config.imageKey) ? imageUrl(config.imageKey) : null,
+      }
+    }
     return {
       id: item.id,
       cohortId,
@@ -291,6 +313,8 @@ export class LearnerService {
         : null,
       scorm,
       interview,
+      video,
+      link,
       status: this.statusOf(progress ?? undefined),
       score: progress?.score ?? null,
       attempts: progress?.attempts ?? 0,
@@ -314,6 +338,65 @@ export class LearnerService {
           completedAt: new Date(),
         },
         update: { status: 'completed', attempts: { increment: 1 }, completedAt: new Date() },
+      })
+      await this.completeIfDone(e.id, e.status, e.cohort.course.id)
+    }
+    return this.item(userId, cohortId, itemId)
+  }
+
+  /**
+   * Marks a video done. The player reports how much was watched; it is the
+   * learner's browser saying so, so what is kept is labelled with the evidence:
+   * 'player-verified' (the player counted the watching) or 'self-attested' (the
+   * video would not play and the learner said they watched it).
+   */
+  async completeVideo(
+    userId: string,
+    cohortId: string,
+    itemId: string,
+    body: unknown
+  ): Promise<LearnerItem> {
+    return this.completeAttested(userId, cohortId, itemId, 'video', videoEvidence(body))
+  }
+
+  /** Marks a link to an external course done, on the learner's word. */
+  async completeExternal(userId: string, cohortId: string, itemId: string): Promise<LearnerItem> {
+    return this.completeAttested(userId, cohortId, itemId, 'external_link', {
+      evidence: 'self-attested',
+    })
+  }
+
+  /** Completion without a score, for items whose proof is the evidence label kept with it. */
+  private async completeAttested(
+    userId: string,
+    cohortId: string,
+    itemId: string,
+    type: 'video' | 'external_link',
+    evidence: { evidence: string; watchedPct?: number }
+  ): Promise<LearnerItem> {
+    const { e, item, progress } = await this.itemOf(userId, cohortId, itemId)
+    const locked = this.lockReason(e.cohort.startsAt, e.cohort.endsAt)
+    if (locked) throw new ConflictException(locked)
+    if (item.type !== type)
+      throw new ConflictException(`This item is not a ${type.replace('_', ' ')}`)
+    if (progress?.status !== 'completed') {
+      const data = { ...evidence, attestedAt: new Date().toISOString() }
+      await this.prisma.itemProgress.upsert({
+        where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
+        create: {
+          enrollmentId: e.id,
+          itemId,
+          status: 'completed',
+          attempts: 1,
+          completedAt: new Date(),
+          data,
+        },
+        update: {
+          status: 'completed',
+          attempts: { increment: 1 },
+          completedAt: new Date(),
+          data,
+        },
       })
       await this.completeIfDone(e.id, e.status, e.cohort.course.id)
     }
@@ -490,6 +573,28 @@ export class LearnerService {
       })
     }
   }
+}
+
+/**
+ * What a learner's browser reports for a video. 'player' means the player
+ * counted the watching and must show at least the required share, kept as
+ * 'player-verified'; 'manual' is the fallback for a video that will not play,
+ * kept as 'self-attested'.
+ */
+export function videoEvidence(body: unknown): {
+  evidence: 'player-verified' | 'self-attested'
+  watchedPct: number
+} {
+  const b = (body ?? {}) as { completedBy?: unknown; watchedPct?: unknown }
+  if (b.completedBy !== 'player' && b.completedBy !== 'manual')
+    throw new BadRequestException(
+      'Say whether the video was watched in the player or marked by hand'
+    )
+  const pct = typeof b.watchedPct === 'number' && Number.isFinite(b.watchedPct) ? b.watchedPct : 0
+  const watchedPct = Math.min(100, Math.max(0, Math.round(pct)))
+  if (b.completedBy === 'player' && watchedPct < VIDEO_COMPLETE_PCT)
+    throw new BadRequestException(`Watch at least ${VIDEO_COMPLETE_PCT}% of the video first.`)
+  return { evidence: b.completedBy === 'player' ? 'player-verified' : 'self-attested', watchedPct }
 }
 
 /** The record a learner (and their agency) sees, from item results and the course's thresholds. */

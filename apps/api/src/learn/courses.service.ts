@@ -13,6 +13,7 @@ import type {
 } from './learn-types'
 import { PrismaService } from '../prisma/prisma.service'
 import { slugify, validateCourseFields, validateItemInput } from './course-config'
+import { imageUrl, isImageKey } from './item-image'
 import { LEARN_ROLES, LearnService } from './learn.service'
 
 const MANAGERS = [LEARN_ROLES.agencyAdmin, LEARN_ROLES.providerAdmin]
@@ -105,6 +106,24 @@ export class CoursesService {
       },
     })
     return this.detail(userId, role, mod.courseId)
+  }
+
+  /** Sets or clears the preview image of an external course item. */
+  async setItemImage(userId: string, role: string | undefined, itemId: string, key: string | null) {
+    const item = await this.itemFor(userId, role, itemId)
+    if (item.type !== 'external_link')
+      throw new BadRequestException('Only an external course item has a preview image')
+    const rest = { ...((item.config ?? {}) as Record<string, unknown>) }
+    delete rest.imageKey
+    await this.prisma.courseItem.update({
+      where: { id: itemId },
+      data: { config: (key ? { ...rest, imageKey: key } : rest) as object },
+    })
+    return this.detail(userId, role, item.module.courseId)
+  }
+
+  async assertItemAccess(userId: string, role: string | undefined, itemId: string): Promise<void> {
+    await this.itemFor(userId, role, itemId)
   }
 
   private async itemFor(userId: string, role: string | undefined, itemId: string) {
@@ -389,6 +408,11 @@ function toItemDto(i: {
     title: i.title,
     position: i.position,
     label: i.label,
-    config: (i.config ?? {}) as Record<string, unknown>,
+    config: withImageUrl((i.config ?? {}) as Record<string, unknown>),
   }
+}
+
+/** Authors see where an item's preview image is served from, so the editor can show it. */
+function withImageUrl(config: Record<string, unknown>): Record<string, unknown> {
+  return isImageKey(config.imageKey) ? { ...config, imageUrl: imageUrl(config.imageKey) } : config
 }

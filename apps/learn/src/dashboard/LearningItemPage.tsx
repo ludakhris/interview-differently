@@ -87,6 +87,22 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
             nextLabel={next ? 'Continue' : 'Back to course'}
           />
         )}
+        {item.type === 'video' && item.video && (
+          <VideoPlayer
+            item={item}
+            onChange={setItem}
+            nextHref={nextHref}
+            nextLabel={next ? 'Continue' : 'Back to course'}
+          />
+        )}
+        {item.type === 'external_link' && item.link && (
+          <ExternalLinkItem
+            item={item}
+            onChange={setItem}
+            nextHref={nextHref}
+            nextLabel={next ? 'Continue' : 'Back to course'}
+          />
+        )}
         {item.type === 'interview' && (
           <Interview
             item={item}
@@ -452,6 +468,326 @@ function Interview(props: {
 }
 
 type ScormApi = Scorm12API | Scorm2004API
+
+/**
+ * A course on another site. We cannot see what the learner does there, so they
+ * open it, do the work, and confirm; the record says the completion was
+ * self-reported.
+ */
+const PROVIDERS: [string, string][] = [
+  ['udemy.com', 'Udemy'],
+  ['coursera.org', 'Coursera'],
+  ['khanacademy.org', 'Khan Academy'],
+  ['edx.org', 'edX'],
+  ['learn.microsoft.com', 'Microsoft Learn'],
+  ['skillshop.withgoogle.com', 'Google Skillshop'],
+  ['pluralsight.com', 'Pluralsight'],
+  ['linkedin.com', 'LinkedIn Learning'],
+]
+/** A friendly provider name for a link's host, or the host itself. */
+const providerName = (host: string): string =>
+  PROVIDERS.find(([d]) => host === d || host.endsWith(`.${d}`))?.[1] ?? host
+
+function ExternalLinkItem(props: {
+  item: LearnerItem
+  onChange: (i: LearnerItem) => void
+  nextHref: string
+  nextLabel: string
+}) {
+  const { item } = props
+  const link = item.link as NonNullable<LearnerItem['link']>
+  const provider = providerName(link.host)
+  const send = useApiSend()
+  const [confirmed, setConfirmed] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const done = item.status === 'completed'
+
+  async function finish() {
+    setBusy(true)
+    setError(null)
+    try {
+      props.onChange(
+        await send<LearnerItem>(
+          'POST',
+          `/learn/me/cohorts/${item.cohortId}/items/${item.id}/external`
+        )
+      )
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <article className="dash-card dash-extcard">
+      {link.imageUrl && (
+        <img
+          className="dash-extcard-image"
+          src={link.imageUrl}
+          alt=""
+          width={640}
+          height={360}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+        />
+      )}
+      <div className="dash-extcard-body">
+        <p className="dash-extcard-provider">
+          <span className="dash-chip">{provider}</span>
+          <span className="dash-muted">Opens on {link.host}</span>
+        </p>
+        {link.summary && <p className="dash-extcard-summary">{link.summary}</p>}
+        {link.instructions && (
+          <div className="dash-extcard-task">
+            <h3 className="dash-extcard-h">Your task</h3>
+            <RichText text={link.instructions} />
+          </div>
+        )}
+        <p>
+          <a className="dash-btn" href={link.url} target="_blank" rel="noopener noreferrer">
+            Open on {provider}
+            <span className="dash-visually-hidden"> (opens in a new tab)</span>
+          </a>
+        </p>
+        {error && <p className="dash-error">{error}</p>}
+        <Actions>
+          {!done && (
+            <>
+              <label className="dash-radio">
+                <input
+                  type="checkbox"
+                  checked={confirmed}
+                  disabled={!!item.locked}
+                  onChange={(e) => setConfirmed(e.target.checked)}
+                />
+                I finished this course on {provider}
+              </label>
+              <button
+                type="button"
+                className="dash-btn"
+                onClick={finish}
+                disabled={busy || !confirmed || !!item.locked}
+              >
+                {busy ? 'Saving…' : 'Mark as done'}
+              </button>
+            </>
+          )}
+          {done && (
+            <>
+              <span className="dash-chip dash-chip-on">Done</span>
+              <a className="dash-btn" href={props.nextHref}>
+                {props.nextLabel}
+              </a>
+            </>
+          )}
+        </Actions>
+      </div>
+    </article>
+  )
+}
+
+/** The parts of YouTube's IFrame Player API used here. */
+interface YTPlayer {
+  getCurrentTime(): number
+  getDuration(): number
+  destroy(): void
+}
+interface YTApi {
+  Player: new (
+    el: HTMLElement,
+    opts: {
+      videoId: string
+      host: string
+      playerVars: Record<string, string | number>
+      events: {
+        onStateChange: (e: { data: number }) => void
+        onError: (e: { data: number }) => void
+      }
+    }
+  ) => YTPlayer
+  PlayerState: { PLAYING: number }
+}
+type YTWindow = Window & { YT?: YTApi; onYouTubeIframeAPIReady?: () => void }
+
+let ytApi: Promise<YTApi> | null = null
+/** Loads YouTube's player script once. Rejects if it is blocked or slow. */
+function loadYouTube(): Promise<YTApi> {
+  const w = window as YTWindow
+  if (w.YT?.Player) return Promise.resolve(w.YT)
+  ytApi ??= new Promise<YTApi>((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      ytApi = null
+      reject(new Error('timeout'))
+    }, 10000)
+    w.onYouTubeIframeAPIReady = () => {
+      window.clearTimeout(timer)
+      resolve(w.YT as YTApi)
+    }
+    const tag = document.createElement('script')
+    tag.src = 'https://www.youtube.com/iframe_api'
+    tag.onerror = () => {
+      window.clearTimeout(timer)
+      ytApi = null
+      reject(new Error('blocked'))
+    }
+    document.head.appendChild(tag)
+  })
+  return ytApi
+}
+
+/**
+ * Plays a YouTube video and counts the seconds actually played (skipping ahead
+ * adds nothing). "Mark as done" unlocks at the share the server asks for. If
+ * the video will not play, the learner can mark it done by hand; the record
+ * says which way it was finished.
+ */
+function VideoPlayer(props: {
+  item: LearnerItem
+  onChange: (i: LearnerItem) => void
+  nextHref: string
+  nextLabel: string
+}) {
+  const { item } = props
+  const video = item.video as NonNullable<LearnerItem['video']>
+  const send = useApiSend()
+  const stage = useRef<HTMLDivElement>(null)
+  const watched = useRef(new Set<number>())
+  const [pct, setPct] = useState(0)
+  const [failed, setFailed] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const done = item.status === 'completed'
+
+  useEffect(() => {
+    if (done) return
+    let player: YTPlayer | null = null
+    let timer: number | undefined
+    let cancelled = false
+    const holder = stage.current
+    loadYouTube()
+      .then((YT) => {
+        if (cancelled || !holder) return
+        const el = document.createElement('div')
+        holder.appendChild(el)
+        let last: number | null = null
+        const tick = () => {
+          if (!player) return
+          const now = player.getCurrentTime()
+          const total = player.getDuration()
+          if (last !== null && now >= last && now - last <= 3) {
+            for (let s = Math.floor(last); s <= Math.floor(now); s++) watched.current.add(s)
+          }
+          last = now
+          if (total > 0) setPct(Math.min(100, Math.round((watched.current.size / total) * 100)))
+        }
+        player = new YT.Player(el, {
+          videoId: video.videoId,
+          host: 'https://www.youtube-nocookie.com',
+          playerVars: {
+            rel: 0,
+            origin: window.location.origin,
+            ...(video.startSeconds ? { start: video.startSeconds } : {}),
+          },
+          events: {
+            onStateChange: (e) => {
+              window.clearInterval(timer)
+              last = null
+              if (e.data === YT.PlayerState.PLAYING) timer = window.setInterval(tick, 500)
+              else tick()
+            },
+            onError: () => setFailed(true),
+          },
+        })
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true)
+      })
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+      player?.destroy()
+      if (holder) holder.innerHTML = ''
+    }
+  }, [video.videoId, video.startSeconds, done])
+
+  async function finish(completedBy: 'player' | 'manual') {
+    setBusy(true)
+    setError(null)
+    try {
+      props.onChange(
+        await send<LearnerItem>(
+          'POST',
+          `/learn/me/cohorts/${item.cohortId}/items/${item.id}/video`,
+          { completedBy, watchedPct: pct }
+        )
+      )
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const ready = pct >= video.minWatchedPct
+  return (
+    <article className="dash-card dash-lesson">
+      {!done && !failed && <div className="dash-video-frame" ref={stage} />}
+      {!done && failed && (
+        <p className="dash-banner">
+          This video would not play here. You can{' '}
+          <a
+            href={`https://www.youtube.com/watch?v=${encodeURIComponent(video.videoId)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            open it on YouTube
+          </a>{' '}
+          and mark it done when you have watched it.
+        </p>
+      )}
+      {error && <p className="dash-error">{error}</p>}
+      <Actions>
+        {!done && !failed && (
+          <>
+            <button
+              type="button"
+              className="dash-btn"
+              onClick={() => finish('player')}
+              disabled={busy || !ready || !!item.locked}
+            >
+              {busy ? 'Saving…' : 'Mark as done'}
+            </button>
+            <span className="dash-muted" aria-live="polite">
+              {ready
+                ? 'You have watched enough to finish.'
+                : `Watched ${pct}%. Watch at least ${video.minWatchedPct}% to finish.`}
+            </span>
+          </>
+        )}
+        {!done && failed && (
+          <button
+            type="button"
+            className="dash-btn"
+            onClick={() => finish('manual')}
+            disabled={busy || !!item.locked}
+          >
+            {busy ? 'Saving…' : 'I watched it, mark as done'}
+          </button>
+        )}
+        {done && (
+          <>
+            <span className="dash-chip dash-chip-on">Done</span>
+            <a className="dash-btn" href={props.nextHref}>
+              {props.nextLabel}
+            </a>
+          </>
+        )}
+      </Actions>
+    </article>
+  )
+}
 
 /**
  * Plays a SCORM package. The package runs in an iframe on this same origin and

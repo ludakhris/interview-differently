@@ -12,11 +12,24 @@ import { StatusChip } from './CoursesPage'
 import { ItemEditor, TYPE_LABEL, type ItemDraft } from './ItemEditor'
 import { errorNotice } from './shared'
 
-const ADD_TYPES: { type: CourseItemType; label: string; title: string }[] = [
+/** `ask`: the item needs a link before it can exist, so the author is asked for it first. */
+const ADD_TYPES: { type: CourseItemType; label: string; title: string; ask?: string }[] = [
   { type: 'lesson', label: 'Lesson', title: 'New lesson' },
   { type: 'knowledge_check', label: 'Knowledge check', title: 'New knowledge check' },
   { type: 'assessment', label: 'Assessment', title: 'New assessment' },
   { type: 'interview', label: 'Practice interview', title: 'Practice interview' },
+  {
+    type: 'video',
+    label: 'YouTube video',
+    title: 'New video',
+    ask: 'Paste the YouTube link for this video',
+  },
+  {
+    type: 'external_link',
+    label: 'External course link',
+    title: 'New external course',
+    ask: 'Paste the link to the course (Udemy, Coursera, Khan Academy, edX, Microsoft Learn, Skillshop, Pluralsight or LinkedIn Learning)',
+  },
 ]
 
 /** Lines of a textarea as a list, blanks dropped. */
@@ -147,6 +160,11 @@ function Editor({
   }
 
   async function addItem(moduleId: string, kind: (typeof ADD_TYPES)[number]) {
+    let url: string | null = null
+    if (kind.ask) {
+      url = window.prompt(kind.ask)
+      if (!url?.trim()) return
+    }
     const before = new Set(course.modules.flatMap((m) => m.items.map((i) => i.id)))
     let created: string | null = null
     const ok = await run(async () => {
@@ -154,6 +172,7 @@ function Editor({
         type: kind.type,
         title: kind.title,
         ...(kind.type === 'assessment' ? { label: 'pre' } : {}),
+        ...(url ? { config: { url } } : {}),
       })
       created = next.modules.flatMap((m) => m.items).find((i) => !before.has(i.id))?.id ?? null
       return next
@@ -174,6 +193,20 @@ function Editor({
       return next
     }, 'Package uploaded.')
     if (ok && created) setEditingItem(created)
+  }
+
+  /** Upload (or, with null, remove) the preview image of an external course item. */
+  async function itemImage(id: string, file: File | null) {
+    await run(
+      async () => {
+        if (!file) return send<CourseDetail>('DELETE', `/learn/items/${id}/image`)
+        const form = new FormData()
+        form.append('file', file)
+        const res = await apiFetch(`/learn/items/${id}/image`, { method: 'POST', body: form })
+        return (await res.json()) as CourseDetail
+      },
+      file ? 'Image saved.' : 'Image removed.'
+    )
   }
 
   async function saveItem(id: string, draft: ItemDraft) {
@@ -444,6 +477,7 @@ function Editor({
                         item={it}
                         busy={busy}
                         onSave={(draft) => saveItem(it.id, draft)}
+                        onImage={(file) => itemImage(it.id, file)}
                         onCancel={() => setEditingItem(null)}
                       />
                     )}

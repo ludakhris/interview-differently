@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common'
 import type { ClerkService } from '../auth/clerk.service'
 import type { PrismaService } from '../prisma/prisma.service'
 import type { InterviewScoringService } from './interview-scoring.service'
@@ -8,6 +8,7 @@ import {
   LearnerService,
   scormResult,
   scormSrc,
+  videoEvidence,
 } from './learner.service'
 
 const prisma = {
@@ -337,6 +338,136 @@ describe('scorm', () => {
     prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
     prisma.itemProgress.findUnique.mockResolvedValue(null)
     await expect(service.saveScorm('u1', 'k1', 'i1', {})).rejects.toThrow(ConflictException)
+  })
+})
+
+describe('video', () => {
+  const video = { ...item('video'), config: { provider: 'youtube', videoId: 'dQw4w9WgXcQ' } }
+
+  it('is shown to the learner with the share they must watch, and a bad stored ID is not', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(video)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    expect((await service.item('u1', 'k1', 'i1')).video).toEqual({
+      videoId: 'dQw4w9WgXcQ',
+      startSeconds: null,
+      minWatchedPct: 90,
+    })
+    prisma.courseItem.findUnique.mockResolvedValue({
+      ...video,
+      config: { videoId: '"><script>' },
+    })
+    expect((await service.item('u1', 'k1', 'i1')).video).toBeNull()
+  })
+
+  it('needs the player to show 90% before it counts, but accepts a hand-marked fallback', () => {
+    expect(videoEvidence({ completedBy: 'player', watchedPct: 90 })).toEqual({
+      evidence: 'player-verified',
+      watchedPct: 90,
+    })
+    expect(() => videoEvidence({ completedBy: 'player', watchedPct: 89 })).toThrow(
+      BadRequestException
+    )
+    expect(() => videoEvidence({ completedBy: 'player' })).toThrow(BadRequestException)
+    expect(() => videoEvidence({ completedBy: 'bot', watchedPct: 100 })).toThrow(
+      BadRequestException
+    )
+    expect(videoEvidence({ completedBy: 'manual' })).toEqual({
+      evidence: 'self-attested',
+      watchedPct: 0,
+    })
+    expect(videoEvidence({ completedBy: 'player', watchedPct: 400 }).watchedPct).toBe(100)
+  })
+
+  it('stores how it was completed and counts toward finishing the course', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(video)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    prisma.courseModule.findMany.mockResolvedValue([
+      { id: 'm1', title: 'M', position: 1, items: [{ id: 'i1', type: 'video' }] },
+    ])
+    prisma.itemProgress.count.mockResolvedValue(1)
+    await service.completeVideo('u1', 'k1', 'i1', { completedBy: 'player', watchedPct: 96 })
+    expect(prisma.itemProgress.upsert.mock.calls[0][0].create).toMatchObject({
+      status: 'completed',
+      data: expect.objectContaining({ evidence: 'player-verified', watchedPct: 96 }),
+    })
+    expect(prisma.enrollment.update).toHaveBeenCalledWith({
+      where: { id: 'e1' },
+      data: expect.objectContaining({ status: 'completed' }),
+    })
+  })
+
+  it('does not overwrite evidence once the video is done', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(video)
+    prisma.itemProgress.findUnique.mockResolvedValue({ status: 'completed', score: null })
+    await service.completeVideo('u1', 'k1', 'i1', { completedBy: 'manual' })
+    expect(prisma.itemProgress.upsert).not.toHaveBeenCalled()
+  })
+
+  it('refuses an item that is not a video, and a cohort that is not open', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    await expect(
+      service.completeVideo('u1', 'k1', 'i1', { completedBy: 'manual' })
+    ).rejects.toThrow(ConflictException)
+    prisma.courseItem.findUnique.mockResolvedValue(video)
+    prisma.enrollment.findUnique.mockResolvedValue(enrollment({ endsAt: PAST }))
+    await expect(
+      service.completeVideo('u1', 'k1', 'i1', { completedBy: 'manual' })
+    ).rejects.toThrow(ConflictException)
+  })
+})
+
+describe('external link', () => {
+  const link = {
+    ...item('external_link'),
+    config: {
+      url: 'https://www.udemy.com/course/safe-lifting/',
+      summary: 'Lifting basics',
+      instructions: 'Finish section 2',
+      imageKey: 'learn-images/0b9d1c64-3f0e-4d58-9c11-6a1f2f6a9d10.png',
+    },
+  }
+
+  it('is shown with its host and instructions, and a link off the allowlist is not', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(link)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    expect((await service.item('u1', 'k1', 'i1')).link).toEqual({
+      url: 'https://www.udemy.com/course/safe-lifting/',
+      host: 'www.udemy.com',
+      summary: 'Lifting basics',
+      instructions: 'Finish section 2',
+      imageUrl: expect.stringContaining('learn-images/0b9d1c64-3f0e-4d58-9c11-6a1f2f6a9d10.png'),
+    })
+    prisma.courseItem.findUnique.mockResolvedValue({
+      ...link,
+      config: { url: 'javascript:alert(1)' },
+    })
+    expect((await service.item('u1', 'k1', 'i1')).link).toBeNull()
+  })
+
+  it("is marked done on the learner's word and kept as self-attested", async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(link)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    prisma.courseModule.findMany.mockResolvedValue([
+      { id: 'm1', title: 'M', position: 1, items: [{ id: 'i1', type: 'external_link' }] },
+    ])
+    prisma.itemProgress.count.mockResolvedValue(1)
+    await service.completeExternal('u1', 'k1', 'i1')
+    expect(prisma.itemProgress.upsert.mock.calls[0][0].create).toMatchObject({
+      status: 'completed',
+      data: expect.objectContaining({ evidence: 'self-attested' }),
+    })
+    expect(prisma.enrollment.update).toHaveBeenCalled()
+  })
+
+  it('refuses another item type and does not overwrite a finished item', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    await expect(service.completeExternal('u1', 'k1', 'i1')).rejects.toThrow(ConflictException)
+    prisma.courseItem.findUnique.mockResolvedValue(link)
+    prisma.itemProgress.findUnique.mockResolvedValue({ status: 'completed', score: null })
+    await service.completeExternal('u1', 'k1', 'i1')
+    expect(prisma.itemProgress.upsert).not.toHaveBeenCalled()
   })
 })
 

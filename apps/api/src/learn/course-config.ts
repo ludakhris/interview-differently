@@ -1,5 +1,8 @@
 import { BadRequestException } from '@nestjs/common'
 import { DEFAULT_ATTEMPTS } from './interview-scoring'
+import { ALLOWED_LINK_SITES, parseExternalLink } from './external-link'
+import { isImageKey } from './item-image'
+import { parseYouTube } from './youtube'
 import type { CourseItemType, CourseStatus, ItemInput, KnowledgeCheckQuestion } from './learn-types'
 
 export const ITEM_TYPES: CourseItemType[] = [
@@ -8,6 +11,8 @@ export const ITEM_TYPES: CourseItemType[] = [
   'assessment',
   'interview',
   'scorm',
+  'video',
+  'external_link',
 ]
 
 export interface CourseFields {
@@ -171,6 +176,41 @@ export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'typ
           entry,
           version: config.version,
           files: whole(config.files, 'Files', 0, 100000) ?? 0,
+        },
+      }
+    }
+    case 'video': {
+      const link = text(config.url ?? config.videoId, 'Video link', 300, true) as string
+      const video = parseYouTube(link)
+      if (!video) return bad('Paste a YouTube video link, for example https://youtu.be/…')
+      const startSeconds = whole(config.startSeconds, 'Start time', 0, 86400) ?? video.startSeconds
+      return {
+        type,
+        title,
+        label,
+        config: {
+          provider: 'youtube',
+          videoId: video.videoId,
+          ...(startSeconds ? { startSeconds } : {}),
+        },
+      }
+    }
+    case 'external_link': {
+      const link = parseExternalLink(text(config.url, 'Link', 500, true))
+      if (!link)
+        return bad(`Link to a page on one of: ${ALLOWED_LINK_SITES.join(', ')} (https only)`)
+      const summary = text(config.summary, 'About this course', 600)
+      const instructions = text(config.instructions, 'Instructions', 1000)
+      return {
+        type,
+        title,
+        label,
+        config: {
+          url: link.url,
+          ...(summary ? { summary } : {}),
+          ...(instructions ? { instructions } : {}),
+          // Only a key this app wrote is kept, so a saved item cannot point at someone else's image.
+          ...(isImageKey(config.imageKey) ? { imageKey: config.imageKey } : {}),
         },
       }
     }

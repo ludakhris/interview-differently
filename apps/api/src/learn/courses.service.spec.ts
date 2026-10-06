@@ -97,6 +97,68 @@ describe('CoursesService deletes', () => {
   })
 })
 
+describe('CoursesService preview image', () => {
+  const KEY = 'learn-images/0b9d1c64-3f0e-4d58-9c11-6a1f2f6a9d10.png'
+  const link = (config: object) => ({
+    id: 'i1',
+    type: 'external_link',
+    config,
+    module: { courseId: 'c1' },
+  })
+
+  it('adds the image key to an external course item and keeps its other settings', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(
+      link({ url: 'https://www.udemy.com/course/x/', summary: 'About' })
+    )
+    await service.setItemImage('u', 'agency-admin', 'i1', KEY)
+    expect(prisma.courseItem.update).toHaveBeenCalledWith({
+      where: { id: 'i1' },
+      data: { config: { url: 'https://www.udemy.com/course/x/', summary: 'About', imageKey: KEY } },
+    })
+  })
+
+  it('removes the image key when cleared', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(
+      link({ url: 'https://www.udemy.com/course/x/', imageKey: KEY })
+    )
+    await service.setItemImage('u', 'agency-admin', 'i1', null)
+    expect(prisma.courseItem.update.mock.calls[0][0].data.config).toEqual({
+      url: 'https://www.udemy.com/course/x/',
+    })
+  })
+
+  it('refuses any other kind of item', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue({ ...link({}), type: 'lesson' })
+    await expect(service.setItemImage('u', 'agency-admin', 'i1', KEY)).rejects.toThrow(
+      BadRequestException
+    )
+    expect(prisma.courseItem.update).not.toHaveBeenCalled()
+  })
+
+  it('shows authors where the saved image is served from', async () => {
+    prisma.courseModule.findMany.mockResolvedValue([
+      {
+        id: 'm1',
+        title: 'M',
+        position: 1,
+        items: [
+          {
+            id: 'i1',
+            moduleId: 'm1',
+            type: 'external_link',
+            title: 'Course',
+            position: 1,
+            label: null,
+            config: { url: 'https://www.udemy.com/course/x/', imageKey: KEY },
+          },
+        ],
+      },
+    ])
+    const detail = await service.detail('u', 'agency-admin', 'c1')
+    expect(detail.modules[0].items[0].config.imageUrl).toEqual(expect.stringContaining(KEY))
+  })
+})
+
 describe('CoursesService reorder', () => {
   beforeEach(() => {
     prisma.courseModule.findMany.mockResolvedValue([

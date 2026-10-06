@@ -124,6 +124,73 @@ describe('validateItemInput scorm', () => {
   })
 })
 
+describe('validateItemInput video', () => {
+  const ID = 'dQw4w9WgXcQ'
+  const item = (config: unknown) => validateItemInput({ type: 'video', title: 'Intro', config })
+
+  it('keeps only the video ID, whatever link was pasted', () => {
+    expect(item({ url: `https://www.youtube.com/watch?v=${ID}&list=x` }).config).toEqual({
+      provider: 'youtube',
+      videoId: ID,
+    })
+  })
+
+  it('takes a start time from the link or from the field, and the field wins', () => {
+    expect(item({ url: `https://youtu.be/${ID}?t=30` }).config).toMatchObject({ startSeconds: 30 })
+    expect(item({ url: `https://youtu.be/${ID}?t=30`, startSeconds: 45 }).config).toMatchObject({
+      startSeconds: 45,
+    })
+  })
+
+  it('accepts the stored form again, so an existing item can be re-saved', () => {
+    const saved = item({ url: `https://youtu.be/${ID}?t=30` }).config
+    expect(item(saved).config).toEqual(saved)
+  })
+
+  it('rejects other sites, a missing link and an out-of-range start time', () => {
+    expect(() => item({ url: 'https://vimeo.com/123' })).toThrow(BadRequestException)
+    expect(() => item({})).toThrow(BadRequestException)
+    expect(() => item({ url: `https://youtu.be/${ID}`, startSeconds: -1 })).toThrow(
+      BadRequestException
+    )
+  })
+})
+
+describe('validateItemInput external_link', () => {
+  const item = (config: unknown) =>
+    validateItemInput({ type: 'external_link', title: 'Course', config })
+
+  it('keeps a rebuilt link and trimmed instructions', () => {
+    expect(
+      item({ url: ' https://www.udemy.com/course/x/#top ', instructions: ' Do section 1 ' }).config
+    ).toEqual({ url: 'https://www.udemy.com/course/x/', instructions: 'Do section 1' })
+    expect(item({ url: 'https://www.coursera.org/learn/y' }).config).toEqual({
+      url: 'https://www.coursera.org/learn/y',
+    })
+  })
+
+  it('keeps the summary, and an image key only if this app wrote it', () => {
+    const KEY = 'learn-images/0b9d1c64-3f0e-4d58-9c11-6a1f2f6a9d10.png'
+    expect(
+      item({ url: 'https://www.udemy.com/course/x/', summary: ' Lifting basics ', imageKey: KEY })
+        .config
+    ).toEqual({ url: 'https://www.udemy.com/course/x/', summary: 'Lifting basics', imageKey: KEY })
+    expect(
+      item({ url: 'https://www.udemy.com/course/x/', imageKey: 'https://evil.example/pixel.png' })
+        .config
+    ).toEqual({ url: 'https://www.udemy.com/course/x/' })
+    expect(() =>
+      item({ url: 'https://www.udemy.com/course/x/', summary: 'x'.repeat(601) })
+    ).toThrow(BadRequestException)
+  })
+
+  it('rejects other sites, other schemes and a missing link', () => {
+    expect(() => item({ url: 'https://example.com/x' })).toThrow(BadRequestException)
+    expect(() => item({ url: 'javascript:alert(1)' })).toThrow(BadRequestException)
+    expect(() => item({})).toThrow(BadRequestException)
+  })
+})
+
 describe('interview attempts and course lists', () => {
   const base = { type: 'interview', title: 'P', config: { role: 'x', questions: ['Q'] } }
   it('lets the author set 1 to 5 attempts, default 1', () => {

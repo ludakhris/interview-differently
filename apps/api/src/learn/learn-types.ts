@@ -100,7 +100,14 @@ export interface LearnWorkspace {
 
 // ── Course setup (#46) ──────────────────────────────────────────────────────
 
-export type CourseItemType = 'lesson' | 'knowledge_check' | 'assessment' | 'interview' | 'scorm'
+export type CourseItemType =
+  | 'lesson'
+  | 'knowledge_check'
+  | 'assessment'
+  | 'interview'
+  | 'scorm'
+  | 'video'
+  | 'external_link'
 export type CourseStatus = 'draft' | 'published'
 
 export interface KnowledgeCheckQuestion {
@@ -111,7 +118,9 @@ export interface KnowledgeCheckQuestion {
 
 /**
  * `config` by type: lesson { body }, knowledge_check and assessment { questions },
- * interview { role, questions }, scorm { packageId, entry, version, files }.
+ * interview { role, questions }, scorm { packageId, entry, version, files },
+ * video { provider: 'youtube', videoId, startSeconds? },
+ * external_link { url, summary?, instructions?, imageKey? } (authors also receive `imageUrl`).
  */
 export interface CourseItemDto {
   id: string
@@ -310,6 +319,16 @@ export interface LearnerItem {
   /** A SCORM package: where to load it and what the learner saved last time. */
   scorm: { src: string; version: '1.2' | '2004'; cmi: Record<string, unknown> | null } | null
   interview: LearnerInterview | null
+  /** A YouTube video: what to play and the share of it that must be watched to finish. */
+  video: { videoId: string; startSeconds: number | null; minWatchedPct: number } | null
+  /** An external course or page: its preview card, where to send the learner and what to do there. */
+  link: {
+    url: string
+    host: string
+    summary: string | null
+    instructions: string | null
+    imageUrl: string | null
+  } | null
   status: ProgressStatus
   score: number | null
   attempts: number

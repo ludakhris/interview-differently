@@ -15,6 +15,8 @@ export const LEARNER_TYPE_LABEL: Record<string, string> = {
   assessment: 'Assessment',
   interview: 'Practice interview',
   scorm: 'Interactive lesson',
+  video: 'Video',
+  external_link: 'External course',
 }
 
 export const TYPE_LABEL: Record<string, string> = {
@@ -23,6 +25,8 @@ export const TYPE_LABEL: Record<string, string> = {
   assessment: 'Assessment',
   interview: 'Practice interview',
   scorm: 'SCORM package',
+  video: 'Video',
+  external_link: 'Link to an external course',
 }
 
 const emptyQuestion = (): KnowledgeCheckQuestion => ({
@@ -37,6 +41,8 @@ export function ItemEditor(props: {
   busy: boolean
   onSave: (draft: ItemDraft) => void
   onCancel: () => void
+  /** Upload a preview image, or remove it with null. Only external course items use it. */
+  onImage?: (file: File | null) => void
 }) {
   const { item } = props
   const [title, setTitle] = useState(item.title)
@@ -45,6 +51,14 @@ export function ItemEditor(props: {
   const [questions, setQuestions] = useState<KnowledgeCheckQuestion[]>(
     Array.isArray(item.config.questions) ? (item.config.questions as KnowledgeCheckQuestion[]) : []
   )
+  const [videoUrl, setVideoUrl] = useState(
+    typeof item.config.videoId === 'string'
+      ? `https://youtu.be/${item.config.videoId}${item.config.startSeconds ? `?t=${item.config.startSeconds}` : ''}`
+      : ''
+  )
+  const [linkUrl, setLinkUrl] = useState(String(item.config.url ?? ''))
+  const [linkNote, setLinkNote] = useState(String(item.config.instructions ?? ''))
+  const [linkSummary, setLinkSummary] = useState(String(item.config.summary ?? ''))
   const [role, setRole] = useState(String(item.config.role ?? ''))
   const [attempts, setAttempts] = useState(String(item.config.maxAttempts ?? 1))
   const [questionsText, setQuestionsText] = useState(
@@ -59,14 +73,23 @@ export function ItemEditor(props: {
         ? { body }
         : item.type === 'knowledge_check' || item.type === 'assessment'
           ? { questions }
-          : {
-              role,
-              maxAttempts: Number(attempts) || 1,
-              questions: questionsText
-                .split('\n')
-                .map((q) => q.trim())
-                .filter(Boolean),
-            }
+          : item.type === 'video'
+            ? { url: videoUrl }
+            : item.type === 'external_link'
+              ? {
+                  url: linkUrl,
+                  summary: linkSummary,
+                  instructions: linkNote,
+                  imageKey: item.config.imageKey,
+                }
+              : {
+                  role,
+                  maxAttempts: Number(attempts) || 1,
+                  questions: questionsText
+                    .split('\n')
+                    .map((q) => q.trim())
+                    .filter(Boolean),
+                }
     props.onSave({
       type: item.type,
       title,
@@ -112,6 +135,119 @@ export function ItemEditor(props: {
               After the course (post-assessment)
             </label>
           </fieldset>
+        </>
+      )}
+
+      {item.type === 'video' && (
+        <label className="dash-field">
+          <span>YouTube link</span>
+          <input
+            value={videoUrl}
+            maxLength={300}
+            placeholder="https://www.youtube.com/watch?v=…"
+            onChange={(e) => setVideoUrl(e.target.value)}
+          />
+          <small className="dash-muted">
+            Paste the link from YouTube. Add ?t=90 to start at 1:30. Learners finish the video by
+            watching at least 90% of it. If the video is removed or will not embed, they can mark it
+            done by hand and the record says so.
+          </small>
+          {typeof item.config.videoId === 'string' && (
+            <img
+              className="dash-video-thumb"
+              src={`https://i.ytimg.com/vi/${encodeURIComponent(item.config.videoId)}/hqdefault.jpg`}
+              alt="The saved video"
+              width={240}
+              height={180}
+            />
+          )}
+        </label>
+      )}
+
+      {item.type === 'external_link' && (
+        <>
+          <label className="dash-field">
+            <span>Link</span>
+            <input
+              value={linkUrl}
+              maxLength={500}
+              placeholder="https://www.udemy.com/course/…"
+              onChange={(e) => setLinkUrl(e.target.value)}
+            />
+            <small className="dash-muted">
+              Opens on the provider's own site. Allowed: Udemy, Coursera, Khan Academy, edX,
+              Microsoft Learn, Google Skillshop, Pluralsight and LinkedIn Learning.
+            </small>
+          </label>
+          <label className="dash-field">
+            <span>About this course</span>
+            <textarea
+              rows={3}
+              value={linkSummary}
+              maxLength={600}
+              onChange={(e) => setLinkSummary(e.target.value)}
+              placeholder="A sentence or two on what the course covers and why it is in this program."
+            />
+            <small className="dash-muted">Shown on the course card the learner sees.</small>
+          </label>
+          <div className="dash-field">
+            <span>Preview image (optional)</span>
+            {typeof item.config.imageUrl === 'string' && (
+              <img
+                className="dash-extcard-image"
+                src={item.config.imageUrl}
+                alt="Preview of the card image"
+                width={320}
+                height={180}
+              />
+            )}
+            <div className="dash-form-actions">
+              <label
+                className={
+                  props.busy ? 'dash-btn-quiet dash-file-disabled' : 'dash-btn-quiet dash-file'
+                }
+              >
+                {item.config.imageUrl ? 'Replace image' : 'Upload image'}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  disabled={props.busy}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    e.target.value = ''
+                    if (f) props.onImage?.(f)
+                  }}
+                />
+              </label>
+              {item.config.imageUrl ? (
+                <button
+                  type="button"
+                  className="dash-btn-quiet"
+                  disabled={props.busy}
+                  onClick={() => props.onImage?.(null)}
+                >
+                  Remove image
+                </button>
+              ) : null}
+            </div>
+            <small className="dash-muted">
+              PNG, JPEG or WebP, up to 2 MB, best at 16:9. A screenshot of the course page works.
+            </small>
+          </div>
+          <label className="dash-field">
+            <span>What the learner should do there</span>
+            <textarea
+              rows={3}
+              value={linkNote}
+              maxLength={1000}
+              onChange={(e) => setLinkNote(e.target.value)}
+              placeholder="Complete sections 1 and 2, then come back and mark this done."
+            />
+            <small className="dash-muted">
+              We cannot see what happens on the other site. The learner confirms they finished, and
+              the record says it was self-reported.
+            </small>
+          </label>
         </>
       )}
 

@@ -4,6 +4,8 @@ import { StorageModule } from '../storage/storage.module'
 import { CoursesController } from './courses.controller'
 import { CoursesService } from './courses.service'
 import { InterviewScoringService } from './interview-scoring.service'
+import { ItemImageController } from './item-image.controller'
+import { ItemImageService } from './item-image.service'
 import { LearnCohortsController } from './learn-cohorts.controller'
 import { LearnCohortsService } from './learn-cohorts.service'
 import { LearnController } from './learn.controller'
@@ -24,6 +26,7 @@ import { ScormService } from './scorm.service'
     LearnerController,
     ScormController,
     ScormFilesController,
+    ItemImageController,
     PublicCatalogController,
   ],
   providers: [
@@ -32,6 +35,7 @@ import { ScormService } from './scorm.service'
     LearnCohortsService,
     LearnerService,
     ScormService,
+    ItemImageService,
     PublicCatalogService,
     InterviewScoringService,
   ],
