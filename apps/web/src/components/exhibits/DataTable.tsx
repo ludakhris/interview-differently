@@ -43,11 +43,11 @@ export function DataTable({ exhibit }: Props) {
     >
       <table className="w-full text-[14px]">
         <thead>
-          <tr className="border-b border-white/10 bg-white/5">
+          <tr className="border-b border-edge/10 bg-ink/5">
             {exhibit.columns.map((col) => (
               <th
                 key={col.key}
-                className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white/45 ${alignClass(col)} ${col.sortable ? 'cursor-pointer hover:text-white/80 select-none' : ''}`}
+                className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-ink/45 ${alignClass(col)} ${col.sortable ? 'cursor-pointer hover:text-ink/80 select-none' : ''}`}
                 onClick={() => col.sortable && toggleSort(col.key, sort, setSort)}
                 aria-sort={sortAriaLabel(col.key, sort)}
               >
@@ -61,7 +61,7 @@ export function DataTable({ exhibit }: Props) {
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className="border-b border-white/5 last:border-0 hover:bg-white/2">
+            <tr key={i} className="border-b border-edge/5 last:border-0 hover:bg-ink/2">
               {exhibit.columns.map((col) => {
                 const cell = row[col.key]
                 const display = formatValue(cell, col)
@@ -70,7 +70,7 @@ export function DataTable({ exhibit }: Props) {
                 return (
                   <td
                     key={col.key}
-                    className={`px-3 py-2 ${alignClass(col)} ${emphasis ? 'font-semibold' : ''} ${cellTone ? toneText[cellTone] : 'text-white/85'}`}
+                    className={`px-3 py-2 ${alignClass(col)} ${emphasis ? 'font-semibold' : ''} ${cellTone ? toneText[cellTone] : 'text-ink/85'}`}
                   >
                     {display}
                   </td>
@@ -79,7 +79,7 @@ export function DataTable({ exhibit }: Props) {
             </tr>
           ))}
           {exhibit.totalRow && (
-            <tr className="bg-white/5 border-t-2 border-white/15">
+            <tr className="bg-ink/5 border-t-2 border-edge/15">
               {exhibit.columns.map((col) => {
                 const cell = exhibit.totalRow![col.key]
                 const display = formatValue(cell, col)
@@ -87,7 +87,7 @@ export function DataTable({ exhibit }: Props) {
                 return (
                   <td
                     key={col.key}
-                    className={`px-3 py-2 font-bold ${alignClass(col)} ${cellTone ? toneText[cellTone] : 'text-[#f5f3ee]'}`}
+                    className={`px-3 py-2 font-bold ${alignClass(col)} ${cellTone ? toneText[cellTone] : 'text-fg'}`}
                   >
                     {display}
                   </td>
@@ -153,9 +153,9 @@ function toggleSort(key: string, current: SortState, setSort: (s: SortState) => 
 
 function SortIndicator({ state, columnKey }: { state: SortState; columnKey: string }) {
   if (!state || state.key !== columnKey) {
-    return <span className="text-white/25">↕</span>
+    return <span className="text-ink/25">↕</span>
   }
-  return <span className="text-white/80">{state.dir === 'desc' ? '↓' : '↑'}</span>
+  return <span className="text-ink/80">{state.dir === 'desc' ? '↓' : '↑'}</span>
 }
 
 function sortAriaLabel(columnKey: string, state: SortState): 'ascending' | 'descending' | 'none' {

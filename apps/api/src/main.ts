@@ -10,6 +10,11 @@ async function bootstrap() {
   // few thousand INSERT rows is already ~200kb.
   app.useBodyParser('json', { limit: '5mb' })
   app.enableCors({ origin: corsOrigin(process.env.FRONTEND_URL) })
+  // Behind a proxy (Railway) set TRUST_PROXY=1 so req.ip is the client, which the LTI rate limits key on.
+  if (process.env.TRUST_PROXY) {
+    const hops = Number(process.env.TRUST_PROXY)
+    app.set('trust proxy', Number.isInteger(hops) ? hops : true)
+  }
   app.setGlobalPrefix('api')
   const port = process.env.PORT ?? 3000
   await app.listen(port)

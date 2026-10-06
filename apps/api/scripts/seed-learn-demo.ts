@@ -27,6 +27,8 @@ import {
   rolesFor,
   summaryFor,
 } from './seed-learn-content'
+import { planItem, toolConfig } from './demo-assessment-bank'
+import { resolveLearnOrigin } from '../src/lti/lti-env'
 
 const DEV_HOSTS = ['localhost', '127.0.0.1', 'zephyr.proxy.rlwy.net']
 const TODAY = new Date('2026-10-04T12:00:00Z')
@@ -403,11 +405,18 @@ function guard(allowHost: string | undefined): string {
 // ── remove ──────────────────────────────────────────────────────────────────
 
 async function removeDemo(prisma: PrismaClient) {
+  // Assessment banks restrict deleting their owner institution, so they go first: the seed's own
+  // (demo- ids) and any a migration created for a demo institution (ld-<item id> slugs).
+  const banks = await prisma.assessment.deleteMany({
+    where: { OR: [{ id: { startsWith: 'demo-' } }, { institutionId: { startsWith: 'demo-' } }] },
+  })
+  // Scenarios owned by a demo institution (for example from an earlier migration) also restrict it.
+  await prisma.scenario.deleteMany({ where: { institutionId: { startsWith: 'demo-' } } })
   // Institution deletes cascade to cohorts, courses, enrollments and progress.
   const inst = await prisma.institution.deleteMany({ where: { id: { startsWith: 'demo-' } } })
   const users = await prisma.user.deleteMany({ where: { id: { startsWith: 'demo-learner-' } } })
   console.log(
-    `Removed ${inst.count} institutions and ${users.count} demo learners (with their data).`
+    `Removed ${inst.count} institutions, ${banks.count} assessments and ${users.count} demo learners (with their data).`
   )
 }
 
@@ -440,12 +449,19 @@ function makeLearners(
 }
 
 async function load(prisma: PrismaClient) {
+  // Brand tokens v1 (src/lti/lti-brand.ts): sent to tools in the LTI launch, so the logo must be an absolute URL.
+  const learnOrigin = resolveLearnOrigin(process.env.LTI_LEARN_URL, dbHost())
   const brand = {
+    name: 'Delaware Department of Labor',
+    logoUrl: `${learnOrigin}/tenants/delaware/dol-logo.png`,
+    scheme: 'light',
     primary: '#05405c',
     accent: '#d76f0f',
-    sky: '#daf2fd',
-    logoUrl: '/tenants/delaware/dol-logo.png',
-    name: 'Delaware Department of Labor',
+    surface: '#ffffff',
+    surfaceAlt: '#f2f2f2',
+    text: '#353535',
+    textSoft: '#4a4a4a',
+    border: '#e5e5e5',
   }
   await prisma.institution.create({
     data: {
@@ -497,6 +513,29 @@ async function load(prisma: PrismaClient) {
       },
     })
 
+    // One assessment bank per program, shared by its pre and post items: the same questions as the
+    // knowledge checks draw on, written as an Interview Differently assessment. Owned by the provider.
+    const bankSlug = `demo-assessment-${p.key}`
+    const bank = planItem(
+      {
+        id: bankSlug,
+        title: `${p.program} assessment`,
+        config: { questions: questionsFor(p.key) },
+      },
+      bankSlug
+    )
+    if (!bank.ok) throw new Error(`Demo assessment for ${p.key}: ${bank.reason}`)
+    await prisma.assessment.create({
+      data: {
+        id: bankSlug,
+        slug: bankSlug,
+        title: bank.parsed.title,
+        institutionId: providerId,
+        sourceMarkdown: bank.markdown,
+        sections: bank.parsed.sections as unknown as object[],
+      },
+    })
+
     // Course: pre-assessment, five lessons with knowledge checks, interview, post-assessment.
     // The two lessons that have a check are skills: a missed check adds extra content and sends
     // the lesson back for review (adaptive remediation, #56).
@@ -530,10 +569,10 @@ async function load(prisma: PrismaClient) {
         title: 'Start here',
         items: [
           {
-            type: 'assessment',
+            type: 'tool',
             title: 'Pre-assessment',
             label: 'pre',
-            config: { questions: questionsFor(p.key) },
+            config: toolConfig(bankSlug),
           },
         ],
       },
@@ -600,10 +639,10 @@ async function load(prisma: PrismaClient) {
         title: 'Finish',
         items: [
           {
-            type: 'assessment',
+            type: 'tool',
             title: 'Post-assessment',
             label: 'post',
-            config: { questions: questionsFor(p.key) },
+            config: toolConfig(bankSlug),
           },
         ],
       },
@@ -883,6 +922,94 @@ async function load(prisma: PrismaClient) {
       counts.progress += progress.length
     }
   }
+
+  // A hidden "Practice labs" course for showing Interview Differently from LearnDifferently: a
+  // decision simulation, a SQL simulation, a voice interview and a timed assessment, all launched
+  // through the connected-tool item. It is a draft, so the public catalog does not list it, but a
+  // learner can still join with its code (de-practice-labs). No synthetic learners, so none of the
+  // eight programs' numbers change.
+  const labsProvider = 'demo-inst-lantern-hill'
+  const labsCourse = 'demo-course-practice-labs'
+  await prisma.course.create({
+    data: {
+      id: labsCourse,
+      providerId: labsProvider,
+      slug: 'practice-labs',
+      title: 'Practice labs: Interview Differently',
+      summary: 'Try the Interview Differently simulations and assessment from inside a course.',
+      status: 'draft',
+      targetScore: 75,
+    },
+  })
+  const labs = [
+    {
+      title: 'Simulations',
+      items: [
+        {
+          type: 'tool',
+          title: 'Incident response simulation',
+          label: null,
+          config: { toolId: 'id-interview', ref: 'ops-001' },
+        },
+        {
+          type: 'tool',
+          title: 'Data analysis simulation (SQL)',
+          label: null,
+          config: { toolId: 'id-interview', ref: 'data-001' },
+        },
+        {
+          type: 'tool',
+          title: 'Incident response interview (voice)',
+          label: null,
+          config: { toolId: 'id-interview', ref: 'ops-001-immersive', countsAsInterview: true },
+        },
+      ],
+    },
+    {
+      title: 'Assessment',
+      items: [
+        {
+          type: 'tool',
+          title: 'IT Support skills check (timed, two attempts)',
+          label: 'pre',
+          config: {
+            ...toolConfig('demo-assessment-lantern-hill'),
+            maxAttempts: 2,
+            timeLimitMinutes: 15,
+          },
+        },
+      ],
+    },
+  ]
+  for (const [mi, m] of labs.entries()) {
+    const moduleId = `demo-module-practice-labs-${mi + 1}`
+    await prisma.courseModule.create({
+      data: { id: moduleId, courseId: labsCourse, title: m.title, position: mi + 1 },
+    })
+    await prisma.courseItem.createMany({
+      data: m.items.map((it, ii) => ({
+        id: `demo-item-practice-labs-${mi + 1}-${ii + 1}`,
+        moduleId,
+        type: it.type,
+        title: it.title,
+        position: ii + 1,
+        label: it.label,
+        config: it.config as object,
+      })),
+    })
+  }
+  await prisma.cohort.create({
+    data: {
+      id: 'demo-cohort-practice-labs-a',
+      institutionId: labsProvider,
+      courseId: labsCourse,
+      name: 'Practice labs',
+      joinKey: 'de-practice-labs',
+      startsAt: new Date(TODAY.getTime() - WEEK),
+      endsAt: new Date(TODAY.getTime() + 90 * DAY),
+      maxLearners: 50,
+    },
+  })
 
   console.log(
     `Loaded demo tenant: ${counts.courses} courses, ${counts.cohorts} cohorts, ` +

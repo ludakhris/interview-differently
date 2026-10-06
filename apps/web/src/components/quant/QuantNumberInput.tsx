@@ -41,16 +41,16 @@ export function QuantNumberInput({
       {label && (
         <label
           htmlFor={id}
-          className="block text-[11px] font-semibold uppercase tracking-widest text-white/55 mb-1"
+          className="block text-[11px] font-semibold uppercase tracking-widest text-ink/55 mb-1"
         >
           {label}
         </label>
       )}
-      {prompt && <p className="text-[12px] text-white/55 mb-2 leading-snug">{prompt}</p>}
+      {prompt && <p className="text-[12px] text-ink/55 mb-2 leading-snug">{prompt}</p>}
       <div className="relative flex items-baseline">
         {isCurrency && (
           <span
-            className={`absolute left-3 text-white/55 ${size === 'lg' ? 'text-[20px]' : 'text-[14px]'}`}
+            className={`absolute left-3 text-ink/55 ${size === 'lg' ? 'text-[20px]' : 'text-[14px]'}`}
           >
             $
           </span>
@@ -75,26 +75,26 @@ export function QuantNumberInput({
           }}
           placeholder={placeholder}
           className={`
-            w-full bg-[#0a0a0a] border border-white/15 rounded-lg
+            w-full bg-surface border border-edge/15 rounded-lg
             ${isCurrency ? 'pl-7' : 'pl-3'}
             ${unit ? 'pr-14' : 'pr-3'}
             ${inputSize}
-            font-display font-semibold text-[#f5f3ee]
-            placeholder:text-white/25 placeholder:font-normal
-            focus:outline-none focus:border-[#4ea58a] focus:ring-1 focus:ring-[#4ea58a]/40
+            font-display font-semibold text-fg
+            placeholder:text-ink/25 placeholder:font-normal
+            focus:outline-none focus:border-jade focus:ring-1 focus:ring-jade/40
             disabled:opacity-60 disabled:cursor-not-allowed
             tabular-nums
           `}
         />
         {unit && (
           <span
-            className={`absolute right-3 text-white/50 ${size === 'lg' ? 'text-[14px]' : 'text-[12px]'} pointer-events-none`}
+            className={`absolute right-3 text-ink/50 ${size === 'lg' ? 'text-[14px]' : 'text-[12px]'} pointer-events-none`}
           >
             {unit}
           </span>
         )}
       </div>
-      {hint && <p className="mt-1.5 text-[11px] text-white/40">{hint}</p>}
+      {hint && <p className="mt-1.5 text-[11px] text-ink/40">{hint}</p>}
     </div>
   )
 }

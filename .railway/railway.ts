@@ -71,6 +71,14 @@ export default defineRailway((ctx) => {
       DATABASE_URL: preserve(),
       DID_API_KEY: preserve(),
       FRONTEND_URL: preserve(),
+      LTI_API_BASE: preserve(),
+      LTI_HINT_SECRET: preserve(),
+      LTI_ID_WEB_URL: preserve(),
+      LTI_LEARN_URL: preserve(),
+      LTI_PLATFORM_PRIVATE_KEY: preserve(),
+      LTI_RETURN_URL: preserve(),
+      LTI_TOOL_PRIVATE_KEY: preserve(),
+      LTI_TOOL_SECRET: preserve(),
       LEARN_CLERK_SECRET_KEY: preserve(),
       NODE_ENV: preserve(),
       OPENAI_API_KEY: preserve(),
@@ -82,6 +90,7 @@ export default defineRailway((ctx) => {
       R2_SECRET_ACCESS_KEY: preserve(),
       REDIS_URL: preserve(),
       RESEND_API_KEY: preserve(),
+      TRUST_PROXY: preserve(),
     },
   })
 

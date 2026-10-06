@@ -3,6 +3,8 @@ import { SignIn, SignUp } from '@clerk/clerk-react'
 import { LandingPage } from '@/pages/LandingPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { BriefingPage } from '@/pages/BriefingPage'
+import { LtiPlayPage } from '@/pages/LtiPlayPage'
+import { LtiAssessmentPage } from '@/pages/LtiAssessmentPage'
 import { SimulationPage } from '@/pages/SimulationPage'
 import { FeedbackPage } from '@/pages/FeedbackPage'
 import { ImmersiveSimulationPage } from '@/pages/ImmersiveSimulationPage'
@@ -80,6 +82,9 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/scenario/:scenarioId/briefing" element={<BriefingPage />} />
         <Route path="/scenario/:scenarioId/play" element={<SimulationPage />} />
+        {/* LTI launch from LearnDifferently — token in the URL fragment, no Clerk */}
+        <Route path="/lti/play/:scenarioId" element={<LtiPlayPage />} />
+        <Route path="/lti/assessment/:deliveryId" element={<LtiAssessmentPage />} />
         <Route path="/request-scenario" element={<RequestScenarioPage />} />
         <Route path="/a/:code" element={<InvitePage />} />
 

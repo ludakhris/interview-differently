@@ -7,7 +7,7 @@ interface Props {
 
 export function NarrationPlayer({ isPlaying, isMuted, onToggleMute, onReplay }: Props) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#111111] border border-white/10">
+    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-surface-alt border border-edge/10">
       {/* Animated bars — visible only while playing */}
       <div className="flex items-end gap-[3px] h-5 w-8">
         {[0, 1, 2, 3].map((i) => (
@@ -33,7 +33,7 @@ export function NarrationPlayer({ isPlaying, isMuted, onToggleMute, onReplay }: 
       <button
         onClick={onReplay}
         title="Replay narration"
-        className="p-1.5 rounded-lg hover:bg-white/10 text-slate-light hover:text-white transition-colors"
+        className="p-1.5 rounded-lg hover:bg-ink/10 text-slate-light hover:text-ink transition-colors"
       >
         <svg
           width="14"
@@ -54,7 +54,7 @@ export function NarrationPlayer({ isPlaying, isMuted, onToggleMute, onReplay }: 
       <button
         onClick={onToggleMute}
         title={isMuted ? 'Unmute narration' : 'Mute narration'}
-        className={`p-1.5 rounded-lg hover:bg-white/10 transition-colors ${isMuted ? 'text-amber-400' : 'text-slate-light hover:text-white'}`}
+        className={`p-1.5 rounded-lg hover:bg-ink/10 transition-colors ${isMuted ? 'text-amber-400' : 'text-slate-light hover:text-ink'}`}
       >
         {isMuted ? (
           <svg

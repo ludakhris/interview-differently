@@ -11,7 +11,13 @@ const prisma = {
     aggregate: jest.fn(),
     update: jest.fn(),
   },
-  courseItem: { findUnique: jest.fn(), delete: jest.fn(), update: jest.fn() },
+  courseItem: {
+    findUnique: jest.fn(),
+    aggregate: jest.fn(),
+    create: jest.fn(),
+    delete: jest.fn(),
+    update: jest.fn(),
+  },
   cohort: { count: jest.fn() },
   itemProgress: { count: jest.fn() },
   institution: { findFirst: jest.fn() },
@@ -94,6 +100,39 @@ describe('CoursesService deletes', () => {
     prisma.itemProgress.count.mockResolvedValue(3)
     await expect(service.removeItem('u', 'agency-admin', 'i1')).rejects.toThrow(ConflictException)
     expect(prisma.courseItem.delete).not.toHaveBeenCalled()
+  })
+})
+
+describe('CoursesService assessment items', () => {
+  const quiz = { prompt: 'Q?', options: ['a', 'b'], correctIndex: 0 }
+
+  it('refuses to add a native assessment item', async () => {
+    prisma.courseModule.findUnique.mockResolvedValue({ id: 'm1', courseId: 'c1' })
+    const add = service.addItem('u', 'agency-admin', 'm1', {
+      type: 'assessment',
+      title: 'Pre',
+      label: 'pre',
+      config: { questions: [quiz] },
+    })
+    await expect(add).rejects.toThrow(BadRequestException)
+    await expect(add).rejects.toThrow(/Interview Differently assessment/)
+    expect(prisma.courseItem.create).not.toHaveBeenCalled()
+  })
+
+  it('still adds a connected assessment tool item', async () => {
+    prisma.courseModule.findUnique.mockResolvedValue({ id: 'm1', courseId: 'c1' })
+    prisma.courseItem.aggregate.mockResolvedValue({ _max: { position: 0 } })
+    await service.addItem('u', 'agency-admin', 'm1', {
+      type: 'tool',
+      title: 'Pre',
+      label: 'pre',
+      config: { toolId: 'id-assessment', ref: 'ma-pre' },
+    })
+    expect(prisma.courseItem.create.mock.calls[0][0].data).toMatchObject({
+      type: 'tool',
+      label: 'pre',
+      config: { toolId: 'id-assessment', ref: 'ma-pre', maxAttempts: 1 },
+    })
   })
 })
 

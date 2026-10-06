@@ -21,7 +21,17 @@ export function registerTokenGetter(fn: TokenGetter | null): void {
   markReady()
 }
 
+// LTI sessions (services/ltiSession.ts) take precedence while it returns a
+// token; otherwise requests fall through to Clerk as normal.
+let ltiGetter: (() => string | null) | null = null
+
+export function registerLtiTokenGetter(fn: (() => string | null) | null): void {
+  ltiGetter = fn
+}
+
 export async function authHeader(): Promise<Record<string, string>> {
+  const lti = ltiGetter?.() ?? null
+  if (lti) return { Authorization: `Bearer ${lti}` }
   await Promise.race([ready, new Promise<void>((r) => setTimeout(r, READY_TIMEOUT_MS))])
   const token = getter ? await getter().catch(() => null) : null
   return token ? { Authorization: `Bearer ${token}` } : {}

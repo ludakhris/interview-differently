@@ -93,6 +93,14 @@ export class ImmersiveSessionsService {
     return session?.userId ?? null
   }
 
+  /** Owner and scenario of a session — used by the controller's LTI check. */
+  async getSessionRef(sessionId: string): Promise<{ userId: string; scenarioId: string } | null> {
+    return this.prisma.immersiveSession.findUnique({
+      where: { id: sessionId },
+      select: { userId: true, scenarioId: true },
+    })
+  }
+
   async getResponse(sessionId: string, responseId: string) {
     const response = await this.prisma.immersiveResponse.findFirst({
       where: { id: responseId, sessionId },

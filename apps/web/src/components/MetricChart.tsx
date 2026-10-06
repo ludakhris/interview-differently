@@ -6,7 +6,7 @@ const palette = {
     gradientStart: 'rgba(239,68,68,0.22)',
     gradientEnd: 'rgba(239,68,68,0)',
     dot: '#ef4444',
-    value: '#f87171',
+    value: 'rgb(var(--ld-red-400, 248 113 113))',
     annotation: 'rgba(239,68,68,0.6)',
   },
   amber: {
@@ -14,7 +14,7 @@ const palette = {
     gradientStart: 'rgba(245,158,11,0.22)',
     gradientEnd: 'rgba(245,158,11,0)',
     dot: '#f59e0b',
-    value: '#fbbf24',
+    value: 'rgb(var(--ld-amber-400, 251 191 36))',
     annotation: 'rgba(245,158,11,0.6)',
   },
   green: {
@@ -22,7 +22,7 @@ const palette = {
     gradientStart: 'rgba(16,185,129,0.22)',
     gradientEnd: 'rgba(16,185,129,0)',
     dot: '#10b981',
-    value: '#34d399',
+    value: 'rgb(var(--ld-emerald-400, 52 211 153))',
     annotation: 'rgba(16,185,129,0.6)',
   },
 }
@@ -77,10 +77,10 @@ export function MetricChart({ config }: Props) {
   const lastY = cy(lastVal)
 
   return (
-    <div className="bg-[#0d0d0d] border border-white/10 rounded-xl overflow-hidden mb-3">
+    <div className="bg-surface-deep border border-edge/10 rounded-xl overflow-hidden mb-3">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-3 pb-1">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-white/35">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-ink/35">
           {config.title}
         </span>
         <div className="flex items-center gap-2">
@@ -89,7 +89,7 @@ export function MetricChart({ config }: Props) {
             {lastVal}
             {config.unit}
           </span>
-          <span className="text-[10px] text-white/30">now</span>
+          <span className="text-[10px] text-ink/30">now</span>
         </div>
       </div>
 
@@ -122,13 +122,13 @@ export function MetricChart({ config }: Props) {
               y1={cy(tick)}
               x2={VW - PAD.r}
               y2={cy(tick)}
-              stroke="rgba(255,255,255,0.055)"
+              style={{ stroke: 'rgb(var(--ld-ink, 255 255 255) / 0.055)' }}
               strokeWidth="1"
             />
             <text
               x={PAD.l - 5}
               y={cy(tick) + 3.5}
-              fill="rgba(255,255,255,0.28)"
+              style={{ fill: 'rgb(var(--ld-ink, 255 255 255) / 0.28)' }}
               fontSize="7.5"
               textAnchor="end"
               fontFamily="ui-monospace, monospace"
@@ -146,7 +146,7 @@ export function MetricChart({ config }: Props) {
             y1={cy(config.baseline)}
             x2={VW - PAD.r}
             y2={cy(config.baseline)}
-            stroke="rgba(255,255,255,0.18)"
+            style={{ stroke: 'rgb(var(--ld-ink, 255 255 255) / 0.18)' }}
             strokeWidth="1"
             strokeDasharray="3 4"
           />
@@ -195,7 +195,7 @@ export function MetricChart({ config }: Props) {
             key={i}
             x={cx(i)}
             y={VH - 5}
-            fill="rgba(255,255,255,0.25)"
+            style={{ fill: 'rgb(var(--ld-ink, 255 255 255) / 0.25)' }}
             fontSize="7.5"
             textAnchor="middle"
             fontFamily="ui-monospace, monospace"

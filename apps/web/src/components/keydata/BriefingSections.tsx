@@ -22,11 +22,11 @@ export function BriefingSections({ panels }: { panels: ContextPanel[] }) {
   }
 
   return (
-    <div className={`${panelBase} border-white/10`}>
+    <div className={`${panelBase} border-edge/10`}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {Array.from(groups.entries()).map(([groupName, items]) => {
           const isConstraintGroup = /constraint|risk/i.test(groupName)
-          const headColor = isConstraintGroup ? 'text-amber-400' : 'text-[#7fc8b2]'
+          const headColor = isConstraintGroup ? 'text-amber-400' : 'text-mint'
           return (
             <div key={groupName}>
               <p className={`${eyebrow} ${headColor}`}>{groupName}</p>
@@ -35,13 +35,11 @@ export function BriefingSections({ panels }: { panels: ContextPanel[] }) {
                   const tone = panelTone(p)
                   return (
                     <div key={i} className="flex items-baseline justify-between">
-                      <dt className="text-[15px] text-white/65">{p.label}</dt>
+                      <dt className="text-[15px] text-ink/65">{p.label}</dt>
                       <dd className={`text-[15px] font-semibold ${toneText[tone]}`}>
                         {p.value}
                         {p.unit && (
-                          <span className="ml-1 text-[13px] font-normal text-white/55">
-                            {p.unit}
-                          </span>
+                          <span className="ml-1 text-[13px] font-normal text-ink/55">{p.unit}</span>
                         )}
                       </dd>
                     </div>

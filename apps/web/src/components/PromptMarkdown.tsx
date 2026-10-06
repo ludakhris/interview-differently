@@ -10,6 +10,8 @@ import { toJsxRuntime } from 'hast-util-to-jsx-runtime'
  * Scenario question prompts (#25): markdown with GFM tables, and ``` fences
  * highlighted with Prism grammars. Only the languages assessments use are
  * registered; any other fence renders as plain mono. Token colours: index.css.
+ * Prose uses the theme tokens; the table and code boxes are deliberately dark and set their own
+ * text colours so they stay readable on a light brand.
  */
 
 refractor.register(sql)
@@ -17,7 +19,7 @@ refractor.register(dax)
 
 const components: Components = {
   p: ({ children }) => <p>{children}</p>,
-  strong: ({ children }) => <strong className="font-semibold text-[#f5f3ee]">{children}</strong>,
+  strong: ({ children }) => <strong className="font-semibold text-fg">{children}</strong>,
   ul: ({ children }) => <ul className="list-disc pl-5 space-y-1">{children}</ul>,
   ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1">{children}</ol>,
   // A data exhibit: framed, green header, zebra rows, right-aligned columns in mono.
@@ -49,7 +51,7 @@ const components: Components = {
     </td>
   ),
   pre: ({ children }) => (
-    <pre className="font-mono text-[13px] bg-[#0d0d0d] border border-white/10 rounded-lg px-4 py-3 overflow-x-auto [scrollbar-color:rgb(255_255_255/0.15)_transparent]">
+    <pre className="font-mono text-[13px] text-[#f5f3ee] bg-[#0d0d0d] border border-white/10 rounded-lg px-4 py-3 overflow-x-auto [scrollbar-color:rgb(255_255_255/0.15)_transparent]">
       {children}
     </pre>
   ),
@@ -58,7 +60,7 @@ const components: Components = {
     const text = String(children ?? '')
     if (!className && !text.includes('\n')) {
       return (
-        <code className="font-mono text-[13px] bg-white/8 px-1.5 py-0.5 rounded text-[#f5f3ee]">
+        <code className="font-mono text-[13px] bg-ink/8 px-1.5 py-0.5 rounded text-fg">
           {children}
         </code>
       )

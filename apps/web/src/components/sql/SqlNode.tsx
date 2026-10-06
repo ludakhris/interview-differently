@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { useConfirm } from '@/components/ConfirmDialog'
 import type { ScenarioNode, SqlSpec } from '@id/types'
@@ -6,6 +6,7 @@ import { SqlWorkbench } from './SqlWorkbench'
 import { ResultsGrid } from './ResultsGrid'
 import { SandboxDb, type SandboxResult } from '@/lib/sql/sandboxDb'
 import { compareResults } from '@/lib/sql/compare'
+import { preferLtiToken } from '@/services/ltiSession'
 import { fetchMyDataset, type DatasetDetail } from '@/services/datasetsService'
 
 /**
@@ -33,7 +34,9 @@ interface Props {
 
 export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
   const spec = node.sql as SqlSpec
-  const { getToken } = useAuth()
+  const { getToken: clerkToken } = useAuth()
+  // an LTI launch has no Clerk session: its session token fetches the dataset instead
+  const getToken = useMemo(() => preferLtiToken(clerkToken), [clerkToken])
   const confirm = useConfirm()
   const [dataset, setDataset] = useState<DatasetDetail | null>(null)
   const [db, setDb] = useState<SandboxDb | null>(null)
@@ -93,14 +96,14 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
   }, [db, sql, submitting, spec, onSubmit])
 
   return (
-    <div className="bg-[#111111] rounded-2xl border border-white/10 p-6">
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40 mb-1">
+    <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6">
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40 mb-1">
         Hands-on SQL
       </p>
       {spec.context && (
         <p className="text-[13px] text-slate-mid leading-relaxed mb-2">{spec.context}</p>
       )}
-      <p className="text-[16px] text-[#f5f3ee] leading-relaxed mb-4">{spec.prompt}</p>
+      <p className="text-[16px] text-fg leading-relaxed mb-4">{spec.prompt}</p>
 
       {loadError ? (
         <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3">
@@ -118,7 +121,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
       )}
 
       {(spec.ordered || spec.strictColumns) && !outcome && (
-        <p className="text-[11px] text-white/40 mt-2">
+        <p className="text-[11px] text-ink/40 mt-2">
           {spec.ordered && 'Row order matters for this question. '}
           {spec.strictColumns && 'Column names must match the ones asked for.'}
         </p>
@@ -148,7 +151,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
                     setHintShown(true)
                     onHintUsed?.(node.nodeId)
                   }}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-white/15 bg-white/5 text-white/65 hover:border-white/25 hover:text-[#f5f3ee] transition-colors"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-edge/15 bg-ink/5 text-ink/65 hover:border-edge/25 hover:text-fg transition-colors"
                 >
                   <span aria-hidden>💡</span> Need a hint?
                 </button>
@@ -157,7 +160,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
           <button
             onClick={submit}
             disabled={!db || submitting || !sql.trim()}
-            className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-6 py-2.5 rounded-lg disabled:opacity-40 transition-colors"
+            className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-6 py-2.5 rounded-lg disabled:opacity-40 transition-colors"
           >
             {submitting ? 'Checking…' : 'Submit answer'}
           </button>
@@ -167,7 +170,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
       {/* Outcome */}
       {outcome && (
         <div className="mt-5 space-y-4">
-          <p className="text-[11px] text-white/40">
+          <p className="text-[11px] text-ink/40">
             Submitted — this verdict is final. You can keep running queries above to explore, but
             they won't be re-graded.
           </p>
@@ -183,36 +186,36 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
             >
               {outcome.correct ? 'Matches the expected output' : 'Not quite'}
             </p>
-            <p className="text-[13px] text-[#f5f3ee]/85">
+            <p className="text-[13px] text-fg/85">
               {outcome.correct
                 ? 'Your query returns exactly the rows the business asked for.'
                 : `Your result ${outcome.reason ? `— ${outcome.reason}` : 'differs from the expected output'}. Compare it with what was expected below.`}
             </p>
           </div>
 
-          <div className="rounded-xl border border-white/10 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2 bg-[#0d0d0d] border-b border-white/8">
+          <div className="rounded-xl border border-edge/10 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2 bg-surface-deep border-b border-edge/8">
               <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
                 Expected output
               </p>
               <div className="flex items-center gap-3">
-                <span className="font-mono text-[11px] text-white/40">
+                <span className="font-mono text-[11px] text-ink/40">
                   {outcome.expected.rowCount} rows
                 </span>
                 <button
                   onClick={() => setShowReference((v) => !v)}
-                  className="text-[11px] font-semibold text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                  className="text-[11px] font-semibold text-slate-mid hover:text-fg transition-colors"
                 >
                   {showReference ? 'Hide reference query' : 'Show reference query'}
                 </button>
               </div>
             </div>
             {showReference && (
-              <pre className="px-4 py-3 bg-[#0a0a0a] border-b border-white/8 font-mono text-[12px] text-[#f5f3ee]/85 whitespace-pre-wrap">
+              <pre className="px-4 py-3 bg-surface border-b border-edge/8 font-mono text-[12px] text-fg/85 whitespace-pre-wrap">
                 {spec.referenceSql}
               </pre>
             )}
-            <div className="max-h-[260px] overflow-auto bg-[#0a0a0a]">
+            <div className="max-h-[260px] overflow-auto bg-surface">
               <ResultsGrid result={outcome.expected} />
             </div>
           </div>

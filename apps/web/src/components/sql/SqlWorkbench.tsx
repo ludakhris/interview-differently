@@ -78,19 +78,19 @@ export function SqlWorkbench({
   }, [autoRun, db, value, run])
 
   return (
-    <div className="rounded-xl border border-white/10 overflow-hidden bg-[#0d0d0d]">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-white/8">
+    <div className="rounded-xl border border-edge/10 overflow-hidden bg-surface-deep">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-edge/8">
         <button
           onClick={run}
           disabled={!db || running || !value.trim()}
-          className="inline-flex items-center gap-2 pl-3 pr-3.5 py-1 rounded-full bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white disabled:opacity-40 transition-colors"
+          className="inline-flex items-center gap-2 pl-3 pr-3.5 py-1 rounded-full bg-green hover:bg-green-light text-[12px] font-semibold text-on-primary disabled:opacity-40 transition-colors"
         >
           <Play size={11} fill="currentColor" />
           {running ? 'Running…' : 'Run'}
-          <span className="font-mono text-[10px] text-white/60">⌘↵</span>
+          <span className="font-mono text-[10px] text-ink/60">⌘↵</span>
         </button>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-[11px] text-white/40">
+          <span className="font-mono text-[11px] text-ink/40">
             {!db
               ? 'loading dataset…'
               : result
@@ -103,7 +103,7 @@ export function SqlWorkbench({
           <button
             onClick={() => setShowSchema((v) => !v)}
             className={`inline-flex items-center gap-1.5 text-[11px] font-semibold transition-colors ${
-              showSchema ? 'text-[#2d9e5f]' : 'text-slate-mid hover:text-[#f5f3ee]'
+              showSchema ? 'text-green-light' : 'text-slate-mid hover:text-fg'
             }`}
           >
             <Table2 size={12} /> Schema
@@ -114,10 +114,10 @@ export function SqlWorkbench({
       <div className="flex min-w-0">
         {showSchema && (
           <aside
-            className="w-[220px] flex-shrink-0 border-r border-white/8 bg-[#0a0a0a] px-3 py-3 overflow-y-auto"
+            className="w-[220px] flex-shrink-0 border-r border-edge/8 bg-surface px-3 py-3 overflow-y-auto"
             style={{ maxHeight: editorHeight + resultsHeight + 1 }}
           >
-            <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2">
+            <p className="text-[10px] uppercase tracking-widest text-ink/30 mb-2">
               Tables — click to insert
             </p>
             <SchemaTree tables={tables} onPick={insertAtCursor} />
@@ -134,21 +134,19 @@ export function SqlWorkbench({
             placeholder="Write your query here…"
           />
           <div
-            className="border-t border-white/8 overflow-auto bg-[#0a0a0a]"
+            className="border-t border-edge/8 overflow-auto bg-surface"
             style={{ maxHeight: resultsHeight }}
           >
             {error && (
               <div className="m-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 flex gap-2">
                 <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-[12px] text-[#f5f3ee]/85 font-mono whitespace-pre-wrap">
-                  {error}
-                </p>
+                <p className="text-[12px] text-fg/85 font-mono whitespace-pre-wrap">{error}</p>
               </div>
             )}
             {result ? (
               <ResultsGrid result={result} />
             ) : !error ? (
-              <p className="px-4 py-4 text-[12px] text-white/30">
+              <p className="px-4 py-4 text-[12px] text-ink/30">
                 Run your query to check the output before moving on.
               </p>
             ) : null}

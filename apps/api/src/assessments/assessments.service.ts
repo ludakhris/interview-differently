@@ -631,12 +631,52 @@ export class AssessmentsService {
     await this.assertCanSee(userId, d.cohortId)
     if (!this.isOpen(d, Date.now()))
       throw new ForbiddenException('This assessment is not open right now')
+    return this.drawAttempt(userId, d)
+  }
 
+  /**
+   * Starts (or resumes) an attempt for a learner launched from LearnDifferently over LTI (#63).
+   * LD, not this app, decides who may launch, so the cohort-membership / tool-enabled check of
+   * `startAttempt` is skipped; the delivery must still be open. The paper is drawn once, as usual.
+   */
+  async startAttemptForLti(userId: string, deliveryId: string) {
+    const d = await this.prisma.assessmentDelivery.findUnique({
+      where: { id: deliveryId },
+      include: { assessment: { include: { dataset: { select: { setupHash: true } } } } },
+    })
+    if (!d) throw new NotFoundException(`Delivery ${deliveryId} not found`)
+    const find = () =>
+      this.prisma.assessmentAttempt.findUnique({
+        where: { deliveryId_userId: { deliveryId, userId } },
+      })
+    const existing = await find()
+    if (existing) return { id: existing.id }
+    if (!this.isOpen(d, Date.now()))
+      throw new ForbiddenException('This assessment is not open right now')
+    try {
+      return await this.drawAttempt(userId, d)
+    } catch (err) {
+      // two concurrent first starts: the unique (delivery, user) row exists now, so resume it
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const again = await find()
+        if (again) return { id: again.id }
+      }
+      throw err
+    }
+  }
+
+  private async drawAttempt(
+    userId: string,
+    d: {
+      id: string
+      assessment: { sections: unknown; dataset: { setupHash: string } | null }
+    }
+  ) {
     const sections = d.assessment.sections as unknown as AssessmentSection[]
     const drawnQuestionIds = sections.flatMap((s) => drawSection(s).map((q) => q.id))
     const row = await this.prisma.assessmentAttempt.create({
       data: {
-        deliveryId,
+        deliveryId: d.id,
         userId,
         datasetHash: d.assessment.dataset?.setupHash ?? null,
         drawnQuestionIds,
@@ -647,8 +687,8 @@ export class AssessmentsService {
   }
 
   /** The student's paper: drawn questions with answers / reference SQL stripped, plus saved answers. */
-  async getAttempt(userId: string, attemptId: string) {
-    const a = await this.loadOwnAttempt(userId, attemptId)
+  async getAttempt(userId: string, attemptId: string, deliveryId?: string) {
+    const a = await this.loadOwnAttempt(userId, attemptId, deliveryId)
     const sections = a.delivery.assessment.sections as unknown as AssessmentSection[]
     const ds = a.delivery.assessment.dataset
     const drawn = new Set(a.drawnQuestionIds as string[])
@@ -680,8 +720,13 @@ export class AssessmentsService {
     }
   }
 
-  async saveAnswers(userId: string, attemptId: string, answers: Record<string, string>) {
-    const a = await this.loadOwnAttempt(userId, attemptId)
+  async saveAnswers(
+    userId: string,
+    attemptId: string,
+    answers: Record<string, string>,
+    deliveryId?: string
+  ) {
+    const a = await this.loadOwnAttempt(userId, attemptId, deliveryId)
     if (a.submittedAt) throw new BadRequestException('Attempt already submitted')
     const drawn = new Set(a.drawnQuestionIds as string[])
     const merged = { ...((a.answers as Record<string, string>) ?? {}) }
@@ -698,9 +743,14 @@ export class AssessmentsService {
   }
 
   /** Grades server-side and locks the attempt. Idempotent: a second submit returns the stored result. */
-  async submit(userId: string, attemptId: string, answers?: Record<string, string>) {
-    if (answers) await this.saveAnswers(userId, attemptId, answers)
-    const a = await this.loadOwnAttempt(userId, attemptId)
+  async submit(
+    userId: string,
+    attemptId: string,
+    answers?: Record<string, string>,
+    deliveryId?: string
+  ) {
+    if (answers) await this.saveAnswers(userId, attemptId, answers, deliveryId)
+    const a = await this.loadOwnAttempt(userId, attemptId, deliveryId)
     if (a.submittedAt) return this.studentResult(a.sectionScores as unknown as SectionScore[])
 
     const sections = a.delivery.assessment.sections as unknown as AssessmentSection[]
@@ -781,8 +831,8 @@ export class AssessmentsService {
     return this.studentResult(sectionScores)
   }
 
-  async getResult(userId: string, attemptId: string) {
-    const a = await this.loadOwnAttempt(userId, attemptId)
+  async getResult(userId: string, attemptId: string, deliveryId?: string) {
+    const a = await this.loadOwnAttempt(userId, attemptId, deliveryId)
     if (!a.submittedAt) throw new BadRequestException('Attempt not submitted yet')
     return {
       title: a.delivery.assessment.title,
@@ -807,12 +857,14 @@ export class AssessmentsService {
     }
   }
 
-  private async loadOwnAttempt(userId: string, attemptId: string) {
+  /** The caller's attempt; for an LTI session `deliveryId` pins it to the launched delivery. */
+  private async loadOwnAttempt(userId: string, attemptId: string, deliveryId?: string) {
     const a = await this.prisma.assessmentAttempt.findUnique({
       where: { id: attemptId },
       include: { delivery: { include: { assessment: { include: { dataset: true } } } } },
     })
-    if (!a || a.userId !== userId) throw new NotFoundException(`Attempt ${attemptId} not found`)
+    if (!a || a.userId !== userId || (deliveryId !== undefined && a.deliveryId !== deliveryId))
+      throw new NotFoundException(`Attempt ${attemptId} not found`)
     return a
   }
 
@@ -851,7 +903,8 @@ export class AssessmentsService {
   }
 }
 
-function overall(scores: SectionScore[]) {
+/** Correct / total over every section, and the rounded percent. */
+export function overall(scores: SectionScore[]) {
   const correct = scores.reduce((n, s) => n + s.correct, 0)
   const total = scores.reduce((n, s) => n + s.total, 0)
   return { correct, total, percent: total ? Math.round((correct / total) * 100) : 0 }

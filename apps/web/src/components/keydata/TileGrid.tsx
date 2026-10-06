@@ -17,7 +17,7 @@ export function TileGrid({ panels }: { panels: ContextPanel[] }) {
             <p className={`text-[30px] font-display font-extrabold leading-none ${toneText[tone]}`}>
               {p.value}
               {p.unit && (
-                <span className="ml-1 text-[15px] font-normal text-white/55 align-baseline">
+                <span className="ml-1 text-[15px] font-normal text-ink/55 align-baseline">
                   {p.unit}
                 </span>
               )}

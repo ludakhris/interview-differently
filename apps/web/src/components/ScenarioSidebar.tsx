@@ -16,10 +16,10 @@ const accentLine: Record<ContextDisplayStyle, string> = {
   monitor: 'bg-amber-500',
   table: 'bg-blue-500',
   finding: 'bg-red-500',
-  'tile-grid': 'bg-[#0f5b89]',
-  'hero-list': 'bg-[#0f5b89]',
-  'context-cards': 'bg-[#0f5b89]',
-  'briefing-sections': 'bg-[#0f5b89]',
+  'tile-grid': 'bg-azure',
+  'hero-list': 'bg-azure',
+  'context-cards': 'bg-azure',
+  'briefing-sections': 'bg-azure',
 }
 
 // ── Section renderers ─────────────────────────────────────────────────────────
@@ -30,11 +30,11 @@ function TextSection({ items }: { items: SidebarItem[] }) {
       {items.map((item, i) => (
         <div key={i} className="flex justify-between gap-3">
           {item.label && (
-            <span className="text-[12px] text-white/40 flex-shrink-0 pt-0.5">{item.label}</span>
+            <span className="text-[12px] text-ink/40 flex-shrink-0 pt-0.5">{item.label}</span>
           )}
           <span
             className={`text-[13px] leading-snug ${
-              item.emphasis ? emphasisColor[item.emphasis] : 'text-[#f5f3ee]/85'
+              item.emphasis ? emphasisColor[item.emphasis] : 'text-fg/85'
             } ${item.label ? 'text-right' : ''}`}
           >
             {item.value}
@@ -51,12 +51,12 @@ function ListSection({ items }: { items: SidebarItem[] }) {
       {items.map((item, i) => (
         <div
           key={i}
-          className="flex justify-between items-center py-2 border-b border-white/5 last:border-0"
+          className="flex justify-between items-center py-2 border-b border-edge/5 last:border-0"
         >
-          <span className="text-[12px] text-white/45 pr-2">{item.label}</span>
+          <span className="text-[12px] text-ink/45 pr-2">{item.label}</span>
           <span
             className={`text-[13px] font-semibold text-right ${
-              item.emphasis ? emphasisColor[item.emphasis] : 'text-[#f5f3ee]/80'
+              item.emphasis ? emphasisColor[item.emphasis] : 'text-fg/80'
             }`}
           >
             {item.value}
@@ -76,10 +76,10 @@ function HighlightSection({ items }: { items: SidebarItem[] }) {
             key={i}
             className="flex justify-between items-center py-1.5 border-b border-red-500/10 last:border-0"
           >
-            {item.label && <span className="text-[11px] text-white/40 pr-2">{item.label}</span>}
+            {item.label && <span className="text-[11px] text-ink/40 pr-2">{item.label}</span>}
             <span
               className={`text-[11px] font-semibold ${
-                item.emphasis ? emphasisColor[item.emphasis] : 'text-[#f5f3ee]/70'
+                item.emphasis ? emphasisColor[item.emphasis] : 'text-fg/70'
               } ${item.label ? 'text-right' : 'text-left leading-snug'}`}
             >
               {item.value}
@@ -94,7 +94,7 @@ function HighlightSection({ items }: { items: SidebarItem[] }) {
 function SidebarSectionBlock({ section }: { section: SidebarSection }) {
   return (
     <div>
-      <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/40 mb-2">
+      <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-ink/40 mb-2">
         {section.title}
       </div>
       {section.style === 'list' && <ListSection items={section.items} />}
@@ -109,7 +109,7 @@ function SidebarSectionBlock({ section }: { section: SidebarSection }) {
 export function ScenarioSidebar({ sections, contextStyle, accentColor }: Props) {
   return (
     <aside
-      className="hidden lg:flex flex-col w-[260px] flex-shrink-0 bg-[#0d0d0d] border-r border-white/8"
+      className="hidden lg:flex flex-col w-[260px] flex-shrink-0 bg-surface-deep border-r border-edge/8"
       style={{ minHeight: 'calc(100vh - 57px)' }}
     >
       {/* Accent bar */}
@@ -118,7 +118,7 @@ export function ScenarioSidebar({ sections, contextStyle, accentColor }: Props) 
       <div className="px-5 py-5 space-y-5 overflow-y-auto flex-1">
         <p
           className="text-[11px] font-bold uppercase tracking-[0.18em] mb-1"
-          style={{ color: accentColor ?? '#b0bec5' }}
+          style={{ color: accentColor ?? 'rgb(var(--ld-soft-light, 176 190 197))' }}
         >
           Your Context
         </p>

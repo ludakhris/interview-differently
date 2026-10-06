@@ -44,7 +44,7 @@ export function InlineExhibits({
             {label}
           </p>
           {resolved.length > 1 && (
-            <span className="ml-auto text-[11px] font-semibold text-white/45 tabular-nums">
+            <span className="ml-auto text-[11px] font-semibold text-ink/45 tabular-nums">
               {resolved.length}
             </span>
           )}

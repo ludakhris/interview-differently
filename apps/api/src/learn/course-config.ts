@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { DEFAULT_ATTEMPTS } from './interview-scoring'
 import { ALLOWED_LINK_SITES, parseExternalLink } from './external-link'
 import { isImageKey } from './item-image'
+import { toolById } from '../lti/platform/lti-platform-config'
 import { parseYouTube } from './youtube'
 import type {
   CourseItemType,
@@ -15,12 +16,16 @@ import type {
 export const ITEM_TYPES: CourseItemType[] = [
   'lesson',
   'knowledge_check',
-  'assessment',
   'interview',
   'scorm',
   'video',
   'external_link',
+  'tool',
 ]
+
+/** False for a stored item whose type is no longer supported (for example the retired native 'assessment'). */
+export const isSupportedItemType = (type: string): boolean =>
+  (ITEM_TYPES as string[]).includes(type)
 
 export interface CourseFields {
   title?: string
@@ -158,7 +163,9 @@ function validateQuestions(v: unknown): KnowledgeCheckQuestion[] {
   })
 }
 
-/** Item fields from a request body, with the config checked for its type. */
+/**
+ * Item fields from a request body, with the config checked for its type.
+ */
 export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'type' | 'title'>> & {
   label: 'pre' | 'post' | null
   config: Record<string, unknown>
@@ -174,7 +181,7 @@ export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'typ
   if (remedial && review) return bad('An item is either extra content or a review, not both')
   const mode = remedial ? 'remediationFor' : review ? 'reviewFor' : null
   const skill = remedial || review
-  if (mode && skill && item.type !== 'assessment' && item.type !== 'interview') {
+  if (mode && skill && item.type !== 'interview' && item.type !== 'tool') {
     if (!SKILL_ID.test(skill)) return bad('Skill is not valid')
     item.config = { ...item.config, [mode]: skill }
   }
@@ -187,17 +194,15 @@ function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | '
 } {
   if (!isObject(input)) return bad('Body must be an object')
   const type = input.type as CourseItemType
-  if (!ITEM_TYPES.includes(type)) return bad(`Type must be one of ${ITEM_TYPES.join(', ')}`)
+  if (!ITEM_TYPES.includes(type))
+    return bad(
+      `Type must be one of ${ITEM_TYPES.join(', ')}. For a pre or post assessment, add an Interview Differently assessment (type tool).`
+    )
   const title = text(input.title, 'Title', 120, true) as string
   const config = input.config === undefined ? {} : input.config
   if (!isObject(config)) return bad('Config must be an object')
 
-  let label: 'pre' | 'post' | null = null
-  if (type === 'assessment') {
-    if (input.label !== 'pre' && input.label !== 'post')
-      return bad('An assessment is either pre or post')
-    label = input.label
-  }
+  const label: 'pre' | 'post' | null = null
 
   switch (type) {
     case 'lesson':
@@ -209,18 +214,6 @@ function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | '
         label,
         config: { questions: validateQuestions(config.questions ?? []) },
       }
-    case 'assessment': {
-      const slug = text(config.assessmentSlug, 'Assessment', 120)
-      return {
-        type,
-        title,
-        label,
-        config: {
-          questions: validateQuestions(config.questions ?? []),
-          ...(slug ? { assessmentSlug: slug } : {}),
-        },
-      }
-    }
     case 'scorm': {
       const packageId = text(config.packageId, 'Package', 60, true) as string
       if (!/^[0-9a-f-]{36}$/.test(packageId)) return bad('That is not a valid package')
@@ -287,6 +280,46 @@ function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | '
         title,
         label,
         config: { role, questions, maxAttempts, ...(skill ? { skill } : {}) },
+      }
+    }
+    case 'tool': {
+      const toolId = text(config.toolId, 'Tool', 60, true) as string
+      const tool = toolById(toolId)
+      if (!tool) return bad('That tool is not connected')
+      const ref = text(config.ref, 'Tool reference', 200, true) as string
+      const skill = text(config.skill, 'Skill', 60)
+      if (skill && !SKILL_ID.test(skill)) return bad('Skill is not valid')
+      // Only an assessment tool can stand in for the pre or post assessment; for any other tool a
+      // label is refused rather than silently saved.
+      const given = input.label ?? null
+      if (given !== null && given !== 'pre' && given !== 'post')
+        return bad('Label must be pre, post or empty')
+      if (given !== null && !tool.labelable)
+        return bad(`${tool.name} cannot be a pre or post assessment`)
+      // Attempt rules apply to assessment tools only; for any other tool they are dropped.
+      const rules: Record<string, number> = {}
+      if (tool.kind === 'assessment') {
+        rules.maxAttempts = whole(config.maxAttempts, 'Attempts allowed', 1, 5) ?? 1
+        const limit = whole(config.timeLimitMinutes, 'Time limit', 5, 240)
+        if (limit !== undefined) rules.timeLimitMinutes = limit
+      }
+      // Whether the item feeds interview readiness. Only an unlabelled interview-kind tool can; for
+      // anything else the flag is dropped.
+      const flag = config.countsAsInterview
+      if (flag !== undefined && typeof flag !== 'boolean')
+        return bad('Counts toward interview readiness must be true or false')
+      const counts = flag === true && tool.kind === 'interview' && given === null
+      return {
+        type,
+        title,
+        label: given,
+        config: {
+          toolId,
+          ref,
+          ...(skill ? { skill } : {}),
+          ...rules,
+          ...(counts ? { countsAsInterview: true } : {}),
+        },
       }
     }
   }

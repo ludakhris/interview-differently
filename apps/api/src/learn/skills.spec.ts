@@ -75,6 +75,16 @@ describe('skillResults', () => {
     ).toBe('unknown')
   })
 
+  it('ignores an item of a type that is no longer supported', () => {
+    const legacy = { ...quiz, id: 'old', type: 'assessment' }
+    const out = skillResults(
+      skills,
+      [legacy],
+      new Map([['old', done(results(false, false, false, false))]])
+    )
+    expect(by(out, 'safety').pct).toBeNull()
+  })
+
   it('counts an interview tagged with the skill by its best score', () => {
     const interview = { id: 'i1', type: 'interview', config: { skill: 'comms', questions: ['x'] } }
     const low = skillResults(skills, [interview], new Map([['i1', done(null, 45)]]))

@@ -19,6 +19,8 @@ import { ToolsModule } from './tools/tools.module'
 import { AssessmentsModule } from './assessments/assessments.module'
 import { UsageModule } from './usage/usage.module'
 import { LearnModule } from './learn/learn.module'
+import { LtiPlatformModule } from './lti/platform/lti-platform.module'
+import { LtiToolModule } from './lti/tool/lti-tool.module'
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { LearnModule } from './learn/learn.module'
     AssessmentsModule,
     UsageModule,
     LearnModule,
+    LtiPlatformModule,
+    LtiToolModule,
   ],
 })
 export class AppModule {}

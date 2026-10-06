@@ -2,37 +2,63 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
+import { LtiNav } from '@/components/LtiNav'
+import { useLtiBrand } from '@/components/LtiBrandProvider'
 import { TrackIcon } from '@/components/TrackIcon'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
+import { isVoiceInterview } from '@/lib/immersiveLti'
 
-export function BriefingPage() {
+export function BriefingPage({
+  ltiMode = false,
+  onBegin,
+}: {
+  ltiMode?: boolean
+  onBegin?: () => void
+} = {}) {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const navigate = useNavigate()
   const { isSignedIn } = useAuth()
+  const brand = useLtiBrand()
   const { scenario, isLoading } = useScenario(scenarioId)
   const { trackMeta } = useScenarios()
   const [narrationMode, setNarrationMode] = useState<'voice' | 'avatar'>('voice')
   const [showSignInPrompt, setShowSignInPrompt] = useState(false)
 
   useEffect(() => {
-    if (!isLoading && !scenario) {
+    if (!isLoading && !scenario && !ltiMode) {
       navigate('/dashboard')
     }
-  }, [isLoading, scenario, navigate])
+  }, [isLoading, scenario, navigate, ltiMode])
+
+  if (ltiMode && !isLoading && !scenario) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center px-6">
+        <p className="text-fg text-[15px] text-center max-w-md">
+          We could not load this scenario. Go back to your course and start again.
+        </p>
+      </div>
+    )
+  }
 
   if (isLoading || !scenario) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <p className="text-slate-mid text-[14px]">Loading...</p>
       </div>
     )
   }
 
   const meta = trackMeta[scenario.track]
+  // tenant accent (LTI only) stands in for the track colour
+  const accent = brand?.accent ?? meta?.color
   const { briefing } = scenario
   const immersiveUrl = `/scenario/${scenarioId}/immersive?mode=${narrationMode}`
 
   function handleBegin() {
+    if (ltiMode) {
+      onBegin?.()
+      return
+    }
     if (scenario!.mode === 'immersive' && !isSignedIn) {
       setShowSignInPrompt(true)
       return
@@ -41,36 +67,39 @@ export function BriefingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
-      <Nav trackLabel={meta?.label} />
+    <div className="min-h-screen bg-surface">
+      {ltiMode ? <LtiNav trackLabel={meta?.label} /> : <Nav trackLabel={meta?.label} />}
 
       <div className="max-w-2xl mx-auto px-6 py-14 animate-fade-in">
         <div
           className="text-[11px] font-bold uppercase tracking-widest mb-3 flex items-center gap-1.5"
-          style={{ color: meta?.color }}
+          style={{ color: accent }}
         >
           {meta && (
-            <TrackIcon name={meta.icon} size={12} color={meta.color} className="inline -mt-0.5" />
+            <TrackIcon
+              name={meta.icon}
+              size={12}
+              color={accent ?? meta.color}
+              className="inline -mt-0.5"
+            />
           )}
           {meta?.label} Track
         </div>
 
-        <h1 className="font-display font-extrabold text-[28px] text-[#f5f3ee] tracking-tight leading-snug mb-8">
+        <h1 className="font-display font-extrabold text-[28px] text-fg tracking-tight leading-snug mb-8">
           {scenario.title}
         </h1>
 
         {briefing.situation && (
-          <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
+          <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6 mb-6">
             <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-4">
               The Situation
             </h3>
-            <p className="text-[15px] text-[#f5f3ee] leading-relaxed font-light">
-              {briefing.situation}
-            </p>
+            <p className="text-[15px] text-fg leading-relaxed font-light">{briefing.situation}</p>
           </div>
         )}
 
-        <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
+        <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6 mb-6">
           <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-4">
             Your Role
           </h3>
@@ -85,13 +114,13 @@ export function BriefingPage() {
                 <span className="text-[12px] font-medium text-slate-mid w-28 flex-shrink-0 pt-0.5">
                   {label}
                 </span>
-                <span className="text-[14px] text-[#f5f3ee] font-medium">{value}</span>
+                <span className="text-[14px] text-fg font-medium">{value}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
+        <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6 mb-6">
           <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-4">
             What You Will Be Evaluated On
           </h3>
@@ -100,10 +129,10 @@ export function BriefingPage() {
               <div key={dim.name} className="flex items-start gap-3">
                 <span
                   className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: meta?.color }}
+                  style={{ backgroundColor: accent }}
                 />
                 <div>
-                  <div className="text-[14px] font-semibold text-[#f5f3ee]">{dim.name}</div>
+                  <div className="text-[14px] font-semibold text-fg">{dim.name}</div>
                   <div className="text-[12px] text-slate-mid leading-relaxed">
                     {dim.description}
                   </div>
@@ -114,7 +143,7 @@ export function BriefingPage() {
         </div>
 
         {scenario.mode === 'immersive' && (
-          <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
+          <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6 mb-6">
             <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-4">
               Presentation Style
             </h3>
@@ -126,16 +155,16 @@ export function BriefingPage() {
                   className={`flex-1 flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
                     narrationMode === mode
                       ? 'border-green/50 bg-green/5'
-                      : 'border-white/10 hover:border-white/20'
+                      : 'border-edge/10 hover:border-edge/20'
                   }`}
                 >
                   <span
                     className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${
-                      narrationMode === mode ? 'border-green bg-green' : 'border-white/30'
+                      narrationMode === mode ? 'border-green bg-green' : 'border-edge/30'
                     }`}
                   />
                   <div>
-                    <div className="text-[13px] font-medium text-[#f5f3ee]">
+                    <div className="text-[13px] font-medium text-fg">
                       {mode === 'voice' ? 'Voice narration' : 'AI Avatar'}
                     </div>
                     {mode === 'avatar' && <div className="text-[11px] text-amber">Beta</div>}
@@ -155,15 +184,20 @@ export function BriefingPage() {
         </div>
 
         <div className="flex items-center justify-between">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="text-[13px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
-          >
-            Back to dashboard
-          </button>
+          {ltiMode ? (
+            <span />
+          ) : (
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="text-[13px] text-slate-mid hover:text-fg transition-colors"
+            >
+              Back to dashboard
+            </button>
+          )}
           <button
             onClick={handleBegin}
-            className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors tracking-wide"
+            disabled={ltiMode && scenario.mode === 'immersive' && !isVoiceInterview(scenario)}
+            className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors tracking-wide disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {scenario.mode === 'immersive' ? 'Begin Interview' : 'Begin Simulation'}
           </button>
@@ -171,11 +205,11 @@ export function BriefingPage() {
 
         {showSignInPrompt && (
           <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-[#111111] border border-white/10 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
+            <div className="bg-surface-alt border border-edge/10 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
               <div className="w-10 h-10 rounded-full bg-green/10 border border-green/20 flex items-center justify-center mx-auto mb-5">
                 <span className="text-green text-[18px]">◈</span>
               </div>
-              <h2 className="font-display font-bold text-[20px] text-[#f5f3ee] mb-2">
+              <h2 className="font-display font-bold text-[20px] text-fg mb-2">
                 Ready to continue?
               </h2>
               <p className="text-[14px] text-slate-mid leading-relaxed mb-6">
@@ -186,7 +220,7 @@ export function BriefingPage() {
                 onClick={() =>
                   navigate(`/sign-up?redirect_url=${encodeURIComponent(immersiveUrl)}`)
                 }
-                className="w-full bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] py-3 rounded-lg transition-colors mb-3"
+                className="w-full bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] py-3 rounded-lg transition-colors mb-3"
               >
                 Create free account
               </button>
@@ -194,7 +228,7 @@ export function BriefingPage() {
                 onClick={() =>
                   navigate(`/sign-in?redirect_url=${encodeURIComponent(immersiveUrl)}`)
                 }
-                className="w-full text-[13px] text-slate-mid hover:text-[#f5f3ee] transition-colors py-1"
+                className="w-full text-[13px] text-slate-mid hover:text-fg transition-colors py-1"
               >
                 Already have an account? Sign in
               </button>

@@ -74,15 +74,15 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="confirm-title"
-            className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#111] shadow-2xl"
+            className="w-full max-w-sm rounded-2xl border border-edge/10 bg-surface-alt shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-6 pt-5 pb-4">
-              <h2 id="confirm-title" className="font-display font-bold text-[16px] text-[#f5f3ee]">
+              <h2 id="confirm-title" className="font-display font-bold text-[16px] text-fg">
                 {pending.title}
               </h2>
               {pending.body && (
-                <div className="mt-2 text-[13px] text-white/60 leading-relaxed">{pending.body}</div>
+                <div className="mt-2 text-[13px] text-ink/60 leading-relaxed">{pending.body}</div>
               )}
             </div>
             <div className="px-6 pb-5 flex gap-2 justify-end">
@@ -90,7 +90,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={() => close(false)}
-                  className="px-3 py-2 rounded-lg border border-white/10 text-[13px] text-white/60 hover:text-white/85 hover:border-white/25 transition-colors"
+                  className="px-3 py-2 rounded-lg border border-edge/10 text-[13px] text-ink/60 hover:text-ink/85 hover:border-edge/25 transition-colors"
                 >
                   {pending.cancelLabel ?? 'Cancel'}
                 </button>
@@ -101,8 +101,8 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 onClick={() => close(true)}
                 className={`px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors ${
                   pending.danger
-                    ? 'bg-red-500/20 text-red-300 border border-red-400/30 hover:bg-red-500/40 hover:text-white'
-                    : 'bg-[#1a6b3c] hover:bg-[#2d9e5f] text-white'
+                    ? 'bg-red-500/20 text-red-300 border border-red-400/30 hover:bg-red-500/40 hover:text-ink'
+                    : 'bg-green hover:bg-green-light text-on-primary'
                 }`}
               >
                 {pending.confirmLabel ?? (pending.notice ? 'OK' : 'Confirm')}

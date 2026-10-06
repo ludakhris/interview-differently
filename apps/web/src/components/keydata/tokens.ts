@@ -20,23 +20,23 @@ export function panelTone(panel: ContextPanel): 'accent' | 'danger' | 'neutral' 
 }
 
 export const toneText: Record<'accent' | 'danger' | 'neutral', string> = {
-  accent: 'text-[#7fc8b2]', // brand green, lighter for legibility on dark
+  accent: 'text-mint', // brand green, lighter for legibility on dark
   danger: 'text-amber-400',
-  neutral: 'text-[#f5f3ee]',
+  neutral: 'text-fg',
 }
 
 export const toneBar: Record<'accent' | 'danger' | 'neutral', string> = {
-  accent: 'bg-[#4ea58a]',
+  accent: 'bg-jade',
   danger: 'bg-amber-400',
-  neutral: 'bg-white/40',
+  neutral: 'bg-ink/40',
 }
 
 export const toneBorder: Record<'accent' | 'danger' | 'neutral', string> = {
-  accent: 'border-white/10',
+  accent: 'border-edge/10',
   danger: 'border-amber-500/35',
-  neutral: 'border-white/10',
+  neutral: 'border-edge/10',
 }
 
-export const panelBase = 'bg-[#0d0d0d] border rounded-2xl p-5 transition-colors'
+export const panelBase = 'bg-surface-deep border rounded-2xl p-5 transition-colors'
 
-export const eyebrow = 'text-[10px] font-bold uppercase tracking-[0.18em] text-white/40'
+export const eyebrow = 'text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40'

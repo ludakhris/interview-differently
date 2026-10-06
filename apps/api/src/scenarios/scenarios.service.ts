@@ -62,6 +62,19 @@ export class ScenariosService {
   }
 
   /**
+   * Full scenario for an LTI session (#63), whatever its owner but only once published: the guard
+   * has already limited the session to the one scenario it was launched for.
+   */
+  async findForLti(id: string): Promise<Scenario> {
+    const row = await this.prisma.scenario.findUnique({
+      where: { scenarioId: id },
+      include: { institution: { select: { name: true } } },
+    })
+    if (!row || row.status !== 'published') throw new NotFoundException(`Scenario ${id} not found`)
+    return this.withOwner(row)
+  }
+
+  /**
    * Public summary lookup — returns the stripped form (title, track,
    * briefing, etc.) for a single scenario. Used by the briefing page so
    * marketing visitors can read the role + situation before signing up.

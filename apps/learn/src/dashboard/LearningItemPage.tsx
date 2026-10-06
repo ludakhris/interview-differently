@@ -6,6 +6,7 @@ import { useApp } from './app-context'
 import { score } from './format'
 import { LEARNER_TYPE_LABEL } from './ItemEditor'
 import { errorNotice } from './shared'
+import { attemptLine, onPageRestore, timeLimitNote, toolCopy } from './toolKinds'
 
 /** Plain text with blank-line paragraphs and "- " bullets. */
 function RichText({ text }: { text: string }) {
@@ -77,7 +78,7 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
             nextLabel={next ? 'Continue' : 'Back to course'}
           />
         )}
-        {(item.type === 'knowledge_check' || item.type === 'assessment') && (
+        {item.type === 'knowledge_check' && (
           <Quiz
             item={item}
             onChange={setItem}
@@ -103,6 +104,14 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
         )}
         {item.type === 'external_link' && item.link && (
           <ExternalLinkItem
+            item={item}
+            onChange={setItem}
+            nextHref={nextHref}
+            nextLabel={next ? 'Continue' : 'Back to course'}
+          />
+        )}
+        {item.type === 'tool' && (
+          <ToolItem
             item={item}
             onChange={setItem}
             nextHref={nextHref}
@@ -220,8 +229,7 @@ function Quiz(props: {
   const [result, setResult] = useState<QuizResult | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const isAssessment = item.type === 'assessment'
-  const finished = result !== null || (isAssessment && item.status === 'completed')
+  const finished = result !== null
 
   async function submit() {
     setBusy(true)
@@ -244,21 +252,6 @@ function Quiz(props: {
   if (questions.length === 0) {
     return <p className="dash-muted">The author has not added questions here yet.</p>
   }
-  if (isAssessment && item.status === 'completed' && !result) {
-    return (
-      <div className="dash-card">
-        <p>
-          You completed this assessment. Your score: <strong>{score(item.score)}</strong>
-        </p>
-        <Actions>
-          <a className="dash-btn" href={props.nextHref}>
-            {props.nextLabel}
-          </a>
-        </Actions>
-      </div>
-    )
-  }
-
   return (
     <form
       onSubmit={(e) => {
@@ -266,11 +259,6 @@ function Quiz(props: {
         void submit()
       }}
     >
-      {isAssessment && !finished && (
-        <p className="dash-banner">
-          This assessment counts once, so take your time. You will see your score when you finish.
-        </p>
-      )}
       <ol className="dash-quiz">
         {questions.map((q, i) => (
           <li key={i} className="dash-card dash-quiz-q">
@@ -315,18 +303,16 @@ function Quiz(props: {
           </p>
           <PlanAddedCard added={item.planAdded} cohortId={item.cohortId} />
           <Actions>
-            {!isAssessment && (
-              <button
-                type="button"
-                className="dash-btn-secondary"
-                onClick={() => {
-                  setResult(null)
-                  setAnswers(questions.map(() => null))
-                }}
-              >
-                Try again
-              </button>
-            )}
+            <button
+              type="button"
+              className="dash-btn-secondary"
+              onClick={() => {
+                setResult(null)
+                setAnswers(questions.map(() => null))
+              }}
+            >
+              Try again
+            </button>
             <a className="dash-btn" href={props.nextHref}>
               {props.nextLabel}
             </a>
@@ -339,9 +325,9 @@ function Quiz(props: {
             className="dash-btn"
             disabled={busy || !!item.locked || answers.some((a) => a === null)}
           >
-            {busy ? 'Checking…' : isAssessment ? 'Submit assessment' : 'Check my answers'}
+            {busy ? 'Checking…' : 'Check my answers'}
           </button>
-          {item.status === 'completed' && !isAssessment && (
+          {item.status === 'completed' && (
             <span className="dash-muted">Best score so far: {score(item.score)}</span>
           )}
         </Actions>
@@ -500,6 +486,138 @@ function Interview(props: {
         .
       </p>
     </>
+  )
+}
+
+/**
+ * Posts the launch fields to the tool in this same window; the tool sends the learner back with a
+ * return link. Values are set as properties, never as HTML.
+ */
+function submitLaunchForm(action: string, fields: Record<string, string>) {
+  const form = document.createElement('form')
+  form.method = 'POST'
+  form.action = action
+  form.target = '_self'
+  form.style.display = 'none'
+  for (const [name, value] of Object.entries(fields)) {
+    const input = document.createElement('input')
+    input.type = 'hidden'
+    input.name = name
+    input.value = value
+    form.appendChild(input)
+  }
+  document.body.appendChild(form)
+  form.submit()
+  form.remove()
+}
+
+/** An activity in a connected tool: the learner goes to the tool in this window and comes back with a score. */
+function ToolItem(props: {
+  item: LearnerItem
+  onChange: (i: LearnerItem) => void
+  nextHref: string
+  nextLabel: string
+}) {
+  const { item } = props
+  const tool = item.tool
+  const send = useApiSend()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // The launch leaves this page in the same window; Back can restore it from the browser's cache
+  // exactly as it was, with the button still on "Opening…".
+  useEffect(
+    () =>
+      onPageRestore(window, () => {
+        setBusy(false)
+        setError(null)
+      }),
+    []
+  )
+
+  async function open() {
+    setBusy(true)
+    setError(null)
+    try {
+      const out = await send<{ action: string; fields: Record<string, string> }>(
+        'POST',
+        `/learn/me/cohorts/${item.cohortId}/items/${item.id}/tool-launch`
+      )
+      submitLaunchForm(out.action, out.fields)
+    } catch (err) {
+      setError((err as Error).message)
+      setBusy(false)
+    }
+  }
+
+  if (!tool) {
+    return (
+      <article className="dash-card dash-lesson">
+        <p>This activity is not available right now. Tell your instructor.</p>
+        <Actions>
+          <a className="dash-btn" href={props.nextHref}>
+            {props.nextLabel}
+          </a>
+        </Actions>
+      </article>
+    )
+  }
+
+  const completed = item.status === 'completed'
+  const copy = toolCopy(tool)
+  const limited = tool.attemptsAllowed !== null
+  const limitNote = timeLimitNote(tool.timeLimitMinutes)
+  return (
+    <article className="dash-card dash-lesson">
+      {completed ? (
+        <p className="dash-muted">
+          {item.score !== null && `Your best score: ${score(item.score)}. `}
+          {limited
+            ? `${attemptLine(item.attempts, tool.attemptsAllowed as number, true)}. `
+            : `Attempts: ${item.attempts}. `}
+          <span className="dash-chip dash-chip-on">Completed</span>
+        </p>
+      ) : (
+        <>
+          <p>{copy.intro}</p>
+          {limited && (
+            <p className="dash-muted">
+              {attemptLine(item.attempts, tool.attemptsAllowed as number, false)}
+            </p>
+          )}
+        </>
+      )}
+      {limitNote && tool.retries && <p className="dash-muted">{limitNote}</p>}
+      {error && <p className="dash-error">{error}</p>}
+      <Actions>
+        {completed ? (
+          <>
+            <a className="dash-btn" href={props.nextHref}>
+              {props.nextLabel}
+            </a>
+            {tool.retries && (
+              <button
+                type="button"
+                className="dash-btn-secondary"
+                onClick={open}
+                disabled={busy || !!item.locked}
+              >
+                {busy ? 'Opening…' : 'Try again'}
+              </button>
+            )}
+          </>
+        ) : (
+          <button
+            type="button"
+            className="dash-btn"
+            onClick={open}
+            disabled={busy || !!item.locked || !tool.retries}
+          >
+            {busy ? 'Opening…' : copy.start}
+          </button>
+        )}
+      </Actions>
+    </article>
   )
 }
 

@@ -8,6 +8,7 @@ import {
 import { createHash } from 'crypto'
 import { PrismaService } from '../prisma/prisma.service'
 import { ClerkService } from '../auth/clerk.service'
+import { sqlDatasetSlugs } from '../lti/tool/lti-session'
 import { SqlRunnerService, type SchemaTable } from '../sql-runner/sql-runner.service'
 
 export interface DatasetInput {
@@ -246,6 +247,19 @@ export class DatasetsService {
     if (viaCohort > 0) return d
     if (await this.referencedByPublishedScenario(slug)) return d
     throw new NotFoundException(`Dataset ${slug} not found`)
+  }
+
+  /**
+   * Full dataset for an LTI session: only one that an `sql` node of the launched (published)
+   * scenario uses. Anything else is a 404, whatever cohort or owner the dataset has.
+   */
+  async getForLti(ref: string, slug: string) {
+    const row = await this.prisma.scenario.findUnique({ where: { scenarioId: ref } })
+    if (!row || row.status !== 'published' || !sqlDatasetSlugs(row.data).includes(slug))
+      throw new NotFoundException(`Dataset ${slug} not found`)
+    const d = await this.prisma.dataset.findUnique({ where: { slug } })
+    if (!d) throw new NotFoundException(`Dataset ${slug} not found`)
+    return d
   }
 
   private async referencedByPublishedScenario(slug: string): Promise<boolean> {

@@ -46,19 +46,14 @@ describe('validateItemInput', () => {
     expect(() => validateItemInput({ type: 'lesson', title: ' ' })).toThrow(BadRequestException)
   })
 
-  it('needs pre or post on an assessment and drops the label elsewhere', () => {
-    expect(() => validateItemInput({ type: 'assessment', title: 'Quiz' })).toThrow(
-      BadRequestException
-    )
-    expect(
-      validateItemInput({
-        type: 'assessment',
-        title: 'Pre',
-        label: 'pre',
-        config: { assessmentSlug: 'ma-pre' },
-      })
-    ).toMatchObject({ label: 'pre', config: { questions: [], assessmentSlug: 'ma-pre' } })
+  it('drops the label on types that cannot carry one', () => {
     expect(validateItemInput({ type: 'lesson', title: 'x', label: 'pre' }).label).toBeNull()
+  })
+
+  it('rejects the retired native assessment type and points to the Interview Differently tool', () => {
+    const body = { type: 'assessment', title: 'Pre', label: 'pre', config: {} }
+    expect(() => validateItemInput(body)).toThrow(BadRequestException)
+    expect(() => validateItemInput(body)).toThrow(/Interview Differently assessment/)
   })
 
   it('checks knowledge-check questions', () => {
@@ -242,20 +237,13 @@ describe('skills and remediation', () => {
     )
   })
 
-  it('marks lessons, videos and links as remediation, but not assessments or interviews', () => {
+  it('marks lessons, videos and links as remediation, but not interviews or tools', () => {
     const lesson = validateItemInput({
       type: 'lesson',
       title: 'Lifting',
       config: { body: 'x', remediationFor: 'safety' },
     })
     expect(lesson.config).toEqual({ body: 'x', remediationFor: 'safety' })
-    const assessment = validateItemInput({
-      type: 'assessment',
-      title: 'Post',
-      label: 'post',
-      config: { questions: [], remediationFor: 'safety' },
-    })
-    expect(assessment.config).not.toHaveProperty('remediationFor')
     expect(() =>
       validateItemInput({ type: 'lesson', title: 'x', config: { remediationFor: 'Not valid!' } })
     ).toThrow(BadRequestException)
@@ -328,5 +316,154 @@ describe('slugify', () => {
   it('makes a url-safe slug', () => {
     expect(slugify('Medical Assistant (CCMA) — 2026!')).toBe('medical-assistant-ccma-2026')
     expect(slugify('!!!')).toBe('course')
+  })
+})
+
+describe('tool items', () => {
+  const base = { type: 'tool', title: 'Practice', config: { toolId: 'id-interview', ref: ' cna ' } }
+
+  it('keeps a registered tool, its trimmed reference and an optional skill', () => {
+    expect(validateItemInput(base)).toMatchObject({
+      type: 'tool',
+      config: { toolId: 'id-interview', ref: 'cna' },
+    })
+    expect(
+      validateItemInput({ ...base, config: { ...base.config, skill: 'comms', extra: 1 } }).config
+    ).toEqual({ toolId: 'id-interview', ref: 'cna', skill: 'comms' })
+  })
+
+  it('rejects an unregistered tool, a missing or long reference and a bad skill', () => {
+    expect(() => validateItemInput({ ...base, config: { toolId: 'nope', ref: 'x' } })).toThrow(
+      'not connected'
+    )
+    expect(() => validateItemInput({ ...base, config: { toolId: 'id-interview' } })).toThrow(
+      'required'
+    )
+    expect(() =>
+      validateItemInput({ ...base, config: { toolId: 'id-interview', ref: 'x'.repeat(201) } })
+    ).toThrow('too long')
+    expect(() =>
+      validateItemInput({ ...base, config: { ...base.config, skill: 'Bad Skill' } })
+    ).toThrow('Skill is not valid')
+  })
+
+  it('refuses an empty or blank reference', () => {
+    for (const ref of ['', '   ', null]) {
+      expect(() => validateItemInput({ ...base, config: { toolId: 'id-interview', ref } })).toThrow(
+        'Tool reference is required'
+      )
+    }
+  })
+
+  describe('countsAsInterview', () => {
+    it('is kept as true for an unlabelled interview tool and defaults to absent', () => {
+      expect(
+        validateItemInput({ ...base, config: { ...base.config, countsAsInterview: true } }).config
+      ).toEqual({ toolId: 'id-interview', ref: 'cna', countsAsInterview: true })
+      expect(
+        validateItemInput({ ...base, config: { ...base.config, countsAsInterview: false } }).config
+      ).toEqual({ toolId: 'id-interview', ref: 'cna' })
+      expect(validateItemInput(base).config).toEqual({ toolId: 'id-interview', ref: 'cna' })
+    })
+
+    it('refuses a value that is not a boolean', () => {
+      expect(() =>
+        validateItemInput({ ...base, config: { ...base.config, countsAsInterview: 'yes' } })
+      ).toThrow('true or false')
+    })
+
+    it('is dropped for an assessment tool', () => {
+      expect(
+        validateItemInput({
+          type: 'tool',
+          title: 'Pre',
+          label: 'pre',
+          config: { toolId: 'id-assessment', ref: 'cna-pre', countsAsInterview: true },
+        }).config
+      ).toEqual({ toolId: 'id-assessment', ref: 'cna-pre', maxAttempts: 1 })
+    })
+  })
+
+  it('cannot be remediation or review content', () => {
+    expect(
+      validateItemInput({ ...base, config: { ...base.config, remediationFor: 'comms' } }).config
+    ).toEqual({ toolId: 'id-interview', ref: 'cna' })
+  })
+
+  describe('assessment tool', () => {
+    const assess = {
+      type: 'tool',
+      title: 'Pre',
+      config: { toolId: 'id-assessment', ref: 'cna-pre' },
+    }
+
+    it('keeps a pre or post label, or none', () => {
+      expect(validateItemInput({ ...assess, label: 'pre' })).toMatchObject({ label: 'pre' })
+      expect(validateItemInput({ ...assess, label: 'post' })).toMatchObject({ label: 'post' })
+      expect(validateItemInput(assess)).toMatchObject({ label: null })
+      expect(validateItemInput({ ...assess, label: null })).toMatchObject({ label: null })
+    })
+
+    it('rejects an unknown label and still requires a reference', () => {
+      expect(() => validateItemInput({ ...assess, label: 'mid' })).toThrow('pre, post')
+      expect(() =>
+        validateItemInput({ ...assess, label: 'pre', config: { toolId: 'id-assessment' } })
+      ).toThrow('required')
+    })
+
+    it('cannot be remediation content', () => {
+      expect(
+        validateItemInput({
+          ...assess,
+          label: 'pre',
+          config: { ...assess.config, remediationFor: 'comms' },
+        }).config
+      ).toEqual({ toolId: 'id-assessment', ref: 'cna-pre', maxAttempts: 1 })
+    })
+
+    it('keeps maxAttempts (default 1) and an optional timeLimitMinutes', () => {
+      expect(validateItemInput(assess).config).toEqual({
+        toolId: 'id-assessment',
+        ref: 'cna-pre',
+        maxAttempts: 1,
+      })
+      expect(
+        validateItemInput({
+          ...assess,
+          config: { ...assess.config, maxAttempts: 5, timeLimitMinutes: 240 },
+        }).config
+      ).toEqual({ toolId: 'id-assessment', ref: 'cna-pre', maxAttempts: 5, timeLimitMinutes: 240 })
+      expect(
+        validateItemInput({ ...assess, config: { ...assess.config, timeLimitMinutes: 5 } }).config
+      ).toMatchObject({ timeLimitMinutes: 5 })
+    })
+
+    it('rejects attempts and time limits out of range or not whole numbers', () => {
+      for (const maxAttempts of [0, 6, 1.5, '2'])
+        expect(() =>
+          validateItemInput({ ...assess, config: { ...assess.config, maxAttempts } })
+        ).toThrow('Attempts allowed must be a whole number from 1 to 5')
+      for (const timeLimitMinutes of [4, 241, 10.5, '30', null])
+        expect(() =>
+          validateItemInput({ ...assess, config: { ...assess.config, timeLimitMinutes } })
+        ).toThrow('Time limit must be a whole number from 5 to 240')
+    })
+
+    it('drops attempts and time limit for a tool that is not an assessment', () => {
+      expect(
+        validateItemInput({
+          ...base,
+          config: { ...base.config, maxAttempts: 3, timeLimitMinutes: 30 },
+        }).config
+      ).toEqual({ toolId: 'id-interview', ref: 'cna' })
+      expect(
+        validateItemInput({ ...base, config: { ...base.config, maxAttempts: 99 } }).config
+      ).toEqual({ toolId: 'id-interview', ref: 'cna' })
+    })
+
+    it('refuses a label on a tool that is not labelable', () => {
+      expect(() => validateItemInput({ ...base, label: 'pre' })).toThrow('cannot be a pre or post')
+      expect(validateItemInput({ ...base, label: null })).toMatchObject({ label: null })
+    })
   })
 })

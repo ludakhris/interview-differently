@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { AssessmentsService } from './assessments.service'
 import { parseAssessmentMarkdown, AssessmentParseError } from './parse-markdown'
 import { compareResults } from './grade'
@@ -511,5 +512,149 @@ describe('live progress (#40)', () => {
     ).deliveryResults('d1')
     expect(r.attempts[0]).toMatchObject({ answeredCount: 2, questionCount: 4, lastActivityAt: t })
     expect(r.notStarted).toEqual([{ userId: 'u2', email: 'two@x', displayName: 'Two' }])
+  })
+})
+
+describe('LTI attempts (#63)', () => {
+  const delivery = {
+    id: 'd1',
+    cohortId: 'c1',
+    opensAt: null as Date | null,
+    closesAt: null as Date | null,
+    assessment: {
+      dataset: null,
+      sections: [
+        {
+          id: 's1',
+          number: 1,
+          title: 'S',
+          draw: null,
+          questions: [{ id: '1.1', type: 'mc', prompt: 'p', options: [], answer: 'A' }],
+        },
+      ],
+    },
+  }
+  const make = (over: { delivery?: unknown; existing?: unknown; attempt?: unknown } = {}) => {
+    const create = jest.fn(async () => ({ id: 'new' }))
+    const prisma = {
+      assessmentDelivery: {
+        findUnique: async () => (over.delivery === undefined ? delivery : over.delivery),
+      },
+      assessmentAttempt: {
+        findUnique: async (a: { where: { id?: string } }) =>
+          a.where.id ? (over.attempt ?? null) : (over.existing ?? null),
+        create,
+      },
+      cohort: { count: jest.fn(async () => 0) },
+    }
+    const clerk = { isAdmin: async () => false }
+    return {
+      create,
+      prisma,
+      svc: new AssessmentsService(prisma as never, clerk as never, {} as never),
+    }
+  }
+
+  it('draws the paper without the cohort membership check', async () => {
+    const { svc, create, prisma } = make()
+    await expect(svc.startAttemptForLti('u1', 'd1')).resolves.toEqual({ id: 'new' })
+    expect(create).toHaveBeenCalledTimes(1)
+    expect(prisma.cohort.count).not.toHaveBeenCalled()
+    // the Clerk path still enforces it
+    await expect(svc.startAttempt('u1', 'd1')).rejects.toThrow(/not found/)
+  })
+
+  it('resumes an existing attempt, even when the delivery has closed', async () => {
+    const closed = { ...delivery, closesAt: new Date(Date.now() - 1000) }
+    const { svc, create } = make({ delivery: closed, existing: { id: 'old' } })
+    await expect(svc.startAttemptForLti('u1', 'd1')).resolves.toEqual({ id: 'old' })
+    expect(create).not.toHaveBeenCalled()
+  })
+
+  it('keeps the open check and 404s an unknown delivery', async () => {
+    const closed = { ...delivery, closesAt: new Date(Date.now() - 1000) }
+    await expect(make({ delivery: closed }).svc.startAttemptForLti('u1', 'd1')).rejects.toThrow(
+      /not open/
+    )
+    await expect(make({ delivery: null }).svc.startAttemptForLti('u1', 'd1')).rejects.toThrow(
+      /not found/
+    )
+  })
+
+  it('resumes the winner when two first starts race', async () => {
+    const { svc, prisma } = make()
+    let first = true
+    const found = { id: 'winner' }
+    prisma.assessmentAttempt.findUnique = (async (a: { where: { id?: string } }) =>
+      a.where.id || first ? ((first = false), null) : found) as never
+    prisma.assessmentAttempt.create = (async () => {
+      throw new Prisma.PrismaClientKnownRequestError('dup', { code: 'P2002', clientVersion: 'x' })
+    }) as never
+    await expect(svc.startAttemptForLti('u1', 'd1')).resolves.toEqual({ id: 'winner' })
+  })
+
+  it('pins an attempt to the session delivery and to its owner', async () => {
+    const attempt = {
+      id: 'a1',
+      userId: 'u1',
+      deliveryId: 'd1',
+      submittedAt: new Date(),
+      sectionScores: [],
+      delivery,
+    }
+    const { svc } = make({ attempt })
+    await expect(svc.getResult('u1', 'a1', 'd1')).resolves.toMatchObject({ overall: { total: 0 } })
+    await expect(svc.getResult('u1', 'a1', 'other')).rejects.toThrow(/not found/)
+    await expect(svc.getAttempt('u1', 'a1', 'other')).rejects.toThrow(/not found/)
+    await expect(svc.saveAnswers('u1', 'a1', {}, 'other')).rejects.toThrow(/not found/)
+    await expect(svc.submit('u1', 'a1', undefined, 'other')).rejects.toThrow(/not found/)
+    await expect(svc.getResult('u2', 'a1', 'd1')).rejects.toThrow(/not found/)
+    // no pin (Clerk): unchanged behaviour
+    await expect(svc.getResult('u1', 'a1')).resolves.toBeDefined()
+  })
+
+  describe('time limit from the delivery', () => {
+    const run = async (startedMinutesAgo: number) => {
+      const timed = { ...delivery, timeLimitMinutes: 30 }
+      const attempt = {
+        id: 'a1',
+        userId: 'u1',
+        deliveryId: 'd1',
+        startedAt: new Date(Date.now() - startedMinutesAgo * 60 * 1000),
+        submittedAt: null,
+        drawnQuestionIds: ['1.1'],
+        answers: { '1.1': 'A' },
+        sectionScores: null,
+        delivery: timed,
+      }
+      const { svc, prisma } = make({ attempt })
+      const update = jest.fn(async () => ({}))
+      ;(prisma.assessmentAttempt as Record<string, unknown>).update = update
+      const paper = await svc.getAttempt('u1', 'a1', 'd1')
+      const result = await svc.submit('u1', 'a1', undefined, 'd1')
+      return { paper, result, update }
+    }
+
+    it('reports the deadline as start plus the limit', async () => {
+      const { paper } = await run(10)
+      expect(paper.deadlineAt!.getTime()).toBeGreaterThan(Date.now() + 19 * 60 * 1000)
+      expect(paper.deadlineAt!.getTime()).toBeLessThan(Date.now() + 21 * 60 * 1000)
+    })
+
+    it('records an on-time submit as not late', async () => {
+      const { update } = await run(10)
+      expect(update.mock.calls[0]).toMatchObject([{ data: { submittedLate: false } }])
+    })
+
+    it('still grades and stores a submit after the deadline, flagged late', async () => {
+      const { result, update } = await run(45)
+      expect(result.overall).toMatchObject({ correct: 1, total: 1, percent: 100 })
+      expect(update.mock.calls[0]).toMatchObject([{ data: { submittedLate: true } }])
+    })
+
+    it('treats a submit within the two minute grace as on time', async () => {
+      const { update } = await run(31)
+      expect(update.mock.calls[0]).toMatchObject([{ data: { submittedLate: false } }])
+    })
   })
 })

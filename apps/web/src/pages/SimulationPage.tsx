@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
+import { LtiNav } from '@/components/LtiNav'
+import { useLtiBrand } from '@/components/LtiBrandProvider'
 import { ChoiceCard } from '@/components/ChoiceCard'
 import { ContextPanel } from '@/components/ContextPanel'
 import { MetricChart } from '@/components/MetricChart'
@@ -12,14 +14,21 @@ import { InlineExhibits } from '@/components/InlineExhibits'
 import { KeyDataPanel, isKeyDataLayout } from '@/components/keydata/KeyDataPanel'
 import { QuantNode } from '@/components/quant/QuantNode'
 import { SqlNode } from '@/components/sql/SqlNode'
-import { saveResult, recordSimulationAttempt } from '@/services/resultsService'
+import { saveResult, saveResultStrict, recordSimulationAttempt } from '@/services/resultsService'
+import { completeLtiAttempt } from '@/services/ltiService'
+import { LtiScoreSent } from '@/components/LtiScoreSent'
 import { useSimulation } from '@/hooks/useSimulation'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import { buildPhaseViews, getPhaseForNode } from '@/lib/phases'
 import type { Scenario } from '@id/types'
 import type { TrackMeta } from '@/hooks/useScenarios'
 
-export function SimulationPage() {
+/**
+ * `ltiMode` (set by /lti/play/:scenarioId): the learner has no Clerk session,
+ * so the page behaves as signed in for saving and attempts, hands the score
+ * back to LearnDifferently on completion, and never links to other pages.
+ */
+export function SimulationPage({ ltiMode = false }: { ltiMode?: boolean } = {}) {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -47,17 +56,27 @@ export function SimulationPage() {
   // `scenario.nodes` (the summary form returned by the API for guests)
   // can't crash the hook. The summary still gives us scenario.track so
   // the Nav shows the right track label.
-  const isGated = isLoaded && !isSignedIn && !isPreview
+  const isGated = !ltiMode && isLoaded && !isSignedIn && !isPreview
 
   useEffect(() => {
-    if (!isLoading && !scenario && !isGated) {
+    if (!isLoading && !scenario && !isGated && !ltiMode) {
       navigate('/dashboard')
     }
-  }, [isLoading, scenario, navigate, isGated])
+  }, [isLoading, scenario, navigate, isGated, ltiMode])
+
+  if (ltiMode && !isLoading && !scenario) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center px-6">
+        <p className="text-fg text-[15px] text-center max-w-md">
+          We could not load this scenario. Go back to your course and start again.
+        </p>
+      </div>
+    )
+  }
 
   if ((isLoading && !isPreview) || !scenario) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <p className="text-slate-mid text-[14px]">Loading simulation...</p>
       </div>
     )
@@ -66,7 +85,7 @@ export function SimulationPage() {
   if (isGated) {
     const meta = trackMeta[scenario.track]
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+      <div className="min-h-screen bg-surface flex flex-col">
         <Nav trackLabel={meta?.label} />
         <div className="relative flex-1 flex items-center justify-center">
           <PreviewGate scenarioId={scenarioId!} />
@@ -81,6 +100,7 @@ export function SimulationPage() {
       scenarioId={scenarioId!}
       trackMeta={trackMeta}
       isPreview={isPreview}
+      ltiMode={ltiMode}
     />
   )
 }
@@ -100,17 +120,26 @@ function SimulationContent({
   scenarioId,
   trackMeta,
   isPreview = false,
+  ltiMode = false,
 }: {
   scenario: Scenario
   scenarioId: string
   trackMeta: Record<string, TrackMeta>
   isPreview?: boolean
+  ltiMode?: boolean
 }) {
   const navigate = useNavigate()
   const builderPath = `/builder/${scenarioId}`
   const meta = trackMeta[scenario.track]
+  // tenant accent (LTI only) stands in for the track colour
+  const accent = useLtiBrand()?.accent ?? meta?.color
 
-  const { isSignedIn, isLoaded, userId } = useAuth()
+  const auth = useAuth()
+  // LTI learners have no Clerk session; the API stamps the real user id from
+  // the LTI token, so the placeholder id here is ignored.
+  const isLoaded = ltiMode || auth.isLoaded
+  const isSignedIn = ltiMode || auth.isSignedIn
+  const userId = ltiMode ? 'lti' : auth.userId
 
   // Record one attempt per page mount, regardless of how many times React
   // re-runs the effect (StrictMode double-mount in dev would otherwise
@@ -156,7 +185,7 @@ function SimulationContent({
     // Gate covers the page — don't auto-navigate to /feedback for guests; the
     // sign-up overlay should prompt them first, then re-render the simulation
     // once authenticated. Preview mode + signed-in users continue as before.
-    if (isGated) return
+    if (isGated || ltiMode) return
     if (isPreview) {
       // Preview mode: skip writing results; return to builder canvas
       setTimeout(() => navigate(`/builder/${scenarioId}`), 600)
@@ -175,7 +204,40 @@ function SimulationContent({
     computeResult,
     isSignedIn,
     scenario.title,
+    ltiMode,
   ])
+
+  // LTI hand-back: save the result, then report it to LearnDifferently and
+  // return the learner there. Retry re-runs both (the API de-dupes by id).
+  const [ltiStatus, setLtiStatus] = useState<'idle' | 'sending' | 'error' | 'sent'>('idle')
+  const [ltiCourseUrl, setLtiCourseUrl] = useState<string | null>(null)
+  const ltiResult = useRef<ReturnType<typeof computeResult> | null>(null)
+  const sendLtiScore = useCallback(async () => {
+    if (!ltiResult.current) ltiResult.current = computeResult()
+    const result = ltiResult.current
+    setLtiStatus('sending')
+    try {
+      await saveResultStrict({ ...result, scenarioTitle: scenario.title })
+      const done = await completeLtiAttempt(result.id)
+      if (!done.ok) {
+        setLtiStatus('error')
+      } else if (done.navigateTo) {
+        window.location.assign(done.navigateTo)
+      } else {
+        setLtiCourseUrl(done.courseUrl)
+        setLtiStatus('sent')
+      }
+    } catch (err) {
+      console.warn('LTI score hand-back failed:', err)
+      setLtiStatus('error')
+    }
+  }, [computeResult, scenario.title])
+  const ltiStarted = useRef(false)
+  useEffect(() => {
+    if (!ltiMode || !isComplete || ltiStarted.current) return
+    ltiStarted.current = true
+    void sendLtiScore()
+  }, [ltiMode, isComplete, sendLtiScore])
 
   // ── Phase + exhibits plumbing ─────────────────────────────────────────────
   // Hooks must run on every render (rules-of-hooks), so they're declared
@@ -212,7 +274,7 @@ function SimulationContent({
   // auth on the API layer, which is tracked separately.
   if (isGated) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+      <div className="min-h-screen bg-surface flex flex-col">
         <Nav trackLabel={meta?.label} />
         <div className="relative flex-1 flex items-center justify-center">
           <PreviewGate scenarioId={scenarioId} />
@@ -221,12 +283,42 @@ function SimulationContent({
     )
   }
 
+  if (isComplete && ltiMode) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center px-6">
+        <div className="text-center animate-fade-in max-w-md">
+          {ltiStatus === 'error' ? (
+            <>
+              <p className="font-display font-bold text-[18px] text-fg mb-2">
+                We could not send your score
+              </p>
+              <p className="text-[14px] text-slate-mid mb-6">
+                Your answers are finished, but your score has not reached your course yet. Check
+                your connection and try again.
+              </p>
+              <button
+                onClick={() => void sendLtiScore()}
+                className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+              >
+                Retry
+              </button>
+            </>
+          ) : ltiStatus === 'sent' ? (
+            <LtiScoreSent courseUrl={ltiCourseUrl} />
+          ) : (
+            <p className="font-display font-bold text-[18px] text-fg">Sending your score...</p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   if (isComplete) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="text-center animate-fade-in">
           <div className="text-4xl mb-4">✓</div>
-          <p className="font-display font-bold text-[18px] text-[#f5f3ee]">
+          <p className="font-display font-bold text-[18px] text-fg">
             {isPreview
               ? 'Preview complete — returning to builder...'
               : 'Evaluating your responses...'}
@@ -259,7 +351,7 @@ function SimulationContent({
   const exhibitsLabel = isFirstPhase ? 'Brief' : 'Exhibits'
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+    <div className="min-h-screen bg-surface flex flex-col">
       {isPreview && (
         <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 bg-[#1a1a1a] border-t border-amber-500/30">
           <div className="flex items-center gap-2.5">
@@ -267,19 +359,23 @@ function SimulationContent({
             <span className="text-[12px] font-semibold text-amber-400 uppercase tracking-widest">
               Preview Mode
             </span>
-            <span className="text-[12px] text-white/30">— responses are not saved</span>
+            <span className="text-[12px] text-ink/30">— responses are not saved</span>
           </div>
           <button
             onClick={() => navigate(builderPath)}
-            className="text-[12px] font-medium text-white/40 hover:text-white/70 transition-colors"
+            className="text-[12px] font-medium text-ink/40 hover:text-ink/70 transition-colors"
           >
             ← Back to builder
           </button>
         </div>
       )}
-      <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
+      {ltiMode ? (
+        <LtiNav trackLabel={meta?.label} stepLabel={stepLabel} />
+      ) : (
+        <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
+      )}
 
-      {hasPhases && <PhaseStepper phases={phaseViews} accentColor={meta?.color} />}
+      {hasPhases && <PhaseStepper phases={phaseViews} accentColor={accent} />}
 
       <div className="flex flex-1">
         {/* Sidebar — only on lg+ screens */}
@@ -287,7 +383,7 @@ function SimulationContent({
           <ScenarioSidebar
             sections={display.sidebar}
             contextStyle={ctxStyle}
-            accentColor={meta?.color}
+            accentColor={accent}
           />
         )}
 
@@ -300,21 +396,21 @@ function SimulationContent({
             {/* ── Transition node ── */}
             {currentNode.type === 'transition' && (
               <div className="max-w-2xl mx-auto px-6 py-16 animate-fade-in">
-                <div className="bg-[#111111] border border-white/10 rounded-2xl p-8 mb-8">
+                <div className="bg-surface-alt border border-edge/10 rounded-2xl p-8 mb-8">
                   <div
                     className="text-[11px] font-bold uppercase tracking-widest mb-4"
-                    style={{ color: meta?.color }}
+                    style={{ color: accent }}
                   >
                     What happened next
                   </div>
-                  <p className="text-[15px] text-[#f5f3ee] leading-relaxed font-light">
+                  <p className="text-[15px] text-fg leading-relaxed font-light">
                     {currentNode.narrative}
                   </p>
                 </div>
                 <div className="flex justify-end">
                   <button
                     onClick={advanceTransition}
-                    className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                    className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
                   >
                     Continue
                   </button>
@@ -330,7 +426,7 @@ function SimulationContent({
                     <InlineExhibits
                       phase={currentPhase}
                       catalog={exhibitCatalog}
-                      accentColor={meta?.color}
+                      accentColor={accent}
                       label={exhibitsLabel}
                     />
                   </div>
@@ -350,7 +446,7 @@ function SimulationContent({
                   <div className="mt-6 flex justify-end">
                     <button
                       onClick={advanceQuant}
-                      className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                      className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
                     >
                       Continue
                     </button>
@@ -367,7 +463,7 @@ function SimulationContent({
                     <InlineExhibits
                       phase={currentPhase}
                       catalog={exhibitCatalog}
-                      accentColor={meta?.color}
+                      accentColor={accent}
                       label={exhibitsLabel}
                     />
                   </div>
@@ -382,7 +478,7 @@ function SimulationContent({
                   <div className="mt-6 flex justify-end">
                     <button
                       onClick={advanceSql}
-                      className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                      className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
                     >
                       Continue
                     </button>
@@ -402,7 +498,7 @@ function SimulationContent({
                     <InlineExhibits
                       phase={currentPhase}
                       catalog={exhibitCatalog}
-                      accentColor={meta?.color}
+                      accentColor={accent}
                       label={exhibitsLabel}
                     />
                   </div>
@@ -418,7 +514,7 @@ function SimulationContent({
                       <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">
                         {display.alertBanner.title}
                       </p>
-                      <p className="text-[13px] text-[#f5f3ee]/80 leading-relaxed">
+                      <p className="text-[13px] text-fg/80 leading-relaxed">
                         {display.alertBanner.body}
                       </p>
                     </div>
@@ -428,7 +524,7 @@ function SimulationContent({
                 {/* Context display — full width above narrative */}
                 {currentNode.contextPanels && currentNode.contextPanels.length > 0 && (
                   <div className="mb-6">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3">
                       {ctxLabel}
                     </p>
                     {currentNode.chart && <MetricChart config={currentNode.chart} />}
@@ -436,7 +532,7 @@ function SimulationContent({
                       <KeyDataPanel
                         layout={ctxStyle}
                         panels={currentNode.contextPanels}
-                        accentColor={meta?.color}
+                        accentColor={accent}
                       />
                     ) : (
                       <ContextPanel
@@ -456,7 +552,7 @@ function SimulationContent({
                     <InlineExhibits
                       phase={currentPhase}
                       catalog={exhibitCatalog}
-                      accentColor={meta?.color}
+                      accentColor={accent}
                       label={exhibitsLabel}
                     />
                   </div>
@@ -464,8 +560,8 @@ function SimulationContent({
 
                 {/* Narrative + choices — stacked. Choices read as the answer
                   to the narrative above, not as a parallel column. */}
-                <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
-                  <p className="text-[15px] text-[#f5f3ee] leading-[1.7] font-light">
+                <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6 mb-6">
+                  <p className="text-[15px] text-fg leading-[1.7] font-light">
                     {currentNode.narrative}
                   </p>
                 </div>
@@ -497,8 +593,8 @@ function SimulationContent({
                       font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
                       ${
                         selectedChoice
-                          ? 'bg-green hover:bg-green-light text-white cursor-pointer'
-                          : 'bg-white/10 text-slate-light cursor-not-allowed'
+                          ? 'bg-green hover:bg-green-light text-on-primary cursor-pointer'
+                          : 'bg-ink/10 text-slate-light cursor-not-allowed'
                       }
                     `}
                     >

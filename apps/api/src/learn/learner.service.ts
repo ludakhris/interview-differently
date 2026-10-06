@@ -24,11 +24,82 @@ import { gradeQuiz, publicQuestions } from './grade-quiz'
 import { averageScore, DEFAULT_ATTEMPTS, MAX_ANSWER_CHARS } from './interview-scoring'
 import { InterviewScoringService } from './interview-scoring.service'
 import { parseExternalLink } from './external-link'
+import {
+  assessmentLimits,
+  isInterviewLike,
+  isPracticeItem,
+  toolById,
+} from '../lti/platform/lti-platform-config'
 import { imageUrl, isImageKey } from './item-image'
+import { isSupportedItemType } from './course-config'
 import { doneSince, parseSkills, remediationOf, reviewOf, skillResults } from './skills'
 import { isVideoId, VIDEO_COMPLETE_PCT } from './youtube'
+import { randomUUID } from 'node:crypto'
 
-const QUIZ_TYPES = ['knowledge_check', 'assessment']
+/** A tool's score is still accepted this long after the cohort ends (a timed assessment begun just before). */
+export const TOOL_SCORE_GRACE_MS = 24 * 60 * 60 * 1000
+/** How many recent `reportedAt` values are kept to recognise a repeated report. */
+const RECENT_REPORTS_KEPT = 10
+
+/** Whether this exact report (by its timestamp) is already recorded in a tool item's progress data. */
+export function alreadyReported(data: unknown, reportedAt: string): boolean {
+  const d = (data ?? {}) as { reportedAt?: unknown; recentReportedAt?: unknown }
+  return (
+    d.reportedAt === reportedAt ||
+    (Array.isArray(d.recentReportedAt) && d.recentReportedAt.includes(reportedAt))
+  )
+}
+
+/**
+ * Records one tool score in a single statement, so concurrent reports cannot lose each other.
+ * $1 new row id, $2 enrollment, $3 item, $4 score, $5 data (json: lastScore, at, reportedAt?,
+ * dimensions?), $6 reportedAt (text or null), $7 attempt cap (int or null for none).
+ * The ON CONFLICT branch runs on the row's latest committed version (row-locked), and its WHERE
+ * skips the update, returning no row, when the report is a repeat (same reportedAt) or the cap
+ * is reached. Score is the best seen; dimensions stay those of the best attempt.
+ */
+export const RECORD_TOOL_RESULT_SQL = `
+INSERT INTO "ItemProgress" AS ip
+  ("id", "enrollmentId", "itemId", "status", "score", "attempts", "completedAt", "data", "updatedAt")
+VALUES (
+  $1, $2, $3, 'completed', $4::int, 1, now() AT TIME ZONE 'UTC',
+  CASE WHEN $6::text IS NULL THEN $5::jsonb
+       ELSE $5::jsonb || jsonb_build_object('recentReportedAt', jsonb_build_array($6::text)) END,
+  now() AT TIME ZONE 'UTC'
+)
+ON CONFLICT ("enrollmentId", "itemId") DO UPDATE SET
+  "status" = 'completed',
+  "score" = GREATEST(ip."score", EXCLUDED."score"),
+  "attempts" = ip."attempts" + 1,
+  "completedAt" = now() AT TIME ZONE 'UTC',
+  "updatedAt" = now() AT TIME ZONE 'UTC',
+  "data" = (
+    CASE WHEN EXCLUDED."score" > COALESCE(ip."score", -1)
+         THEN (COALESCE(ip."data", '{}'::jsonb) - 'dimensions')
+              || (EXCLUDED."data" - 'recentReportedAt')
+         ELSE COALESCE(ip."data", '{}'::jsonb)
+              || (EXCLUDED."data" - 'recentReportedAt' - 'dimensions')
+    END
+  ) || jsonb_build_object('recentReportedAt', (
+    SELECT COALESCE(jsonb_agg(t.v ORDER BY t.n), '[]'::jsonb)
+    FROM (
+      SELECT a.v, a.n
+      FROM jsonb_array_elements(
+        CASE WHEN jsonb_typeof(ip."data"->'recentReportedAt') = 'array' THEN ip."data"->'recentReportedAt'
+             WHEN ip."data"->>'reportedAt' IS NOT NULL THEN jsonb_build_array(ip."data"->>'reportedAt')
+             ELSE '[]'::jsonb END
+        || CASE WHEN $6::text IS NULL THEN '[]'::jsonb ELSE jsonb_build_array($6::text) END
+      ) WITH ORDINALITY AS a(v, n)
+      ORDER BY a.n DESC
+      LIMIT ${RECENT_REPORTS_KEPT}
+    ) t
+  ))
+WHERE ($7::int IS NULL OR ip."attempts" < $7::int)
+  AND ($6::text IS NULL OR (
+        NOT (COALESCE(ip."data"->'recentReportedAt', '[]'::jsonb) @> to_jsonb($6::text))
+        AND COALESCE(ip."data"->>'reportedAt', '') <> $6::text))
+RETURNING ip."attempts" AS "attempts"
+`
 
 /**
  * Done for what the learner is doing now: completed, and for an item their results
@@ -130,11 +201,13 @@ export class LearnerService {
   // ── reading ───────────────────────────────────────────────────────────────
 
   private async courseItems(courseId: string) {
-    return this.prisma.courseModule.findMany({
+    const modules = await this.prisma.courseModule.findMany({
       where: { courseId },
       orderBy: { position: 'asc' },
       include: { items: { orderBy: { position: 'asc' } } },
     })
+    // A stored item of a type that is no longer supported is skipped, not shown broken.
+    return modules.map((m) => ({ ...m, items: m.items.filter((i) => isSupportedItemType(i.type)) }))
   }
 
   async cards(userId: string): Promise<LearnerCohortCard[]> {
@@ -281,7 +354,12 @@ export class LearnerService {
           ),
       })),
       record: buildRecord(
-        items.map((i) => ({ id: i.id, type: i.type, label: i.label })),
+        items.map((i) => ({
+          id: i.id,
+          type: i.type,
+          label: i.label,
+          config: i.config,
+        })),
         progress,
         course,
         e.status === 'completed'
@@ -306,6 +384,8 @@ export class LearnerService {
     })
     if (!item || item.module.courseId !== e.cohort.course.id)
       throw new NotFoundException('Item not found')
+    if (!isSupportedItemType(item.type))
+      throw new NotFoundException('This item type is no longer supported')
     // The plan entry, if this learner's results added the item. Extra content opens only with one.
     const plan = await this.prisma.planItem.findUnique({
       where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
@@ -372,6 +452,20 @@ export class LearnerService {
         imageUrl: isImageKey(config.imageKey) ? imageUrl(config.imageKey) : null,
       }
     }
+    const registered = item.type === 'tool' ? toolById(config.toolId) : undefined
+    const limits = registered?.kind === 'assessment' ? assessmentLimits(config) : null
+    const tool: LearnerItem['tool'] =
+      registered && typeof config.ref === 'string'
+        ? {
+            toolId: registered.toolId,
+            name: registered.name,
+            ref: config.ref,
+            // Interviews are unlimited; an assessment allows `maxAttempts` recorded scores.
+            retries: limits ? (progress?.attempts ?? 0) < limits.maxAttempts : true,
+            attemptsAllowed: limits ? limits.maxAttempts : null,
+            timeLimitMinutes: limits ? limits.timeLimitMinutes : null,
+          }
+        : null
     return {
       id: item.id,
       cohortId,
@@ -379,15 +473,17 @@ export class LearnerService {
       title: item.title,
       label: item.label,
       body: item.type === 'lesson' ? String(config.body ?? '') : null,
-      questions: QUIZ_TYPES.includes(item.type)
-        ? publicQuestions((config.questions ?? []) as KnowledgeCheckQuestion[])
-        : null,
+      questions:
+        item.type === 'knowledge_check'
+          ? publicQuestions((config.questions ?? []) as KnowledgeCheckQuestion[])
+          : null,
       scorm,
       interview,
       planAdded,
       review,
       video,
       link,
+      tool,
       status: review ? 'not_started' : this.statusOf(progress ?? undefined),
       score: progress?.score ?? null,
       attempts: progress?.attempts ?? 0,
@@ -485,11 +581,7 @@ export class LearnerService {
     const { e, item, progress } = await this.itemOf(userId, cohortId, itemId)
     const locked = this.lockReason(e.cohort.startsAt, e.cohort.endsAt)
     if (locked) throw new ConflictException(locked)
-    if (!QUIZ_TYPES.includes(item.type)) throw new ConflictException('This item has no questions')
-    // Pre and post assessments count once; knowledge checks can be retaken.
-    if (item.type === 'assessment' && progress?.status === 'completed') {
-      throw new ConflictException('You have already completed this assessment.')
-    }
+    if (item.type !== 'knowledge_check') throw new ConflictException('This item has no questions')
     const questions =
       ((item.config ?? {}) as { questions?: KnowledgeCheckQuestion[] }).questions ?? []
     const result = gradeQuiz(questions, answers)
@@ -511,7 +603,7 @@ export class LearnerService {
       },
       update: {
         status: 'completed',
-        score: item.type === 'assessment' ? result.score : best,
+        score: best,
         attempts: { increment: 1 },
         completedAt: new Date(),
         data,
@@ -588,6 +680,79 @@ export class LearnerService {
       },
     })
     const added = await this.updatePlan(e.id, e.cohort.course, itemId)
+    return this.item(userId, cohortId, itemId, added)
+  }
+
+  /**
+   * Records a score an LTI tool sent back (0-100): the best counts, every distinct report is an
+   * attempt, and the plan and course completion are updated like after any other scored item.
+   * The write is one SQL statement, so concurrent reports neither lose an attempt nor a better score.
+   */
+  async recordToolResult(
+    userId: string,
+    cohortId: string,
+    itemId: string,
+    result: { scorePct: number; dimensions?: unknown; reportedAt?: string }
+  ): Promise<LearnerItem> {
+    const { e, item, progress } = await this.itemOf(userId, cohortId, itemId)
+    // Launching needs an open cohort; a score may arrive up to a day after it closes, so a learner
+    // who started a timed assessment just before the end keeps the result.
+    const status = cohortStatus(e.cohort.startsAt, e.cohort.endsAt)
+    if (status === 'upcoming') throw new ConflictException('This cohort has not started yet.')
+    if (
+      status === 'completed' &&
+      Date.now() - (e.cohort.endsAt as Date).getTime() > TOOL_SCORE_GRACE_MS
+    )
+      throw new ConflictException('This cohort has ended.')
+    if (item.type !== 'tool') throw new ConflictException('This item is not a connected tool')
+    const pct = result.scorePct
+    if (typeof pct !== 'number' || !Number.isFinite(pct) || pct < 0 || pct > 100)
+      throw new BadRequestException('Score must be from 0 to 100')
+    const registered = toolById((item.config as { toolId?: unknown } | null)?.toolId)
+    const cap = registered?.kind === 'assessment' ? assessmentLimits(item.config).maxAttempts : null
+
+    // A tool may report the same result twice (a retry after a timeout): a report with the same
+    // timestamp as one already recorded is not counted again.
+    const reportedMs = typeof result.reportedAt === 'string' ? Date.parse(result.reportedAt) : NaN
+    const reportedAt = Number.isNaN(reportedMs) ? null : new Date(reportedMs).toISOString()
+    // The statement below re-checks both rules on the row's latest state; this saves a round trip.
+    if (reportedAt && progress && alreadyReported(progress.data, reportedAt))
+      return this.item(userId, cohortId, itemId)
+    if (cap !== null && (progress?.attempts ?? 0) >= cap)
+      throw new ConflictException(`You have used all ${cap} attempts.`)
+
+    const score = Math.round(pct)
+    const dims = result.dimensions
+    const data = {
+      lastScore: score,
+      at: new Date().toISOString(),
+      ...(reportedAt ? { reportedAt } : {}),
+      ...(dims && typeof dims === 'object' && JSON.stringify(dims).length < 20_000
+        ? { dimensions: dims }
+        : {}),
+    }
+    const rows = await this.prisma.$queryRawUnsafe<{ attempts: number }[]>(
+      RECORD_TOOL_RESULT_SQL,
+      randomUUID(),
+      e.id,
+      itemId,
+      score,
+      JSON.stringify(data),
+      reportedAt,
+      cap
+    )
+    if (rows.length === 0) {
+      // Another request got there first: it was this very report, or it used the last attempt.
+      const now = await this.prisma.itemProgress.findUnique({
+        where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
+      })
+      if (reportedAt && now && alreadyReported(now.data, reportedAt))
+        return this.item(userId, cohortId, itemId)
+      throw new ConflictException(`You have used all ${cap} attempts.`)
+    }
+    // Plan first, so a skill flagged by this result holds the course open.
+    const added = await this.updatePlan(e.id, e.cohort.course, itemId)
+    await this.completeIfDone(e.id, e.status, e.cohort.course.id)
     return this.item(userId, cohortId, itemId, added)
   }
 
@@ -684,8 +849,9 @@ export class LearnerService {
 
   /**
    * A learner completes the course when every lesson, knowledge check and
-   * assessment is done. Practice interviews are scored by an instructor and do
-   * not hold completion back.
+   * assessment is done, including a connected tool labelled pre or post (an assessment in
+   * Interview Differently). Practice interviews and unlabelled connected tools (an interview in
+   * Interview Differently) are practice and do not hold completion back.
    */
   private async completeIfDone(
     enrollmentId: string,
@@ -704,7 +870,7 @@ export class LearnerService {
     // (a review) must be done in the outline and again since it was added to the plan.
     const outline = modules
       .flatMap((m) => m.items)
-      .filter((i) => i.type !== 'interview' && !remediationOf(i.config))
+      .filter((i) => !isPracticeItem(i) && !remediationOf(i.config))
       .map((i) => i.id)
     const finished = await this.prisma.itemProgress.findMany({
       where: {
@@ -752,12 +918,14 @@ export function videoEvidence(body: unknown): {
 
 /** The record a learner (and their agency) sees, from item results and the course's thresholds. */
 export function buildRecord(
-  items: { id: string; type: string; label: string | null }[],
+  items: { id: string; type: string; label: string | null; config?: unknown }[],
   progress: { itemId: string; status: string; score: number | null }[],
   course: { targetScore: number; readinessThreshold: number },
   completed: boolean
 ): ReadinessRecord {
-  const scoreOf = (pick: (i: { type: string; label: string | null }) => boolean) => {
+  const scoreOf = (
+    pick: (i: { type: string; label: string | null; config?: unknown }) => boolean
+  ) => {
     const ids = new Set(items.filter(pick).map((i) => i.id))
     const scores = progress
       .filter((p) => ids.has(p.itemId) && p.status === 'completed' && p.score !== null)
@@ -766,7 +934,7 @@ export function buildRecord(
   }
   const pre = scoreOf((i) => i.label === 'pre')
   const post = scoreOf((i) => i.label === 'post')
-  const interviewBest = scoreOf((i) => i.type === 'interview')
+  const interviewBest = scoreOf(isInterviewLike)
   return {
     pre,
     post,

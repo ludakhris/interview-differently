@@ -1,5 +1,6 @@
 import type { CourseItemDto, CourseSkill, KnowledgeCheckQuestion } from '@id/types'
 import { useState } from 'react'
+import { TOOL_OPTIONS, toolConfig, toolItemLabel, toolLabelable, toolRefProblem } from './toolKinds'
 
 export interface ItemDraft {
   type: string
@@ -12,21 +13,21 @@ export interface ItemDraft {
 export const LEARNER_TYPE_LABEL: Record<string, string> = {
   lesson: 'Lesson',
   knowledge_check: 'Knowledge check',
-  assessment: 'Assessment',
   interview: 'Practice interview',
   scorm: 'Interactive lesson',
   video: 'Video',
   external_link: 'External course',
+  tool: 'Connected tool',
 }
 
 export const TYPE_LABEL: Record<string, string> = {
   lesson: 'Lesson',
   knowledge_check: 'Knowledge check',
-  assessment: 'Assessment',
   interview: 'Practice interview',
   scorm: 'SCORM package',
   video: 'Video',
   external_link: 'Link to an external course',
+  tool: 'Connected tool',
 }
 
 const emptyQuestion = (): KnowledgeCheckQuestion => ({
@@ -42,6 +43,8 @@ export function ItemEditor(props: {
   skills: CourseSkill[]
   busy: boolean
   onSave: (draft: ItemDraft) => void
+  /** True for a new item that is not saved yet: nothing exists until the author saves it. */
+  isNew?: boolean
   onCancel: () => void
   /** Upload a preview image, or remove it with null. Only external course items use it. */
   onImage?: (file: File | null) => void
@@ -63,6 +66,8 @@ export function ItemEditor(props: {
   const [linkSummary, setLinkSummary] = useState(String(item.config.summary ?? ''))
   const [role, setRole] = useState(String(item.config.role ?? ''))
   const [skill, setSkill] = useState(String(item.config.skill ?? ''))
+  const [toolId, setToolId] = useState(String(item.config.toolId ?? 'id-interview'))
+  const [toolRef, setToolRef] = useState(String(item.config.ref ?? ''))
   // How this item is used in a learner's plan: ordinary content, extra content only flagged
   // learners get, or ordinary content that flagged learners must complete again.
   const [planMode, setPlanMode] = useState<'none' | 'extra' | 'review'>(
@@ -71,21 +76,26 @@ export function ItemEditor(props: {
   const [planSkill, setPlanSkill] = useState(
     String(item.config.remediationFor ?? item.config.reviewFor ?? '')
   )
+  const [countsAsInterview, setCountsAsInterview] = useState(item.config.countsAsInterview === true)
+  const [problem, setProblem] = useState<string | null>(null)
   const [attempts, setAttempts] = useState(String(item.config.maxAttempts ?? 1))
+  const [timeLimit, setTimeLimit] = useState(
+    item.config.timeLimitMinutes ? String(item.config.timeLimitMinutes) : ''
+  )
   const [questionsText, setQuestionsText] = useState(
     Array.isArray(item.config.questions) && item.type === 'interview'
       ? (item.config.questions as string[]).join('\n')
       : ''
   )
 
-  // An assessment or a practice interview is evidence, so it cannot be remediation content.
-  const canBeRemediation = item.type !== 'assessment' && item.type !== 'interview'
+  // A practice interview or an assessment tool is evidence, so it cannot be remediation content.
+  const canBeRemediation = item.type !== 'interview' && item.type !== 'tool'
 
   function save() {
     const config: Record<string, unknown> =
       item.type === 'lesson'
         ? { body }
-        : item.type === 'knowledge_check' || item.type === 'assessment'
+        : item.type === 'knowledge_check'
           ? { questions }
           : item.type === 'video'
             ? { url: videoUrl }
@@ -96,24 +106,36 @@ export function ItemEditor(props: {
                   instructions: linkNote,
                   imageKey: item.config.imageKey,
                 }
-              : {
-                  role,
-                  ...(skill ? { skill } : {}),
-                  maxAttempts: Number(attempts) || 1,
-                  questions: questionsText
-                    .split('\n')
-                    .map((q) => q.trim())
-                    .filter(Boolean),
-                }
+              : item.type === 'tool'
+                ? toolConfig({
+                    toolId,
+                    ref: toolRef,
+                    skill,
+                    attempts,
+                    timeLimit,
+                    countsAsInterview,
+                  })
+                : {
+                    role,
+                    ...(skill ? { skill } : {}),
+                    maxAttempts: Number(attempts) || 1,
+                    questions: questionsText
+                      .split('\n')
+                      .map((q) => q.trim())
+                      .filter(Boolean),
+                  }
     const saved: Record<string, unknown> = { ...(item.type === 'scorm' ? item.config : config) }
     delete saved.remediationFor
     delete saved.reviewFor
     if (planSkill && canBeRemediation && planMode === 'extra') saved.remediationFor = planSkill
     if (planSkill && canBeRemediation && planMode === 'review') saved.reviewFor = planSkill
+    const refProblem = item.type === 'tool' ? toolRefProblem(toolRef) : null
+    setProblem(refProblem)
+    if (refProblem) return
     props.onSave({
       type: item.type,
       title,
-      label: item.type === 'assessment' ? label : null,
+      label: item.type === 'tool' ? toolItemLabel(toolId, label) : null,
       config: saved,
     })
   }
@@ -138,24 +160,8 @@ export function ItemEditor(props: {
         </label>
       )}
 
-      {(item.type === 'knowledge_check' || item.type === 'assessment') && (
+      {item.type === 'knowledge_check' && (
         <QuestionBuilder questions={questions} skills={props.skills} onChange={setQuestions} />
-      )}
-
-      {item.type === 'assessment' && (
-        <>
-          <fieldset className="dash-field">
-            <legend>When it runs</legend>
-            <label className="dash-radio">
-              <input type="radio" checked={label === 'pre'} onChange={() => setLabel('pre')} />
-              Before the course (pre-assessment)
-            </label>
-            <label className="dash-radio">
-              <input type="radio" checked={label === 'post'} onChange={() => setLabel('post')} />
-              After the course (post-assessment)
-            </label>
-          </fieldset>
-        </>
       )}
 
       {item.type === 'video' && (
@@ -320,9 +326,102 @@ export function ItemEditor(props: {
         </>
       )}
 
-      {item.type === 'interview' && (
+      {item.type === 'tool' && (
+        <>
+          <label className="dash-field">
+            <span>Tool</span>
+            <select value={toolId} onChange={(e) => setToolId(e.target.value)}>
+              {TOOL_OPTIONS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {toolLabelable(toolId) && (
+            <>
+              <label className="dash-field">
+                <span>When it runs</span>
+                <select value={label} onChange={(e) => setLabel(e.target.value as 'pre' | 'post')}>
+                  <option value="pre">Before the course (pre-assessment)</option>
+                  <option value="post">After the course (post-assessment)</option>
+                </select>
+                <small className="dash-muted">
+                  It stands in for the course's own pre or post assessment: it is required to finish
+                  the course and its best score counts toward the gain.
+                </small>
+              </label>
+              <label className="dash-field">
+                <span>Attempts allowed</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={5}
+                  value={attempts}
+                  onChange={(e) => setAttempts(e.target.value)}
+                />
+              </label>
+              <label className="dash-field">
+                <span>Time limit (minutes, optional)</span>
+                <input
+                  type="number"
+                  min={5}
+                  max={240}
+                  value={timeLimit}
+                  placeholder="No limit"
+                  onChange={(e) => setTimeLimit(e.target.value)}
+                />
+                <small className="dash-muted">
+                  The best score counts. A started attempt can be resumed. The timer starts when the
+                  learner opens the attempt.
+                </small>
+              </label>
+            </>
+          )}
+          <label className="dash-field">
+            <span>Reference</span>
+            <input
+              value={toolRef}
+              maxLength={200}
+              placeholder={toolLabelable(toolId) ? 'Assessment slug' : 'Interview scenario id'}
+              onChange={(e) => setToolRef(e.target.value)}
+            />
+            {toolLabelable(toolId) ? (
+              <small className="dash-muted">
+                The assessment's slug, as set when it was imported in Interview Differently (Admin,
+                Assessments). A wrong slug only shows up when a learner opens it.
+              </small>
+            ) : (
+              <small className="dash-muted">
+                Which interview this opens. In Interview Differently, open the interview in the
+                builder: its id is the last part of the page address
+                (.../builder/your-interview-id). Check it before saving, since a wrong id only shows
+                up when a learner opens it. The learner goes to the tool in the same window and
+                comes back here with the score.
+              </small>
+            )}
+          </label>
+          {!toolLabelable(toolId) && (
+            <label className="dash-check">
+              <input
+                type="checkbox"
+                checked={countsAsInterview}
+                onChange={(e) => setCountsAsInterview(e.target.checked)}
+              />
+              <span>Counts toward interview readiness</span>
+              <small className="dash-muted">
+                Tick this if the learner's best score here should count as their practice interview
+                score. Leave it unticked for a simulation or other practice: the learner still sees
+                its own score beside it in the course outline, but it does not feed their readiness.
+              </small>
+            </label>
+          )}
+        </>
+      )}
+
+      {(item.type === 'interview' || item.type === 'tool') && (
         <SkillSelect
-          label="Skill this interview builds"
+          label={item.type === 'tool' ? 'Skill this builds' : 'Skill this interview builds'}
           skills={props.skills}
           value={skill}
           onChange={setSkill}
@@ -359,9 +458,14 @@ export function ItemEditor(props: {
         </>
       )}
 
+      {problem && (
+        <p className="dash-banner dash-banner-error" role="alert">
+          {problem}
+        </p>
+      )}
       <div className="dash-form-actions">
         <button type="button" className="dash-btn" onClick={save} disabled={props.busy}>
-          {props.busy ? 'Saving…' : 'Save item'}
+          {props.busy ? 'Saving…' : props.isNew ? 'Add item' : 'Save item'}
         </button>
         <button type="button" className="dash-btn-quiet" onClick={props.onCancel}>
           Cancel

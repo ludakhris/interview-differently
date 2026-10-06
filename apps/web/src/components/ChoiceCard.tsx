@@ -16,7 +16,7 @@ export function ChoiceCard({ id, text, selected, onSelect }: Props) {
         ${
           selected
             ? 'border-green bg-green/10'
-            : 'border-white/10 bg-[#111111] hover:border-white/25'
+            : 'border-edge/10 bg-surface-alt hover:border-edge/25'
         }
       `}
     >
@@ -24,13 +24,13 @@ export function ChoiceCard({ id, text, selected, onSelect }: Props) {
         className={`
           flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center
           font-display font-bold text-[13px] transition-colors
-          ${selected ? 'bg-green text-white' : 'bg-white/10 text-slate-light'}
+          ${selected ? 'bg-green text-on-primary' : 'bg-ink/10 text-slate-light'}
         `}
       >
         {id}
       </span>
       <span
-        className={`text-[14px] leading-relaxed pt-0.5 ${selected ? 'text-[#f5f3ee] font-medium' : 'text-slate-light'}`}
+        className={`text-[14px] leading-relaxed pt-0.5 ${selected ? 'text-fg font-medium' : 'text-slate-light'}`}
       >
         {text}
       </span>

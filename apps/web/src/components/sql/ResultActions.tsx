@@ -23,7 +23,7 @@ export function ResultActions({
     window.setTimeout(() => setCopied(null), 1500)
   }
 
-  const btn = 'font-semibold text-white/50 hover:text-[#f5f3ee] transition-colors'
+  const btn = 'font-semibold text-ink/50 hover:text-fg transition-colors'
   const all = `all ${result.rowCount} row${result.rowCount !== 1 ? 's' : ''}`
   return (
     <span className="inline-flex items-center gap-3">

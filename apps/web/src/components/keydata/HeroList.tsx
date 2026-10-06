@@ -30,8 +30,10 @@ export function HeroList({ panels, accentColor = '#0f5b89' }: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-4">
       <div
-        className={`${panelBase} border-white/10 flex flex-col justify-center min-h-[160px]`}
-        style={{ backgroundImage: `linear-gradient(135deg, ${accentColor}22 0%, #0d0d0d 70%)` }}
+        className={`${panelBase} border-edge/10 flex flex-col justify-center min-h-[160px]`}
+        style={{
+          backgroundImage: `linear-gradient(135deg, ${accentColor}22 0%, rgb(var(--ld-surface-deep, 13 13 13)) 70%)`,
+        }}
       >
         <p className={eyebrow}>{hero.label}</p>
         <p
@@ -39,17 +41,17 @@ export function HeroList({ panels, accentColor = '#0f5b89' }: Props) {
         >
           {hero.value}
           {hero.unit && (
-            <span className="ml-2 text-[16px] font-normal text-white/65 align-baseline">
+            <span className="ml-2 text-[16px] font-normal text-ink/65 align-baseline">
               {hero.unit}
             </span>
           )}
         </p>
         {hero.caption && (
-          <p className="mt-3 text-[15px] text-white/75 leading-relaxed max-w-md">{hero.caption}</p>
+          <p className="mt-3 text-[15px] text-ink/75 leading-relaxed max-w-md">{hero.caption}</p>
         )}
       </div>
 
-      <div className={`${panelBase} border-white/10`}>
+      <div className={`${panelBase} border-edge/10`}>
         <p className={eyebrow}>Supporting</p>
         <dl className="mt-3 space-y-2.5">
           {rest.map((p, i) => {
@@ -57,13 +59,13 @@ export function HeroList({ panels, accentColor = '#0f5b89' }: Props) {
             return (
               <div
                 key={i}
-                className="flex items-baseline justify-between border-b border-white/8 pb-2.5 last:border-0 last:pb-0"
+                className="flex items-baseline justify-between border-b border-edge/8 pb-2.5 last:border-0 last:pb-0"
               >
-                <dt className="text-[14px] text-white/65">{p.label}</dt>
+                <dt className="text-[14px] text-ink/65">{p.label}</dt>
                 <dd className={`text-[15px] font-semibold ${toneText[tone]}`}>
                   {p.value}
                   {p.unit && (
-                    <span className="ml-1 text-[13px] font-normal text-white/55">{p.unit}</span>
+                    <span className="ml-1 text-[13px] font-normal text-ink/55">{p.unit}</span>
                   )}
                 </dd>
               </div>

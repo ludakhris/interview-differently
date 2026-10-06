@@ -36,17 +36,17 @@ function TreeNode({ node, depth }: TreeNodeProps) {
   const tone = node.tone ?? 'neutral'
 
   return (
-    <div className={depth === 0 ? '' : 'pl-4 border-l border-white/10 ml-1'}>
+    <div className={depth === 0 ? '' : 'pl-4 border-l border-edge/10 ml-1'}>
       <button
         type="button"
-        className={`group flex items-baseline gap-2 w-full text-left py-1.5 rounded hover:bg-white/3 px-1 -mx-1 ${hasChildren ? 'cursor-pointer' : 'cursor-default'}`}
+        className={`group flex items-baseline gap-2 w-full text-left py-1.5 rounded hover:bg-ink/3 px-1 -mx-1 ${hasChildren ? 'cursor-pointer' : 'cursor-default'}`}
         onClick={() => hasChildren && setOpen((o) => !o)}
         aria-expanded={hasChildren ? open : undefined}
       >
         {hasChildren ? (
-          <span className="text-[10px] text-white/40 w-3 flex-shrink-0">{open ? '▾' : '▸'}</span>
+          <span className="text-[10px] text-ink/40 w-3 flex-shrink-0">{open ? '▾' : '▸'}</span>
         ) : (
-          <span className="w-3 flex-shrink-0 text-white/20 text-[10px]">·</span>
+          <span className="w-3 flex-shrink-0 text-ink/20 text-[10px]">·</span>
         )}
         <span className={`text-[14px] font-medium ${toneText[tone]} flex-1`}>{node.label}</span>
         {node.value && (
@@ -56,9 +56,7 @@ function TreeNode({ node, depth }: TreeNodeProps) {
         )}
       </button>
       {node.formula && open && (
-        <p className="ml-5 text-[12px] text-white/45 font-mono leading-snug py-0.5">
-          {node.formula}
-        </p>
+        <p className="ml-5 text-[12px] text-ink/45 font-mono leading-snug py-0.5">{node.formula}</p>
       )}
       {hasChildren && open && (
         <div className="mt-0.5">

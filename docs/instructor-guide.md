@@ -47,6 +47,27 @@ None, until they choose. With two or more datasets, the Sandbox shows a **Choose
 
 ## LearnDifferently courses
 
+### How do I add a pre or post assessment to a course?
+
+Pre and post assessments are Interview Differently assessments; the course item launches one and brings the score back. Knowledge checks are unchanged: they stay inside the course (**+ Knowledge check**).
+
+1. An Interview Differently admin imports the assessment (**Tools ▾ → Admin → Assessments → + Import**; format in [assessment-format.md](assessment-format.md)) and tells you its **slug**.
+2. In LearnDifferently, open **Courses**, click the course, and under the module that should hold it click **+ Interview Differently assessment**.
+3. In the item editor that opens, set the title, then:
+   - **When it runs**: Before the course (pre-assessment) or After the course (post-assessment). It is required to finish the course and counts toward the gain.
+   - **Attempts allowed**: 1 to 5. The best score counts.
+   - **Time limit (minutes, optional)**: 5 to 240. The timer starts when the learner opens the attempt.
+   - **Reference**: the assessment's slug. A wrong slug only shows up when a learner opens it, so open it yourself first.
+4. **Save**.
+
+There is no Assessment button with questions typed into the course: pre and post assessments are always Interview Differently assessments. Knowledge checks (questions typed into the course) are unchanged.
+
+### How do I add a simulation or practice interview from Interview Differently?
+
+1. Under the module, click **+ Connected tool**. An editor opens for a new item; nothing is added to the course until you save with a real **Reference** (the interview's id, the last part of its builder address). Cancel adds nothing.
+2. Set the **Title**. Learners see it in the course outline, with their score beside it once they have one. It is not listed separately on the readiness record.
+3. Tick **Counts toward interview readiness** only for the item that should count as the learner's practice interview score. Unticked items are not required to finish the course and do not feed "Ready to interview".
+
 ### How do I add a SCORM package to a course?
 
 In the dashboard (staff only, signed in to LearnDifferently):
