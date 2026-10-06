@@ -45,6 +45,25 @@ Both always include **every row** the query returned, not just the rows on scree
 
 None, until they choose. With two or more datasets, the Sandbox shows a **Choose a dataset to start** banner with one button per dataset; they can switch later from the menu on the left. With only one dataset, it opens automatically. Tell students which dataset to pick for the exercise.
 
+## LearnDifferently courses
+
+### How do I add a SCORM package to a course?
+
+In the dashboard (staff only, signed in to LearnDifferently):
+
+1. Open **Courses**, then click the course.
+2. Under the module that should hold it, find the **Add:** row and click **+ SCORM package**.
+3. Choose the `.zip`. The server checks it before keeping anything and shows a plain-language error if it can't use the file.
+
+Learners see it as an **Interactive lesson**. Its score and completion count toward the course and appear in the cohort gradebook.
+
+Good to know:
+
+- Supported: SCORM 1.2 and SCORM 2004 packages, up to 100 MB zipped (3,000 files, 250 MB unzipped). The zip must contain `imsmanifest.xml` with a launch file.
+- To replace a package, delete the item and upload the new one.
+- Only the manifest's default launch file is played, so packages with several separate lessons inside (multi-SCO sequencing) may not behave as authored.
+- Uploaded content runs on the app's own address, so only upload packages you trust.
+
 ## Datasets
 
 ### Saving a dataset fails with "Request Entity Too Large"
