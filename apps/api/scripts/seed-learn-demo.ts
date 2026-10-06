@@ -404,8 +404,13 @@ function guard(allowHost: string | undefined): string {
 // ── remove ──────────────────────────────────────────────────────────────────
 
 async function removeDemo(prisma: PrismaClient) {
-  // Assessment banks restrict deleting their owner institution, so they go first.
-  const banks = await prisma.assessment.deleteMany({ where: { id: { startsWith: 'demo-' } } })
+  // Assessment banks restrict deleting their owner institution, so they go first: the seed's own
+  // (demo- ids) and any a migration created for a demo institution (ld-<item id> slugs).
+  const banks = await prisma.assessment.deleteMany({
+    where: { OR: [{ id: { startsWith: 'demo-' } }, { institutionId: { startsWith: 'demo-' } }] },
+  })
+  // Scenarios owned by a demo institution (for example from an earlier migration) also restrict it.
+  await prisma.scenario.deleteMany({ where: { institutionId: { startsWith: 'demo-' } } })
   // Institution deletes cascade to cohorts, courses, enrollments and progress.
   const inst = await prisma.institution.deleteMany({ where: { id: { startsWith: 'demo-' } } })
   const users = await prisma.user.deleteMany({ where: { id: { startsWith: 'demo-learner-' } } })
