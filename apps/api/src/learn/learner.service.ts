@@ -7,10 +7,12 @@ import {
 import type {
   InterviewAttempt,
   KnowledgeCheckQuestion,
+  LearnerAddedItem,
   LearnerCohortCard,
   LearnerItem,
   LearnerOutline,
   LearnerOutlineItem,
+  PlanAddition,
   ProgressStatus,
   QuizResult,
   ReadinessRecord,
@@ -23,9 +25,19 @@ import { averageScore, DEFAULT_ATTEMPTS, MAX_ANSWER_CHARS } from './interview-sc
 import { InterviewScoringService } from './interview-scoring.service'
 import { parseExternalLink } from './external-link'
 import { imageUrl, isImageKey } from './item-image'
+import { doneSince, parseSkills, remediationOf, reviewOf, skillResults } from './skills'
 import { isVideoId, VIDEO_COMPLETE_PCT } from './youtube'
 
 const QUIZ_TYPES = ['knowledge_check', 'assessment']
+
+/**
+ * Done for what the learner is doing now: completed, and for an item their results
+ * added to the plan, completed again since it was added (a review means doing it again).
+ */
+const isDoneNow = (
+  progress: { status: string; completedAt: Date | null } | null | undefined,
+  plan: { createdAt: Date } | null | undefined
+): boolean => progress?.status === 'completed' && (!plan || doneSince(progress, plan.createdAt))
 
 interface ProgressLite {
   itemId: string
@@ -136,6 +148,7 @@ export class LearnerService {
           },
         },
         progress: { where: { status: 'completed' }, select: { itemId: true } },
+        plan: { select: { itemId: true } },
       },
       orderBy: { enrolledAt: 'desc' },
     })
@@ -146,7 +159,7 @@ export class LearnerService {
         const modules = await this.courseItems(cid)
         totals.set(
           cid,
-          modules.reduce((n, m) => n + m.items.length, 0)
+          modules.reduce((n, m) => n + m.items.filter((i) => !remediationOf(i.config)).length, 0)
         )
       }
     }
@@ -160,7 +173,7 @@ export class LearnerService {
       endsAt: r.cohort.endsAt?.toISOString() ?? null,
       enrollmentStatus: r.status as LearnerCohortCard['enrollmentStatus'],
       itemsDone: r.progress.length,
-      itemsTotal: totals.get(r.cohort.course?.id as string) ?? 0,
+      itemsTotal: (totals.get(r.cohort.course?.id as string) ?? 0) + r.plan.length,
     }))
   }
 
@@ -190,13 +203,52 @@ export class LearnerService {
   async outline(userId: string, cohortId: string): Promise<LearnerOutline> {
     const e = await this.enrollmentFor(userId, cohortId)
     const course = e.cohort.course
-    const [modules, progress] = await Promise.all([
+    const [modules, progress, plan] = await Promise.all([
       this.courseItems(course.id),
       this.prisma.itemProgress.findMany({ where: { enrollmentId: e.id } }),
+      this.prisma.planItem.findMany({
+        where: { enrollmentId: e.id },
+        orderBy: { createdAt: 'asc' },
+      }),
     ])
     const byItem = new Map(progress.map((p) => [p.itemId, p]))
-    const items = modules.flatMap((m) => m.items)
-    const done = items.filter((i) => byItem.get(i.id)?.status === 'completed').length
+    const allItems = modules.flatMap((m) => m.items)
+    // Remediation items are in the outline only for learners whose plan includes them.
+    const items = allItems.filter((i) => !remediationOf(i.config))
+    const addedItems = plan.flatMap((p): LearnerAddedItem[] => {
+      const i = allItems.find((x) => x.id === p.itemId)
+      const r = (p.reason ?? {}) as {
+        skillLabel?: string
+        pct?: number
+        n?: number
+        sourceItemId?: string | null
+      }
+      if (!i) return []
+      return [
+        {
+          id: i.id,
+          type: i.type,
+          title: i.title,
+          label: i.label,
+          // Done for the plan only if completed since it was added: a review means doing it again.
+          status: doneSince(byItem.get(i.id), p.createdAt)
+            ? ('completed' as const)
+            : ('not_started' as const),
+          score: byItem.get(i.id)?.score ?? null,
+          attempts: byItem.get(i.id)?.attempts ?? 0,
+          reason: {
+            skill: r.skillLabel ?? '',
+            pct: r.pct ?? 0,
+            n: r.n ?? 0,
+            sourceItemId: r.sourceItemId ?? null,
+          },
+          review: !remediationOf(i.config),
+        },
+      ]
+    })
+    const done =
+      items.filter((i) => byItem.get(i.id)?.status === 'completed').length +
+      addedItems.filter((i) => i.status === 'completed').length
     return {
       cohort: {
         cohortId,
@@ -208,22 +260,25 @@ export class LearnerService {
         endsAt: e.cohort.endsAt?.toISOString() ?? null,
         enrollmentStatus: e.status as LearnerCohortCard['enrollmentStatus'],
         itemsDone: done,
-        itemsTotal: items.length,
+        itemsTotal: items.length + addedItems.length,
       },
+      added: addedItems,
       modules: modules.map((m) => ({
         id: m.id,
         title: m.title,
-        items: m.items.map(
-          (i): LearnerOutlineItem => ({
-            id: i.id,
-            type: i.type,
-            title: i.title,
-            label: i.label,
-            status: this.statusOf(byItem.get(i.id)),
-            score: byItem.get(i.id)?.score ?? null,
-            attempts: byItem.get(i.id)?.attempts ?? 0,
-          })
-        ),
+        items: m.items
+          .filter((i) => !remediationOf(i.config))
+          .map(
+            (i): LearnerOutlineItem => ({
+              id: i.id,
+              type: i.type,
+              title: i.title,
+              label: i.label,
+              status: this.statusOf(byItem.get(i.id)),
+              score: byItem.get(i.id)?.score ?? null,
+              attempts: byItem.get(i.id)?.attempts ?? 0,
+            })
+          ),
       })),
       record: buildRecord(
         items.map((i) => ({ id: i.id, type: i.type, label: i.label })),
@@ -251,14 +306,24 @@ export class LearnerService {
     })
     if (!item || item.module.courseId !== e.cohort.course.id)
       throw new NotFoundException('Item not found')
+    // The plan entry, if this learner's results added the item. Extra content opens only with one.
+    const plan = await this.prisma.planItem.findUnique({
+      where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
+    })
+    if (remediationOf(item.config) && !plan) throw new NotFoundException('Item not found')
     const progress = await this.prisma.itemProgress.findUnique({
       where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
     })
-    return { e, item, progress }
+    return { e, item, progress, plan }
   }
 
-  async item(userId: string, cohortId: string, itemId: string): Promise<LearnerItem> {
-    const { e, item, progress } = await this.itemOf(userId, cohortId, itemId)
+  async item(
+    userId: string,
+    cohortId: string,
+    itemId: string,
+    planAdded: PlanAddition[] = []
+  ): Promise<LearnerItem> {
+    const { e, item, progress, plan } = await this.itemOf(userId, cohortId, itemId)
     const config = (item.config ?? {}) as Record<string, unknown>
     let interview: LearnerItem['interview'] = null
     if (item.type === 'interview') {
@@ -290,6 +355,12 @@ export class LearnerService {
         minWatchedPct: VIDEO_COMPLETE_PCT,
       }
     }
+    // Course content a flagged skill sent the learner back to: done before, but it must be done again.
+    const why = ((plan?.reason ?? {}) as { skillLabel?: string; pct?: number }) || {}
+    const review: LearnerItem['review'] =
+      plan && progress?.status === 'completed' && !doneSince(progress, plan.createdAt)
+        ? { skill: why.skillLabel ?? '', pct: why.pct ?? 0 }
+        : null
     let link: LearnerItem['link'] = null
     const parsed = item.type === 'external_link' ? parseExternalLink(config.url) : null
     if (parsed) {
@@ -313,9 +384,11 @@ export class LearnerService {
         : null,
       scorm,
       interview,
+      planAdded,
+      review,
       video,
       link,
-      status: this.statusOf(progress ?? undefined),
+      status: review ? 'not_started' : this.statusOf(progress ?? undefined),
       score: progress?.score ?? null,
       attempts: progress?.attempts ?? 0,
       locked: this.lockReason(e.cohort.startsAt, e.cohort.endsAt),
@@ -323,11 +396,11 @@ export class LearnerService {
   }
 
   async completeLesson(userId: string, cohortId: string, itemId: string): Promise<LearnerItem> {
-    const { e, item, progress } = await this.itemOf(userId, cohortId, itemId)
+    const { e, item, progress, plan } = await this.itemOf(userId, cohortId, itemId)
     const locked = this.lockReason(e.cohort.startsAt, e.cohort.endsAt)
     if (locked) throw new ConflictException(locked)
     if (item.type !== 'lesson') throw new ConflictException('Only lessons are marked done this way')
-    if (progress?.status !== 'completed') {
+    if (!isDoneNow(progress, plan)) {
       await this.prisma.itemProgress.upsert({
         where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
         create: {
@@ -374,12 +447,12 @@ export class LearnerService {
     type: 'video' | 'external_link',
     evidence: { evidence: string; watchedPct?: number }
   ): Promise<LearnerItem> {
-    const { e, item, progress } = await this.itemOf(userId, cohortId, itemId)
+    const { e, item, progress, plan } = await this.itemOf(userId, cohortId, itemId)
     const locked = this.lockReason(e.cohort.startsAt, e.cohort.endsAt)
     if (locked) throw new ConflictException(locked)
     if (item.type !== type)
       throw new ConflictException(`This item is not a ${type.replace('_', ' ')}`)
-    if (progress?.status !== 'completed') {
+    if (!isDoneNow(progress, plan)) {
       const data = { ...evidence, attestedAt: new Date().toISOString() }
       await this.prisma.itemProgress.upsert({
         where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
@@ -421,6 +494,10 @@ export class LearnerService {
       ((item.config ?? {}) as { questions?: KnowledgeCheckQuestion[] }).questions ?? []
     const result = gradeQuiz(questions, answers)
     const best = Math.max(result.score, progress?.score ?? 0)
+    // Per-question results, so a weak skill can be found later (the latest attempt replaces the last).
+    const data = {
+      results: questions.map((q, i) => ({ id: q.id ?? `q${i}`, correct: result.correct[i] })),
+    }
     await this.prisma.itemProgress.upsert({
       where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
       create: {
@@ -430,16 +507,20 @@ export class LearnerService {
         score: result.score,
         attempts: 1,
         completedAt: new Date(),
+        data,
       },
       update: {
         status: 'completed',
         score: item.type === 'assessment' ? result.score : best,
         attempts: { increment: 1 },
         completedAt: new Date(),
+        data,
       },
     })
+    // Plan first, so a skill flagged by the last quiz holds the course open.
+    const added = await this.updatePlan(e.id, e.cohort.course, itemId)
     await this.completeIfDone(e.id, e.status, e.cohort.course.id)
-    return { result, item: await this.item(userId, cohortId, itemId) }
+    return { result, item: await this.item(userId, cohortId, itemId, added) }
   }
 
   /**
@@ -506,7 +587,8 @@ export class LearnerService {
         data: { attempts: [...earlier, attempt].slice(-allowed) } as unknown as object,
       },
     })
-    return this.item(userId, cohortId, itemId)
+    const added = await this.updatePlan(e.id, e.cohort.course, itemId)
+    return this.item(userId, cohortId, itemId, added)
   }
 
   /** Saves what a SCORM package reported: status, score and the data it needs to resume. */
@@ -516,7 +598,7 @@ export class LearnerService {
     itemId: string,
     body: unknown
   ): Promise<LearnerItem> {
-    const { e, item, progress } = await this.itemOf(userId, cohortId, itemId)
+    const { e, item, progress, plan } = await this.itemOf(userId, cohortId, itemId)
     const locked = this.lockReason(e.cohort.startsAt, e.cohort.endsAt)
     if (locked) throw new ConflictException(locked)
     if (item.type !== 'scorm') throw new ConflictException('This item is not a SCORM package')
@@ -526,7 +608,8 @@ export class LearnerService {
       raw && typeof raw === 'object' && !Array.isArray(raw) && JSON.stringify(raw).length < 400_000
         ? (raw as object)
         : undefined
-    const wasDone = progress?.status === 'completed'
+    const everDone = progress?.status === 'completed'
+    const wasDone = isDoneNow(progress, plan)
     const best = score === null ? (progress?.score ?? null) : Math.max(score, progress?.score ?? 0)
     await this.prisma.itemProgress.upsert({
       where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
@@ -540,7 +623,7 @@ export class LearnerService {
         data: runtime,
       },
       update: {
-        status: done || wasDone ? 'completed' : 'in_progress',
+        status: done || everDone ? 'completed' : 'in_progress',
         score: best,
         ...(done && !wasDone ? { completedAt: new Date() } : {}),
         ...(runtime ? { data: runtime } : {}),
@@ -548,6 +631,55 @@ export class LearnerService {
     })
     if (done) await this.completeIfDone(e.id, e.status, e.cohort.course.id)
     return this.item(userId, cohortId, itemId)
+  }
+
+  /**
+   * Adds the author's remediation content for every skill the learner is now
+   * flagged on. Only ever adds, once per item, so it can run after every scored
+   * attempt. Returns what was newly added, for the result screen.
+   */
+  private async updatePlan(
+    enrollmentId: string,
+    course: { id: string; skills: unknown },
+    sourceItemId: string
+  ): Promise<PlanAddition[]> {
+    const skills = parseSkills(course.skills)
+    if (skills.length === 0) return []
+    const [modules, progress, existing] = await Promise.all([
+      this.courseItems(course.id),
+      this.prisma.itemProgress.findMany({ where: { enrollmentId } }),
+      this.prisma.planItem.findMany({ where: { enrollmentId }, select: { itemId: true } }),
+    ])
+    const items = modules.flatMap((m) => m.items)
+    const have = new Set(existing.map((p) => p.itemId))
+    const results = skillResults(skills, items, new Map(progress.map((p) => [p.itemId, p])))
+    const rows: { enrollmentId: string; itemId: string; reason: object }[] = []
+    const added: PlanAddition[] = []
+    for (const r of results.filter((x) => x.status === 'gap')) {
+      for (const item of items) {
+        const extra = remediationOf(item.config) === r.skillId
+        const review = reviewOf(item.config) === r.skillId
+        if ((!extra && !review) || have.has(item.id)) continue
+        have.add(item.id)
+        const pct = r.pct as number
+        rows.push({
+          enrollmentId,
+          itemId: item.id,
+          reason: { skill: r.skillId, skillLabel: r.label, pct, n: r.n, sourceItemId },
+        })
+        added.push({
+          itemId: item.id,
+          type: item.type,
+          title: item.title,
+          skill: r.label,
+          pct,
+          n: r.n,
+          review,
+        })
+      }
+    }
+    if (rows.length > 0) await this.prisma.planItem.createMany({ data: rows, skipDuplicates: true })
+    return added
   }
 
   /**
@@ -561,12 +693,33 @@ export class LearnerService {
     courseId: string
   ): Promise<void> {
     if (status === 'completed') return
-    const modules = await this.courseItems(courseId)
-    const required = modules.flatMap((m) => m.items).filter((i) => i.type !== 'interview')
-    const done = await this.prisma.itemProgress.count({
-      where: { enrollmentId, status: 'completed', itemId: { in: required.map((i) => i.id) } },
+    const [modules, plan] = await Promise.all([
+      this.courseItems(courseId),
+      this.prisma.planItem.findMany({
+        where: { enrollmentId },
+        select: { itemId: true, createdAt: true },
+      }),
+    ])
+    // The outline's required items, plus whatever this learner's results added. An item in both
+    // (a review) must be done in the outline and again since it was added to the plan.
+    const outline = modules
+      .flatMap((m) => m.items)
+      .filter((i) => i.type !== 'interview' && !remediationOf(i.config))
+      .map((i) => i.id)
+    const finished = await this.prisma.itemProgress.findMany({
+      where: {
+        enrollmentId,
+        status: 'completed',
+        itemId: { in: [...outline, ...plan.map((p) => p.itemId)] },
+      },
+      select: { itemId: true, status: true, completedAt: true },
     })
-    if (required.length > 0 && done >= required.length) {
+    const byItem = new Map(finished.map((p) => [p.itemId, p]))
+    const required = outline.length + plan.length
+    const done =
+      outline.filter((id) => byItem.has(id)).length +
+      plan.filter((p) => doneSince(byItem.get(p.itemId), p.createdAt)).length
+    if (required > 0 && done >= required) {
       await this.prisma.enrollment.update({
         where: { id: enrollmentId },
         data: { status: 'completed', completedAt: new Date() },

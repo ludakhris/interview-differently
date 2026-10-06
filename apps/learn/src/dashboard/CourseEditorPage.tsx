@@ -4,12 +4,14 @@ import type {
   CourseModuleDto,
   CourseOffers,
   CourseOutline,
+  CourseSkill,
 } from '@id/types'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useApiFetch, useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { StatusChip } from './CoursesPage'
 import { ItemEditor, TYPE_LABEL, type ItemDraft } from './ItemEditor'
+import { SkillsEditor } from './SkillsEditor'
 import { errorNotice } from './shared'
 
 /** `ask`: the item needs a link before it can exist, so the author is asked for it first. */
@@ -83,6 +85,7 @@ function Editor({
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null)
   const [editingItem, setEditingItem] = useState<string | null>(null)
+  const [skills, setSkills] = useState<CourseSkill[]>(course.skills)
 
   /** Runs a change; shows the server's message if it is refused. */
   async function run(action: () => Promise<CourseDetail | void>, ok?: string) {
@@ -117,6 +120,7 @@ function Editor({
           readinessThreshold: Number(f.get('readinessThreshold')),
           outcomes: asLines(f.get('outcomes')),
           targetRoles: asLines(f.get('targetRoles')),
+          skills: skills.map(({ label, targetPct }) => ({ label, targetPct })),
         }),
       'Settings saved.'
     )
@@ -305,6 +309,7 @@ function Editor({
               </small>
             </label>
           </div>
+          <SkillsEditor skills={skills} onChange={setSkills} />
           <div className="dash-field-row">
             <label className="dash-field">
               <span>Sector</span>
@@ -435,6 +440,20 @@ function Editor({
                         {it.label ? ` · ${it.label}` : ''}
                       </span>
                       <span className="dash-item-title">{it.title}</span>
+                      {typeof it.config.remediationFor === 'string' && (
+                        <span className="dash-chip">
+                          Extra content for:{' '}
+                          {course.skills.find((s) => s.id === it.config.remediationFor)?.label ??
+                            it.config.remediationFor}
+                        </span>
+                      )}
+                      {typeof it.config.reviewFor === 'string' && (
+                        <span className="dash-chip">
+                          Review for:{' '}
+                          {course.skills.find((s) => s.id === it.config.reviewFor)?.label ??
+                            it.config.reviewFor}
+                        </span>
+                      )}
                       <div className="dash-row-actions">
                         <button
                           type="button"
@@ -475,6 +494,7 @@ function Editor({
                       <ItemEditor
                         key={it.id}
                         item={it}
+                        skills={course.skills}
                         busy={busy}
                         onSave={(draft) => saveItem(it.id, draft)}
                         onImage={(file) => itemImage(it.id, file)}

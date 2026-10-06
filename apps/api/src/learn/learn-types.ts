@@ -111,16 +111,31 @@ export type CourseItemType =
 export type CourseStatus = 'draft' | 'published'
 
 export interface KnowledgeCheckQuestion {
+  /** Stable id (assigned when saved) so a learner's per-question results can be tied to it. */
+  id?: string
   prompt: string
   options: string[]
   correctIndex: number
+  /** A course skill id: a wrong answer counts against that skill. */
+  skill?: string
+}
+
+/** A skill the course builds. Below `targetPct` the learner is flagged and remediation is added. */
+export interface CourseSkill {
+  id: string
+  label: string
+  targetPct: number
 }
 
 /**
  * `config` by type: lesson { body }, knowledge_check and assessment { questions },
- * interview { role, questions }, scorm { packageId, entry, version, files },
+ * interview { role, questions, skill? }, scorm { packageId, entry, version, files },
  * video { provider: 'youtube', videoId, startSeconds? },
  * external_link { url, summary?, instructions?, imageKey? } (authors also receive `imageUrl`).
+ * Any item except an assessment or interview may carry `remediationFor` (a skill id): it is then
+ * extra content, kept out of the outline and added to a learner's plan when that skill is flagged.
+ * Or `reviewFor`: it stays in the outline and is also added back to a flagged learner's plan, who
+ * must complete it again.
  */
 export interface CourseItemDto {
   id: string
@@ -154,6 +169,8 @@ export interface CourseSettings {
   outcomes: string[]
   /** Jobs the course prepares for. Shown in the catalog. */
   targetRoles: string[]
+  /** Skills the course builds, each with a pass mark. */
+  skills: CourseSkill[]
   status: CourseStatus
 }
 
@@ -289,9 +306,30 @@ export interface ReadinessRecord {
   completed: boolean
 }
 
+/** Content added to this learner's plan because a skill was flagged. Required for completion. */
+export interface LearnerAddedItem extends LearnerOutlineItem {
+  /** `sourceItemId`: the check or interview whose result added it, so it can be shown beside it. */
+  reason: { skill: string; pct: number; n: number; sourceItemId: string | null }
+  /** True when it is ordinary course content the learner must complete again, not extra content. */
+  review: boolean
+}
+
+/** What a scored attempt just added to the plan, for the result screen. */
+export interface PlanAddition {
+  itemId: string
+  type: string
+  title: string
+  skill: string
+  pct: number
+  n: number
+  review: boolean
+}
+
 export interface LearnerOutline {
   cohort: LearnerCohortCard
   modules: { id: string; title: string; items: LearnerOutlineItem[] }[]
+  /** Items the learner's results added to the course outline. */
+  added: LearnerAddedItem[]
   record: ReadinessRecord
 }
 
@@ -319,6 +357,10 @@ export interface LearnerItem {
   /** A SCORM package: where to load it and what the learner saved last time. */
   scorm: { src: string; version: '1.2' | '2004'; cmi: Record<string, unknown> | null } | null
   interview: LearnerInterview | null
+  /** Set on the response to a scored attempt: what it added to the plan. */
+  planAdded: PlanAddition[]
+  /** Set when this is course content the learner must complete again because of a flagged skill. */
+  review: { skill: string; pct: number } | null
   /** A YouTube video: what to play and the share of it that must be watched to finish. */
   video: { videoId: string; startSeconds: number | null; minWatchedPct: number } | null
   /** An external course or page: its preview card, where to send the learner and what to do there. */

@@ -99,9 +99,20 @@ export class LearnService {
         MAX(ip."score") FILTER (WHERE it."label" = 'post' AND ip."status" = 'completed')::int AS "post",
         MAX(ip."score") FILTER (WHERE it."type" = 'interview' AND ip."status" = 'completed')::int AS "interviewBest",
         COALESCE(MAX(ip."attempts") FILTER (WHERE it."type" = 'interview'), 0)::int AS "interviewAttempts",
-        (COUNT(ip."id") FILTER (WHERE ip."status" = 'completed'))::int AS "itemsDone",
-        (SELECT COUNT(*) FROM "CourseItem" ci JOIN "CourseModule" cm ON cm."id" = ci."moduleId"
-           WHERE cm."courseId" = co."id")::int AS "itemsTotal",
+        -- Completed items, plus plan slots for course content sent back for review that were redone
+        -- since they were added (the item's own completion already counts once).
+        ((COUNT(ip."id") FILTER (WHERE ip."status" = 'completed'))
+         + (SELECT COUNT(*) FROM "PlanItem" pi
+              JOIN "CourseItem" pci ON pci."id" = pi."itemId"
+              JOIN "ItemProgress" pip ON pip."itemId" = pi."itemId" AND pip."enrollmentId" = pi."enrollmentId"
+            WHERE pi."enrollmentId" = e."id"
+              AND pci."config"->>'remediationFor' IS NULL
+              AND pip."status" = 'completed'
+              AND pip."completedAt" >= pi."createdAt"))::int AS "itemsDone",
+        -- The outline (remediation items are not part of it) plus what this learner's plan added.
+        ((SELECT COUNT(*) FROM "CourseItem" ci JOIN "CourseModule" cm ON cm."id" = ci."moduleId"
+           WHERE cm."courseId" = co."id" AND ci."config"->>'remediationFor' IS NULL)
+         + (SELECT COUNT(*) FROM "PlanItem" pi WHERE pi."enrollmentId" = e."id"))::int AS "itemsTotal",
         MAX(ip."completedAt")          AS "lastActivity"
       FROM "Enrollment" e
       JOIN "User" u            ON u."id" = e."userId"

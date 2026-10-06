@@ -66,7 +66,7 @@ describe('validateItemInput', () => {
     expect(
       validateItemInput({ type: 'knowledge_check', title: 'Check', config: { questions: [q] } })
         .config
-    ).toEqual({ questions: [q] })
+    ).toEqual({ questions: [{ ...q, id: expect.stringMatching(/^q_[0-9a-f]{8}$/) }] })
     for (const broken of [
       { ...q, options: ['only one'] },
       { ...q, correctIndex: 2 },
@@ -188,6 +188,104 @@ describe('validateItemInput external_link', () => {
     expect(() => item({ url: 'https://example.com/x' })).toThrow(BadRequestException)
     expect(() => item({ url: 'javascript:alert(1)' })).toThrow(BadRequestException)
     expect(() => item({})).toThrow(BadRequestException)
+  })
+})
+
+describe('skills and remediation', () => {
+  const q = { prompt: 'Pulse?', options: ['20', '70'], correctIndex: 1 }
+  const quiz = (questions: unknown[]) =>
+    validateItemInput({ type: 'knowledge_check', title: 'Check', config: { questions } }).config
+      .questions as { id: string; skill?: string }[]
+
+  it('gives each question an id, keeps it when the item is saved again, and keeps its skill', () => {
+    const [first] = quiz([{ ...q, skill: 'safety' }])
+    expect(first).toMatchObject({ id: expect.stringMatching(/^q_[0-9a-f]{8}$/), skill: 'safety' })
+    expect(quiz([{ ...first, prompt: 'Edited?' }])[0].id).toBe(first.id)
+    expect(quiz([q])[0].id).not.toBe(quiz([q])[0].id)
+  })
+
+  it('rejects a skill that is not a plain id', () => {
+    expect(() => quiz([{ ...q, skill: 'Bad Skill!' }])).toThrow(BadRequestException)
+  })
+
+  it('reads course skills, builds ids from labels and refuses duplicates', () => {
+    expect(
+      validateCourseFields(
+        {
+          skills: [
+            { label: 'Workplace safety', targetPct: 70 },
+            { label: 'Communication', targetPct: 60 },
+          ],
+        },
+        true
+      ).skills
+    ).toEqual([
+      { id: 'workplace-safety', label: 'Workplace safety', targetPct: 70 },
+      { id: 'communication', label: 'Communication', targetPct: 60 },
+    ])
+    expect(() =>
+      validateCourseFields(
+        {
+          skills: [
+            { label: 'Safety', targetPct: 70 },
+            { label: 'safety', targetPct: 50 },
+          ],
+        },
+        true
+      )
+    ).toThrow(BadRequestException)
+    expect(() =>
+      validateCourseFields({ skills: [{ label: 'Safety', targetPct: 0 }] }, true)
+    ).toThrow(BadRequestException)
+    expect(() => validateCourseFields({ skills: [{ label: 'Safety' }] }, true)).toThrow(
+      BadRequestException
+    )
+  })
+
+  it('marks lessons, videos and links as remediation, but not assessments or interviews', () => {
+    const lesson = validateItemInput({
+      type: 'lesson',
+      title: 'Lifting',
+      config: { body: 'x', remediationFor: 'safety' },
+    })
+    expect(lesson.config).toEqual({ body: 'x', remediationFor: 'safety' })
+    const assessment = validateItemInput({
+      type: 'assessment',
+      title: 'Post',
+      label: 'post',
+      config: { questions: [], remediationFor: 'safety' },
+    })
+    expect(assessment.config).not.toHaveProperty('remediationFor')
+    expect(() =>
+      validateItemInput({ type: 'lesson', title: 'x', config: { remediationFor: 'Not valid!' } })
+    ).toThrow(BadRequestException)
+  })
+
+  it('marks an item to be reviewed instead, and refuses both settings together', () => {
+    expect(
+      validateItemInput({
+        type: 'lesson',
+        title: 'Vitals',
+        config: { body: 'x', reviewFor: 'safety' },
+      }).config
+    ).toEqual({ body: 'x', reviewFor: 'safety' })
+    expect(() =>
+      validateItemInput({
+        type: 'lesson',
+        title: 'Vitals',
+        config: { body: 'x', reviewFor: 'safety', remediationFor: 'safety' },
+      })
+    ).toThrow(BadRequestException)
+  })
+
+  it('tags an interview with the skill it builds', () => {
+    expect(
+      validateItemInput({
+        type: 'interview',
+        title: 'Practice',
+        config: { role: 'MA', questions: ['Tell me about yourself'], skill: 'comms' },
+      }).config
+    ).toMatchObject({ skill: 'comms' })
   })
 })
 

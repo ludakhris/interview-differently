@@ -412,6 +412,9 @@ model Course {
   // What a learner will be able to do, and the jobs the course prepares for. Shown in the catalog.
   outcomes    String[]           @default([])
   targetRoles String[]           @default([])
+  // Skills the course builds, each with the pass mark (0-100) below which a learner is flagged
+  // and the author's remediation content is added to their plan: [{ id, label, targetPct }].
+  skills      Json               @default("[]")
   status      String         @default("published") // 'draft' | 'published'
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -447,6 +450,7 @@ model CourseItem {
   config   Json           @default("{}")
   module   CourseModule   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   progress ItemProgress[]
+  plan     PlanItem[]
 
   @@index([moduleId])
 }
@@ -473,6 +477,7 @@ model Enrollment {
   cohort      Cohort         @relation(fields: [cohortId], references: [id], onDelete: Cascade)
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   progress    ItemProgress[]
+  plan        PlanItem[]
 
   @@unique([cohortId, userId])
   @@index([userId])
@@ -489,6 +494,23 @@ model ItemProgress {
   // SCORM runtime data (cmi), so a package can resume where the learner left off.
   data         Json?
   updatedAt    DateTime   @updatedAt
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  item         CourseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, itemId])
+  @@index([itemId])
+}
+
+// Content added to one learner's plan because a skill was flagged. The author's outline is
+// the recipe; these rows are what a learner's results added to it. Required for completion.
+model PlanItem {
+  id           String     @id @default(uuid())
+  enrollmentId String
+  itemId       String
+  // { skill, skillLabel, pct, n }: why it was added, shown to the learner.
+  reason       Json
+  seenAt       DateTime?
+  createdAt    DateTime   @default(now())
   enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   item         CourseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 

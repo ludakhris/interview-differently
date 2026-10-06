@@ -1,4 +1,4 @@
-import type { LearnerItem, LearnerOutline, QuizResult } from '@id/types'
+import type { LearnerItem, LearnerOutline, PlanAddition, QuizResult } from '@id/types'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Scorm12API, Scorm2004API } from 'scorm-again'
 import { useApiSend, useLoad } from './api'
@@ -61,6 +61,12 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
       </p>
       <h1 className="dash-h2">{item.title}</h1>
       {item.locked && <p className="dash-banner">{item.locked}</p>}
+      {item.review && (
+        <p className="dash-banner" role="status">
+          You are reviewing this. Your {item.review.skill} result was {item.review.pct}%, so it was
+          added to your plan again. Complete it again to finish it.
+        </p>
+      )}
 
       <div className="dash-player">
         {item.type === 'lesson' && (
@@ -113,6 +119,34 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
         )}
       </div>
     </>
+  )
+}
+
+/** What a scored attempt just added to the learner's plan, and why. Nothing is shown when nothing was added. */
+function PlanAddedCard({ added, cohortId }: { added: PlanAddition[]; cohortId: string }) {
+  const { href } = useApp()
+  if (added.length === 0) return null
+  return (
+    <div className="dash-card dash-plan-added" role="status">
+      <h3 className="dash-extcard-h">Added to your plan</h3>
+      <p>
+        Your answers show some skills need more practice.{' '}
+        {added.length === 1 ? 'This item was' : 'These items were'} added to your course, and you
+        finish the course by completing {added.length === 1 ? 'it' : 'them'}:
+      </p>
+      <ul className="dash-plan-list">
+        {added.map((a) => (
+          <li key={a.itemId}>
+            <a href={href(`/lms/learning/${cohortId}/${a.itemId}`)}>{a.title}</a>
+            {a.review && <span className="dash-muted"> (review: you have done this before)</span>}
+            <span className="dash-muted">
+              {' '}
+              Because your {a.skill} result was {a.pct}%.
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -279,6 +313,7 @@ function Quiz(props: {
             You scored <strong>{score(result.score)}</strong> (
             {result.correct.filter(Boolean).length} of {result.correct.length} correct).
           </p>
+          <PlanAddedCard added={item.planAdded} cohortId={item.cohortId} />
           <Actions>
             {!isAssessment && (
               <button
@@ -371,6 +406,7 @@ function Interview(props: {
           </li>
         ))}
       </ol>
+      <PlanAddedCard added={item.planAdded} cohortId={item.cohortId} />
       <Actions>
         {left > 0 && (
           <button
@@ -545,14 +581,19 @@ function ExternalLinkItem(props: {
             <RichText text={link.instructions} />
           </div>
         )}
-        <p>
-          <a className="dash-btn" href={link.url} target="_blank" rel="noopener noreferrer">
-            Open on {provider}
+        <div className="dash-extcard-open">
+          <a
+            className={done ? 'dash-btn-secondary dash-btn-link' : 'dash-btn dash-btn-link'}
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open on {provider} <span aria-hidden="true">↗</span>
             <span className="dash-visually-hidden"> (opens in a new tab)</span>
           </a>
-        </p>
+        </div>
         {error && <p className="dash-error">{error}</p>}
-        <Actions>
+        <div className="dash-extcard-footer">
           {!done && (
             <>
               <label className="dash-radio">
@@ -576,13 +617,15 @@ function ExternalLinkItem(props: {
           )}
           {done && (
             <>
-              <span className="dash-chip dash-chip-on">Done</span>
-              <a className="dash-btn" href={props.nextHref}>
+              <span className="dash-extcard-done">
+                <span aria-hidden="true">✓</span> Done
+              </span>
+              <a className="dash-btn dash-btn-link" href={props.nextHref}>
                 {props.nextLabel}
               </a>
             </>
           )}
-        </Actions>
+        </div>
       </div>
     </article>
   )

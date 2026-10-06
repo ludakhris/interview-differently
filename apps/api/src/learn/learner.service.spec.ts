@@ -25,6 +25,7 @@ const prisma = {
   courseItem: { findUnique: jest.fn() },
   courseModule: { findMany: jest.fn() },
   itemProgress: { findUnique: jest.fn(), upsert: jest.fn(), count: jest.fn(), findMany: jest.fn() },
+  planItem: { findMany: jest.fn(), findUnique: jest.fn(), createMany: jest.fn() },
 }
 const clerk = { getUserProfile: jest.fn() }
 const scoring = { score: jest.fn() }
@@ -70,7 +71,23 @@ beforeEach(() => {
   prisma.enrollment.findUnique.mockResolvedValue(enrollment())
   prisma.courseModule.findMany.mockResolvedValue([])
   prisma.itemProgress.count.mockResolvedValue(0)
+  prisma.itemProgress.findMany.mockResolvedValue([])
+  prisma.planItem.findMany.mockResolvedValue([])
+  prisma.planItem.findUnique.mockResolvedValue(null)
 })
+
+/** What the completion check reads: these items are finished (just now). */
+const finished = (...ids: string[]) =>
+  prisma.itemProgress.findMany.mockResolvedValue(
+    ids.map((itemId) => ({
+      itemId,
+      status: 'completed',
+      score: null,
+      attempts: 1,
+      data: null,
+      completedAt: new Date(),
+    }))
+  )
 
 describe('join', () => {
   const cohort = {
@@ -222,7 +239,7 @@ describe('completion', () => {
         ],
       },
     ])
-    prisma.itemProgress.count.mockResolvedValue(1) // the lesson; the interview is not required
+    finished('i1') // the lesson; the interview is not required
     await service.completeLesson('u1', 'k1', 'i1')
     expect(prisma.enrollment.update).toHaveBeenCalledWith({
       where: { id: 'e1' },
@@ -244,7 +261,7 @@ describe('completion', () => {
         ],
       },
     ])
-    prisma.itemProgress.count.mockResolvedValue(1)
+    finished('i1')
     await service.completeLesson('u1', 'k1', 'i1')
     expect(prisma.enrollment.update).not.toHaveBeenCalled()
   })
@@ -384,7 +401,7 @@ describe('video', () => {
     prisma.courseModule.findMany.mockResolvedValue([
       { id: 'm1', title: 'M', position: 1, items: [{ id: 'i1', type: 'video' }] },
     ])
-    prisma.itemProgress.count.mockResolvedValue(1)
+    finished('i1')
     await service.completeVideo('u1', 'k1', 'i1', { completedBy: 'player', watchedPct: 96 })
     expect(prisma.itemProgress.upsert.mock.calls[0][0].create).toMatchObject({
       status: 'completed',
@@ -451,7 +468,7 @@ describe('external link', () => {
     prisma.courseModule.findMany.mockResolvedValue([
       { id: 'm1', title: 'M', position: 1, items: [{ id: 'i1', type: 'external_link' }] },
     ])
-    prisma.itemProgress.count.mockResolvedValue(1)
+    finished('i1')
     await service.completeExternal('u1', 'k1', 'i1')
     expect(prisma.itemProgress.upsert.mock.calls[0][0].create).toMatchObject({
       status: 'completed',
@@ -468,6 +485,305 @@ describe('external link', () => {
     prisma.itemProgress.findUnique.mockResolvedValue({ status: 'completed', score: null })
     await service.completeExternal('u1', 'k1', 'i1')
     expect(prisma.itemProgress.upsert).not.toHaveBeenCalled()
+  })
+})
+
+describe('adaptive plan', () => {
+  const skills = [{ id: 'safety', label: 'Workplace safety', targetPct: 70 }]
+  const tagged = [
+    { id: 'q_00000001', prompt: 'a', options: ['x', 'y'], correctIndex: 0, skill: 'safety' },
+    { id: 'q_00000002', prompt: 'b', options: ['x', 'y'], correctIndex: 0, skill: 'safety' },
+  ]
+  const check = { ...item('knowledge_check', null, { questions: tagged }), id: 'k1' }
+  const lesson = {
+    ...item('lesson', null, { body: 'Lift safely', remediationFor: 'safety' }),
+    id: 'r1',
+    title: 'Safe lifting',
+  }
+  const video = {
+    ...item('video', null, { videoId: 'dQw4w9WgXcQ', remediationFor: 'safety' }),
+    id: 'r2',
+    title: 'Lifting video',
+  }
+  const withSkills = () =>
+    prisma.enrollment.findUnique.mockResolvedValue({
+      ...enrollment(),
+      cohort: {
+        ...enrollment().cohort,
+        course: { ...enrollment().cohort.course, skills },
+      },
+    })
+  const outlineOf = (...items: object[]) =>
+    prisma.courseModule.findMany.mockResolvedValue([{ id: 'm1', title: 'M', position: 1, items }])
+  /** What the plan code sees after the learner's attempt is saved. */
+  const afterAttempt = (...correct: boolean[]) =>
+    prisma.itemProgress.findMany.mockResolvedValue([
+      {
+        itemId: 'k1',
+        status: 'completed',
+        score: 50,
+        data: { results: tagged.map((q, i) => ({ id: q.id, correct: correct[i] })) },
+      },
+    ])
+
+  it('stores which questions were right, so a weak skill can be found later', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(check)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    await service.submitQuiz('u1', 'k1', 'k1', [0, 1])
+    expect(prisma.itemProgress.upsert.mock.calls[0][0].create.data).toEqual({
+      results: [
+        { id: 'q_00000001', correct: true },
+        { id: 'q_00000002', correct: false },
+      ],
+    })
+  })
+
+  it("adds the author's remediation items for a flagged skill and tells the learner why", async () => {
+    withSkills()
+    prisma.courseItem.findUnique.mockResolvedValue(check)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    outlineOf(check, lesson, video)
+    afterAttempt(true, false) // 50% against a 70% pass mark
+    const { item: shown } = await service.submitQuiz('u1', 'k1', 'k1', [0, 1])
+    expect(prisma.planItem.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          enrollmentId: 'e1',
+          itemId: 'r1',
+          reason: {
+            skill: 'safety',
+            skillLabel: 'Workplace safety',
+            pct: 50,
+            n: 2,
+            sourceItemId: 'k1',
+          },
+        }),
+        expect.objectContaining({ itemId: 'r2' }),
+      ],
+      skipDuplicates: true,
+    })
+    expect(shown.planAdded).toEqual([
+      expect.objectContaining({
+        itemId: 'r1',
+        title: 'Safe lifting',
+        skill: 'Workplace safety',
+        pct: 50,
+      }),
+      expect.objectContaining({ itemId: 'r2' }),
+    ])
+  })
+
+  it('adds nothing when the skill is met, or when the course has no skills', async () => {
+    withSkills()
+    prisma.courseItem.findUnique.mockResolvedValue(check)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    outlineOf(check, lesson)
+    afterAttempt(true, true)
+    await service.submitQuiz('u1', 'k1', 'k1', [0, 0])
+    expect(prisma.planItem.createMany).not.toHaveBeenCalled()
+    prisma.enrollment.findUnique.mockResolvedValue(enrollment())
+    afterAttempt(false, false)
+    await service.submitQuiz('u1', 'k1', 'k1', [1, 1])
+    expect(prisma.planItem.createMany).not.toHaveBeenCalled()
+  })
+
+  it('does not add an item that is already in the plan', async () => {
+    withSkills()
+    prisma.courseItem.findUnique.mockResolvedValue(check)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    outlineOf(check, lesson, video)
+    afterAttempt(false, false)
+    prisma.planItem.findMany.mockResolvedValue([{ itemId: 'r1' }])
+    await service.submitQuiz('u1', 'k1', 'k1', [1, 1])
+    expect(prisma.planItem.createMany.mock.calls[0][0].data).toEqual([
+      expect.objectContaining({ itemId: 'r2' }),
+    ])
+  })
+
+  it('holds the course open until the added items are done', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(check)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    outlineOf(check, lesson)
+    prisma.planItem.findMany.mockResolvedValue([
+      { itemId: 'r1', createdAt: new Date('2020-01-01') },
+    ])
+    finished('k1') // the check is done, the lesson is not
+    await service.submitQuiz('u1', 'k1', 'k1', [0, 0])
+    expect(prisma.enrollment.update).not.toHaveBeenCalled()
+    expect(prisma.itemProgress.findMany.mock.calls[0][0].where.itemId.in).toEqual(['k1', 'r1'])
+    finished('k1', 'r1')
+    await service.submitQuiz('u1', 'k1', 'k1', [0, 0])
+    expect(prisma.enrollment.update).toHaveBeenCalled()
+  })
+
+  it('does not require remediation items from a learner who was not flagged', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(check)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    outlineOf(check, lesson)
+    finished('k1')
+    await service.submitQuiz('u1', 'k1', 'k1', [0, 0])
+    expect(prisma.itemProgress.findMany.mock.calls[0][0].where.itemId.in).toEqual(['k1'])
+    expect(prisma.enrollment.update).toHaveBeenCalled()
+  })
+
+  it('keeps remediation items out of the outline until they are added, then lists them with the reason', async () => {
+    outlineOf(check, lesson)
+    const before = await service.outline('u1', 'k1')
+    expect(before.modules[0].items.map((i) => i.id)).toEqual(['k1'])
+    expect(before.added).toEqual([])
+    expect(before.cohort.itemsTotal).toBe(1)
+    prisma.planItem.findMany.mockResolvedValue([
+      {
+        itemId: 'r1',
+        createdAt: new Date('2020-01-01'),
+        reason: { skillLabel: 'Workplace safety', pct: 50, n: 2, sourceItemId: 'k1' },
+      },
+    ])
+    finished('r1')
+    const after = await service.outline('u1', 'k1')
+    expect(after.added).toEqual([
+      expect.objectContaining({
+        id: 'r1',
+        title: 'Safe lifting',
+        status: 'completed',
+        reason: { skill: 'Workplace safety', pct: 50, n: 2, sourceItemId: 'k1' },
+        review: false,
+      }),
+    ])
+    expect(after.cohort).toMatchObject({ itemsDone: 1, itemsTotal: 2 })
+  })
+
+  describe('review of existing course content', () => {
+    // A lesson in the normal outline that is sent back to a learner flagged on the skill.
+    const review = {
+      ...item('lesson', null, { body: 'Taking vitals', reviewFor: 'safety' }),
+      id: 'v1',
+      title: 'Taking vital signs',
+    }
+    const BEFORE = new Date('2026-01-01T00:00:00Z')
+    const AFTER = new Date('2026-02-01T00:00:00Z')
+    const planned = {
+      itemId: 'v1',
+      createdAt: AFTER,
+      reason: { skillLabel: 'Workplace safety', pct: 50 },
+    }
+
+    it("adds it back to a flagged learner's plan, marked as a review, while it stays in the outline", async () => {
+      withSkills()
+      prisma.courseItem.findUnique.mockResolvedValue(check)
+      prisma.itemProgress.findUnique.mockResolvedValue(null)
+      outlineOf(check, review)
+      afterAttempt(true, false)
+      const { item: shown } = await service.submitQuiz('u1', 'k1', 'k1', [0, 1])
+      expect(prisma.planItem.createMany.mock.calls[0][0].data).toEqual([
+        expect.objectContaining({ itemId: 'v1' }),
+      ])
+      expect(shown.planAdded).toEqual([expect.objectContaining({ itemId: 'v1', review: true })])
+      const outline = await service.outline('u1', 'k1')
+      expect(outline.modules[0].items.map((i) => i.id)).toEqual(['k1', 'v1'])
+    })
+
+    it('is not done for the plan just because it was done before', async () => {
+      outlineOf(check, review)
+      prisma.planItem.findMany.mockResolvedValue([planned])
+      prisma.itemProgress.findMany.mockResolvedValue([
+        { itemId: 'v1', status: 'completed', score: null, attempts: 1, completedAt: BEFORE },
+      ])
+      const outline = await service.outline('u1', 'k1')
+      expect(outline.modules[0].items.find((i) => i.id === 'v1')?.status).toBe('completed')
+      expect(outline.added).toEqual([
+        expect.objectContaining({ id: 'v1', status: 'not_started', review: true }),
+      ])
+      expect(outline.cohort.itemsDone).toBe(1) // the outline copy, not the plan's
+      expect(outline.cohort.itemsTotal).toBe(3)
+    })
+
+    it('asks the learner to complete it again, and counts that completion', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(review)
+      prisma.planItem.findUnique.mockResolvedValue(planned)
+      prisma.itemProgress.findUnique.mockResolvedValue({
+        status: 'completed',
+        score: null,
+        attempts: 1,
+        completedAt: BEFORE,
+      })
+      const shown = await service.item('u1', 'k1', 'v1')
+      expect(shown).toMatchObject({
+        status: 'not_started',
+        review: { skill: 'Workplace safety', pct: 50 },
+      })
+      await service.completeLesson('u1', 'k1', 'v1')
+      expect(prisma.itemProgress.upsert).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not ask again once it has been redone since it was added', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(review)
+      prisma.planItem.findUnique.mockResolvedValue(planned)
+      prisma.itemProgress.findUnique.mockResolvedValue({
+        status: 'completed',
+        score: null,
+        attempts: 2,
+        completedAt: new Date('2026-03-01T00:00:00Z'),
+      })
+      expect((await service.item('u1', 'k1', 'v1')).review).toBeNull()
+      await service.completeLesson('u1', 'k1', 'v1')
+      expect(prisma.itemProgress.upsert).not.toHaveBeenCalled()
+    })
+
+    it('holds the course open until the review is redone, even though the item was done before', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(check)
+      prisma.itemProgress.findUnique.mockResolvedValue(null)
+      outlineOf(check, review)
+      prisma.planItem.findMany.mockResolvedValue([planned])
+      prisma.itemProgress.findMany.mockResolvedValue([
+        { itemId: 'k1', status: 'completed', completedAt: BEFORE },
+        { itemId: 'v1', status: 'completed', completedAt: BEFORE },
+      ])
+      await service.submitQuiz('u1', 'k1', 'k1', [0, 0])
+      expect(prisma.enrollment.update).not.toHaveBeenCalled()
+      prisma.itemProgress.findMany.mockResolvedValue([
+        { itemId: 'k1', status: 'completed', completedAt: BEFORE },
+        { itemId: 'v1', status: 'completed', completedAt: new Date('2026-03-01T00:00:00Z') },
+      ])
+      await service.submitQuiz('u1', 'k1', 'k1', [0, 0])
+      expect(prisma.enrollment.update).toHaveBeenCalled()
+    })
+  })
+
+  it('flags a skill from a low practice-interview score and adds its remediation content', async () => {
+    const interview = {
+      ...item('interview', null, {
+        role: 'MA',
+        questions: ['Q1'],
+        maxAttempts: 3,
+        skill: 'safety',
+      }),
+      id: 'i1',
+    }
+    withSkills()
+    prisma.courseItem.findUnique.mockResolvedValue(interview)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    scoring.score.mockResolvedValue([{ score: 40, feedback: 'Add detail.' }])
+    outlineOf(interview, lesson)
+    prisma.itemProgress.findMany.mockResolvedValue([
+      { itemId: 'i1', status: 'completed', score: 40, data: null },
+    ])
+    const shown = await service.submitInterview('u1', 'k1', 'i1', ['my answer'])
+    expect(prisma.planItem.createMany.mock.calls[0][0].data).toEqual([
+      expect.objectContaining({
+        itemId: 'r1',
+        reason: expect.objectContaining({ skill: 'safety', pct: 40, n: 1 }),
+      }),
+    ])
+    expect(shown.planAdded).toEqual([expect.objectContaining({ itemId: 'r1', pct: 40 })])
+  })
+
+  it('opens a remediation item only for a learner whose plan includes it', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(lesson)
+    await expect(service.item('u1', 'k1', 'r1')).rejects.toThrow(NotFoundException)
+    prisma.planItem.findUnique.mockResolvedValue({ id: 'p1' })
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    await expect(service.item('u1', 'k1', 'r1')).resolves.toMatchObject({ id: 'r1' })
   })
 })
 

@@ -14,6 +14,7 @@ import type {
 import { PrismaService } from '../prisma/prisma.service'
 import { slugify, validateCourseFields, validateItemInput } from './course-config'
 import { imageUrl, isImageKey } from './item-image'
+import { parseSkills } from './skills'
 import { LEARN_ROLES, LearnService } from './learn.service'
 
 const MANAGERS = [LEARN_ROLES.agencyAdmin, LEARN_ROLES.providerAdmin]
@@ -30,6 +31,7 @@ type CourseRow = {
   readinessThreshold: number
   outcomes: string[]
   targetRoles: string[]
+  skills: unknown
   status: string
 }
 
@@ -43,6 +45,7 @@ const settings = (c: CourseRow) => ({
   readinessThreshold: c.readinessThreshold,
   outcomes: c.outcomes,
   targetRoles: c.targetRoles,
+  skills: parseSkills(c.skills),
   status: c.status as 'draft' | 'published',
 })
 
@@ -190,6 +193,7 @@ export class CoursesService {
         slug,
         status: 'draft',
         ...fields,
+        skills: fields.skills as object | undefined,
         title: fields.title as string,
       },
     })
@@ -229,7 +233,10 @@ export class CoursesService {
     await this.courseFor(userId, role, courseId)
     await this.prisma.course.update({
       where: { id: courseId },
-      data: validateCourseFields(body, true),
+      data: (({ skills, ...rest }) => ({
+        ...rest,
+        ...(skills ? { skills: skills as object } : {}),
+      }))(validateCourseFields(body, true)),
     })
     return this.detail(userId, role, courseId)
   }
@@ -303,10 +310,11 @@ export class CoursesService {
   async updateItem(userId: string, role: string | undefined, itemId: string, body: unknown) {
     const item = await this.itemFor(userId, role, itemId)
     const input = validateItemInput(body)
-    // A SCORM item's package cannot be swapped by editing; only its title changes.
+    // A SCORM item's package cannot be swapped by editing; only its title and whether it is
+    // remediation content change.
     const data =
       item.type === 'scorm'
-        ? { title: input.title }
+        ? { title: input.title, config: scormConfig(item.config, input.config) }
         : {
             type: input.type,
             title: input.title,
@@ -390,6 +398,17 @@ export class CoursesService {
       return { id: r.scenarioId, title: d.title ?? r.scenarioId, detail: d.track }
     })
   }
+}
+
+/** A SCORM item's stored config, with its remediation or review setting set or cleared. */
+function scormConfig(stored: unknown, incoming: Record<string, unknown>): object {
+  const config = { ...((stored ?? {}) as Record<string, unknown>) }
+  delete config.remediationFor
+  delete config.reviewFor
+  for (const key of ['remediationFor', 'reviewFor'] as const) {
+    if (typeof incoming[key] === 'string' && incoming[key]) config[key] = incoming[key]
+  }
+  return config
 }
 
 function toItemDto(i: {

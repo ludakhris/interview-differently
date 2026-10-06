@@ -1250,6 +1250,48 @@
 .dash-file-disabled input {
   display: none;
 }
+.dash-plan-added {
+  margin-top: 16px;
+  border-left: 4px solid var(--accent, #056a99);
+}
+.dash-plan-after {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dash-plan-rows {
+  gap: 12px;
+}
+.dash-item-tag {
+  display: block;
+  margin-top: 6px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.dash-item-added {
+  /* The same row as any other; an accent bar marks it (kept above the hover background). */
+  position: relative;
+  overflow: hidden;
+}
+.dash-item-added::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--navy);
+  pointer-events: none;
+}
+.dash-plan-list {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+.dash-plan-why {
+  display: block;
+  margin: 2px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
 .dash-extcard {
   padding: 0;
   overflow: hidden;
@@ -1274,6 +1316,22 @@
 .dash-extcard-summary {
   margin: 0 0 12px;
   font-size: 1.05rem;
+}
+.dash-extcard-open {
+  margin: 4px 0 0;
+}
+.dash-extcard-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.dash-extcard-done {
+  font-weight: 600;
 }
 .dash-extcard-task {
   margin: 0 0 12px;
@@ -1423,4 +1481,46 @@
   margin: 0 0 28px;
   padding: 0;
   list-style: none;
+}
+.dash-skill-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.dash-skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface, #fff);
+}
+.dash-skill-chip input {
+  width: 4.2em;
+  padding: 2px 6px;
+}
+.dash-skill-chip button {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 6px;
+}
+.dash-skill-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.dash-skill-add input:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.dash-skill-add input[type='number'] {
+  width: 5em;
 }

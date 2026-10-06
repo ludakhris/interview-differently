@@ -1,4 +1,5 @@
-import type { LearnerOutline, ReadinessRecord } from '@id/types'
+import type { LearnerAddedItem, LearnerOutline, ReadinessRecord } from '@id/types'
+import { Fragment } from 'react'
 import { useLoad } from './api'
 import { useApp } from './app-context'
 import { Meter } from './charts'
@@ -16,6 +17,13 @@ export function LearningCoursePage({ cohortId }: { cohortId: string }) {
   if (error) return errorNotice(error)
   if (loading || !data) return <p className="dash-loading">Loading course…</p>
   const c = data.cohort
+  // Each addition is shown right after the check or interview whose result added it. Anything
+  // whose trigger is no longer in the course falls back to its own section.
+  const inOutline = new Set(data.modules.flatMap((m) => m.items.map((i) => i.id)))
+  const addedAfter = (id: string) => data.added.filter((a) => a.reason.sourceItemId === id)
+  const orphans = data.added.filter(
+    (a) => !a.reason.sourceItemId || !inOutline.has(a.reason.sourceItemId)
+  )
   const locked = c.status === 'upcoming' ? `Starts ${dateOnly(c.startsAt)}.` : null
 
   return (
@@ -47,41 +55,60 @@ export function LearningCoursePage({ cohortId }: { cohortId: string }) {
             Your course
           </h2>
           <Meter value={c.itemsTotal ? c.itemsDone / c.itemsTotal : null} label="Progress" />
+          <p className="dash-muted" data-testid="progress-count">
+            {c.itemsDone} of {c.itemsTotal} items
+            {data.added.length > 0 ? `, including ${data.added.length} added to your plan` : ''}
+          </p>
           <ol className="dash-modules dash-learner-modules">
             {data.modules.map((m) => (
               <li key={m.id} className="dash-card">
                 <h3 className="dash-learner-module">{m.title}</h3>
                 <ol className="dash-items">
                   {m.items.map((i) => (
-                    <li key={i.id} className="dash-item">
-                      <a
-                        className="dash-item-link"
-                        href={href(`/lms/learning/${cohortId}/${i.id}`)}
-                      >
-                        <span className="dash-item-type">
-                          {LEARNER_TYPE_LABEL[i.type] ?? i.type}
-                          {i.label ? ` · ${i.label}` : ''}
-                        </span>
-                        <span className="dash-item-title">{i.title}</span>
-                        <span
-                          className={
-                            i.status === 'completed'
-                              ? 'dash-item-status dash-item-done'
-                              : 'dash-item-status'
-                          }
+                    <Fragment key={i.id}>
+                      <li className="dash-item">
+                        <a
+                          className="dash-item-link"
+                          href={href(`/lms/learning/${cohortId}/${i.id}`)}
                         >
-                          {STATUS_WORD[i.status]}
-                          {i.status === 'completed' && i.score !== null
-                            ? ` · ${score(i.score)}`
-                            : ''}
-                        </span>
-                      </a>
-                    </li>
+                          <span className="dash-item-type">
+                            {LEARNER_TYPE_LABEL[i.type] ?? i.type}
+                            {i.label ? ` · ${i.label}` : ''}
+                          </span>
+                          <span className="dash-item-title">{i.title}</span>
+                          <span
+                            className={
+                              i.status === 'completed'
+                                ? 'dash-item-status dash-item-done'
+                                : 'dash-item-status'
+                            }
+                          >
+                            {STATUS_WORD[i.status]}
+                            {i.status === 'completed' && i.score !== null
+                              ? ` · ${score(i.score)}`
+                              : ''}
+                          </span>
+                        </a>
+                      </li>
+                      {addedAfter(i.id).length > 0 && (
+                        <li className="dash-plan-after">
+                          <AddedList items={addedAfter(i.id)} cohortId={cohortId} />
+                        </li>
+                      )}
+                    </Fragment>
                   ))}
                 </ol>
               </li>
             ))}
           </ol>
+          {orphans.length > 0 && (
+            <section className="dash-card" aria-labelledby="h-added">
+              <h3 className="dash-learner-module" id="h-added">
+                Added for you
+              </h3>
+              <AddedList items={orphans} cohortId={cohortId} />
+            </section>
+          )}
         </section>
 
         <aside>
@@ -89,6 +116,43 @@ export function LearningCoursePage({ cohortId }: { cohortId: string }) {
         </aside>
       </div>
     </>
+  )
+}
+
+/**
+ * Items a learner's results added to their plan, as rows like any other in the course, marked
+ * with a short chip and the reason inside the row.
+ */
+function AddedList({ items, cohortId }: { items: LearnerAddedItem[]; cohortId: string }) {
+  const { href } = useApp()
+  return (
+    <ol className="dash-items dash-plan-rows">
+      {items.map((i) => {
+        const done = i.status === 'completed'
+        return (
+          <li key={i.id} className="dash-item dash-item-added">
+            <a className="dash-item-link" href={href(`/lms/learning/${cohortId}/${i.id}`)}>
+              <span className="dash-item-type">
+                {LEARNER_TYPE_LABEL[i.type] ?? i.type}
+                <span className="dash-item-tag">
+                  <span className="dash-chip">{i.review ? 'Review' : 'Added'}</span>
+                </span>
+              </span>
+              <span className="dash-item-title">
+                {i.title}
+                <span className="dash-plan-why">
+                  Because your {i.reason.skill} result was {i.reason.pct}%.
+                  {i.review && !done ? ' You did this before; do it again.' : ''}
+                </span>
+              </span>
+              <span className={done ? 'dash-item-status dash-item-done' : 'dash-item-status'}>
+                {done ? 'Done' : i.review ? 'To redo' : 'To do'}
+              </span>
+            </a>
+          </li>
+        )
+      })}
+    </ol>
   )
 }
 

@@ -1,4 +1,4 @@
-import type { CourseItemDto, KnowledgeCheckQuestion } from '@id/types'
+import type { CourseItemDto, CourseSkill, KnowledgeCheckQuestion } from '@id/types'
 import { useState } from 'react'
 
 export interface ItemDraft {
@@ -38,6 +38,8 @@ const emptyQuestion = (): KnowledgeCheckQuestion => ({
 /** Edits one item in place. The fields shown depend on its type. */
 export function ItemEditor(props: {
   item: CourseItemDto
+  /** The course's skills, for tagging questions and choosing remediation. */
+  skills: CourseSkill[]
   busy: boolean
   onSave: (draft: ItemDraft) => void
   onCancel: () => void
@@ -60,12 +62,24 @@ export function ItemEditor(props: {
   const [linkNote, setLinkNote] = useState(String(item.config.instructions ?? ''))
   const [linkSummary, setLinkSummary] = useState(String(item.config.summary ?? ''))
   const [role, setRole] = useState(String(item.config.role ?? ''))
+  const [skill, setSkill] = useState(String(item.config.skill ?? ''))
+  // How this item is used in a learner's plan: ordinary content, extra content only flagged
+  // learners get, or ordinary content that flagged learners must complete again.
+  const [planMode, setPlanMode] = useState<'none' | 'extra' | 'review'>(
+    item.config.remediationFor ? 'extra' : item.config.reviewFor ? 'review' : 'none'
+  )
+  const [planSkill, setPlanSkill] = useState(
+    String(item.config.remediationFor ?? item.config.reviewFor ?? '')
+  )
   const [attempts, setAttempts] = useState(String(item.config.maxAttempts ?? 1))
   const [questionsText, setQuestionsText] = useState(
     Array.isArray(item.config.questions) && item.type === 'interview'
       ? (item.config.questions as string[]).join('\n')
       : ''
   )
+
+  // An assessment or a practice interview is evidence, so it cannot be remediation content.
+  const canBeRemediation = item.type !== 'assessment' && item.type !== 'interview'
 
   function save() {
     const config: Record<string, unknown> =
@@ -84,17 +98,23 @@ export function ItemEditor(props: {
                 }
               : {
                   role,
+                  ...(skill ? { skill } : {}),
                   maxAttempts: Number(attempts) || 1,
                   questions: questionsText
                     .split('\n')
                     .map((q) => q.trim())
                     .filter(Boolean),
                 }
+    const saved: Record<string, unknown> = { ...(item.type === 'scorm' ? item.config : config) }
+    delete saved.remediationFor
+    delete saved.reviewFor
+    if (planSkill && canBeRemediation && planMode === 'extra') saved.remediationFor = planSkill
+    if (planSkill && canBeRemediation && planMode === 'review') saved.reviewFor = planSkill
     props.onSave({
       type: item.type,
       title,
       label: item.type === 'assessment' ? label : null,
-      config: item.type === 'scorm' ? item.config : config,
+      config: saved,
     })
   }
 
@@ -119,7 +139,7 @@ export function ItemEditor(props: {
       )}
 
       {(item.type === 'knowledge_check' || item.type === 'assessment') && (
-        <QuestionBuilder questions={questions} onChange={setQuestions} />
+        <QuestionBuilder questions={questions} skills={props.skills} onChange={setQuestions} />
       )}
 
       {item.type === 'assessment' && (
@@ -300,6 +320,45 @@ export function ItemEditor(props: {
         </>
       )}
 
+      {item.type === 'interview' && (
+        <SkillSelect
+          label="Skill this interview builds"
+          skills={props.skills}
+          value={skill}
+          onChange={setSkill}
+          help="Its best score counts toward the skill. Below the skill's pass mark, the remediation content for it is added to the learner's plan."
+        />
+      )}
+
+      {canBeRemediation && (
+        <>
+          <label className="dash-field">
+            <span>Part of a learner's plan</span>
+            <select
+              value={planMode}
+              onChange={(e) => setPlanMode(e.target.value as 'none' | 'extra' | 'review')}
+            >
+              <option value="none">Ordinary course content</option>
+              <option value="extra">Extra content, only for learners flagged on a skill</option>
+              <option value="review">Review: flagged learners must complete it again</option>
+            </select>
+            <small className="dash-muted">
+              Extra content is hidden from everyone else. A review stays where it is in the course
+              and is also added to a flagged learner's plan as a new item they must complete again.
+              Either way the learner's progress total grows by one.
+            </small>
+          </label>
+          {planMode !== 'none' && (
+            <SkillSelect
+              label="When this skill is flagged"
+              skills={props.skills}
+              value={planSkill}
+              onChange={setPlanSkill}
+            />
+          )}
+        </>
+      )}
+
       <div className="dash-form-actions">
         <button type="button" className="dash-btn" onClick={save} disabled={props.busy}>
           {props.busy ? 'Saving…' : 'Save item'}
@@ -312,8 +371,41 @@ export function ItemEditor(props: {
   )
 }
 
+/** Pick one of the course's skills, or none. */
+function SkillSelect(props: {
+  label: string
+  skills: CourseSkill[]
+  value: string
+  onChange: (id: string) => void
+  help?: string
+}) {
+  const none = props.skills.length === 0
+  return (
+    <label className="dash-field">
+      <span>{props.label}</span>
+      <select
+        value={props.value}
+        disabled={none && !props.value}
+        onChange={(e) => props.onChange(e.target.value)}
+      >
+        <option value="">{none ? 'No skills yet: add them in the course settings' : 'None'}</option>
+        {props.skills.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.label}
+          </option>
+        ))}
+        {props.value && !props.skills.some((s) => s.id === props.value) && (
+          <option value={props.value}>{props.value} (no longer a course skill)</option>
+        )}
+      </select>
+      {props.help && <small className="dash-muted">{props.help}</small>}
+    </label>
+  )
+}
+
 function QuestionBuilder(props: {
   questions: KnowledgeCheckQuestion[]
+  skills: CourseSkill[]
   onChange: (q: KnowledgeCheckQuestion[]) => void
 }) {
   const { questions, onChange } = props
@@ -333,6 +425,16 @@ function QuestionBuilder(props: {
               onChange={(e) => set(i, { ...q, prompt: e.target.value })}
             />
           </label>
+          <SkillSelect
+            label="Skill (optional)"
+            skills={props.skills}
+            value={q.skill ?? ''}
+            onChange={(id) => {
+              const next: KnowledgeCheckQuestion = { ...q, skill: id }
+              if (!id) delete next.skill
+              set(i, next)
+            }}
+          />
           <p className="dash-muted">Answers. Select the correct one.</p>
           {q.options.map((o, j) => (
             <div key={j} className="dash-option">

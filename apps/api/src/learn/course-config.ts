@@ -1,9 +1,16 @@
 import { BadRequestException } from '@nestjs/common'
+import { randomBytes } from 'node:crypto'
 import { DEFAULT_ATTEMPTS } from './interview-scoring'
 import { ALLOWED_LINK_SITES, parseExternalLink } from './external-link'
 import { isImageKey } from './item-image'
 import { parseYouTube } from './youtube'
-import type { CourseItemType, CourseStatus, ItemInput, KnowledgeCheckQuestion } from './learn-types'
+import type {
+  CourseItemType,
+  CourseSkill,
+  CourseStatus,
+  ItemInput,
+  KnowledgeCheckQuestion,
+} from './learn-types'
 
 export const ITEM_TYPES: CourseItemType[] = [
   'lesson',
@@ -25,6 +32,7 @@ export interface CourseFields {
   readinessThreshold?: number
   outcomes?: string[]
   targetRoles?: string[]
+  skills?: CourseSkill[]
   status?: CourseStatus
 }
 
@@ -79,6 +87,7 @@ export function validateCourseFields(input: unknown, partial: boolean): CourseFi
       out[key] = lines(input[key], key === 'outcomes' ? 'Outcomes' : 'Target jobs', 8, 160)
     }
   }
+  if (input.skills !== undefined) out.skills = validateSkills(input.skills)
   if (input.status !== undefined) {
     if (input.status !== 'draft' && input.status !== 'published') {
       return bad('Status must be draft or published')
@@ -97,6 +106,26 @@ function lines(v: unknown, field: string, max: number, maxLen: number): string[]
     return bad(`${field}: each line up to ${maxLen} characters`)
   return out
 }
+
+const SKILL_ID = /^[a-z0-9-]{1,60}$/
+
+/** The course's skills: a label and a pass mark each. The id comes from the label. */
+function validateSkills(v: unknown): CourseSkill[] {
+  if (!Array.isArray(v) || v.length > 12) return bad('Skills must be a list of up to 12')
+  const seen = new Set<string>()
+  return v.map((s, i) => {
+    if (!isObject(s)) return bad(`Skill ${i + 1} is not valid`)
+    const label = text(s.label, `Skill ${i + 1}`, 60, true) as string
+    const targetPct = whole(s.targetPct, `Pass mark of ${label}`, 1, 100)
+    if (targetPct === undefined) return bad(`Pass mark of ${label} is required`)
+    const id = slugify(label)
+    if (seen.has(id)) return bad(`The skill "${label}" appears twice`)
+    seen.add(id)
+    return { id, label, targetPct }
+  })
+}
+
+const QUESTION_ID = /^q_[0-9a-f]{8}$/
 
 function validateQuestions(v: unknown): KnowledgeCheckQuestion[] {
   if (!Array.isArray(v) || v.length > 20) return bad('Questions must be a list of up to 20')
@@ -117,12 +146,42 @@ function validateQuestions(v: unknown): KnowledgeCheckQuestion[] {
       options.length - 1
     )
     if (correctIndex === undefined) return bad(`Question ${i + 1} needs a correct answer`)
-    return { prompt, options, correctIndex }
+    const skill = q.skill === undefined || q.skill === '' ? undefined : q.skill
+    if (skill !== undefined && (typeof skill !== 'string' || !SKILL_ID.test(skill)))
+      return bad(`Skill of question ${i + 1} is not valid`)
+    // An id is kept once given, so results stay tied to the question when its text is edited.
+    const id =
+      typeof q.id === 'string' && QUESTION_ID.test(q.id)
+        ? q.id
+        : `q_${randomBytes(4).toString('hex')}`
+    return { id, prompt, options, correctIndex, ...(skill ? { skill } : {}) }
   })
 }
 
 /** Item fields from a request body, with the config checked for its type. */
 export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'type' | 'title'>> & {
+  label: 'pre' | 'post' | null
+  config: Record<string, unknown>
+} {
+  const item = validateItemByType(input)
+  // Remediation content: kept out of the outline until a flagged skill adds it to a learner's plan.
+  // A scored assessment or an interview cannot be remediation.
+  const config = isObject(input) && isObject(input.config) ? input.config : {}
+  // `remediationFor`: extra content only flagged learners get. `reviewFor`: stays in the course and is
+  // added back to a flagged learner's plan. An item is one or the other.
+  const remedial = text(config.remediationFor, 'Remediation skill', 60)
+  const review = text(config.reviewFor, 'Review skill', 60)
+  if (remedial && review) return bad('An item is either extra content or a review, not both')
+  const mode = remedial ? 'remediationFor' : review ? 'reviewFor' : null
+  const skill = remedial || review
+  if (mode && skill && item.type !== 'assessment' && item.type !== 'interview') {
+    if (!SKILL_ID.test(skill)) return bad('Skill is not valid')
+    item.config = { ...item.config, [mode]: skill }
+  }
+  return item
+}
+
+function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | 'title'>> & {
   label: 'pre' | 'post' | null
   config: Record<string, unknown>
 } {
@@ -221,7 +280,14 @@ export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'typ
         return bad('A practice interview has up to 6 questions')
       const questions = raw.map((q, i) => text(q, `Question ${i + 1}`, 300, true) as string)
       const maxAttempts = whole(config.maxAttempts, 'Attempts', 1, 5) ?? DEFAULT_ATTEMPTS
-      return { type, title, label, config: { role, questions, maxAttempts } }
+      const skill = text(config.skill, 'Skill', 60)
+      if (skill && !SKILL_ID.test(skill)) return bad('Skill is not valid')
+      return {
+        type,
+        title,
+        label,
+        config: { role, questions, maxAttempts, ...(skill ? { skill } : {}) },
+      }
     }
   }
 }
