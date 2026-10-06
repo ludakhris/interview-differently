@@ -27,6 +27,12 @@ type Req = AuthedRequest & Pick<LtiRequest, 'lti'>
 
 const LTI_WRITES_PER_MINUTE = 20
 
+/**
+ * Stored when transcription ran but heard nothing, so the answer counts as given (and scores low)
+ * and the player is not left waiting for a transcript that will never come.
+ */
+export const NO_SPEECH_TRANSCRIPT = '[No speech was detected in this answer.]'
+
 interface CreateSessionDto {
   scenarioId: string
 }
@@ -105,7 +111,13 @@ export class ImmersiveSessionsController {
         void this.transcription
           .transcribe(file.buffer, file.originalname)
           .then((transcript) =>
-            transcript ? this.service.updateTranscript(response.id, transcript) : null
+            // null means the transcription itself failed: leave it unset. '' means silence.
+            transcript === null
+              ? null
+              : this.service.updateTranscript(
+                  response.id,
+                  transcript.trim() || NO_SPEECH_TRANSCRIPT
+                )
           )
           .catch(() => {
             /* best effort */

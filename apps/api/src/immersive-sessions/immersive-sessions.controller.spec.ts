@@ -1,10 +1,13 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import { MemoryLtiStore } from '../lti/lti-store'
-import { ImmersiveSessionsController } from './immersive-sessions.controller'
+import { ImmersiveSessionsController, NO_SPEECH_TRANSCRIPT } from './immersive-sessions.controller'
 
 const lti = { ref: 'S1', jti: 'j', iat: 0, exp: 0, lineitem: 'x' }
 
-function setup(found: { userId: string; scenarioId: string } | null) {
+function setup(
+  found: { userId: string; scenarioId: string } | null,
+  transcribe: jest.Mock = jest.fn()
+) {
   const service = {
     getSessionRef: jest.fn().mockResolvedValue(found),
     getSessionOwner: jest.fn().mockResolvedValue(found?.userId ?? null),
@@ -13,11 +16,13 @@ function setup(found: { userId: string; scenarioId: string } | null) {
     getResponseSignedUrl: jest.fn().mockResolvedValue({ url: 'u', expiresAt: 'e' }),
     createSession: jest.fn().mockResolvedValue({ id: 's1' }),
     createResponse: jest.fn().mockResolvedValue({ id: 'r1' }),
+    updateTranscript: jest.fn().mockResolvedValue({}),
+    storeResponseMedia: jest.fn().mockResolvedValue(undefined),
   }
   const clerk = { isAdmin: jest.fn().mockResolvedValue(true) }
   const c = new ImmersiveSessionsController(
     service as never,
-    { transcribe: jest.fn() } as never,
+    { transcribe } as never,
     clerk as never,
     new MemoryLtiStore()
   )
@@ -79,5 +84,34 @@ describe('ImmersiveSessionsController for a Clerk user', () => {
       ForbiddenException
     )
     expect(service.getSessionRef).not.toHaveBeenCalled()
+  })
+})
+
+describe('ImmersiveSessionsController transcripts', () => {
+  const req = { userId: 'u1', lti } as never
+  const file = { buffer: Buffer.from('a'), originalname: 'r.webm', mimetype: 'audio/webm' }
+  const upload = async (transcript: string | null) => {
+    const { c, service } = setup(
+      { userId: 'u1', scenarioId: 'S1' },
+      jest.fn().mockResolvedValue(transcript)
+    )
+    await c.createResponse(req, 's1', { nodeId: 'n1', questionText: 'q' }, file as never)
+    await new Promise((r) => setImmediate(r))
+    return service.updateTranscript
+  }
+
+  it('stores what was heard', async () => {
+    expect(await upload(' I would page the on-call. ')).toHaveBeenCalledWith(
+      'r1',
+      'I would page the on-call.'
+    )
+  })
+
+  it('stores a no-speech marker for silence, so the player does not wait forever', async () => {
+    expect(await upload('')).toHaveBeenCalledWith('r1', NO_SPEECH_TRANSCRIPT)
+  })
+
+  it('leaves the transcript unset when transcription itself failed', async () => {
+    expect(await upload(null)).not.toHaveBeenCalled()
   })
 })
