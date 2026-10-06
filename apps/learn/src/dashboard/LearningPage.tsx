@@ -4,7 +4,7 @@ import { useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { Meter } from './charts'
 import { CohortStatusChip } from './CohortsPage'
-import { dateShort } from './format'
+import { dateOnly } from './format'
 import { errorNotice } from './shared'
 
 /** The learner's home: the cohorts they are in, and a box to join another with a code. */
@@ -76,7 +76,7 @@ export function LearningPage() {
                   {c.courseTitle}
                 </a>
                 <p className="dash-sub">
-                  {c.cohortName} · {c.host} · {dateShort(c.startsAt)} to {dateShort(c.endsAt)}
+                  {c.cohortName} · {c.host} · {dateOnly(c.startsAt)} to {dateOnly(c.endsAt)}
                 </p>
               </div>
               <div className="dash-learner-progress">

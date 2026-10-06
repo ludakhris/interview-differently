@@ -1,7 +1,7 @@
 import type { Gradebook } from '@id/types'
 import { useLoad } from './api'
 import { Meter, StatTile } from './charts'
-import { dateShort, pct, points, score } from './format'
+import { dateOnly, dateShort, pct, points, score } from './format'
 import { useApp } from './app-context'
 import { errorNotice, useRole } from './shared'
 
@@ -28,8 +28,8 @@ export function GradebookView({ data, role }: { data: Gradebook; role?: string }
           <h1 className="dash-h2">{c.cohort}</h1>
           <p className="dash-sub">
             {c.provider}
-            {c.host !== c.provider ? ` · run by ${c.host}` : ''} · {dateShort(c.startsAt)} to{' '}
-            {dateShort(c.endsAt)} · {c.status === 'running' ? 'In progress' : 'Completed'}
+            {c.host !== c.provider ? ` · run by ${c.host}` : ''} · {dateOnly(c.startsAt)} to{' '}
+            {dateOnly(c.endsAt)} · {c.status === 'running' ? 'In progress' : 'Completed'}
           </p>
         </div>
         {role === 'case-manager' && <p className="dash-readonly">Read-only view</p>}

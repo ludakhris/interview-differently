@@ -2,7 +2,7 @@ import type { CohortDetail, CohortListItem, RunnableCourse } from '@id/types'
 import { useState, type FormEvent } from 'react'
 import { useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
-import { dateShort } from './format'
+import { dateOnly } from './format'
 import { errorNotice } from './shared'
 
 const STATUS_LABEL = { upcoming: 'Upcoming', running: 'Running', completed: 'Completed' } as const
@@ -42,7 +42,7 @@ export function CohortsPage({ workspace }: { workspace: string }) {
   const suggested = course && startsAt ? `${course.title} ${startsAt.slice(0, 4)}` : ''
   const shownName = nameTouched ? name : suggested
   const endIso = course?.lengthWeeks && startsAt ? addWeeks(startsAt, course.lengthWeeks) : null
-  const endText = endIso ? dateShort(endIso) : ''
+  const endText = endIso ? dateOnly(endIso) : ''
 
   async function create(e: FormEvent) {
     e.preventDefault()
@@ -192,7 +192,7 @@ export function CohortsPage({ workspace }: { workspace: string }) {
                   {c.name}
                 </a>
                 <p className="dash-sub">
-                  {c.courseTitle} · {dateShort(c.startsAt)} to {dateShort(c.endsAt)}
+                  {c.courseTitle} · {dateOnly(c.startsAt)} to {dateOnly(c.endsAt)}
                 </p>
               </div>
               <dl className="dash-course-stats">

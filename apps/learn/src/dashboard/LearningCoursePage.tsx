@@ -3,7 +3,7 @@ import { useLoad } from './api'
 import { useApp } from './app-context'
 import { Meter } from './charts'
 import { CohortStatusChip } from './CohortsPage'
-import { dateShort, points, score } from './format'
+import { dateOnly, points, score } from './format'
 import { LEARNER_TYPE_LABEL } from './ItemEditor'
 import { errorNotice } from './shared'
 
@@ -16,7 +16,7 @@ export function LearningCoursePage({ cohortId }: { cohortId: string }) {
   if (error) return errorNotice(error)
   if (loading || !data) return <p className="dash-loading">Loading course…</p>
   const c = data.cohort
-  const locked = c.status === 'upcoming' ? `Starts ${dateShort(c.startsAt)}.` : null
+  const locked = c.status === 'upcoming' ? `Starts ${dateOnly(c.startsAt)}.` : null
 
   return (
     <>
@@ -27,7 +27,7 @@ export function LearningCoursePage({ cohortId }: { cohortId: string }) {
         <div>
           <h1 className="dash-h2">{c.courseTitle}</h1>
           <p className="dash-sub">
-            {c.cohortName} · {c.host} · {dateShort(c.startsAt)} to {dateShort(c.endsAt)}
+            {c.cohortName} · {c.host} · {dateOnly(c.startsAt)} to {dateOnly(c.endsAt)}
           </p>
         </div>
         <div className="dash-actions">

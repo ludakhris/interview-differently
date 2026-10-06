@@ -2,7 +2,7 @@ import type { AgencyOutcomes } from '@id/types'
 import { useState } from 'react'
 import { downloadFile, useApiFetch, useLoad } from './api'
 import { Dumbbell, Funnel, Legend, Meter, PairedBars, StatTile } from './charts'
-import { dateShort, pct, points, score } from './format'
+import { dateOnly, dateShort, pct, points, score } from './format'
 import { useApp } from './app-context'
 import { errorNotice, useRole } from './shared'
 
@@ -212,7 +212,7 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
             .map((c) => ({
               key: c.cohortId,
               label: c.cohort,
-              sub: c.status === 'running' ? 'In progress' : `Ended ${dateShort(c.endsAt)}`,
+              sub: c.status === 'running' ? 'In progress' : `Ended ${dateOnly(c.endsAt)}`,
               group: c.provider,
               pre: c.avgPre,
               post: c.avgPost,

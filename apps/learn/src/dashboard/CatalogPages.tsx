@@ -2,7 +2,7 @@ import type { CatalogCourse, CatalogOffering } from '@id/types'
 import { useState, type FormEvent } from 'react'
 import { usePublic } from '../public-api'
 import { useApp } from './app-context'
-import { dateShort } from './format'
+import { dateOnly } from './format'
 import { Notice } from './DashboardShell'
 
 const meta = (c: CatalogCourse) =>
@@ -93,7 +93,7 @@ export function CatalogPage() {
               <div className="dash-learner-progress">
                 <span className="dash-muted">
                   {c.nextStart
-                    ? `Next start ${dateShort(c.nextStart)}`
+                    ? `Next start ${dateOnly(c.nextStart)}`
                     : c.openCohorts
                       ? 'Cohort in progress'
                       : 'No cohort scheduled'}
@@ -197,8 +197,8 @@ export function OfferingPage({ courseId }: { courseId: string }) {
                   <li key={i}>
                     <strong>{k.name}</strong>
                     <span className="dash-muted">
-                      {k.status === 'running' ? 'In progress' : `Starts ${dateShort(k.startsAt)}`} ·
-                      ends {dateShort(k.endsAt)}
+                      {k.status === 'running' ? 'In progress' : `Starts ${dateOnly(k.startsAt)}`} ·
+                      ends {dateOnly(k.endsAt)}
                       {k.seatsLeft !== null &&
                         (k.seatsLeft > 0 ? ` · ${k.seatsLeft} places left` : ' · Full')}
                     </span>

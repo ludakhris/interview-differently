@@ -4,7 +4,7 @@ import { useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { Meter } from './charts'
 import { CohortStatusChip } from './CohortsPage'
-import { dateShort } from './format'
+import { dateOnly, dateShort } from './format'
 import { errorNotice } from './shared'
 
 export function CohortPage({ cohortId }: { cohortId: string }) {
@@ -105,7 +105,7 @@ function Cohort({
         <div>
           <h1 className="dash-h2">{cohort.name}</h1>
           <p className="dash-sub">
-            {cohort.courseTitle} · {dateShort(cohort.startsAt)} to {dateShort(cohort.endsAt)}
+            {cohort.courseTitle} · {dateOnly(cohort.startsAt)} to {dateOnly(cohort.endsAt)}
             {cohort.lengthWeeks ? ` (${cohort.lengthWeeks} weeks)` : ''}
           </p>
         </div>
@@ -243,7 +243,7 @@ function Cohort({
             </label>
             <label className="dash-field">
               <span>End date</span>
-              <input type="text" readOnly disabled value={dateShort(cohort.endsAt)} />
+              <input type="text" readOnly disabled value={dateOnly(cohort.endsAt)} />
               <small className="dash-muted">Follows the start date and the course length.</small>
             </label>
             <label className="dash-field">
