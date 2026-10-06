@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { DEFAULT_ATTEMPTS } from './interview-scoring'
 import { ALLOWED_LINK_SITES, parseExternalLink } from './external-link'
 import { isImageKey } from './item-image'
-import { registeredToolIds } from '../lti/platform/lti-platform-config'
+import { toolById } from '../lti/platform/lti-platform-config'
 import { parseYouTube } from './youtube'
 import type {
   CourseItemType,
@@ -299,11 +299,19 @@ function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | '
     }
     case 'tool': {
       const toolId = text(config.toolId, 'Tool', 60, true) as string
-      if (!registeredToolIds().includes(toolId)) return bad('That tool is not connected')
+      const tool = toolById(toolId)
+      if (!tool) return bad('That tool is not connected')
       const ref = text(config.ref, 'Tool reference', 200, true) as string
       const skill = text(config.skill, 'Skill', 60)
       if (skill && !SKILL_ID.test(skill)) return bad('Skill is not valid')
-      return { type, title, label, config: { toolId, ref, ...(skill ? { skill } : {}) } }
+      // Only an assessment tool can stand in for the pre or post assessment; for any other tool a
+      // label is refused rather than silently saved.
+      const given = input.label ?? null
+      if (given !== null && given !== 'pre' && given !== 'post')
+        return bad('Label must be pre, post or empty')
+      if (given !== null && !tool.labelable)
+        return bad(`${tool.name} cannot be a pre or post assessment`)
+      return { type, title, label: given, config: { toolId, ref, ...(skill ? { skill } : {}) } }
     }
   }
 }

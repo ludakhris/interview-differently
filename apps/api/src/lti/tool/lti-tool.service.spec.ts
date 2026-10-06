@@ -14,6 +14,10 @@ import { MemoryLtiStore } from '../lti-store'
 import { LtiToolService } from './lti-tool.service'
 import { signSession, sqlDatasetSlugs, verifySession, type LtiSession } from './lti-session'
 
+/** Loose shape for hand-rolled Prisma fakes whose args the tests index freely. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Row = Record<string, any>
+
 const BASE = 'http://api.test/api'
 const ISS = 'http://api.test'
 const LINEITEM = `${BASE}/lti/platform/ags/c1/lineitems/i1`
@@ -45,7 +49,7 @@ function setup(questions = ['Tell me about a time you led.', 'Why this role?']) 
   }
   const store = new MemoryLtiStore()
   const engine = { scoreAnswers: jest.fn() }
-  const svc = new LtiToolService(prisma as any, engine as any, store)
+  const svc = new LtiToolService(prisma as never, engine as never, store)
   const calls: { url: string; init?: RequestInit }[] = []
   let scoreStatus = 200
   let tokenStatus = 200
@@ -56,7 +60,7 @@ function setup(questions = ['Tell me about a time you led.', 'Why this role?']) 
       return new Response(JSON.stringify({ access_token: 'AT' }), { status: tokenStatus })
     }
     return new Response('{}', { status: scoreStatus })
-  }) as any
+  }) as never
   return {
     svc,
     store,
@@ -481,7 +485,11 @@ describe('submit', () => {
   it('is safe across instances: a token spent on one instance is refused on another', async () => {
     process.env.LTI_TOOL_SECRET = 'shared-secret'
     const h = setup()
-    const other = new LtiToolService(h.prisma as any, { scoreAnswers: jest.fn() } as any, h.store)
+    const other = new LtiToolService(
+      h.prisma as never,
+      { scoreAnswers: jest.fn() } as never,
+      h.store
+    )
     other.fetchImpl = h.svc.fetchImpl
     const html = await launchAgain(h.svc)
     const answers = { submission: submissionOf(html), answer_0: long, answer_1: long }
@@ -863,8 +871,19 @@ describe('session token', () => {
     expect(() => verifySession(signSession(claims), 2_000_000_001)).toThrow('expired')
   })
 
+  it('round trips a delivery id and refuses a malformed one', () => {
+    const t = signSession({ ...claims, deliveryId: 'd1' })
+    expect(verifySession(t, 1_000).deliveryId).toBe('d1')
+    expect(verifySession(signSession(claims), 1_000).deliveryId).toBeUndefined()
+    for (const bad of ['', 5, {}])
+      expect(() =>
+        verifySession(signSession({ ...claims, deliveryId: bad } as unknown as LtiSession), 1_000)
+      ).toThrow('Invalid')
+  })
+
   it('rejects a token without iat', () => {
-    const { iat: _iat, ...noIat } = claims
+    const noIat: Partial<LtiSession> = { ...claims }
+    delete noIat.iat
     expect(() => verifySession(signSession(noIat as LtiSession), 1_000)).toThrow('Invalid')
   })
 
@@ -1297,6 +1316,240 @@ describe('completeImmersive', () => {
     for (let i = 0; i < 10; i++)
       await h.svc.completeImmersive({ ...session, jti: `j${i}` }, 'im1').catch(() => undefined)
     await expect(h.svc.completeImmersive({ ...session, jti: 'jx' }, 'im1')).rejects.toMatchObject({
+      status: 429,
+    })
+  })
+})
+
+describe('assessment launch', () => {
+  const bank = { id: 'as1', slug: 'sql-basics', dataset: { slug: 'sql-fundamentals' } }
+
+  function ready(over: { assessment?: unknown; cohort?: unknown } = {}) {
+    const h = setup() as ReturnType<typeof setup> & { prisma: Row }
+    const deliveries: Row[] = []
+    h.prisma.assessment = {
+      findUnique: jest.fn(async (a: Row) =>
+        over.assessment === undefined
+          ? a.where.slug === 'sql-basics' || a.where.id === 'as1'
+            ? bank
+            : null
+          : over.assessment
+      ),
+    }
+    h.prisma.cohort = {
+      findUnique: jest.fn(async () => (over.cohort === undefined ? { id: 'c1' } : over.cohort)),
+    }
+    h.prisma.assessmentDelivery = {
+      findFirst: jest.fn(
+        async (a: Row) =>
+          deliveries.find(
+            (d) =>
+              d.assessmentId === a.where.assessmentId &&
+              d.cohortId === a.where.cohortId &&
+              d.label === a.where.label
+          ) ?? null
+      ),
+      create: jest.fn(async (a: Row) => {
+        await Promise.resolve()
+        const d = { id: `d${deliveries.length + 1}`, ...a.data }
+        deliveries.push(d)
+        return d
+      }),
+    }
+    h.svc.sleep = async () => undefined
+    return { ...h, deliveries }
+  }
+  async function launchWith(
+    h: ReturnType<typeof ready>,
+    custom: Record<string, unknown> = { ref: 'sql-basics', tool: 'id-assessment' },
+    extra: Record<string, unknown> = {}
+  ) {
+    const { state, nonce } = await startLogin(h.svc)
+    return h.svc.launch(
+      idToken(nonce, {
+        [CLAIM.custom]: custom,
+        [CLAIM.context]: { id: 'c1' },
+        [CLAIM.resourceLink]: { id: 'item1' },
+        ...extra,
+      }),
+      state,
+      state
+    ) as Promise<{ redirect: string }>
+  }
+  const sessionOf = (r: { redirect: string }) => verifySession(r.redirect.split('#session=')[1])
+
+  it('creates the delivery and redirects to the assessment page with a pinned session', async () => {
+    const h = ready()
+    const r = await launchWith(h)
+    expect(h.deliveries).toEqual([
+      { id: 'd1', assessmentId: 'as1', cohortId: 'c1', label: 'lti:item1' },
+    ])
+    expect(r.redirect.startsWith('http://localhost:5173/lti/assessment/d1#session=')).toBe(true)
+    expect(sessionOf(r)).toMatchObject({
+      sub: 'u1',
+      ref: 'sql-basics',
+      deliveryId: 'd1',
+      datasets: ['sql-fundamentals'],
+      lineitem: LINEITEM,
+    })
+    expect(h.prisma.scenario.findUnique).not.toHaveBeenCalled()
+  })
+
+  it('reuses the delivery on a second launch and matches by id as a fallback', async () => {
+    const h = ready()
+    await launchWith(h)
+    const r = await launchWith(h, { ref: 'as1', tool: 'id-assessment' })
+    expect(h.deliveries).toHaveLength(1)
+    expect(sessionOf(r).deliveryId).toBe('d1')
+  })
+
+  it('creates one delivery when two launches race', async () => {
+    const h = ready()
+    const [a, b] = await Promise.all([launchWith(h), launchWith(h)])
+    expect(h.deliveries).toHaveLength(1)
+    expect(sessionOf(a).deliveryId).toBe(sessionOf(b).deliveryId)
+  })
+
+  it('fails with a 503 page when the lock holder never produces the delivery', async () => {
+    const h = ready()
+    await h.store.claim('lti-delivery', 'as1:c1:lti:item1', 60)
+    await expect(launchWith(h)).rejects.toMatchObject({ status: 503 })
+  })
+
+  it('answers 404 for an unknown assessment', async () => {
+    const h = ready({ assessment: null })
+    await expect(launchWith(h)).rejects.toMatchObject({
+      status: 404,
+      message: 'Assessment not found',
+    })
+    expect(h.deliveries).toHaveLength(0)
+  })
+
+  it('uses a null cohort when the context is not a cohort row', async () => {
+    const h = ready({ cohort: null })
+    await launchWith(h)
+    expect(h.deliveries[0]).toMatchObject({ cohortId: null })
+  })
+
+  it('has no datasets when the bank has no dataset', async () => {
+    const h = ready({ assessment: { ...bank, dataset: null } })
+    expect(sessionOf(await launchWith(h)).datasets).toEqual([])
+  })
+
+  it('keeps the brand and the return link', async () => {
+    const h = ready()
+    const r = await launchWith(h, undefined, {
+      [BRAND_CLAIM]: { name: 'Acme' },
+      [CLAIM.launchPresentation]: { return_url: 'http://learn.test/back' },
+    })
+    expect(sessionOf(r)).toMatchObject({
+      brand: { name: 'Acme' },
+      returnUrl: 'http://learn.test/back',
+    })
+  })
+
+  it('treats a missing tool as the interview and refuses an unknown one', async () => {
+    const h = ready()
+    const text = await launchWith(h, { ref: 'S1' })
+    expect(typeof text).toBe('string') // typed interview page, no assessment lookups
+    expect(h.prisma.assessment.findUnique).not.toHaveBeenCalled()
+    await expect(launchWith(h, { ref: 'S1', tool: 'nope' })).rejects.toMatchObject({ status: 400 })
+  })
+})
+
+describe('completeAssessment', () => {
+  const nowS = Math.floor(Date.now() / 1000)
+  const session: LtiSession = {
+    sub: 'u1',
+    ref: 'sql-basics',
+    lineitem: LINEITEM,
+    returnUrl: 'http://learn.test/back',
+    deliveryId: 'd1',
+    jti: 'j1',
+    iat: nowS,
+    exp: nowS + 3600,
+  }
+  const attempt = (over = {}) => ({
+    id: 'at1',
+    userId: 'u1',
+    deliveryId: 'd1',
+    startedAt: new Date(),
+    submittedAt: new Date(),
+    sectionScores: [
+      { sectionId: 's1', title: 'Basics', correct: 1, total: 3, questions: [] },
+      { sectionId: 's2', title: 'Joins', correct: 2, total: 2, questions: [] },
+    ],
+    ...over,
+  })
+  function ready(over = {}) {
+    const h = setup() as ReturnType<typeof setup> & { prisma: Row }
+    h.prisma.assessmentAttempt = { findUnique: jest.fn().mockResolvedValue(attempt(over)) }
+    return h as ReturnType<typeof setup> & { prisma: Row }
+  }
+
+  it('posts the server-computed percent and per-section scores, then answers', async () => {
+    const h = ready()
+    expect(await h.svc.completeAssessment(session, 'at1')).toEqual({
+      score: 60,
+      returnUrl: 'http://learn.test/back',
+    })
+    const body = JSON.parse(String(h.calls.at(-1)!.init!.body))
+    expect(body).toMatchObject({ userId: 'u1', scoreGiven: 60, scoreMaximum: 100 })
+    expect(body[DIMENSIONS_FIELD]).toEqual([
+      { dimension: 'Basics', score: 33 },
+      { dimension: 'Joins', score: 100 },
+    ])
+  })
+
+  it('needs an attempt id and a session with a delivery', async () => {
+    const h = ready()
+    await expect(h.svc.completeAssessment(session, undefined)).rejects.toMatchObject({
+      status: 400,
+    })
+    const noDelivery: Partial<LtiSession> = { ...session }
+    delete noDelivery.deliveryId
+    await expect(h.svc.completeAssessment(noDelivery as LtiSession, 'at1')).rejects.toMatchObject({
+      status: 404,
+    })
+  })
+
+  it.each([
+    ['a missing attempt', null, 404],
+    ['another learner', { userId: 'u2' }, 404],
+    ['another delivery', { deliveryId: 'd2' }, 404],
+    ['an unsubmitted attempt', { submittedAt: null }, 400],
+    ['an ungraded attempt', { sectionScores: null }, 400],
+    ['a stale attempt', { startedAt: new Date(Date.now() - 3 * 3600 * 1000) }, 400],
+  ])('refuses %s and posts nothing', async (_n, over, status) => {
+    const h = ready(over ?? {})
+    if (over === null) h.prisma.assessmentAttempt.findUnique.mockResolvedValue(null)
+    await expect(h.svc.completeAssessment(session, 'at1')).rejects.toMatchObject({ status })
+    expect(h.calls).toHaveLength(0)
+  })
+
+  it('sends an attempt once, per session and across sessions', async () => {
+    const h = ready()
+    await h.svc.completeAssessment(session, 'at1')
+    await expect(h.svc.completeAssessment(session, 'at1')).rejects.toMatchObject({ status: 409 })
+    await expect(h.svc.completeAssessment({ ...session, jti: 'j2' }, 'at1')).rejects.toMatchObject({
+      status: 409,
+    })
+    expect(h.calls.filter((c) => c.url.endsWith('/scores'))).toHaveLength(1)
+  })
+
+  it('releases both locks when the platform fails, so a retry works', async () => {
+    const h = ready()
+    h.setScoreStatus(500)
+    await expect(h.svc.completeAssessment(session, 'at1')).rejects.toMatchObject({ status: 502 })
+    h.setScoreStatus(200)
+    await expect(h.svc.completeAssessment(session, 'at1')).resolves.toMatchObject({ score: 60 })
+  })
+
+  it('rate limits by learner', async () => {
+    const h = ready()
+    for (let i = 0; i < 10; i++)
+      await h.svc.completeAssessment({ ...session, jti: `j${i}` }, 'at1').catch(() => undefined)
+    await expect(h.svc.completeAssessment({ ...session, jti: 'jx' }, 'at1')).rejects.toMatchObject({
       status: 429,
     })
   })

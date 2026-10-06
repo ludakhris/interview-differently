@@ -26,7 +26,7 @@ function setup(row: object | null = scenario()) {
     membership: { count: jest.fn().mockResolvedValue(0) },
   }
   const clerk = { getRole: jest.fn().mockResolvedValue('student') }
-  return { prisma, clerk, svc: new DatasetsService(prisma as any, clerk as any, {} as any) }
+  return { prisma, clerk, svc: new DatasetsService(prisma as never, clerk as never, {} as never) }
 }
 
 describe('DatasetsService.getForLti', () => {
@@ -76,7 +76,7 @@ describe('DatasetsService.getForLti', () => {
 describe('DatasetsMeController.get', () => {
   it('authorizes an LTI viewer by the launched scenario, not by the learner', async () => {
     const service = { getForLti: jest.fn().mockResolvedValue('d'), getForUser: jest.fn() }
-    const c = new DatasetsMeController(service as any)
+    const c = new DatasetsMeController(service as never)
     const lti = { ref: 'data-001', jti: 'j', iat: 1, exp: 2, lineitem: 'l' }
     await expect(c.get({ userId: 'u1', lti }, 'sql-fundamentals')).resolves.toBe('d')
     expect(service.getForLti).toHaveBeenCalledWith('data-001', 'sql-fundamentals')
@@ -85,7 +85,7 @@ describe('DatasetsMeController.get', () => {
 
   it('keeps the existing rules for a Clerk learner', async () => {
     const service = { getForLti: jest.fn(), getForUser: jest.fn().mockResolvedValue('d') }
-    const c = new DatasetsMeController(service as any)
+    const c = new DatasetsMeController(service as never)
     await c.get({ userId: 'u1' }, 'sql-fundamentals')
     expect(service.getForUser).toHaveBeenCalledWith('u1', 'sql-fundamentals')
     expect(service.getForLti).not.toHaveBeenCalled()

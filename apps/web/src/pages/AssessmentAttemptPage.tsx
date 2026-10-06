@@ -5,9 +5,11 @@ import { useConfirm } from '@/components/ConfirmDialog'
 import { Clock } from 'lucide-react'
 import type { StudentQuestion } from '@id/types'
 import { Nav } from '@/components/Nav'
+import { LtiNav } from '@/components/LtiNav'
 import { SqlWorkbench } from '@/components/sql/SqlWorkbench'
 import { PromptMarkdown } from '@/components/PromptMarkdown'
 import { SandboxDb } from '@/lib/sql/sandboxDb'
+import { preferLtiToken } from '@/services/ltiSession'
 import {
   fetchAttempt,
   saveAnswers,
@@ -25,9 +27,27 @@ import {
 const AUTOSAVE_MS = 1500
 const NAV_HEIGHT = 57
 
-export function AssessmentAttemptPage() {
-  const { attemptId = '' } = useParams()
-  const { getToken } = useAuth()
+/**
+ * `ltiMode` (set by /lti/assessment/:deliveryId): the learner has no Clerk session; the LTI session
+ * token authenticates every call, nothing links out of the paper, and the parent receives the
+ * submitted attempt via `onSubmitted` instead of this page routing to ID's result page.
+ */
+export function AssessmentAttemptPage({
+  ltiMode = false,
+  ltiAttemptId,
+  onSubmitted,
+}: {
+  ltiMode?: boolean
+  ltiAttemptId?: string
+  onSubmitted?: () => void
+} = {}) {
+  const params = useParams()
+  const attemptId = ltiMode ? (ltiAttemptId ?? '') : (params.attemptId ?? '')
+  const { getToken: clerkToken } = useAuth()
+  const getToken = useMemo(
+    () => (ltiMode ? preferLtiToken(clerkToken) : clerkToken),
+    [ltiMode, clerkToken]
+  )
   const navigate = useNavigate()
   const confirm = useConfirm()
 
@@ -49,7 +69,8 @@ export function AssessmentAttemptPage() {
       .then(async (p) => {
         if (cancelled) return
         if (p.submittedAt) {
-          navigate(`/tools/assessments/attempt/${attemptId}/result`, { replace: true })
+          if (ltiMode) onSubmitted?.()
+          else navigate(`/tools/assessments/attempt/${attemptId}/result`, { replace: true })
           return
         }
         setPaper(p)
@@ -64,7 +85,7 @@ export function AssessmentAttemptPage() {
       cancelled = true
       void instance?.close()
     }
-  }, [getToken, attemptId, navigate])
+  }, [getToken, attemptId, navigate, ltiMode, onSubmitted])
 
   // ── Autosave ──
   const flush = useCallback(async () => {
@@ -121,13 +142,14 @@ export function AssessmentAttemptPage() {
           }
         }
         await submitAttempt(getToken, attemptId, { ...starters, ...answers, ...dirtyRef.current })
-        navigate(`/tools/assessments/attempt/${attemptId}/result`, { replace: true })
+        if (ltiMode) onSubmitted?.()
+        else navigate(`/tools/assessments/attempt/${attemptId}/result`, { replace: true })
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Submit failed')
         setSubmitting(false)
       }
     },
-    [submitting, getToken, attemptId, answers, navigate, paper, confirm]
+    [submitting, getToken, attemptId, answers, navigate, paper, confirm, ltiMode, onSubmitted]
   )
 
   // ── Deadline countdown → auto-submit ──
@@ -163,8 +185,8 @@ export function AssessmentAttemptPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a]">
-        <Nav trackLabel="Assessment" />
+      <div className="min-h-screen bg-surface">
+        {ltiMode ? <LtiNav trackLabel="Assessment" /> : <Nav trackLabel="Assessment" />}
         <div className="max-w-xl mx-auto px-6 py-12">
           <div className="rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3">
             <p className="text-[13px] text-red-400">{error}</p>
@@ -176,33 +198,40 @@ export function AssessmentAttemptPage() {
 
   if (!paper || !section) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <p className="text-slate-mid text-[14px]">Loading your paper…</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
-      <Nav
-        trackLabel={paper.label}
-        stepLabel={`Section ${sectionIx + 1} of ${paper.sections.length}`}
-      />
+    <div className="min-h-screen bg-surface flex flex-col">
+      {ltiMode ? (
+        <LtiNav
+          trackLabel={paper.label}
+          stepLabel={`Section ${sectionIx + 1} of ${paper.sections.length}`}
+        />
+      ) : (
+        <Nav
+          trackLabel={paper.label}
+          stepLabel={`Section ${sectionIx + 1} of ${paper.sections.length}`}
+        />
+      )}
       <div className="flex flex-1" style={{ minHeight: `calc(100vh - ${NAV_HEIGHT}px)` }}>
         {/* ── Sidebar ── */}
         <aside
-          className="flex flex-col w-[240px] flex-shrink-0 bg-[#0d0d0d] border-r border-white/8 sticky top-[57px] self-start"
+          className="flex flex-col w-[240px] flex-shrink-0 bg-surface-deep border-r border-edge/8 sticky top-[57px] self-start"
           style={{ height: `calc(100vh - ${NAV_HEIGHT}px)` }}
         >
-          <div className="h-[3px] w-full flex-shrink-0 bg-[#2d9e5f]" />
+          <div className="h-[3px] w-full flex-shrink-0 bg-green-light" />
           <div className="px-5 pt-5 pb-3">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#2d9e5f]">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-green-light">
               {paper.title}
             </p>
             {remainingMs !== null && (
               <p
                 className={`mt-2 inline-flex items-center gap-1.5 font-mono text-[13px] ${
-                  remainingMs < 5 * 60 * 1000 ? 'text-red-400' : 'text-[#f5f3ee]'
+                  remainingMs < 5 * 60 * 1000 ? 'text-red-400' : 'text-fg'
                 }`}
               >
                 <Clock size={13} /> {formatRemaining(remainingMs)}
@@ -217,20 +246,20 @@ export function AssessmentAttemptPage() {
                   key={s.id}
                   onClick={() => goTo(i)}
                   className={`w-full text-left px-2 py-2 rounded-lg mb-0.5 transition-colors ${
-                    i === sectionIx ? 'bg-white/10' : 'hover:bg-white/5'
+                    i === sectionIx ? 'bg-ink/10' : 'hover:bg-ink/5'
                   }`}
                 >
-                  <p className="text-[12px] font-semibold text-[#f5f3ee] truncate">
+                  <p className="text-[12px] font-semibold text-fg truncate">
                     {i + 1}. {s.title}
                   </p>
                   <div className="flex items-center gap-1 mt-1">
                     {s.questions.map((q) => (
                       <span
                         key={q.id}
-                        className={`h-1.5 flex-1 rounded-full ${answers[q.id]?.trim() ? 'bg-[#2d9e5f]' : 'bg-white/10'}`}
+                        className={`h-1.5 flex-1 rounded-full ${answers[q.id]?.trim() ? 'bg-green-light' : 'bg-ink/10'}`}
                       />
                     ))}
-                    <span className="font-mono text-[10px] text-white/30 ml-1">
+                    <span className="font-mono text-[10px] text-ink/30 ml-1">
                       {done}/{s.questions.length}
                     </span>
                   </div>
@@ -238,8 +267,8 @@ export function AssessmentAttemptPage() {
               )
             })}
           </nav>
-          <div className="px-5 py-4 border-t border-white/8">
-            <p className="font-mono text-[11px] text-white/40 mb-2">
+          <div className="px-5 py-4 border-t border-edge/8">
+            <p className="font-mono text-[11px] text-ink/40 mb-2">
               {answeredCount}/{totalCount} answered ·{' '}
               <span className={saveState === 'error' ? 'text-red-400' : undefined}>
                 {saveState === 'saving'
@@ -254,7 +283,7 @@ export function AssessmentAttemptPage() {
             <button
               onClick={() => submit()}
               disabled={submitting}
-              className="w-full px-3 py-2 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white disabled:opacity-50 transition-colors"
+              className="w-full px-3 py-2 rounded-md bg-green hover:bg-green-light text-[12px] font-semibold text-on-primary disabled:opacity-50 transition-colors"
             >
               {submitting ? 'Submitting…' : 'Submit assessment'}
             </button>
@@ -264,11 +293,11 @@ export function AssessmentAttemptPage() {
         {/* ── Questions ── */}
         <main className="flex-1 min-w-0 max-w-4xl px-8 py-8">
           {sectionIx === 0 && (
-            <div className="mb-6 rounded-xl border border-white/10 bg-[#0d0d0d] px-5 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40 mb-2">
+            <div className="mb-6 rounded-xl border border-edge/10 bg-surface-deep px-5 py-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40 mb-2">
                 How this works
               </p>
-              <ul className="text-[13px] text-[#f5f3ee]/80 leading-relaxed space-y-1 list-disc pl-5">
+              <ul className="text-[13px] text-fg/80 leading-relaxed space-y-1 list-disc pl-5">
                 <li>
                   Answers save as you go. Submit when you're done
                   {paper.deadlineAt ? ' — or when the timer runs out' : ''}.
@@ -276,14 +305,13 @@ export function AssessmentAttemptPage() {
                 {hasSql && (
                   <>
                     <li>
-                      On SQL questions, press{' '}
-                      <span className="font-semibold text-[#f5f3ee]">Run</span> (⌘↵) to see your
-                      query's output before moving on. Only the query left in the editor is graded.
+                      On SQL questions, press <span className="font-semibold text-fg">Run</span>{' '}
+                      (⌘↵) to see your query's output before moving on. Only the query left in the
+                      editor is graded.
                     </li>
                     <li>
-                      Click <span className="font-semibold text-[#f5f3ee]">Schema</span> to open the
-                      table and column list beside the editor; clicking a name inserts it at the
-                      cursor.
+                      Click <span className="font-semibold text-fg">Schema</span> to open the table
+                      and column list beside the editor; clicking a name inserts it at the cursor.
                     </li>
                   </>
                 )}
@@ -299,19 +327,19 @@ export function AssessmentAttemptPage() {
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-1">
             Section {sectionIx + 1} of {paper.sections.length}
           </p>
-          <h2 className="font-display font-extrabold text-[22px] text-[#f5f3ee] tracking-tight mb-6">
+          <h2 className="font-display font-extrabold text-[22px] text-fg tracking-tight mb-6">
             {section.title}
           </h2>
 
           <ol className="space-y-8">
             {section.questions.map((q, i) => (
-              <li key={q.id} className="bg-[#111111] rounded-2xl border border-white/10 p-6">
+              <li key={q.id} className="bg-surface-alt rounded-2xl border border-edge/10 p-6">
                 <div className="flex items-start gap-3 mb-4">
-                  <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-white/5 text-[12px] font-bold text-slate-light flex items-center justify-center">
+                  <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-ink/5 text-[12px] font-bold text-slate-light flex items-center justify-center">
                     {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40 mb-1">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40 mb-1">
                       {q.type === 'mc'
                         ? 'Multiple choice'
                         : q.type === 'scenario'
@@ -319,11 +347,11 @@ export function AssessmentAttemptPage() {
                           : 'Hands-on SQL'}
                     </p>
                     {q.type === 'scenario' ? (
-                      <div className="text-[15px] text-[#f5f3ee] leading-relaxed">
+                      <div className="text-[15px] text-fg leading-relaxed">
                         <PromptMarkdown text={q.prompt} />
                       </div>
                     ) : (
-                      <p className="text-[15px] text-[#f5f3ee] leading-relaxed">
+                      <p className="text-[15px] text-fg leading-relaxed">
                         {renderPrompt(q.prompt)}
                       </p>
                     )}
@@ -344,14 +372,14 @@ export function AssessmentAttemptPage() {
             <button
               onClick={() => goTo(sectionIx - 1)}
               disabled={sectionIx === 0}
-              className="text-[12px] font-semibold text-slate-mid hover:text-[#f5f3ee] disabled:opacity-30 transition-colors"
+              className="text-[12px] font-semibold text-slate-mid hover:text-fg disabled:opacity-30 transition-colors"
             >
               ← Previous section
             </button>
             {sectionIx < paper.sections.length - 1 ? (
               <button
                 onClick={() => goTo(sectionIx + 1)}
-                className="px-4 py-2 rounded-md border border-white/15 hover:border-white/30 text-[12px] font-semibold text-[#f5f3ee] transition-colors"
+                className="px-4 py-2 rounded-md border border-edge/15 hover:border-edge/30 text-[12px] font-semibold text-fg transition-colors"
               >
                 Next section →
               </button>
@@ -359,7 +387,7 @@ export function AssessmentAttemptPage() {
               <button
                 onClick={() => submit()}
                 disabled={submitting}
-                className="px-4 py-2 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white disabled:opacity-50 transition-colors"
+                className="px-4 py-2 rounded-md bg-green hover:bg-green-light text-[12px] font-semibold text-on-primary disabled:opacity-50 transition-colors"
               >
                 {submitting ? 'Submitting…' : 'Submit assessment'}
               </button>
@@ -397,18 +425,18 @@ function QuestionBody({
               onClick={() => onChange(o.key)}
               className={`flex items-start gap-3 text-left px-4 py-3 rounded-xl border transition-colors ${
                 on
-                  ? 'border-[#2d9e5f]/70 bg-[#1a6b3c]/20'
-                  : 'border-white/10 hover:border-white/25 bg-[#0d0d0d]'
+                  ? 'border-green-light/70 bg-green/20'
+                  : 'border-edge/10 hover:border-edge/25 bg-surface-deep'
               }`}
             >
               <span
                 className={`flex-shrink-0 w-6 h-6 rounded-md text-[11px] font-bold flex items-center justify-center ${
-                  on ? 'bg-[#2d9e5f] text-white' : 'bg-white/10 text-slate-light'
+                  on ? 'bg-green-light text-on-primary' : 'bg-ink/10 text-slate-light'
                 }`}
               >
                 {o.key}
               </span>
-              <span className="min-w-0 [overflow-wrap:anywhere] text-[13px] text-[#f5f3ee]/90 leading-snug pt-0.5">
+              <span className="min-w-0 [overflow-wrap:anywhere] text-[13px] text-fg/90 leading-snug pt-0.5">
                 {renderPrompt(o.text)}
               </span>
             </button>
@@ -433,7 +461,7 @@ function QuestionBody({
         </p>
       )}
       {(q.ordered || q.strictColumns) && (
-        <p className="text-[11px] text-white/40 mt-2">
+        <p className="text-[11px] text-ink/40 mt-2">
           {q.ordered && 'Row order matters for this question. '}
           {q.strictColumns && 'Column names must match the ones asked for.'}
         </p>
@@ -447,10 +475,7 @@ function renderPrompt(text: string): React.ReactNode {
   const parts = text.split(/(`[^`]+`)/g)
   return parts.map((p, i) =>
     p.startsWith('`') && p.endsWith('`') ? (
-      <code
-        key={i}
-        className="font-mono text-[13px] bg-white/8 px-1.5 py-0.5 rounded text-[#f5f3ee]"
-      >
+      <code key={i} className="font-mono text-[13px] bg-ink/8 px-1.5 py-0.5 rounded text-fg">
         {p.slice(1, -1)}
       </code>
     ) : (

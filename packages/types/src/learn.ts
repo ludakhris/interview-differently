@@ -129,7 +129,9 @@ export interface CourseSkill {
  * interview { role, questions, skill? }, scorm { packageId, entry, version, files },
  * video { provider: 'youtube', videoId, startSeconds? },
  * external_link { url, summary?, instructions?, imageKey? } (authors also receive `imageUrl`),
- * tool { toolId, ref, skill? } (an LTI tool launched from the course; it reports a score back).
+ * tool { toolId, ref, skill? } (an LTI tool launched from the course; it reports a score back). A
+ * tool item whose tool is an assessment may carry the pre or post label and then stands in for the
+ * course's own assessment; any other tool item is interview-like.
  * Any item except an assessment, interview or tool may carry `remediationFor` (a skill id): it is then
  * extra content, kept out of the outline and added to a learner's plan when that skill is flagged.
  * Or `reviewFor`: it stays in the outline and is also added back to a flagged learner's plan, who
@@ -370,7 +372,13 @@ export interface LearnerItem {
     imageUrl: string | null
   } | null
   /** A connected tool (LTI): which one and the tool-specific reference. */
-  tool: { toolId: string; name: string; ref: string } | null
+  tool: {
+    toolId: string
+    name: string
+    ref: string
+    /** False for an assessment: one attempt per delivery, so the learner gets no "Try again". */
+    retries: boolean
+  } | null
   status: ProgressStatus
   score: number | null
   attempts: number

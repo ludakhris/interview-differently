@@ -1,7 +1,9 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   Param,
@@ -13,6 +15,7 @@ import {
 } from '@nestjs/common'
 import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
+import { AuthenticatedOrLtiGuard, type LtiRequest } from '../lti/tool/lti-session.guard'
 import { InstitutionScope, type AdminRequest } from '../auth/scope'
 import { AssessmentsService, type DeliveryInput } from './assessments.service'
 
@@ -150,46 +153,81 @@ export class InvitesMeController {
   }
 }
 
+type MeRequest = AuthedRequest & Pick<LtiRequest, 'lti'>
+
+const MAX_ANSWER_KEYS = 200
+const MAX_ANSWER_KEY_CHARS = 64
+const MAX_ANSWER_CHARS = 20_000
+
+/** Answers from an LTI session: a plain object of short ids to strings of bounded size. */
+function ltiAnswers(input: unknown): Record<string, string> {
+  if (typeof input !== 'object' || input === null || Array.isArray(input))
+    throw new BadRequestException('answers must be an object')
+  const entries = Object.entries(input)
+  if (entries.length > MAX_ANSWER_KEYS) throw new BadRequestException('Too many answers')
+  for (const [k, v] of entries) {
+    if (k.length > MAX_ANSWER_KEY_CHARS || typeof v !== 'string' || v.length > MAX_ANSWER_CHARS)
+      throw new BadRequestException('Invalid answer')
+  }
+  return Object.fromEntries(entries) as Record<string, string>
+}
+
+/**
+ * A signed-in Clerk user, or an LTI session (#63) which the guard limits to the five attempt
+ * routes of its one launched delivery; `deliveryId` below then pins the attempt to that delivery.
+ */
 @Controller('me')
-@UseGuards(AuthenticatedGuard)
+@UseGuards(AuthenticatedOrLtiGuard)
 export class AssessmentsMeController {
   constructor(private readonly service: AssessmentsService) {}
 
   @Get('assessments')
-  list(@Req() req: AuthedRequest) {
+  list(@Req() req: MeRequest) {
     return this.service.listForUser(req.userId)
   }
 
   @Post('deliveries/:id/attempts')
-  start(@Req() req: AuthedRequest, @Param('id') id: string) {
-    return this.service.startAttempt(req.userId, id)
+  start(@Req() req: MeRequest, @Param('id') id: string) {
+    if (!req.lti) return this.service.startAttempt(req.userId, id)
+    if (!req.lti.deliveryId || req.lti.deliveryId !== id) throw new ForbiddenException()
+    return this.service.startAttemptForLti(req.userId, id)
   }
 
   @Get('attempts/:id')
-  attempt(@Req() req: AuthedRequest, @Param('id') id: string) {
-    return this.service.getAttempt(req.userId, id)
+  attempt(@Req() req: MeRequest, @Param('id') id: string) {
+    return this.service.getAttempt(req.userId, id, this.pinned(req))
   }
 
   @Put('attempts/:id/answers')
   save(
-    @Req() req: AuthedRequest,
+    @Req() req: MeRequest,
     @Param('id') id: string,
     @Body() body: { answers: Record<string, string> }
   ) {
-    return this.service.saveAnswers(req.userId, id, body.answers ?? {})
+    const answers = req.lti ? ltiAnswers(body?.answers ?? {}) : (body.answers ?? {})
+    return this.service.saveAnswers(req.userId, id, answers, this.pinned(req))
   }
 
   @Post('attempts/:id/submit')
   submit(
-    @Req() req: AuthedRequest,
+    @Req() req: MeRequest,
     @Param('id') id: string,
     @Body() body: { answers?: Record<string, string> }
   ) {
-    return this.service.submit(req.userId, id, body?.answers)
+    const answers =
+      req.lti && body?.answers !== undefined ? ltiAnswers(body.answers) : body?.answers
+    return this.service.submit(req.userId, id, answers, this.pinned(req))
   }
 
   @Get('attempts/:id/result')
-  result(@Req() req: AuthedRequest, @Param('id') id: string) {
-    return this.service.getResult(req.userId, id)
+  result(@Req() req: MeRequest, @Param('id') id: string) {
+    return this.service.getResult(req.userId, id, this.pinned(req))
+  }
+
+  /** The session's delivery for an LTI caller (never undefined, which would mean unpinned); undefined for Clerk. */
+  private pinned(req: MeRequest): string | undefined {
+    if (!req.lti) return undefined
+    if (!req.lti.deliveryId) throw new ForbiddenException()
+    return req.lti.deliveryId
   }
 }

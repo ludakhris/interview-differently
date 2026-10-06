@@ -2,6 +2,8 @@ import type { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 import type { AddressInfo } from 'node:net'
 import { AdminGuard } from '../auth/admin.guard'
+import { AssessmentsMeController } from '../assessments/assessments.controller'
+import { AssessmentsService } from '../assessments/assessments.service'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
 import { ClerkService } from '../auth/clerk.service'
 import { InstitutionScope } from '../auth/scope'
@@ -24,6 +26,10 @@ import { LtiPlatformService } from './platform/lti-platform.service'
 import { LtiToolController } from './tool/lti-tool.controller'
 import { LtiToolService } from './tool/lti-tool.service'
 
+/** Loose shape for hand-rolled Prisma fakes whose args the tests index freely. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Row = Record<string, any>
+
 /**
  * The whole launch and score return over real HTTP between the two sides: LD as platform, the tool
  * as ID. Only the database and LD's record of the result are faked; every LTI message is a real
@@ -37,6 +43,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
 
   /** The ref of the launched item; set per test. */
   let itemRef = 'scn-1'
+  let itemTool = 'id-interview'
   const textScenario = {
     scenarioId: 'ops-001',
     status: 'published',
@@ -59,15 +66,15 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
       ],
     },
   }
-  const datasets: Record<string, any> = {
+  const datasets: Row = {
     'sql-fundamentals': { id: 'd1', slug: 'sql-fundamentals', setupSql: 'create table t(x int);' },
     'someone-elses': { id: 'd2', slug: 'someone-elses', setupSql: 'create table secret(x int);' },
   }
-  const stored: Record<string, any> = {}
+  const stored: Row = {}
   const fakeResults = {
     createAttempt: jest.fn(async (a: object) => ({ id: 'att1', ...a })),
     create: jest.fn(
-      async (dto: any) => (stored[dto.id] = { ...dto, completedAt: new Date(dto.completedAt) })
+      async (dto: Row) => (stored[dto.id] = { ...dto, completedAt: new Date(dto.completedAt) })
     ),
     getById: jest.fn(async (id: string) => stored[id]),
   }
@@ -106,7 +113,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     },
   }
   /** Immersive sessions, shared by the fake service (the player's routes) and the fake prisma (complete). */
-  const immersive: Record<string, any> = {}
+  const immersive: Row = {}
   let immersiveCount = 0
   const fakeImmersive = {
     createSession: jest.fn(async (scenarioId: string, userId: string) => {
@@ -134,7 +141,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     getSessionOwner: jest.fn(async (id: string) => immersive[id]?.userId ?? null),
     getSession: jest.fn(async (id: string) => immersive[id]),
     getResponse: jest.fn(async (id: string, rid: string) =>
-      immersive[id].responses.find((r: any) => r.id === rid)
+      immersive[id].responses.find((r: Row) => r.id === rid)
     ),
     getResponseSignedUrl: jest.fn(async () => ({ url: 'http://media.test/x', expiresAt: 'soon' })),
     getSessionSummary: jest.fn(),
@@ -145,13 +152,98 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     'inst-child': { brand: null, parentId: 'inst-agency' },
     'inst-agency': { brand: null, parentId: null },
   }
+  const bank = {
+    id: 'as1',
+    slug: 'sql-basics',
+    title: 'SQL basics',
+    dataset: null,
+    sections: [
+      {
+        id: 's1',
+        number: 1,
+        title: 'Basics',
+        draw: null,
+        questions: [
+          {
+            id: '1.1',
+            type: 'mc',
+            prompt: 'Filter rows?',
+            options: [{ key: 'A', text: 'SELECT' }],
+            answer: 'B',
+          },
+          {
+            id: '1.2',
+            type: 'mc',
+            prompt: 'Default sort?',
+            options: [{ key: 'A', text: 'ASC' }],
+            answer: 'A',
+          },
+        ],
+      },
+    ],
+  }
+  const deliveries: Row[] = []
+  const attempts: Row = {}
   const prisma = {
+    assessment: {
+      findUnique: jest.fn(async (a: Row) =>
+        a.where.slug === 'sql-basics' || a.where.id === 'as1' ? bank : null
+      ),
+    },
+    assessmentDelivery: {
+      findFirst: jest.fn(
+        async (a: Row) =>
+          deliveries.find(
+            (d) =>
+              d.assessmentId === a.where.assessmentId &&
+              d.cohortId === a.where.cohortId &&
+              d.label === a.where.label
+          ) ?? null
+      ),
+      findUnique: jest.fn(async (a: Row) => {
+        const d = deliveries.find((x) => x.id === a.where.id)
+        return d && { ...d, assessment: bank }
+      }),
+      create: jest.fn(async (a: Row) => {
+        const d = { id: `dl${deliveries.length + 1}`, opensAt: null, closesAt: null, ...a.data }
+        deliveries.push(d)
+        return d
+      }),
+    },
+    assessmentAttempt: {
+      findUnique: jest.fn(async (a: Row) => {
+        const row = a.where.id
+          ? attempts[a.where.id]
+          : Object.values(attempts).find(
+              (x: Row) =>
+                x.deliveryId === a.where.deliveryId_userId.deliveryId &&
+                x.userId === a.where.deliveryId_userId.userId
+            )
+        return row
+          ? {
+              ...row,
+              delivery: { ...deliveries.find((d) => d.id === row.deliveryId), assessment: bank },
+            }
+          : null
+      }),
+      create: jest.fn(async (a: Row) => {
+        const id = `at${Object.keys(attempts).length + 1}`
+        return (attempts[id] = {
+          id,
+          startedAt: new Date(),
+          submittedAt: null,
+          sectionScores: null,
+          ...a.data,
+        })
+      }),
+      update: jest.fn(async (a: Row) => Object.assign(attempts[a.where.id], a.data)),
+    },
     immersiveSession: {
-      findUnique: jest.fn(async (a: any) => immersive[a.where.id] ?? null),
-      update: jest.fn(async (a: any) => Object.assign(immersive[a.where.id], a.data)),
+      findUnique: jest.fn(async (a: Row) => immersive[a.where.id] ?? null),
+      update: jest.fn(async (a: Row) => Object.assign(immersive[a.where.id], a.data)),
     },
     institution: {
-      findUnique: jest.fn(async (a: any) => institutions[a.where.id] ?? null),
+      findUnique: jest.fn(async (a: Row) => institutions[a.where.id] ?? null),
     },
     cohort: {
       findUnique: jest.fn(async () => ({
@@ -165,13 +257,13 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     courseItem: {
       findUnique: jest.fn(async () => ({
         type: 'tool',
-        config: { toolId: 'id-interview', ref: itemRef },
+        config: { toolId: itemTool, ref: itemRef },
         module: { courseId: 'c1' },
       })),
     },
     scenario: {
       findMany: jest.fn(async () => []),
-      findUnique: jest.fn(async (a: any) =>
+      findUnique: jest.fn(async (a: Row) =>
         a.where.scenarioId === 'ops-001'
           ? textScenario
           : a.where.scenarioId === 'voice-1'
@@ -183,8 +275,8 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
                 : null
       ),
     },
-    dataset: { findUnique: jest.fn(async (a: any) => datasets[a.where.slug] ?? null) },
-    simulationResult: { findUnique: jest.fn(async (a: any) => stored[a.where.id] ?? null) },
+    dataset: { findUnique: jest.fn(async (a: Row) => datasets[a.where.slug] ?? null) },
+    simulationResult: { findUnique: jest.fn(async (a: Row) => stored[a.where.id] ?? null) },
   }
 
   const unescape = (s: string) =>
@@ -242,11 +334,13 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         DatasetsMeController,
         DatasetsAdminController,
         ImmersiveSessionsController,
+        AssessmentsMeController,
       ],
       providers: [
         { provide: ImmersiveSessionsService, useValue: fakeImmersive },
         { provide: TranscriptionService, useValue: { transcribe: async () => 'spoken words' } },
         DatasetsService,
+        AssessmentsService,
         { provide: SqlRunnerService, useValue: {} },
         ScenariosService,
         AuthenticatedGuard,
@@ -284,6 +378,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
   beforeEach(() => {
     recordToolResult.mockClear()
     itemRef = 'scn-1'
+    itemTool = 'id-interview'
   })
 
   const longAnswer = 'I helped patients feel at ease and kept careful records. '.repeat(5)
@@ -557,6 +652,123 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
       })
       expect(done.status).toBe(404)
       expect(recordToolResult).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('an assessment played in the web app', () => {
+    const api = (token: string, path: string, init: RequestInit = {}) =>
+      fetch(`${base}${path}`, {
+        ...init,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer lti.${token}`,
+          ...init.headers,
+        },
+      })
+
+    async function launchAssessment() {
+      itemTool = 'id-assessment'
+      itemRef = 'sql-basics'
+      const launch = await reachLaunchForm()
+      const res = await post(launch.action, launch.fields, launch.cookie)
+      expect(res.status).toBe(303)
+      const [path, token] = res.headers.get('location')!.split('#session=')
+      const deliveryId = path.split('/lti/assessment/')[1]
+      return { token, deliveryId, path }
+    }
+
+    it('plays through: launch, attempt, answers, server grading, score return', async () => {
+      const { token, deliveryId, path } = await launchAssessment()
+      expect(path).toBe(`http://localhost:5173/lti/assessment/${deliveryId}`)
+      expect(await (await api(token, '/lti/tool/session')).json()).toMatchObject({
+        ref: 'sql-basics',
+        deliveryId,
+      })
+
+      const started = await api(token, `/me/deliveries/${deliveryId}/attempts`, { method: 'POST' })
+      expect(started.status).toBe(201)
+      const { id } = await started.json()
+      // a second start resumes the same attempt
+      const again = await api(token, `/me/deliveries/${deliveryId}/attempts`, { method: 'POST' })
+      expect((await again.json()).id).toBe(id)
+
+      const paper = await (await api(token, `/me/attempts/${id}`)).json()
+      expect(JSON.stringify(paper)).not.toContain('"answer"')
+
+      expect(
+        (
+          await api(token, `/me/attempts/${id}/answers`, {
+            method: 'PUT',
+            body: JSON.stringify({ answers: { '1.1': 'B' } }),
+          })
+        ).status
+      ).toBe(200)
+      expect(
+        (
+          await api(token, `/me/attempts/${id}/answers`, {
+            method: 'PUT',
+            body: JSON.stringify({ answers: { '1.1': 5 } }),
+          })
+        ).status
+      ).toBe(400)
+      const submitted = await api(token, `/me/attempts/${id}/submit`, {
+        method: 'POST',
+        body: JSON.stringify({ answers: { '1.2': 'B' } }),
+      })
+      expect(await submitted.json()).toMatchObject({
+        overall: { correct: 1, total: 2, percent: 50 },
+      })
+      expect((await api(token, `/me/attempts/${id}/result`)).status).toBe(200)
+
+      const done = await api(token, '/lti/tool/complete', {
+        method: 'POST',
+        body: JSON.stringify({ attemptId: id }),
+      })
+      expect(done.status).toBe(201)
+      expect(await done.json()).toMatchObject({ score: 50 })
+      expect(recordToolResult).toHaveBeenCalledWith('u1', 'k1', 'i1', {
+        reportedAt: expect.any(String),
+        scorePct: 50,
+        dimensions: [{ dimension: 'Basics', score: 50 }],
+      })
+      expect(recordToolResult).toHaveBeenCalledTimes(1)
+    })
+
+    it('relaunching the same item reuses its delivery', async () => {
+      const a = await launchAssessment()
+      const b = await launchAssessment()
+      expect(b.deliveryId).toBe(a.deliveryId)
+    })
+
+    it('refuses other deliveries, scenario routes, and a scenario token on assessment routes', async () => {
+      const { token } = await launchAssessment()
+      expect((await api(token, '/me/deliveries/other/attempts', { method: 'POST' })).status).toBe(
+        403
+      )
+      expect((await api(token, '/me/assessments')).status).toBe(403)
+      expect((await api(token, '/scenarios/sql-basics')).status).toBe(403)
+      expect((await api(token, '/results/attempts', { method: 'POST' })).status).toBe(403)
+      expect((await api(token, '/me/attempts/nope')).status).toBe(404)
+
+      itemTool = 'id-interview'
+      itemRef = 'ops-001'
+      const launch = await reachLaunchForm()
+      const res = await post(launch.action, launch.fields, launch.cookie)
+      const scenarioToken = res.headers.get('location')!.split('#session=')[1]
+      const { deliveryId } = await launchAssessment()
+      expect(
+        (await api(scenarioToken, `/me/deliveries/${deliveryId}/attempts`, { method: 'POST' }))
+          .status
+      ).toBe(403)
+    })
+
+    it('shows a page for an unknown assessment', async () => {
+      itemTool = 'id-assessment'
+      itemRef = 'no-such-bank'
+      const launch = await reachLaunchForm()
+      const res = await post(launch.action, launch.fields, launch.cookie)
+      expect(res.status).toBe(404)
+      expect(await res.text()).toContain('Assessment not found')
     })
   })
 

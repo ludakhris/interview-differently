@@ -5,6 +5,7 @@ import {
   LtiSessionGuard,
   type LtiRequest,
 } from './lti-session.guard'
+import type { AuthenticatedGuard } from '../../auth/authenticated.guard'
 import { signSession, type LtiSession } from './lti-session'
 
 const session: LtiSession = {
@@ -30,7 +31,7 @@ const reqOf = (method: string, url: string, body?: unknown, auth: string | null 
   }) as LtiRequest
 
 const clerkGuard = { canActivate: jest.fn(async () => true) }
-const guard = new AuthenticatedOrLtiGuard(clerkGuard as any)
+const guard = new AuthenticatedOrLtiGuard(clerkGuard as unknown as AuthenticatedGuard)
 
 describe('AuthenticatedOrLtiGuard with an LTI token', () => {
   it.each([
@@ -292,9 +293,63 @@ describe('GET /api/lti/tool/session', () => {
   })
 
   it('refuses a session whose brand was tampered with', () => {
-    const forged = ltiHeader({ ...session, brand: { name: 'Acme', primary: 'red' } as any })
+    const forged = ltiHeader({
+      ...session,
+      brand: { name: 'Acme', primary: 'red' } as unknown as LtiSession['brand'],
+    })
     expect(() =>
       onlyGuard.canActivate(ctxOf(reqOf('GET', '/api/lti/tool/session', undefined, forged)))
     ).toThrow(UnauthorizedException)
+  })
+})
+
+describe('AuthenticatedOrLtiGuard with an assessment session', () => {
+  const asm: LtiSession = { ...session, ref: 'sql-basics', deliveryId: 'd1', datasets: ['ds'] }
+  const hdr = ltiHeader(asm)
+
+  it.each([
+    ['POST', '/api/me/deliveries/d1/attempts'],
+    ['GET', '/api/me/attempts/a1'],
+    ['PUT', '/api/me/attempts/a1/answers'],
+    ['POST', '/api/me/attempts/a1/submit'],
+    ['GET', '/api/me/attempts/a1/result'],
+    ['GET', '/api/me/datasets/ds'],
+    ['GET', '/api/lti/tool/session'],
+    ['POST', '/api/lti/tool/complete'],
+  ])('allows %s %s and carries the delivery id', async (method, url) => {
+    const req = reqOf(method, url, undefined, hdr)
+    expect(await guard.canActivate(ctxOf(req))).toBe(true)
+    expect(req.userId).toBe('u1')
+    expect(req.lti?.deliveryId).toBe('d1')
+  })
+
+  it.each([
+    ['POST', '/api/me/deliveries/d2/attempts'], // another delivery
+    ['POST', '/api/me/deliveries/d1%2Fx/attempts'],
+    ['GET', '/api/me/assessments'],
+    ['DELETE', '/api/me/attempts/a1'],
+    ['GET', '/api/me/attempts/a1/answers'],
+    ['GET', '/api/me/datasets/other'],
+    ['GET', '/api/scenarios/sql-basics'], // scenario routes are closed to assessment sessions
+    ['POST', '/api/results/attempts'],
+    ['GET', '/api/results/r1'],
+    ['POST', '/api/immersive-sessions'],
+    ['GET', '/api/admin/assessments'],
+  ])('refuses %s %s', async (method, url) => {
+    await expect(
+      guard.canActivate(ctxOf(reqOf(method, url, { scenarioId: 'sql-basics' }, hdr)))
+    ).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
+  it.each([
+    ['POST', '/api/me/deliveries/d1/attempts'],
+    ['GET', '/api/me/attempts/a1'],
+    ['PUT', '/api/me/attempts/a1/answers'],
+    ['POST', '/api/me/attempts/a1/submit'],
+    ['GET', '/api/me/attempts/a1/result'],
+  ])('refuses %s %s for a session without a delivery id', async (method, url) => {
+    await expect(guard.canActivate(ctxOf(reqOf(method, url)))).rejects.toBeInstanceOf(
+      ForbiddenException
+    )
   })
 })

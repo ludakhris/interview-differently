@@ -3,26 +3,34 @@ import { ResultsController } from './results.controller'
 
 function setup() {
   const results = {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- typed so tests can read the 2nd arg
     create: jest.fn(async (d: object, _o?: object) => d),
     createAttempt: jest.fn(async (d: object) => d),
   }
-  const ctrl = new ResultsController(results as any, {} as any, new MemoryLtiStore())
+  const ctrl = new ResultsController(results as never, {} as never, new MemoryLtiStore())
   return { ctrl, results }
 }
-const lti = (sub = 'u1') => ({ userId: sub, lti: { ref: 'S1' } }) as any
-const body = { scenarioId: 'S1', track: 't' } as any
+const lti = (sub = 'u1') => ({ userId: sub, lti: { ref: 'S1' } }) as never
+const body = { scenarioId: 'S1', track: 't' } as never
 
 describe('ResultsController', () => {
   it('flags LTI callers to the service', async () => {
     const { ctrl, results } = setup()
     await ctrl.create(lti(), body)
-    await ctrl.create({ userId: 'u1' } as any, body)
+    await ctrl.create({ userId: 'u1' } as never, body)
     expect(results.create.mock.calls.map((c) => c[1])).toEqual([{ lti: true }, { lti: false }])
   })
 
   it.each([
-    ['create', (c: ResultsController, r: any) => c.create(r, body)],
-    ['createAttempt', (c: ResultsController, r: any) => c.createAttempt(r, body)],
+    [
+      'create',
+      (c: ResultsController, r: Parameters<ResultsController['create']>[0]) => c.create(r, body),
+    ],
+    [
+      'createAttempt',
+      (c: ResultsController, r: Parameters<ResultsController['create']>[0]) =>
+        c.createAttempt(r, body),
+    ],
   ])('rate limits an LTI session to 20 a minute on %s, per learner', async (_n, call) => {
     const { ctrl } = setup()
     for (let i = 0; i < 20; i++) await call(ctrl, lti())
@@ -34,6 +42,6 @@ describe('ResultsController', () => {
     const { ctrl } = setup()
     for (let i = 0; i < 20; i++) await ctrl.create(lti(), body)
     await expect(ctrl.createAttempt(lti(), body)).resolves.toBeDefined()
-    for (let i = 0; i < 30; i++) await ctrl.create({ userId: 'u1' } as any, body)
+    for (let i = 0; i < 30; i++) await ctrl.create({ userId: 'u1' } as never, body)
   })
 })

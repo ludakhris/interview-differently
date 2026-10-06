@@ -307,6 +307,41 @@ describe('buildRecord', () => {
     expect(r).toMatchObject({ interviewBest: 88, interviewReady: true })
   })
 
+  it('feeds a labelled tool item into pre, post and gain, not interview readiness', () => {
+    const r = buildRecord(
+      [
+        { id: 'p', type: 'tool', label: 'pre' },
+        { id: 'q', type: 'tool', label: 'post' },
+        { id: 'c', type: 'interview', label: null },
+      ],
+      [
+        { itemId: 'p', status: 'completed', score: 40 },
+        { itemId: 'q', status: 'completed', score: 90 },
+        { itemId: 'c', status: 'completed', score: 50 },
+      ],
+      course,
+      false
+    )
+    expect(r).toMatchObject({
+      pre: 40,
+      post: 90,
+      gain: 50,
+      reachedTarget: true,
+      interviewBest: 50,
+      interviewReady: false,
+    })
+  })
+
+  it('has no interview score when only labelled tool items are done', () => {
+    const r = buildRecord(
+      [{ id: 'p', type: 'tool', label: 'pre' }],
+      [{ itemId: 'p', status: 'completed', score: 95 }],
+      course,
+      false
+    )
+    expect(r).toMatchObject({ pre: 95, interviewBest: null, interviewReady: false })
+  })
+
   it('shows nothing earned before anything is done', () => {
     expect(buildRecord(items, [], course, false)).toMatchObject({
       pre: null,
@@ -938,6 +973,7 @@ describe('recordToolResult', () => {
       toolId: 'id-interview',
       name: 'Interview Differently',
       ref: 'cna-interview',
+      retries: true,
     })
     expect(prisma.courseModule.findMany).toHaveBeenCalled() // plan and completion checks ran
   })
@@ -1002,6 +1038,52 @@ describe('recordToolResult', () => {
       toolId: 'id-interview',
       name: 'Interview Differently',
       ref: 'cna-interview',
+      retries: true,
     })
+  })
+
+  it('shows an assessment tool without retries', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(
+      item('tool', 'pre', { toolId: 'id-assessment', ref: 'cna-pre' })
+    )
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    const out = await service.item('u1', 'k1', 'i1')
+    expect(out.label).toBe('pre')
+    expect(out.tool).toEqual({
+      toolId: 'id-assessment',
+      name: 'Interview Differently assessment',
+      ref: 'cna-pre',
+      retries: false,
+    })
+  })
+
+  it('holds course completion back while a pre/post assessment tool is not done', async () => {
+    const lesson = item('lesson')
+    const labelled = item('tool', 'post', { toolId: 'id-assessment', ref: 'cna-post' })
+    prisma.courseItem.findUnique.mockResolvedValue(lesson)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    prisma.courseModule.findMany.mockResolvedValue([
+      {
+        items: [
+          { ...lesson, id: 'l1' },
+          { ...labelled, id: 't1' },
+        ],
+      },
+    ])
+    finished('l1')
+    await service.completeLesson('u1', 'k1', 'i1')
+    expect(prisma.enrollment.update).not.toHaveBeenCalled()
+  })
+
+  it('completes the course once the labelled assessment tool is done', async () => {
+    const labelled = item('tool', 'post', { toolId: 'id-assessment', ref: 'cna-post' })
+    prisma.courseItem.findUnique.mockResolvedValue(labelled)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    prisma.courseModule.findMany.mockResolvedValue([
+      { items: [{ ...item('lesson'), id: 'l1' }, labelled] },
+    ])
+    finished('l1', 'i1')
+    await service.recordToolResult('u1', 'k1', 'i1', { scorePct: 80 })
+    expect(prisma.enrollment.update).toHaveBeenCalled()
   })
 })

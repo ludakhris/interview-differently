@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { AssessmentsService } from './assessments.service'
 import { parseAssessmentMarkdown, AssessmentParseError } from './parse-markdown'
 import { compareResults } from './grade'
@@ -511,5 +512,104 @@ describe('live progress (#40)', () => {
     ).deliveryResults('d1')
     expect(r.attempts[0]).toMatchObject({ answeredCount: 2, questionCount: 4, lastActivityAt: t })
     expect(r.notStarted).toEqual([{ userId: 'u2', email: 'two@x', displayName: 'Two' }])
+  })
+})
+
+describe('LTI attempts (#63)', () => {
+  const delivery = {
+    id: 'd1',
+    cohortId: 'c1',
+    opensAt: null as Date | null,
+    closesAt: null as Date | null,
+    assessment: {
+      dataset: null,
+      sections: [
+        {
+          id: 's1',
+          number: 1,
+          title: 'S',
+          draw: null,
+          questions: [{ id: '1.1', type: 'mc', prompt: 'p', options: [], answer: 'A' }],
+        },
+      ],
+    },
+  }
+  const make = (over: { delivery?: unknown; existing?: unknown; attempt?: unknown } = {}) => {
+    const create = jest.fn(async () => ({ id: 'new' }))
+    const prisma = {
+      assessmentDelivery: {
+        findUnique: async () => (over.delivery === undefined ? delivery : over.delivery),
+      },
+      assessmentAttempt: {
+        findUnique: async (a: { where: { id?: string } }) =>
+          a.where.id ? (over.attempt ?? null) : (over.existing ?? null),
+        create,
+      },
+      cohort: { count: jest.fn(async () => 0) },
+    }
+    const clerk = { isAdmin: async () => false }
+    return {
+      create,
+      prisma,
+      svc: new AssessmentsService(prisma as never, clerk as never, {} as never),
+    }
+  }
+
+  it('draws the paper without the cohort membership check', async () => {
+    const { svc, create, prisma } = make()
+    await expect(svc.startAttemptForLti('u1', 'd1')).resolves.toEqual({ id: 'new' })
+    expect(create).toHaveBeenCalledTimes(1)
+    expect(prisma.cohort.count).not.toHaveBeenCalled()
+    // the Clerk path still enforces it
+    await expect(svc.startAttempt('u1', 'd1')).rejects.toThrow(/not found/)
+  })
+
+  it('resumes an existing attempt, even when the delivery has closed', async () => {
+    const closed = { ...delivery, closesAt: new Date(Date.now() - 1000) }
+    const { svc, create } = make({ delivery: closed, existing: { id: 'old' } })
+    await expect(svc.startAttemptForLti('u1', 'd1')).resolves.toEqual({ id: 'old' })
+    expect(create).not.toHaveBeenCalled()
+  })
+
+  it('keeps the open check and 404s an unknown delivery', async () => {
+    const closed = { ...delivery, closesAt: new Date(Date.now() - 1000) }
+    await expect(make({ delivery: closed }).svc.startAttemptForLti('u1', 'd1')).rejects.toThrow(
+      /not open/
+    )
+    await expect(make({ delivery: null }).svc.startAttemptForLti('u1', 'd1')).rejects.toThrow(
+      /not found/
+    )
+  })
+
+  it('resumes the winner when two first starts race', async () => {
+    const { svc, prisma } = make()
+    let first = true
+    const found = { id: 'winner' }
+    prisma.assessmentAttempt.findUnique = (async (a: { where: { id?: string } }) =>
+      a.where.id || first ? ((first = false), null) : found) as never
+    prisma.assessmentAttempt.create = (async () => {
+      throw new Prisma.PrismaClientKnownRequestError('dup', { code: 'P2002', clientVersion: 'x' })
+    }) as never
+    await expect(svc.startAttemptForLti('u1', 'd1')).resolves.toEqual({ id: 'winner' })
+  })
+
+  it('pins an attempt to the session delivery and to its owner', async () => {
+    const attempt = {
+      id: 'a1',
+      userId: 'u1',
+      deliveryId: 'd1',
+      submittedAt: new Date(),
+      sectionScores: [],
+      delivery,
+    }
+    const { svc } = make({ attempt })
+    await expect(svc.getResult('u1', 'a1', 'd1')).resolves.toMatchObject({ overall: { total: 0 } })
+    await expect(svc.getResult('u1', 'a1', 'other')).rejects.toThrow(/not found/)
+    await expect(svc.getAttempt('u1', 'a1', 'other')).rejects.toThrow(/not found/)
+    await expect(svc.saveAnswers('u1', 'a1', {}, 'other')).rejects.toThrow(/not found/)
+    await expect(svc.submit('u1', 'a1', undefined, 'other')).rejects.toThrow(/not found/)
+    await expect(svc.getResult('u2', 'a1', 'd1')).rejects.toThrow(/not found/)
+    // no pin (Clerk): unchanged behaviour
+    await expect(svc.getResult('u1', 'a1')).resolves.toBeDefined()
   })
 })

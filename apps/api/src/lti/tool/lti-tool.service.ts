@@ -12,6 +12,8 @@ import {
   type ScoredAnswer,
 } from '../../interview-engine/interview-engine'
 import { interviewOf, type InterviewSource } from '../../interview-engine/interview-scenario'
+import { overall } from '../../assessments/assessments.service'
+import type { SectionScore } from '../../assessments/assessment.types'
 import { sanitizeBrand } from '../lti-brand'
 import {
   AGS_SCOPE_SCORE,
@@ -56,6 +58,9 @@ const RESULT_CLOCK_SKEW_MS = 60 * 1000
 const LOGIN_PER_MINUTE_PER_IP = 30
 const SUBMIT_PER_MINUTE_PER_LEARNER = 10
 const COMPLETE_PER_MINUTE_PER_LEARNER = 10
+const DELIVERY_LOCK_TTL_S = 10
+const DELIVERY_LOCK_TRIES = 20
+const DELIVERY_LOCK_WAIT_MS = 100
 
 interface SubmissionClaims {
   sub: string
@@ -99,6 +104,7 @@ export class LtiToolService {
   /** Injectable for tests. */
   fetchImpl: typeof fetch = (...args) => fetch(...args)
   now: () => number = () => Date.now()
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))
 
   private readonly keys: KeyPair
   /** The key `keys` replaced (LTI_TOOL_PREVIOUS_PRIVATE_KEY): published, never signed with. */
@@ -204,11 +210,25 @@ export class LtiToolService {
     if (!sameOrigin(lineitem, reg.issuer))
       throw new LtiError('Score endpoint is not on the platform')
     if (typeof claims.sub !== 'string' || !claims.sub) throw new LtiError('Missing sub')
-    const row = await this.prisma.scenario.findUnique({ where: { scenarioId: ref } })
-    if (!row || row.status !== 'published') throw new LtiError('Interview not found', 404)
+    const tool = claims[CLAIM.custom]?.tool
+    if (tool !== undefined && tool !== 'id-interview' && tool !== 'id-assessment')
+      throw new LtiError('Unsupported tool')
     // never trust the claim: the same validator the platform used, again
     const brand = sanitizeBrand(claims[BRAND_CLAIM])
     const sessionReturn = safeReturnUrl(claims[CLAIM.launchPresentation]?.return_url)
+    if (tool === 'id-assessment') {
+      return this.launchAssessment({
+        ref,
+        sub: claims.sub,
+        lineitem,
+        returnUrl: sessionReturn,
+        brand,
+        contextId: claims[CLAIM.context]?.id,
+        resourceLinkId: claims[CLAIM.resourceLink]?.id,
+      })
+    }
+    const row = await this.prisma.scenario.findUnique({ where: { scenarioId: ref } })
+    if (!row || row.status !== 'published') throw new LtiError('Interview not found', 404)
     if (!isTypedPlaceholder(row.data)) {
       const token = signSession({
         sub: claims.sub,
@@ -239,6 +259,95 @@ export class LtiToolService {
       role: interview.role,
       questions: interview.questions,
     })
+  }
+
+  /**
+   * An assessment launch: `ref` is the Assessment slug (else its id). The delivery for this
+   * (assessment, cohort, resource link) is found or created, and the learner is sent to the web
+   * app with a session pinned to it.
+   */
+  private async launchAssessment(l: {
+    ref: string
+    sub: string
+    lineitem: string
+    returnUrl: string | undefined
+    brand: ReturnType<typeof sanitizeBrand>
+    contextId: unknown
+    resourceLinkId: unknown
+  }): Promise<{ redirect: string }> {
+    const include = { dataset: { select: { slug: true } } }
+    const assessment =
+      (await this.prisma.assessment.findUnique({ where: { slug: l.ref }, include })) ??
+      (await this.prisma.assessment.findUnique({ where: { id: l.ref }, include }))
+    if (!assessment) throw new LtiError('Assessment not found', 404)
+    // the context is an LD cohort id; it only becomes a cohort here if that row exists
+    const contextId = typeof l.contextId === 'string' && l.contextId ? l.contextId : null
+    const cohort = contextId
+      ? await this.prisma.cohort.findUnique({ where: { id: contextId }, select: { id: true } })
+      : null
+    const resourceLinkId =
+      typeof l.resourceLinkId === 'string' && l.resourceLinkId ? l.resourceLinkId : 'default'
+    const deliveryId = await this.findOrCreateDelivery(
+      assessment.id,
+      cohort?.id ?? null,
+      `lti:${resourceLinkId}`
+    )
+    const iat = Math.floor(this.now() / 1000)
+    const token = signSession({
+      sub: l.sub,
+      ref: assessment.slug,
+      lineitem: l.lineitem,
+      returnUrl: l.returnUrl,
+      datasets: assessment.dataset ? [assessment.dataset.slug] : [],
+      deliveryId,
+      ...(l.brand ? { brand: l.brand } : {}),
+      jti: newId(),
+      iat,
+      exp: iat + SESSION_TTL_S,
+    })
+    return {
+      redirect: `${idWebUrl()}/lti/assessment/${encodeURIComponent(deliveryId)}#session=${token}`,
+    }
+  }
+
+  /**
+   * One delivery per (assessment, cohort, label). There is no unique index to lean on, so the
+   * store claim is a short lock around find-then-create; a launch that loses the lock waits for the
+   * winner's row and fails with a 503 page if it never appears.
+   */
+  private async findOrCreateDelivery(
+    assessmentId: string,
+    cohortId: string | null,
+    label: string
+  ): Promise<string> {
+    const find = () =>
+      this.prisma.assessmentDelivery.findFirst({
+        where: { assessmentId, cohortId, label },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      })
+    const found = await find()
+    if (found) return found.id
+    const lockKey = `${assessmentId}:${cohortId ?? '-'}:${label}`
+    for (let i = 0; i < DELIVERY_LOCK_TRIES; i++) {
+      if (await this.store.claim('lti-delivery', lockKey, DELIVERY_LOCK_TTL_S)) {
+        try {
+          const again = await find()
+          if (again) return again.id
+          const created = await this.prisma.assessmentDelivery.create({
+            data: { assessmentId, cohortId, label },
+            select: { id: true },
+          })
+          return created.id
+        } finally {
+          await this.store.release('lti-delivery', lockKey)
+        }
+      }
+      await this.sleep(DELIVERY_LOCK_WAIT_MS)
+      const other = await find()
+      if (other) return other.id
+    }
+    throw new LtiError('The assessment is being set up. Please try again.', 503)
   }
 
   /** Scores the answers, posts the score to the platform, renders the result or an error. */
@@ -497,6 +606,64 @@ export class LtiToolService {
       await this.prisma.immersiveSession
         .update({ where: { id: sessionId }, data: { status: 'completed' } })
         .catch(() => undefined) // the score is sent and both claims hold; the status is bookkeeping
+      return { score, returnUrl: session.returnUrl ?? returnUrl() }
+    } finally {
+      if (!posted) {
+        await this.store.release('lti-complete', session.jti)
+        if (resultClaimed) await this.store.release('lti-result', resultKey)
+      }
+    }
+  }
+
+  /**
+   * Posts the percent score of a graded assessment attempt to the session's lineitem. The attempt
+   * must be the learner's, on the session's delivery, submitted (graded server-side), and created in
+   * this session; the score is computed here from its stored section scores, never from the client.
+   * Single use per LTI session and per attempt; a failed post can be retried.
+   */
+  async completeAssessment(
+    session: LtiSession,
+    attemptId: unknown
+  ): Promise<{ score: number; returnUrl: string }> {
+    if (typeof attemptId !== 'string' || !attemptId) throw new LtiError('Missing attemptId')
+    await this.limit('tool-complete', session.sub, COMPLETE_PER_MINUTE_PER_LEARNER)
+    const attempt = session.deliveryId
+      ? await this.prisma.assessmentAttempt.findUnique({ where: { id: attemptId } })
+      : null
+    if (!attempt || attempt.userId !== session.sub || attempt.deliveryId !== session.deliveryId) {
+      throw new LtiError('Attempt not found', 404)
+    }
+    if (!attempt.submittedAt || !Array.isArray(attempt.sectionScores)) {
+      throw new LtiError('Submit the assessment before finishing', 400)
+    }
+    // an attempt created before the LTI session began cannot be the work done in it
+    if (attempt.startedAt.getTime() < session.iat * 1000 - RESULT_CLOCK_SKEW_MS) {
+      throw new LtiError('This assessment was not started in this session', 400)
+    }
+    const scores = attempt.sectionScores as unknown as SectionScore[]
+    if (!(await this.store.claim('lti-complete', session.jti, IN_FLIGHT_TTL_S))) {
+      throw new LtiError('This score was already sent. Relaunch it from your course.', 409)
+    }
+    const resultKey = `assessment:${attemptId}`
+    let posted = false
+    let resultClaimed = false
+    try {
+      // one attempt is sent once, whichever LTI session it comes from
+      resultClaimed = await this.store.claim('lti-result', resultKey, RESULT_TTL_S)
+      if (!resultClaimed) throw new LtiError('This assessment was already sent.', 409)
+      const score = overall(scores).percent
+      const dimensions = scores.map((s) => ({
+        dimension: s.title,
+        score: s.total ? Math.round((s.correct / s.total) * 100) : 0,
+      }))
+      try {
+        await this.postScore(session, score, dimensions)
+      } catch {
+        throw new LtiError('The score could not be sent to your course. Please try again.', 502)
+      }
+      posted = true
+      const ttl = Math.max(1, Math.ceil(session.exp - this.now() / 1000) + 60)
+      await this.store.put('lti-complete', session.jti, true, ttl)
       return { score, returnUrl: session.returnUrl ?? returnUrl() }
     } finally {
       if (!posted) {

@@ -16,16 +16,16 @@ function setup(found: { userId: string; scenarioId: string } | null) {
   }
   const clerk = { isAdmin: jest.fn().mockResolvedValue(true) }
   const c = new ImmersiveSessionsController(
-    service as any,
-    { transcribe: jest.fn() } as any,
-    clerk as any,
+    service as never,
+    { transcribe: jest.fn() } as never,
+    clerk as never,
     new MemoryLtiStore()
   )
   return { c, service, clerk }
 }
 
 describe('ImmersiveSessionsController for an LTI session', () => {
-  const req = { userId: 'u1', lti } as any
+  const req = { userId: 'u1', lti } as never
 
   it('serves its own session of its ref', async () => {
     const { c, service } = setup({ userId: 'u1', scenarioId: 'S1' })
@@ -59,7 +59,7 @@ describe('ImmersiveSessionsController for an LTI session', () => {
 
   it('creates the session for the token learner, whatever the body says', async () => {
     const { c, service } = setup(null)
-    await c.createSession(req, { scenarioId: 'S1', userId: 'attacker' } as any)
+    await c.createSession(req, { scenarioId: 'S1', userId: 'attacker' } as never)
     expect(service.createSession).toHaveBeenCalledWith('S1', 'u1')
   })
 
@@ -73,9 +73,9 @@ describe('ImmersiveSessionsController for an LTI session', () => {
 describe('ImmersiveSessionsController for a Clerk user', () => {
   it('keeps own-or-admin and never reads the LTI scenario check', async () => {
     const { c, service, clerk } = setup({ userId: 'owner', scenarioId: 'any' })
-    await expect(c.getSession({ userId: 'owner' } as any, 's1')).resolves.toBeDefined()
+    await expect(c.getSession({ userId: 'owner' } as never, 's1')).resolves.toBeDefined()
     clerk.isAdmin.mockResolvedValueOnce(false)
-    await expect(c.getSession({ userId: 'other' } as any, 's1')).rejects.toBeInstanceOf(
+    await expect(c.getSession({ userId: 'other' } as never, 's1')).rejects.toBeInstanceOf(
       ForbiddenException
     )
     expect(service.getSessionRef).not.toHaveBeenCalled()

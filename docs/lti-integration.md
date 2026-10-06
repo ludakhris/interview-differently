@@ -37,14 +37,15 @@ operation is one SQL statement, so it is atomic: `put`, `peek`, `take` (DELETE .
 after the window). Expired rows are ignored on read and deleted in batches of 500 at start and on about 2% of
 writes. `MemoryLtiStore` is for unit tests and a single local process. Uses:
 
-| Scope            | Key                      | What                                                                                                                                                |
-| ---------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `lti-hint`       | hint jti                 | `lti_message_hint` is single use (claimed after the item checks pass)                                                                               |
-| `lti-assertion`  | `clientId:jti`           | client-assertion `jti` replay (claimed after the signature verifies)                                                                                |
-| `lti-login`      | state                    | tool login `{nonce}`, 10 minutes, taken at launch                                                                                                   |
-| `lti-submission` | submission jti           | in-flight lock (5 minutes), replaced by a "consumed" entry for the token's remaining life after a successful score post, released if the post fails |
-| `lti-complete`   | session jti              | same lock/consumed pattern for `POST /complete`, one score post per session                                                                         |
-| `rl:*`           | IP, client id or learner | rate-limit counters                                                                                                                                 |
+| Scope            | Key                           | What                                                                                                                                                |
+| ---------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lti-hint`       | hint jti                      | `lti_message_hint` is single use (claimed after the item checks pass)                                                                               |
+| `lti-assertion`  | `clientId:jti`                | client-assertion `jti` replay (claimed after the signature verifies)                                                                                |
+| `lti-login`      | state                         | tool login `{nonce}`, 10 minutes, taken at launch                                                                                                   |
+| `lti-submission` | submission jti                | in-flight lock (5 minutes), replaced by a "consumed" entry for the token's remaining life after a successful score post, released if the post fails |
+| `lti-delivery`   | `assessmentId:cohortId:label` | short lock around find-or-create of an assessment delivery                                                                                          |
+| `lti-complete`   | session jti                   | same lock/consumed pattern for `POST /complete`, one score post per session                                                                         |
+| `rl:*`           | IP, client id or learner      | rate-limit counters                                                                                                                                 |
 
 **Multiple instances are safe** provided they share the database and the required production variables
 (every instance must use the same keys and secrets, so any instance can finish what another started).
@@ -74,7 +75,13 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
 
 ## Registration (static)
 
-- Tool id `id-interview`, client id `ld-platform`, deployment id `1`.
+- Two tools, `id-interview` (name "Interview Differently") and `id-assessment` ("Interview Differently assessment"), share
+  one client id `ld-platform`, deployment id `1` and the same login/launch/jwks URLs. The id_token's custom claim says which
+  was launched: `{ ref, tool }`, where `tool` is the LearnDifferently tool id and, for `id-assessment`, `ref` is the Assessment slug.
+- Platform-only properties per tool (never on the wire): `kind` (`interview` | `assessment`), `retries` (interview true;
+  assessment false, one attempt per delivery) and `labelable` (assessment true). A `tool` course item may carry the `pre`/`post`
+  label only when its tool is labelable; such an item stands in for LearnDifferently's own assessment (required for course
+  completion, its best score feeds pre/post/gain, not counted as an interview). An unlabelled tool item is interview-like.
 - Platform side config (`ToolRegistration`): loginUrl `${BASE}/lti/tool/login`, launchUrl `${BASE}/lti/tool/launch`,
   jwksUrl `${BASE}/lti/tool/jwks`.
 - Tool side config (`PlatformRegistration`): issuer, authUrl `${BASE}/lti/platform/auth`,
@@ -92,7 +99,7 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
   Replies with an auto-submitting HTML form POSTing `id_token` and `state` to `redirect_uri`.
   The `id_token` is RS256, iss=platform issuer, aud=client id, sub=learner user id, `nonce` echoed, exp 5 minutes, with claims:
   message_type `LtiResourceLinkRequest`, version `1.3.0`, deployment_id, target_link_uri, resource_link `{id: itemId}`,
-  context `{id: cohortId}`, roles `[LEARNER_ROLE]`, custom `{ref}` (the tool-specific reference stored on the item),
+  context `{id: cohortId}`, roles `[LEARNER_ROLE]`, custom `{ref, tool}` (the tool-specific reference stored on the item, and the LearnDifferently tool id),
   the `launch_presentation` claim `{document_target:'window', return_url}` (the LD item page, `${LTI_LEARN_URL}/lms/learning/${cohortId}/${itemId}`), and the AGS endpoint claim `{scope:[AGS_SCOPE_SCORE], lineitem: ${BASE}/lti/platform/ags/${cohortId}/lineitems/${itemId}}`, plus, when the cohort's tenant has one, the brand claim (see "Brand tokens").
 - `POST /token` OAuth2 client_credentials with `client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer`,
   `client_assertion` (RS256 JWT signed by the tool: iss=sub=clientId, aud=tokenUrl, jti unique, exp no more than 10 minutes away), `scope`. Verifies against the
@@ -102,7 +109,7 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
   (`userId`, `scoreGiven`, `scoreMaximum`, `activityProgress`, `gradingProgress`, `timestamp`, plus optional `DIMENSIONS_FIELD`).
   Content-Type must be `SCORE_CONTENT_TYPE` (nothing else is accepted; body at most 100 KB). `timestamp` is required: an ISO 8601
   date-time no more than 5 minutes in the future. Only accepts a score for a learner enrolled in that cohort and an item of type `tool` whose
-  `toolId` matches the token's client. Records it (best score kept) via `LearnerService.recordToolResult`.
+  `toolId` belongs to the token's client (compared by client id, since both tools share one). Records it (best score kept) via `LearnerService.recordToolResult`.
 - Launch start (called by the learner API, not public): `LtiPlatformService.startLaunch(userId, cohortId, itemId)` returns
   `{ action: <tool loginUrl>, fields: { iss, login_hint, target_link_uri, lti_message_hint, client_id, lti_deployment_id } }`.
 
@@ -153,7 +160,7 @@ in-flight fetch between concurrent callers, times fetches out after 3 seconds an
   answers `303` to `${LTI_ID_WEB_URL}/lti/play/${encodeURIComponent(ref)}#session=<token>`; the token is in the fragment so it is
   never sent to a server or logged. Immersive scenarios (`mode === 'immersive'`) that have an `interviewer` persona (`presenterId` and `voiceId`) are redirected the same way and played by voice in the web app; immersive scenarios without one keep the typed page below.
 - The session token is `base64url(JSON).base64url(HMAC-SHA256)` (secret `LTI_TOOL_SECRET`, MAC over `lti-session.` + body, so it
-  cannot be used as a submission token), claims `{sub, ref, lineitem, returnUrl?, datasets?, brand?, jti, iat, exp}`, valid 2 hours. The web app sends it as
+  cannot be used as a submission token), claims `{sub, ref, lineitem, returnUrl?, datasets?, brand?, deliveryId?, jti, iat, exp}`, valid 2 hours. The web app sends it as
   `Authorization: Bearer lti.<token>`. It is accepted only by `lti-session.guard.ts` and only for: `GET /api/scenarios/<ref>`
   (full scenario, any owner), `POST /api/results/attempts` and `POST /api/results` with `scenarioId === ref` (the user is always
   the token `sub`), `GET /api/results/:id` for the learner's own result of `ref`, `GET /api/me/datasets/<slug>` for a SQL dataset slug listed in the token's `datasets` claim (the slugs of the scenario's `sql` nodes, read at launch; the dataset service re-checks the slug against the launched scenario), `GET /api/lti/tool/session`, and `POST /api/lti/tool/complete`. Everything
@@ -164,6 +171,22 @@ in-flight fetch between concurrent callers, times fetches out after 3 seconds an
   `overallScore` (0-100) of the stored result, `scoreMaximum` 100, with its dimension scores under `DIMENSIONS_FIELD`; posted to the
   lineitem like `/submit`. Single use per session `jti` (409 on reuse, released if the post fails), answers JSON
   `{score, returnUrl}`, or 502 with a generic message if the platform rejects it.
+- Assessments (`custom.tool === 'id-assessment'`; a missing `tool` means `id-interview`, any other value is refused with a 400 page). `ref` is the
+  `Assessment.slug` (fallback: its `id`); unknown answers a 404 page "Assessment not found". The tool finds or creates the
+  `AssessmentDelivery` for (assessment, cohort = the launch's context id if a `Cohort` row with that id exists, else null, label `lti:<resource link id>`),
+  with no open/close dates or time limit. There is no unique index on that triple, so creation runs under a short `lti-delivery` store lock
+  (10 s) with a re-find inside it; a launch that loses the lock polls for the winner's row (up to about 2 s, then a 503 page). The launch answers
+  `303` to `${LTI_ID_WEB_URL}/lti/assessment/<deliveryId>#session=<token>`. The session has the extra claim `deliveryId` (and `datasets` = the bank's dataset slug, if any); a session
+  with `deliveryId` can reach only the assessment routes below, `GET /me/datasets/<slug>`, `GET /lti/tool/session` (which then also answers `deliveryId`) and `POST /lti/tool/complete`; it is refused on every scenario route.
+  A session without `deliveryId` can reach no assessment route. Allowed assessment routes (through `AuthenticatedOrLtiGuard`): `POST /me/deliveries/<deliveryId>/attempts`
+  (the id must equal the session's), `GET /me/attempts/:id`, `PUT /me/attempts/:id/answers`, `POST /me/attempts/:id/submit`, `GET /me/attempts/:id/result`.
+  The attempt must belong to `sub` and to the session's delivery (404 otherwise). For an LTI caller `startAttemptForLti` skips the cohort membership / tool-enabled
+  check (LearnDifferently decides who may launch), keeps the open check, draws the paper once and resumes an existing attempt; answers are validated (object of at most 200 string values, ids at most 64 and values at most 20,000 characters).
+  The Clerk path is unchanged. One attempt exists per (delivery, learner), so one LD item is one attempt.
+- `POST /complete` also takes `{attemptId}` for an assessment: the attempt must belong to `sub`, to the session's `deliveryId`, be submitted (graded on the server) and have been
+  created no earlier than the session `iat` minus 60 s. Score = the overall percent of its stored section scores (correct / total, rounded), with `DIMENSIONS_FIELD`
+  = one entry per section `{dimension: section title, score: round(correct / total * 100)}`. Locks: `lti-complete` per LTI session and `lti-result` keyed `assessment:<attemptId>` (30 days); both are
+  released if the post fails (502); reuse answers 409. Rate limit as the others (10 per minute per `sub`).
 - `POST /submit` takes the `submission` token and answers, scores them with the tool's own scorer, obtains an access token from the
   platform `tokenUrl` (client-credentials with a signed assertion; the timestamp is always sent), POSTs the score to the lineitem scores URL, and renders a result page
   (overall score, per-dimension scores, feedback) with a primary "Back to your course" link to the launch's `return_url` (fallback `LTI_RETURN_URL`, default `http://localhost:5174`); error pages link there too. A submission token is single use: its `jti` is

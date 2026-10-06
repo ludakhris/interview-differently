@@ -20,6 +20,12 @@ export interface LtiRequest {
 }
 
 type Allow = (session: LtiSession, req: LtiRequest) => boolean
+/**
+ * Which sessions a route is for: a scenario session (no `deliveryId`, the default), an assessment
+ * session (has `deliveryId`), or both. An assessment session never reaches scenario routes and a
+ * scenario session never reaches assessment routes.
+ */
+type Audience = 'scenario' | 'assessment' | 'both'
 const bodyScenario: Allow = (s, req) => req.body?.scenarioId === s.ref
 
 /**
@@ -28,7 +34,7 @@ const bodyScenario: Allow = (s, req) => req.body?.scenarioId === s.ref
  * ref. Anything not listed is refused, so a new endpoint is never reachable with an LTI token by
  * accident. Ownership of a result or immersive session is checked by the controller.
  */
-const ALLOWED: { method: string; path: RegExp; allow?: Allow }[] = [
+const ALLOWED: { method: string; path: RegExp; allow?: Allow; audience?: Audience }[] = [
   { method: 'GET', path: /^\/scenarios\/[^/]+$/, allow: (s, req) => idOf(req) === s.ref },
   { method: 'POST', path: /^\/results\/attempts$/, allow: bodyScenario },
   { method: 'POST', path: /^\/results$/, allow: bodyScenario },
@@ -37,6 +43,7 @@ const ALLOWED: { method: string; path: RegExp; allow?: Allow }[] = [
     // launch); the controller re-checks it against the scenario. Never the list or admin routes.
     method: 'GET',
     path: /^\/me\/datasets\/[^/]+$/,
+    audience: 'both',
     allow: (s, req) => {
       const slug = datasetSlugOf(req)
       return slug !== undefined && (s.datasets ?? []).includes(slug)
@@ -50,8 +57,20 @@ const ALLOWED: { method: string; path: RegExp; allow?: Allow }[] = [
   { method: 'GET', path: /^\/immersive-sessions\/[^/]+$/ },
   { method: 'GET', path: /^\/immersive-sessions\/[^/]+\/responses\/[^/]+$/ },
   { method: 'GET', path: /^\/immersive-sessions\/[^/]+\/responses\/[^/]+\/media-url$/ },
-  { method: 'GET', path: /^\/lti\/tool\/session$/ },
-  { method: 'POST', path: /^\/lti\/tool\/complete$/ },
+  // assessment: start (or resume) the attempt on the launched delivery, then play it. The controller
+  // checks the attempt belongs to the learner and to the session's delivery.
+  {
+    method: 'POST',
+    path: /^\/me\/deliveries\/[^/]+\/attempts$/,
+    audience: 'assessment',
+    allow: (s, req) => deliveryIdOf(req) === s.deliveryId,
+  },
+  { method: 'GET', path: /^\/me\/attempts\/[^/]+$/, audience: 'assessment' },
+  { method: 'PUT', path: /^\/me\/attempts\/[^/]+\/answers$/, audience: 'assessment' },
+  { method: 'POST', path: /^\/me\/attempts\/[^/]+\/submit$/, audience: 'assessment' },
+  { method: 'GET', path: /^\/me\/attempts\/[^/]+\/result$/, audience: 'assessment' },
+  { method: 'GET', path: /^\/lti\/tool\/session$/, audience: 'both' },
+  { method: 'POST', path: /^\/lti\/tool\/complete$/, audience: 'both' },
 ]
 
 const pathOf = (req: LtiRequest): string => {
@@ -61,6 +80,15 @@ const pathOf = (req: LtiRequest): string => {
 
 function idOf(req: LtiRequest): string | undefined {
   const m = /^\/scenarios\/([^/]+)$/.exec(pathOf(req))
+  try {
+    return m ? decodeURIComponent(m[1]) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function deliveryIdOf(req: LtiRequest): string | undefined {
+  const m = /^\/me\/deliveries\/([^/]+)\/attempts$/.exec(pathOf(req))
   try {
     return m ? decodeURIComponent(m[1]) : undefined
   } catch {
@@ -97,13 +125,20 @@ function authorizeLti(req: LtiRequest, token: string): true {
     throw err
   }
   const path = pathOf(req)
-  const rule = ALLOWED.find((r) => r.method === req.method && r.path.test(path))
+  const mine: Audience = session.deliveryId ? 'assessment' : 'scenario'
+  const rule = ALLOWED.find((r) => {
+    const audience = r.audience ?? 'scenario'
+    return (
+      r.method === req.method && r.path.test(path) && (audience === 'both' || audience === mine)
+    )
+  })
   if (!rule || (rule.allow && !rule.allow(session, req))) {
     throw new ForbiddenException('This session cannot be used here')
   }
   req.userId = session.sub
-  const { sub: _sub, ...lti } = session
-  req.lti = lti
+  const lti: Partial<LtiSession> = { ...session }
+  delete lti.sub
+  req.lti = lti as Omit<LtiSession, 'sub'>
   return true
 }
 

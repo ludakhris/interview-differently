@@ -1,5 +1,6 @@
 import type { CourseItemDto, CourseSkill, KnowledgeCheckQuestion } from '@id/types'
 import { useState } from 'react'
+import { TOOL_OPTIONS, toolItemLabel, toolLabelable } from './toolKinds'
 
 export interface ItemDraft {
   type: string
@@ -120,7 +121,12 @@ export function ItemEditor(props: {
     props.onSave({
       type: item.type,
       title,
-      label: item.type === 'assessment' ? label : null,
+      label:
+        item.type === 'assessment'
+          ? label
+          : item.type === 'tool'
+            ? toolItemLabel(toolId, label)
+            : null,
       config: saved,
     })
   }
@@ -332,23 +338,48 @@ export function ItemEditor(props: {
           <label className="dash-field">
             <span>Tool</span>
             <select value={toolId} onChange={(e) => setToolId(e.target.value)}>
-              <option value="id-interview">Interview Differently interview</option>
+              {TOOL_OPTIONS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
             </select>
           </label>
+          {toolLabelable(toolId) && (
+            <label className="dash-field">
+              <span>When it runs</span>
+              <select value={label} onChange={(e) => setLabel(e.target.value as 'pre' | 'post')}>
+                <option value="pre">Before the course (pre-assessment)</option>
+                <option value="post">After the course (post-assessment)</option>
+              </select>
+              <small className="dash-muted">
+                It stands in for the course's own pre or post assessment: it is required to finish
+                the course and its best score counts toward the gain.
+              </small>
+            </label>
+          )}
           <label className="dash-field">
             <span>Reference</span>
             <input
               value={toolRef}
               maxLength={200}
-              placeholder="Interview scenario id"
+              placeholder={toolLabelable(toolId) ? 'Assessment slug' : 'Interview scenario id'}
               onChange={(e) => setToolRef(e.target.value)}
             />
-            <small className="dash-muted">
-              Which interview this opens. In Interview Differently, open the interview in the
-              builder: its id is the last part of the page address (.../builder/your-interview-id).
-              Check it before saving, since a wrong id only shows up when a learner opens it. The
-              learner goes to the tool in the same window and comes back here with the score.
-            </small>
+            {toolLabelable(toolId) ? (
+              <small className="dash-muted">
+                The assessment's slug, as set when it was imported in Interview Differently (Admin,
+                Assessments). A wrong slug only shows up when a learner opens it.
+              </small>
+            ) : (
+              <small className="dash-muted">
+                Which interview this opens. In Interview Differently, open the interview in the
+                builder: its id is the last part of the page address
+                (.../builder/your-interview-id). Check it before saving, since a wrong id only shows
+                up when a learner opens it. The learner goes to the tool in the same window and
+                comes back here with the score.
+              </small>
+            )}
           </label>
         </>
       )}

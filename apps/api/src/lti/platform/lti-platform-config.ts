@@ -23,22 +23,53 @@ export function platformRegistration(): PlatformRegistration {
   }
 }
 
+/** A connected tool: its LTI registration plus how LearnDifferently treats it (never sent over LTI). */
+export interface PlatformTool extends ToolRegistration {
+  /** An interview is practice that can be retried; an assessment is a question bank taken once. */
+  kind: 'interview' | 'assessment'
+  /** Whether a learner may launch it again after completing it. */
+  retries: boolean
+  /** Whether a course item for it may be labelled as the pre or post assessment. */
+  labelable: boolean
+}
+
 /** The tools a course item may launch (static for the POC; each field overridable by env). */
-export function registeredTools(): ToolRegistration[] {
+export function registeredTools(): PlatformTool[] {
   const base = apiBase()
+  const shared = {
+    clientId: env('LTI_TOOL_CLIENT_ID') ?? 'ld-platform',
+    deploymentId: env('LTI_TOOL_DEPLOYMENT_ID') ?? '1',
+    loginUrl: env('LTI_TOOL_LOGIN_URL') ?? `${base}/lti/tool/login`,
+    launchUrl: env('LTI_TOOL_LAUNCH_URL') ?? `${base}/lti/tool/launch`,
+    jwksUrl: env('LTI_TOOL_JWKS_URL') ?? `${base}/lti/tool/jwks`,
+  }
   return [
     {
       toolId: 'id-interview',
       name: env('LTI_TOOL_NAME') ?? 'Interview Differently',
-      clientId: env('LTI_TOOL_CLIENT_ID') ?? 'ld-platform',
-      deploymentId: env('LTI_TOOL_DEPLOYMENT_ID') ?? '1',
-      loginUrl: env('LTI_TOOL_LOGIN_URL') ?? `${base}/lti/tool/login`,
-      launchUrl: env('LTI_TOOL_LAUNCH_URL') ?? `${base}/lti/tool/launch`,
-      jwksUrl: env('LTI_TOOL_JWKS_URL') ?? `${base}/lti/tool/jwks`,
+      ...shared,
+      kind: 'interview',
+      retries: true,
+      labelable: false,
+    },
+    {
+      toolId: 'id-assessment',
+      name: 'Interview Differently assessment',
+      ...shared,
+      kind: 'assessment',
+      retries: false,
+      labelable: true,
     },
   ]
 }
 
 export const registeredToolIds = (): string[] => registeredTools().map((t) => t.toolId)
-export const toolById = (id: unknown): ToolRegistration | undefined =>
+export const toolById = (id: unknown): PlatformTool | undefined =>
   registeredTools().find((t) => t.toolId === id)
+
+/**
+ * Whether a course item counts as a practice interview (readiness, not required for completion):
+ * an interview, or a tool item that is not labelled as a pre/post assessment.
+ */
+export const isInterviewLike = (i: { type: string; label: string | null }): boolean =>
+  i.type === 'interview' || (i.type === 'tool' && !i.label)

@@ -21,6 +21,11 @@ export interface LtiSession {
   datasets?: string[]
   /** The launching tenant's sanitized brand tokens, if it has one. */
   brand?: LtiBrand
+  /**
+   * Set for an assessment launch (`ref` is then the assessment slug): the one AssessmentDelivery
+   * this session may start an attempt on. Absent means the session can reach no assessment route.
+   */
+  deliveryId?: string
   jti: string
   /** Issued-at, epoch seconds: a result must be completed after the session began. */
   iat: number
@@ -68,6 +73,11 @@ export function verifySession(
   if (
     claims.datasets !== undefined &&
     (!Array.isArray(claims.datasets) || !claims.datasets.every((d) => typeof d === 'string'))
+  )
+    throw invalid()
+  if (
+    claims.deliveryId !== undefined &&
+    (typeof claims.deliveryId !== 'string' || !claims.deliveryId)
   )
     throw invalid()
   if (claims.brand !== undefined) {

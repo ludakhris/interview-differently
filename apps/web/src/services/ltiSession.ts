@@ -4,12 +4,12 @@
  * The token rides in the URL fragment (never sent to a server or logged), is
  * moved into sessionStorage for this tab, and is stripped from the address
  * bar. It is sent as `Authorization: Bearer lti.<token>` — but only while the
- * browser is on an `/lti/play/` route, so Clerk-gated pages are unaffected.
+ * browser is on an `/lti/play/` or `/lti/assessment/` route, so Clerk-gated pages are unaffected.
  */
 import { registerLtiTokenGetter } from './authToken'
 
 const STORAGE_KEY = 'lti-session-token'
-const LTI_PATH = /^\/lti\/play\/[^/]+/
+const LTI_PATH = /^\/lti\/(?:play|assessment)\/[^/]+/
 // Opaque token characters only (JWT / base64url style); rejects garbage.
 const TOKEN_SHAPE = /^[A-Za-z0-9._~+/=-]{8,4096}$/
 
@@ -72,7 +72,7 @@ export function getLtiToken(): string | null {
   return memoryToken ?? readStored()
 }
 
-/** True only on an /lti/play/ route with a token present for this tab. */
+/** True only on an /lti/play/ or /lti/assessment/ route with a token present for this tab. */
 export function isLtiSession(pathname: string = window.location.pathname): boolean {
   return isLtiPath(pathname) && getLtiToken() !== null
 }

@@ -107,7 +107,7 @@ describe('PrismaLtiStore statements', () => {
   const sqlOf = (call: unknown[]) => (call[0] as string[]).join('?').replace(/\s+/g, ' ')
   function make() {
     const prisma = { $executeRaw: jest.fn(async () => 1), $queryRaw: jest.fn(async () => []) }
-    return { prisma, store: new PrismaLtiStore(prisma as any) }
+    return { prisma, store: new PrismaLtiStore(prisma as never) }
   }
   beforeEach(() => jest.spyOn(Math, 'random').mockReturnValue(0.99)) // no opportunistic cleanup
   afterEach(() => jest.restoreAllMocks())
@@ -218,14 +218,16 @@ describe('assertLtiProductionConfig', () => {
     expect(() =>
       assertLtiProductionConfig({ NODE_ENV: 'production', ...all, LTI_TOOL_SECRET: '  ' })
     ).toThrow('LTI_TOOL_SECRET')
-    const { LTI_LEARN_URL: _omit, ...withoutLearnUrl } = all
+    const withoutLearnUrl: Record<string, string> = { ...all }
+    delete withoutLearnUrl.LTI_LEARN_URL
     expect(() => assertLtiProductionConfig({ NODE_ENV: 'production', ...withoutLearnUrl })).toThrow(
       'LTI_LEARN_URL'
     )
   })
 
   it('requires LTI_ID_WEB_URL in production', () => {
-    const { LTI_ID_WEB_URL: _omit, ...withoutIdWeb } = all
+    const withoutIdWeb: Record<string, string> = { ...all }
+    delete withoutIdWeb.LTI_ID_WEB_URL
     expect(() => assertLtiProductionConfig({ NODE_ENV: 'production', ...withoutIdWeb })).toThrow(
       'LTI_ID_WEB_URL'
     )

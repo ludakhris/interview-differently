@@ -79,12 +79,13 @@ export class LtiToolController {
   @Get('session')
   @UseGuards(LtiOnlyGuard)
   session(@Req() req: LtiRequest) {
-    return { brand: req.lti!.brand ?? null, ref: req.lti!.ref }
+    const { brand, ref, deliveryId } = req.lti!
+    return { brand: brand ?? null, ref, ...(deliveryId ? { deliveryId } : {}) }
   }
 
   /**
    * Posts the score of a finished play; the LTI session is the credential. `{resultId}` is a text
-   * scenario's stored result, `{sessionId}` an immersive (voice) interview scored here.
+   * scenario's stored result, `{sessionId}` an immersive (voice) interview scored here, `{attemptId}` a submitted assessment attempt graded server-side.
    */
   @Post('complete')
   @UseGuards(LtiOnlyGuard)
@@ -92,6 +93,7 @@ export class LtiToolController {
     try {
       const session = { ...req.lti!, sub: req.userId! }
       const p = strings(b)
+      if (p.attemptId !== undefined) return await this.tool.completeAssessment(session, p.attemptId)
       return p.sessionId !== undefined
         ? await this.tool.completeImmersive(session, p.sessionId)
         : await this.tool.complete(session, p.resultId)

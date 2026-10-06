@@ -80,9 +80,9 @@ describe('lti-spec jwt', () => {
 describe('jwksKeyResolver', () => {
   const pair = generateKeyPair()
   const ok = (body: unknown) => new Response(typeof body === 'string' ? body : JSON.stringify(body))
-  const resolverOf = (impl: (...a: any[]) => Promise<Response>) => ({
+  const resolverOf = (impl: (...a: Parameters<typeof fetch>) => Promise<Response>) => ({
     fetchImpl: jest.fn(impl),
-    resolve: (f: jest.Mock) => jwksKeyResolver('https://secret.example/jwks', f as any),
+    resolve: (f: jest.Mock) => jwksKeyResolver('https://secret.example/jwks', f as never),
   })
 
   it('does not refetch for the same unknown kid within a minute', async () => {
@@ -120,12 +120,12 @@ describe('jwksKeyResolver', () => {
   it('gives the fetch a timeout signal', async () => {
     const { fetchImpl, resolve } = resolverOf(async () => ok(jwksOf(pair)))
     await resolve(fetchImpl)(pair.kid)
-    expect(fetchImpl.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal)
+    expect(fetchImpl.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal)
   })
 
   it('refuses an oversized body, and never puts the URL in the error', async () => {
     const big = { keys: [], pad: 'x'.repeat(100_001) }
-    const failures: ((...a: any[]) => Promise<Response>)[] = [
+    const failures: ((...a: Parameters<typeof fetch>) => Promise<Response>)[] = [
       async () => ok(big),
       async () => new Response('no', { status: 500 }),
       async () => {

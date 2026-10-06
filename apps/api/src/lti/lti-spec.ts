@@ -115,6 +115,10 @@ export function signJwt(payload: Record<string, unknown>, key: KeyPair): string 
   return `${head}.${body}.${b64url(sig)}`
 }
 
+/** Decoded JWT claims: shape is untrusted until each claim is checked, so values stay loosely typed. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type JwtClaims = Record<string, any>
+
 export interface VerifyOptions {
   issuer: string
   audience: string
@@ -126,11 +130,11 @@ export interface VerifyOptions {
 }
 
 /** Verifies an RS256 JWT's signature, issuer, audience and time window (and nonce if asked). */
-export async function verifyJwt(token: string, opts: VerifyOptions): Promise<Record<string, any>> {
+export async function verifyJwt(token: string, opts: VerifyOptions): Promise<JwtClaims> {
   const parts = token.split('.')
   if (parts.length !== 3) throw new LtiError('Malformed token')
   let header: { alg?: string; kid?: string }
-  let payload: Record<string, any>
+  let payload: JwtClaims
   try {
     header = JSON.parse(fromB64url(parts[0]).toString())
     payload = JSON.parse(fromB64url(parts[1]).toString())

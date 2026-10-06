@@ -18,7 +18,7 @@ function setup(existing: unknown = null) {
     },
     scenario: { findUnique: jest.fn().mockResolvedValue(scenarioRow) },
   }
-  return { prisma, svc: new ResultsService(prisma as any, {} as any) }
+  return { prisma, svc: new ResultsService(prisma as never, {} as never) }
 }
 
 const dto = (over: Partial<CreateResultDto> | Record<string, unknown> = {}): CreateResultDto => ({

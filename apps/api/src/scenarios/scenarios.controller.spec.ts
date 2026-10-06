@@ -5,7 +5,7 @@ describe('GET /scenarios with an LTI token', () => {
   it('is an anonymous viewer: the token never reaches Clerk', async () => {
     const clerk = { verifyBearerToken: jest.fn(), getRole: jest.fn() }
     const service = { findAll: jest.fn(async () => ({ scenarios: [], trackMeta: {} })) }
-    const ctrl = new ScenariosController(service as any, clerk as any, {} as any)
+    const ctrl = new ScenariosController(service as never, clerk as never, {} as never)
     const token = signSession({
       sub: 'u1',
       ref: 'S1',

@@ -42,8 +42,12 @@ describe('parseSessionFromHash', () => {
 })
 
 describe('isLtiPath', () => {
-  it('matches only the LTI play route', () => {
+  it('matches only the LTI play and assessment routes', () => {
     expect(isLtiPath('/lti/play/abc')).toBe(true)
+    expect(isLtiPath('/lti/assessment/d1')).toBe(true)
+    expect(isLtiPath('/lti/assessment/')).toBe(false)
+    expect(isLtiPath('/lti/other/d1')).toBe(false)
+    expect(isLtiPath('/tools/assessments/attempt/a1')).toBe(false)
     expect(isLtiPath('/scenario/abc/play')).toBe(false)
     expect(isLtiPath('/lti/play/')).toBe(false)
     expect(isLtiPath('/dashboard')).toBe(false)
@@ -63,6 +67,8 @@ describe('captureLtiSession', () => {
     expect(replaceState).toHaveBeenCalledWith(null, '', '/lti/play/s1')
     expect(getLtiToken()).toBe(TOKEN)
     expect(isLtiSession('/lti/play/s1')).toBe(true)
+    expect(isLtiSession('/lti/assessment/d1')).toBe(true)
+    expect(isLtiSession('/tools/assessments/attempt/a1')).toBe(false)
     expect(isLtiSession('/dashboard')).toBe(false)
   })
 

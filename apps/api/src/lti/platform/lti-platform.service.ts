@@ -28,7 +28,7 @@ import {
   signJwt,
   verifyJwt,
 } from '../lti-spec'
-import type { KeyPair, ToolRegistration } from '../lti-spec'
+import type { JwtClaims, KeyPair, ToolRegistration } from '../lti-spec'
 import {
   apiBase,
   learnUrl,
@@ -249,7 +249,7 @@ export class LtiPlatformService {
         [CLAIM.resourceLink]: { id: hint.itemId },
         [CLAIM.context]: { id: hint.cohortId },
         [CLAIM.roles]: [LEARNER_ROLE],
-        [CLAIM.custom]: { ref },
+        [CLAIM.custom]: { ref, tool: itemTool.toolId },
         [CLAIM.launchPresentation]: {
           document_target: 'window',
           return_url: `${learnUrl()}/lms/learning/${hint.cohortId}/${hint.itemId}`,
@@ -311,7 +311,7 @@ export class LtiPlatformService {
     const registered = tool as ToolRegistration
 
     const reg = platformRegistration()
-    let payload: Record<string, any>
+    let payload: JwtClaims
     try {
       payload = await verifyJwt(assertion, {
         issuer: registered.clientId,
@@ -376,7 +376,7 @@ export class LtiPlatformService {
     const aud = decodePayload(token)?.aud
     const tool = registeredTools().find((t) => t.clientId === aud)
     if (!tool) throw new HttpException('Invalid token', 401)
-    let payload: Record<string, any>
+    let payload: JwtClaims
     try {
       payload = await verifyJwt(token, {
         issuer: platformRegistration().issuer,
@@ -402,7 +402,8 @@ export class LtiPlatformService {
   ): Promise<{ recorded: true }> {
     const client = await this.clientOf(authorization)
     const { tool } = await this.toolItem(cohortId, itemId)
-    if (tool.toolId !== client.toolId) throw new HttpException('Token is not for this tool', 403)
+    if (tool.clientId !== client.clientId)
+      throw new HttpException('Token is not for this tool', 403)
 
     const s = (body ?? {}) as Record<string, unknown>
     if (typeof s.userId !== 'string' || !s.userId)
@@ -437,7 +438,7 @@ export class LtiPlatformService {
 }
 
 /** A JWT's claims without checking anything; used only to pick which key and client to verify with. */
-function decodePayload(token: string): Record<string, any> | undefined {
+function decodePayload(token: string): JwtClaims | undefined {
   try {
     return JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8'))
   } catch {

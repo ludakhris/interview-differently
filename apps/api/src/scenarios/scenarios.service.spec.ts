@@ -2,7 +2,7 @@ import { NotFoundException } from '@nestjs/common'
 import { ScenariosService } from './scenarios.service'
 
 const svc = (row: unknown) =>
-  new ScenariosService({ scenario: { findUnique: jest.fn().mockResolvedValue(row) } } as any)
+  new ScenariosService({ scenario: { findUnique: jest.fn().mockResolvedValue(row) } } as never)
 
 describe('ScenariosService.findForLti', () => {
   it('returns a published scenario of any owner', async () => {

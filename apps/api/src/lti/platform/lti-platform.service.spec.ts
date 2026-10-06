@@ -229,6 +229,25 @@ describe('startLaunch', () => {
   })
 })
 
+describe('auth for an assessment item', () => {
+  it('puts the tool id and the assessment slug in the custom claim', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue({
+      id: 'i1',
+      type: 'tool',
+      config: { toolId: 'id-assessment', ref: 'cna-pre' },
+      module: { courseId: 'c1' },
+    })
+    const html = await service.authenticate(await authParams())
+    const claims = await verifyJwt(field(html, 'id_token'), {
+      issuer: reg.issuer,
+      audience: tool.clientId,
+      nonce: 'n1',
+      keyFor: async () => service.jwks().keys[0],
+    })
+    expect(claims[CLAIM.custom]).toEqual({ ref: 'cna-pre', tool: 'id-assessment' })
+  })
+})
+
 describe('auth', () => {
   it('replies with a form posting a signed id_token and the state back to the launch URL', async () => {
     const html = await service.authenticate(await authParams())
@@ -249,7 +268,7 @@ describe('auth', () => {
     expect(claims[CLAIM.resourceLink]).toEqual({ id: 'i1' })
     expect(claims[CLAIM.context]).toEqual({ id: 'k1' })
     expect(claims[CLAIM.roles]).toEqual([LEARNER_ROLE])
-    expect(claims[CLAIM.custom]).toEqual({ ref: 'cna-interview' })
+    expect(claims[CLAIM.custom]).toEqual({ ref: 'cna-interview', tool: 'id-interview' })
     expect(claims[CLAIM.launchPresentation]).toEqual({
       document_target: 'window',
       return_url: 'http://learn.test/lms/learning/k1/i1',
@@ -571,6 +590,16 @@ describe('scores', () => {
     })
     await reject(service.receiveScore(await bearer(), 'k1', 'i1', score()), 409)
     expect(learner.recordToolResult).not.toHaveBeenCalled()
+  })
+
+  it('accepts a score for an assessment item launched by the shared client', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue({
+      type: 'tool',
+      config: { toolId: 'id-assessment', ref: 'cna-pre' },
+      module: { courseId: 'c1' },
+    })
+    await service.receiveScore(await bearer(), 'k1', 'i1', score())
+    expect(learner.recordToolResult).toHaveBeenCalled()
   })
 
   it('rejects the wrong cohort or item', async () => {

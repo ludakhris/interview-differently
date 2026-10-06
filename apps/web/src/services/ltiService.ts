@@ -37,6 +37,39 @@ export async function completeLtiInterview(
   return data
 }
 
+export type AssessmentHandoff = { ok: true; returnUrl: string | null } | { ok: false }
+
+/**
+ * Reads the answer to an assessment hand-back. 409 means the score was already sent: success, with
+ * a return link only if the body has one. A return link must be http(s); anything else is dropped.
+ */
+export function interpretAssessmentComplete(status: number, body: unknown): AssessmentHandoff {
+  if (status !== 200 && status !== 201 && status !== 409) return { ok: false }
+  const raw = (body as { returnUrl?: unknown } | null)?.returnUrl
+  let returnUrl: string | null = null
+  if (typeof raw === 'string') {
+    try {
+      const u = new URL(raw)
+      if (u.protocol === 'https:' || u.protocol === 'http:') returnUrl = raw
+    } catch {
+      // not a URL — treated as absent
+    }
+  }
+  if (status !== 409 && !returnUrl) return { ok: false }
+  return { ok: true, returnUrl }
+}
+
+/** Sends a graded assessment attempt's score to LearnDifferently. Safe to repeat (409 = already sent). */
+export async function completeLtiAssessment(attemptId: string): Promise<AssessmentHandoff> {
+  const res = await fetch(`${API_URL}/api/lti/tool/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify({ attemptId }),
+  })
+  const body: unknown = await res.json().catch(() => null)
+  return interpretAssessmentComplete(res.status, body)
+}
+
 /** What the API knows about this launch: the tenant's brand tokens (unvalidated) and a reference. */
 export interface LtiToolSession {
   brand: Brand | null

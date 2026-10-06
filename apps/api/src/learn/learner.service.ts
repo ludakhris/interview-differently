@@ -24,7 +24,7 @@ import { gradeQuiz, publicQuestions } from './grade-quiz'
 import { averageScore, DEFAULT_ATTEMPTS, MAX_ANSWER_CHARS } from './interview-scoring'
 import { InterviewScoringService } from './interview-scoring.service'
 import { parseExternalLink } from './external-link'
-import { toolById } from '../lti/platform/lti-platform-config'
+import { isInterviewLike, toolById } from '../lti/platform/lti-platform-config'
 import { imageUrl, isImageKey } from './item-image'
 import { doneSince, parseSkills, remediationOf, reviewOf, skillResults } from './skills'
 import { isVideoId, VIDEO_COMPLETE_PCT } from './youtube'
@@ -376,7 +376,12 @@ export class LearnerService {
     const registered = item.type === 'tool' ? toolById(config.toolId) : undefined
     const tool: LearnerItem['tool'] =
       registered && typeof config.ref === 'string'
-        ? { toolId: registered.toolId, name: registered.name, ref: config.ref }
+        ? {
+            toolId: registered.toolId,
+            name: registered.name,
+            ref: config.ref,
+            retries: registered.retries,
+          }
         : null
     return {
       id: item.id,
@@ -753,7 +758,8 @@ export class LearnerService {
 
   /**
    * A learner completes the course when every lesson, knowledge check and
-   * assessment is done. Practice interviews and connected tools (an interview in
+   * assessment is done, including a connected tool labelled pre or post (an assessment in
+   * Interview Differently). Practice interviews and unlabelled connected tools (an interview in
    * Interview Differently) are practice and do not hold completion back.
    */
   private async completeIfDone(
@@ -773,7 +779,7 @@ export class LearnerService {
     // (a review) must be done in the outline and again since it was added to the plan.
     const outline = modules
       .flatMap((m) => m.items)
-      .filter((i) => i.type !== 'interview' && i.type !== 'tool' && !remediationOf(i.config))
+      .filter((i) => !isInterviewLike(i) && !remediationOf(i.config))
       .map((i) => i.id)
     const finished = await this.prisma.itemProgress.findMany({
       where: {
@@ -835,7 +841,7 @@ export function buildRecord(
   }
   const pre = scoreOf((i) => i.label === 'pre')
   const post = scoreOf((i) => i.label === 'post')
-  const interviewBest = scoreOf((i) => i.type === 'interview' || i.type === 'tool')
+  const interviewBest = scoreOf(isInterviewLike)
   return {
     pre,
     post,

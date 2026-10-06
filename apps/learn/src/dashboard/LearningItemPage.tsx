@@ -6,6 +6,7 @@ import { useApp } from './app-context'
 import { score } from './format'
 import { LEARNER_TYPE_LABEL } from './ItemEditor'
 import { errorNotice } from './shared'
+import { toolCopy } from './toolKinds'
 
 /** Plain text with blank-line paragraphs and "- " bullets. */
 function RichText({ text }: { text: string }) {
@@ -575,18 +576,17 @@ function ToolItem(props: {
   }
 
   const completed = item.status === 'completed'
+  const copy = toolCopy(tool)
   return (
     <article className="dash-card dash-lesson">
       {completed ? (
         <p className="dash-muted">
           {item.score !== null && `Your best score: ${score(item.score)}. `}
-          {`Attempts: ${item.attempts}.`} <span className="dash-chip dash-chip-on">Completed</span>
+          {tool.retries && `Attempts: ${item.attempts}. `}
+          <span className="dash-chip dash-chip-on">Completed</span>
         </p>
       ) : (
-        <p>
-          This activity runs in <strong>{tool.name}</strong>. You will go there, then come back here
-          with your score.
-        </p>
+        <p>{copy.intro}</p>
       )}
       {error && <p className="dash-error">{error}</p>}
       <Actions>
@@ -595,14 +595,16 @@ function ToolItem(props: {
             <a className="dash-btn" href={props.nextHref}>
               {props.nextLabel}
             </a>
-            <button
-              type="button"
-              className="dash-btn-secondary"
-              onClick={open}
-              disabled={busy || !!item.locked}
-            >
-              {busy ? 'Opening…' : 'Try again'}
-            </button>
+            {tool.retries && (
+              <button
+                type="button"
+                className="dash-btn-secondary"
+                onClick={open}
+                disabled={busy || !!item.locked}
+              >
+                {busy ? 'Opening…' : 'Try again'}
+              </button>
+            )}
           </>
         ) : (
           <button
@@ -611,7 +613,7 @@ function ToolItem(props: {
             onClick={open}
             disabled={busy || !!item.locked}
           >
-            {busy ? 'Opening…' : `Start in ${tool.name}`}
+            {busy ? 'Opening…' : copy.start}
           </button>
         )}
       </Actions>

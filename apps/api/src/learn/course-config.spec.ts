@@ -364,4 +364,41 @@ describe('tool items', () => {
       validateItemInput({ ...base, config: { ...base.config, remediationFor: 'comms' } }).config
     ).toEqual({ toolId: 'id-interview', ref: 'cna' })
   })
+
+  describe('assessment tool', () => {
+    const assess = {
+      type: 'tool',
+      title: 'Pre',
+      config: { toolId: 'id-assessment', ref: 'cna-pre' },
+    }
+
+    it('keeps a pre or post label, or none', () => {
+      expect(validateItemInput({ ...assess, label: 'pre' })).toMatchObject({ label: 'pre' })
+      expect(validateItemInput({ ...assess, label: 'post' })).toMatchObject({ label: 'post' })
+      expect(validateItemInput(assess)).toMatchObject({ label: null })
+      expect(validateItemInput({ ...assess, label: null })).toMatchObject({ label: null })
+    })
+
+    it('rejects an unknown label and still requires a reference', () => {
+      expect(() => validateItemInput({ ...assess, label: 'mid' })).toThrow('pre, post')
+      expect(() =>
+        validateItemInput({ ...assess, label: 'pre', config: { toolId: 'id-assessment' } })
+      ).toThrow('required')
+    })
+
+    it('cannot be remediation content', () => {
+      expect(
+        validateItemInput({
+          ...assess,
+          label: 'pre',
+          config: { ...assess.config, remediationFor: 'comms' },
+        }).config
+      ).toEqual({ toolId: 'id-assessment', ref: 'cna-pre' })
+    })
+
+    it('refuses a label on a tool that is not labelable', () => {
+      expect(() => validateItemInput({ ...base, label: 'pre' })).toThrow('cannot be a pre or post')
+      expect(validateItemInput({ ...base, label: null })).toMatchObject({ label: null })
+    })
+  })
 })
