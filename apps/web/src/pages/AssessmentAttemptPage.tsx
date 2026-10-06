@@ -208,7 +208,7 @@ export function AssessmentAttemptPage({
     <div className="min-h-screen bg-surface flex flex-col">
       {ltiMode ? (
         <LtiNav
-          trackLabel={paper.label}
+          trackLabel="Assessment"
           stepLabel={`Section ${sectionIx + 1} of ${paper.sections.length}`}
         />
       ) : (
