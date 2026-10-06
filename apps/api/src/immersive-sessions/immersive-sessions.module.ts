@@ -3,10 +3,11 @@ import { ImmersiveSessionsController } from './immersive-sessions.controller'
 import { ImmersiveSessionsService } from './immersive-sessions.service'
 import { ImmersiveFeedbackService } from './immersive-feedback.service'
 import { TranscriptionService } from '../transcription/transcription.service'
+import { LtiStoreModule } from '../lti/lti-store.module'
 import { StorageModule } from '../storage/storage.module'
 
 @Module({
-  imports: [StorageModule],
+  imports: [StorageModule, LtiStoreModule],
   controllers: [ImmersiveSessionsController],
   providers: [ImmersiveSessionsService, ImmersiveFeedbackService, TranscriptionService],
 })

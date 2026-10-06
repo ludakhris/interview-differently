@@ -164,7 +164,7 @@ export class LtiToolService {
 
   /**
    * Verifies the launch and returns the typed interview page, or `{ redirect }` to the web app
-   * for a scenario that is played there (anything not immersive). `cookieState` is the `lti_state` cookie the
+   * for a scenario that is played there (text, or immersive with an interviewer persona). `cookieState` is the `lti_state` cookie the
    * login set: it must equal the posted state, so only the browser that started the login can finish it.
    */
   async launch(
@@ -205,7 +205,7 @@ export class LtiToolService {
     const row = await this.prisma.scenario.findUnique({ where: { scenarioId: ref } })
     if (!row || row.status !== 'published') throw new LtiError('Interview not found', 404)
     const sessionReturn = safeReturnUrl(claims[CLAIM.launchPresentation]?.return_url)
-    if ((row.data as { mode?: unknown } | null)?.mode !== 'immersive') {
+    if (!isTypedPlaceholder(row.data)) {
       const token = signSession({
         sub: claims.sub,
         ref,
@@ -407,6 +407,100 @@ export class LtiToolService {
     }
   }
 
+  /**
+   * Scores a finished immersive (voice) play and posts it to the session's lineitem. Nothing comes
+   * from the client but the session id: the answers are the stored transcripts, scored here, and the
+   * question for each is the scenario's own prompt for the node the response was recorded against.
+   * Single use per LTI session and per immersive session; a failed score or post can be retried.
+   */
+  async completeImmersive(
+    session: LtiSession,
+    sessionId: unknown
+  ): Promise<{ score: number; returnUrl: string }> {
+    if (typeof sessionId !== 'string' || !sessionId) throw new LtiError('Missing sessionId')
+    await this.limit('tool-complete', session.sub, COMPLETE_PER_MINUTE_PER_LEARNER)
+    const row = await this.prisma.immersiveSession.findUnique({
+      where: { id: sessionId },
+      include: { responses: { orderBy: { createdAt: 'asc' } } },
+    })
+    if (!row || row.userId !== session.sub || row.scenarioId !== session.ref) {
+      throw new LtiError('Session not found', 404)
+    }
+    if (row.status !== 'active') {
+      throw new LtiError('This interview was already completed. Relaunch it from your course.', 409)
+    }
+    // a session created before the LTI session began cannot be the work done in it
+    if (row.createdAt.getTime() < session.iat * 1000 - RESULT_CLOCK_SKEW_MS) {
+      throw new LtiError('This interview was not started in this session', 400)
+    }
+    const scenario = await this.prisma.scenario.findUnique({ where: { scenarioId: session.ref } })
+    const interview = scenario ? interviewOf(scenario.data) : undefined
+    const prompts = scenario ? promptNodes(scenario.data) : []
+    if (
+      !scenario ||
+      !interview ||
+      prompts.length === 0 ||
+      prompts.length !== interview.questions.length
+    ) {
+      throw new LtiError('Interview not found', 404)
+    }
+    // the latest response per question node, in the scenario's order
+    const latest = new Map<string, { questionText: string; transcript: string | null }>()
+    for (const r of row.responses) latest.set(r.nodeId, r)
+    const answers: string[] = []
+    for (const p of prompts) {
+      const r = latest.get(p.nodeId)
+      if (!r) throw new LtiError('Answer every question before finishing', 400)
+      const transcript = (r.transcript ?? '').trim()
+      if (!transcript) {
+        throw new LtiError('Your answers are still being transcribed. Try again in a moment.', 422)
+      }
+      answers.push(transcript.slice(0, MAX_ANSWER_CHARS))
+    }
+    if (!(await this.store.claim('lti-complete', session.jti, IN_FLIGHT_TTL_S))) {
+      throw new LtiError('This score was already sent. Relaunch it from your course.', 409)
+    }
+    const resultKey = `immersive:${sessionId}`
+    let posted = false
+    let resultClaimed = false
+    try {
+      // one interview is sent once, whichever LTI session it comes from
+      resultClaimed = await this.store.claim('lti-result', resultKey, RESULT_TTL_S)
+      if (!resultClaimed) throw new LtiError('This interview was already sent.', 409)
+      let scored: ScoredAnswer[]
+      try {
+        if (!useStubScoring() && !process.env.ANTHROPIC_API_KEY) {
+          throw new LtiError('Interview scoring is not set up on this server.', 502)
+        }
+        scored = await this.score(
+          { ...interview, questions: prompts.map((p) => p.prompt) },
+          answers
+        )
+      } catch (err) {
+        if (err instanceof LtiError) throw err
+        throw new LtiError('Your answers could not be scored right now. Please try again.', 502)
+      }
+      const score = averageScore(scored)
+      try {
+        await this.postScore(session, score, this.dimensionAverages(scored))
+      } catch {
+        throw new LtiError('The score could not be sent to your course. Please try again.', 502)
+      }
+      posted = true
+      const ttl = Math.max(1, Math.ceil(session.exp - this.now() / 1000) + 60)
+      await this.store.put('lti-complete', session.jti, true, ttl)
+      await this.prisma.immersiveSession
+        .update({ where: { id: sessionId }, data: { status: 'completed' } })
+        .catch(() => undefined) // the score is sent and both claims hold; the status is bookkeeping
+      return { score, returnUrl: session.returnUrl ?? returnUrl() }
+    } finally {
+      if (!posted) {
+        await this.store.release('lti-complete', session.jti)
+        if (resultClaimed) await this.store.release('lti-result', resultKey)
+      }
+    }
+  }
+
   private async postScore(
     claims: Pick<SubmissionClaims, 'sub' | 'lineitem'>,
     score: number,
@@ -485,6 +579,35 @@ export class LtiToolService {
     claims.returnUrl = safeReturnUrl(claims.returnUrl)
     return claims
   }
+}
+
+/**
+ * An immersive scenario without an interviewer persona is a typed placeholder made for LMS demos,
+ * served by the tool's own page. Everything else (text, or immersive with a persona) is played in
+ * the web app.
+ */
+function isTypedPlaceholder(data: unknown): boolean {
+  const d = data as {
+    mode?: unknown
+    interviewer?: { presenterId?: unknown; voiceId?: unknown }
+  } | null
+  if (d?.mode !== 'immersive') return false
+  return !(
+    typeof d.interviewer?.presenterId === 'string' &&
+    d.interviewer.presenterId &&
+    typeof d.interviewer.voiceId === 'string' &&
+    d.interviewer.voiceId
+  )
+}
+
+/** The scenario nodes that ask a question, in order (the same filter as `interviewOf`). */
+function promptNodes(data: unknown): { nodeId: string; prompt: string }[] {
+  const nodes = (data as { nodes?: { nodeId?: unknown; responsePrompt?: unknown }[] } | null)?.nodes
+  return (Array.isArray(nodes) ? nodes : []).flatMap((n) =>
+    typeof n?.responsePrompt === 'string' && n.responsePrompt.trim() && typeof n.nodeId === 'string'
+      ? [{ nodeId: n.nodeId, prompt: n.responsePrompt.trim() }]
+      : []
+  )
 }
 
 function sameOrigin(url: string, issuer: string): boolean {

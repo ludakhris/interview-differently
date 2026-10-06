@@ -18,3 +18,20 @@ export async function completeLtiAttempt(
   }
   return data
 }
+
+/** Scores a finished immersive interview (from its stored transcripts, on the server) and posts it. */
+export async function completeLtiInterview(
+  sessionId: string
+): Promise<{ score: number; returnUrl: string }> {
+  const res = await fetch(`${API_URL}/api/lti/tool/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify({ sessionId }),
+  })
+  if (!res.ok) throw new Error(`Score hand-back failed: ${res.status}`)
+  const data = (await res.json()) as { score: number; returnUrl: string }
+  if (typeof data.returnUrl !== 'string' || !data.returnUrl) {
+    throw new Error('Score hand-back returned no return link')
+  }
+  return data
+}

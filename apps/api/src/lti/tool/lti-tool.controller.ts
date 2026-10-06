@@ -75,12 +75,19 @@ export class LtiToolController {
     })
   }
 
-  /** Posts the score of a finished text-scenario play; the LTI session is the credential. */
+  /**
+   * Posts the score of a finished play; the LTI session is the credential. `{resultId}` is a text
+   * scenario's stored result, `{sessionId}` an immersive (voice) interview scored here.
+   */
   @Post('complete')
   @UseGuards(LtiOnlyGuard)
   async complete(@Req() req: LtiRequest, @Body() b: unknown) {
     try {
-      return await this.tool.complete({ ...req.lti!, sub: req.userId! }, strings(b).resultId)
+      const session = { ...req.lti!, sub: req.userId! }
+      const p = strings(b)
+      return p.sessionId !== undefined
+        ? await this.tool.completeImmersive(session, p.sessionId)
+        : await this.tool.complete(session, p.resultId)
     } catch (err) {
       if (err instanceof LtiError) throw new HttpException(err.message, err.status)
       throw err

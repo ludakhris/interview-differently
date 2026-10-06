@@ -26,7 +26,7 @@ const bodyScenario: Allow = (s, req) => req.body?.scenarioId === s.ref
  * Everything an LTI session may reach, by method and path (without the /api prefix). Each entry
  * is matched against the whole path, then its `allow` check (if any) must pass for the session's
  * ref. Anything not listed is refused, so a new endpoint is never reachable with an LTI token by
- * accident. Ownership of a result is checked by the controller.
+ * accident. Ownership of a result or immersive session is checked by the controller.
  */
 const ALLOWED: { method: string; path: RegExp; allow?: Allow }[] = [
   { method: 'GET', path: /^\/scenarios\/[^/]+$/, allow: (s, req) => idOf(req) === s.ref },
@@ -43,6 +43,13 @@ const ALLOWED: { method: string; path: RegExp; allow?: Allow }[] = [
     },
   },
   { method: 'GET', path: /^\/results\/[^/]+$/ },
+  // immersive (voice) interview: create a session for the launched ref and, for a session, upload
+  // answers and read it back. The controller checks the session belongs to the learner and the ref.
+  { method: 'POST', path: /^\/immersive-sessions$/, allow: bodyScenario },
+  { method: 'POST', path: /^\/immersive-sessions\/[^/]+\/responses$/ },
+  { method: 'GET', path: /^\/immersive-sessions\/[^/]+$/ },
+  { method: 'GET', path: /^\/immersive-sessions\/[^/]+\/responses\/[^/]+$/ },
+  { method: 'GET', path: /^\/immersive-sessions\/[^/]+\/responses\/[^/]+\/media-url$/ },
   { method: 'POST', path: /^\/lti\/tool\/complete$/ },
 ]
 

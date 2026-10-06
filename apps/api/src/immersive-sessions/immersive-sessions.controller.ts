@@ -7,6 +7,8 @@ import {
   HttpCode,
   HttpException,
   HttpStatus,
+  ForbiddenException,
+  Inject,
   NotFoundException,
   Req,
   UploadedFile,
@@ -17,8 +19,13 @@ import { FileInterceptor } from '@nestjs/platform-express'
 import { ImmersiveSessionsService } from './immersive-sessions.service'
 import { TranscriptionService } from '../transcription/transcription.service'
 import { ClerkService } from '../auth/clerk.service'
-import { AuthenticatedGuard } from '../auth/authenticated.guard'
+import { LTI_STORE, type LtiStore } from '../lti/lti-store'
+import { AuthenticatedOrLtiGuard, type LtiRequest } from '../lti/tool/lti-session.guard'
 import { assertOwnerOrAdmin, type AuthedRequest } from '../auth/owner'
+
+type Req = AuthedRequest & Pick<LtiRequest, 'lti'>
+
+const LTI_WRITES_PER_MINUTE = 20
 
 interface CreateSessionDto {
   scenarioId: string
@@ -26,20 +33,30 @@ interface CreateSessionDto {
 
 /**
  * Immersive (avatar) sessions. Signed-in only; sessions are created for
- * the caller and every read/write on a session is own-or-admin (#27).
+ * the caller and every read/write on a session is own-or-admin (#27). An LTI session (#63) is
+ * limited by the guard to the routes the player needs and, here, to its own sessions of its ref.
  */
 @Controller('immersive-sessions')
-@UseGuards(AuthenticatedGuard)
+@UseGuards(AuthenticatedOrLtiGuard)
 export class ImmersiveSessionsController {
   constructor(
     private readonly service: ImmersiveSessionsService,
     private readonly transcription: TranscriptionService,
-    private readonly clerk: ClerkService
+    private readonly clerk: ClerkService,
+    @Inject(LTI_STORE) private readonly store: LtiStore
   ) {}
+
+  /** An LTI session may write at most 20 a minute per route; 429 over that. */
+  private async limit(req: Req, scope: string) {
+    if (!req.lti) return
+    if ((await this.store.count(`rl:${scope}`, req.userId, 60)) > LTI_WRITES_PER_MINUTE)
+      throw new HttpException('Too many requests. Wait a minute and try again.', 429)
+  }
 
   @Post()
   @HttpCode(201)
-  createSession(@Req() req: AuthedRequest, @Body() dto: CreateSessionDto) {
+  async createSession(@Req() req: Req, @Body() dto: CreateSessionDto) {
+    await this.limit(req, 'immersive-create')
     return this.service.createSession(dto.scenarioId, req.userId)
   }
 
@@ -50,7 +67,7 @@ export class ImmersiveSessionsController {
   }
 
   @Get(':sessionId')
-  async getSession(@Req() req: AuthedRequest, @Param('sessionId') sessionId: string) {
+  async getSession(@Req() req: Req, @Param('sessionId') sessionId: string) {
     await this.assertSession(req, sessionId)
     try {
       return await this.service.getSession(sessionId)
@@ -64,12 +81,13 @@ export class ImmersiveSessionsController {
   @HttpCode(201)
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 25 * 1024 * 1024 } }))
   async createResponse(
-    @Req() req: AuthedRequest,
+    @Req() req: Req,
     @Param('sessionId') sessionId: string,
     @Body() body: Record<string, string>,
     @UploadedFile() file?: Express.Multer.File
   ) {
     await this.assertSession(req, sessionId)
+    await this.limit(req, 'immersive-response')
     try {
       // Save immediately so the frontend can navigate without waiting for Whisper
       const response = await this.service.createResponse(
@@ -114,7 +132,7 @@ export class ImmersiveSessionsController {
   /** Time-limited signed URL for playing back a candidate's recorded response. */
   @Get(':sessionId/responses/:responseId/media-url')
   async getResponseMediaUrl(
-    @Req() req: AuthedRequest,
+    @Req() req: Req,
     @Param('sessionId') sessionId: string,
     @Param('responseId') responseId: string
   ) {
@@ -129,7 +147,7 @@ export class ImmersiveSessionsController {
 
   @Get(':sessionId/responses/:responseId')
   async getResponse(
-    @Req() req: AuthedRequest,
+    @Req() req: Req,
     @Param('sessionId') sessionId: string,
     @Param('responseId') responseId: string
   ) {
@@ -143,7 +161,7 @@ export class ImmersiveSessionsController {
   }
 
   @Get(':sessionId/summary')
-  async getSessionSummary(@Req() req: AuthedRequest, @Param('sessionId') sessionId: string) {
+  async getSessionSummary(@Req() req: Req, @Param('sessionId') sessionId: string) {
     await this.assertSession(req, sessionId)
     try {
       return await this.service.getSessionSummary(sessionId)
@@ -153,8 +171,18 @@ export class ImmersiveSessionsController {
     }
   }
 
-  /** 404 for unknown sessions, 403 unless the caller owns it or is a full admin. */
-  private async assertSession(req: AuthedRequest, sessionId: string): Promise<void> {
+  /**
+   * 404 for unknown sessions, 403 unless the caller owns it or is a full admin. An LTI session
+   * has no admin override: it must own the session and the session must be for its ref.
+   */
+  private async assertSession(req: Req, sessionId: string): Promise<void> {
+    if (req.lti) {
+      const found = await this.service.getSessionRef(sessionId)
+      if (!found) throw new NotFoundException(`Session ${sessionId} not found`)
+      if (found.userId !== req.userId || found.scenarioId !== req.lti.ref)
+        throw new ForbiddenException('Not authorised to access this record')
+      return
+    }
     const ownerUserId = await this.service.getSessionOwner(sessionId)
     if (!ownerUserId) throw new NotFoundException(`Session ${sessionId} not found`)
     await assertOwnerOrAdmin(this.clerk, req, ownerUserId)

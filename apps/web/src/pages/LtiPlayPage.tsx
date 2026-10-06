@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { BriefingPage } from '@/pages/BriefingPage'
 import { SimulationPage } from '@/pages/SimulationPage'
+import { ImmersiveSimulationPage } from '@/pages/ImmersiveSimulationPage'
+import { useScenario } from '@/hooks/useScenarios'
+import { isVoiceInterview } from '@/lib/immersiveLti'
 import { captureLtiSession } from '@/services/ltiSession'
 
 /**
@@ -13,6 +16,7 @@ export function LtiPlayPage() {
   // Runs before any child renders so their first fetches already carry the token.
   const [token] = useState(() => captureLtiSession())
   const [started, setStarted] = useState(false)
+  const { scenario } = useScenario(token ? scenarioId : undefined)
 
   if (!token || !scenarioId) {
     return (
@@ -24,8 +28,22 @@ export function LtiPlayPage() {
     )
   }
 
+  if (started && !scenario) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <p className="text-slate-mid text-[14px]">Loading...</p>
+      </div>
+    )
+  }
+
+  // a voice interview has its own player; every other scenario is the text simulation
+  const voice = scenario ? isVoiceInterview(scenario) : false
   return started ? (
-    <SimulationPage ltiMode />
+    voice ? (
+      <ImmersiveSimulationPage ltiMode />
+    ) : (
+      <SimulationPage ltiMode />
+    )
   ) : (
     <BriefingPage ltiMode onBegin={() => setStarted(true)} />
   )

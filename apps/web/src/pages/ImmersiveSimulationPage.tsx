@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
+import { LtiNav } from '@/components/LtiNav'
 import { ContextPanel } from '@/components/ContextPanel'
 import { MetricChart } from '@/components/MetricChart'
 import { ScenarioSidebar } from '@/components/ScenarioSidebar'
@@ -10,12 +11,22 @@ import { PrerenderedAvatarPlayer } from '@/components/immersive/PrerenderedAvata
 import { ResponseRecorder, type RecordingResult } from '@/components/immersive/ResponseRecorder'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import { useNarration } from '@/hooks/useNarration'
-import { createImmersiveSession, submitImmersiveResponse } from '@/services/immersiveService'
+import {
+  createImmersiveSession,
+  fetchImmersiveSession,
+  submitImmersiveResponse,
+} from '@/services/immersiveService'
+import { completeLtiInterview } from '@/services/ltiService'
+import { transcriptsReady } from '@/lib/immersiveLti'
 import { listScenarioMedia } from '@/services/scenarioMediaService'
 import type { ScenarioMediaAsset, ScenarioNode } from '@id/types'
 
 type NarrationMode = 'voice' | 'avatar'
-type PageState = 'loading' | 'narrating' | 'responding' | 'submitting' | 'complete'
+type PageState = 'loading' | 'narrating' | 'responding' | 'submitting' | 'complete' | 'error'
+
+/** How long to wait for the answers to be transcribed before asking the learner to retry. */
+const TRANSCRIPT_WAIT_MS = 90_000
+const TRANSCRIPT_POLL_MS = 2_000
 
 const contextSectionLabel: Record<string, string> = {
   monitor: 'Live Metrics',
@@ -23,7 +34,13 @@ const contextSectionLabel: Record<string, string> = {
   finding: 'Security Finding',
 }
 
-export function ImmersiveSimulationPage() {
+/**
+ * `ltiMode` (set by /lti/play/:scenarioId for a learner launched from LearnDifferently): no Clerk
+ * session, the interview is always voice (browser speech, no avatar clips needed), every question
+ * must be answered, nothing links to other pages, and on the last answer the score is requested
+ * from the server (which scores the transcripts) and the browser returns to the course.
+ */
+export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean } = {}) {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -33,7 +50,7 @@ export function ImmersiveSimulationPage() {
   const narration = useNarration()
 
   const [narrationMode] = useState<NarrationMode>(
-    searchParams.get('mode') === 'avatar' ? 'avatar' : 'voice'
+    !ltiMode && searchParams.get('mode') === 'avatar' ? 'avatar' : 'voice'
   )
 
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -41,6 +58,10 @@ export function ImmersiveSimulationPage() {
   const [pageState, setPageState] = useState<PageState>('loading')
   const [mediaAssets, setMediaAssets] = useState<ScenarioMediaAsset[] | null>(null)
   const sessionCreatedRef = useRef(false)
+  // LTI only: what went wrong, and a counter that remounts the recorder after a failed upload
+  const [ltiError, setLtiError] = useState<string | null>(null)
+  const [recorderKey, setRecorderKey] = useState(0)
+  const [finishing, setFinishing] = useState(false)
 
   const decisionNodes: ScenarioNode[] = (scenario?.nodes ?? []).filter(
     (n) => n.type === 'decision' && n.responsePrompt
@@ -61,10 +82,10 @@ export function ImmersiveSimulationPage() {
 
   // Redirect non-immersive scenarios back to normal play
   useEffect(() => {
-    if (!isLoading && scenario && scenario.mode !== 'immersive') {
+    if (!ltiMode && !isLoading && scenario && scenario.mode !== 'immersive') {
       navigate(`/scenario/${scenarioId}/play`, { replace: true })
     }
-  }, [isLoading, scenario, scenarioId, navigate])
+  }, [ltiMode, isLoading, scenario, scenarioId, navigate])
 
   // Hydrate pre-rendered avatar clips for this scenario (avatar mode only).
   useEffect(() => {
@@ -75,18 +96,29 @@ export function ImmersiveSimulationPage() {
   }, [scenarioId, narrationMode])
 
   // Create the session once auth is loaded, then show mode selection
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn || !scenarioId || sessionCreatedRef.current) return
-    if (!userId) return
-    sessionCreatedRef.current = true
-
-    createImmersiveSession(scenarioId, userId)
+  const startSession = useCallback(() => {
+    if (!scenarioId) return
+    createImmersiveSession(scenarioId, userId ?? 'lti')
       .then((session) => {
         setSessionId(session.id)
         setPageState('narrating')
       })
-      .catch(() => setPageState('narrating')) // gracefully continue without session
-  }, [isLoaded, isSignedIn, userId, scenarioId])
+      .catch(() => {
+        if (ltiMode) {
+          // answers cannot be saved without a session, so never carry on without one
+          setLtiError('We could not start your interview. Check your connection and try again.')
+          setPageState('error')
+        } else setPageState('narrating') // gracefully continue without session
+      })
+  }, [scenarioId, userId, ltiMode])
+
+  useEffect(() => {
+    if (!ltiMode && (!isLoaded || !isSignedIn)) return
+    if (!scenarioId || sessionCreatedRef.current) return
+    if (!ltiMode && !userId) return
+    sessionCreatedRef.current = true
+    startSession()
+  }, [ltiMode, isLoaded, isSignedIn, userId, scenarioId, startSession])
 
   // Auto-play narration when we enter 'narrating' state for a new node.
   // Avatar mode plays a pre-rendered MP4; voice mode falls through to TTS.
@@ -126,22 +158,67 @@ export function ImmersiveSimulationPage() {
             audioBlob: result.blob,
           })
           void resp
+        } else if (ltiMode) {
+          throw new Error('no session')
         }
       } catch {
+        if (ltiMode) {
+          // the answer was not saved: ask for it again instead of moving on without it
+          setLtiError('Your answer could not be uploaded. Please record it again.')
+          setRecorderKey((k) => k + 1)
+          setPageState('responding')
+          return
+        }
         // Don't block the flow on a submission failure
       }
+      setLtiError(null)
 
       advanceOrFinish()
     },
-    [currentNode, sessionId, nodeIndex] // eslint-disable-line react-hooks/exhaustive-deps
+    [currentNode, sessionId, nodeIndex, ltiMode] // eslint-disable-line react-hooks/exhaustive-deps
   )
 
   const handleSkip = useCallback(() => {
     advanceOrFinish()
   }, [nodeIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // LTI: wait for the answers to be transcribed, then have the server score them and post the
+  // score to the course. Safe to repeat: a failure leaves nothing sent and Retry runs it again.
+  const finishLti = useCallback(async () => {
+    if (!sessionId) return
+    setLtiError(null)
+    setFinishing(true)
+    setPageState('complete')
+    try {
+      const nodeIds = decisionNodes.map((n) => n.nodeId)
+      const deadline = Date.now() + TRANSCRIPT_WAIT_MS
+      for (;;) {
+        const session = await fetchImmersiveSession(sessionId)
+        if (transcriptsReady(session.responses, nodeIds)) break
+        if (Date.now() > deadline) {
+          throw new Error(
+            'We could not finish transcribing your answers. Check your connection and try again.'
+          )
+        }
+        await new Promise((r) => setTimeout(r, TRANSCRIPT_POLL_MS))
+      }
+      const { returnUrl } = await completeLtiInterview(sessionId)
+      window.location.assign(returnUrl)
+    } catch (err) {
+      console.warn('LTI score hand-back failed:', err)
+      setLtiError(
+        err instanceof Error && err.message.startsWith('We could not')
+          ? err.message
+          : 'Your answers are finished, but your score has not reached your course yet. Check your connection and try again.'
+      )
+      setFinishing(false)
+    }
+  }, [sessionId, decisionNodes])
+
   function advanceOrFinish() {
-    if (isLastNode) {
+    if (isLastNode && ltiMode) {
+      void finishLti()
+    } else if (isLastNode) {
       setPageState('complete')
       const target = sessionId
         ? `/scenario/${scenarioId}/immersive/${sessionId}/feedback`
@@ -153,7 +230,36 @@ export function ImmersiveSimulationPage() {
     }
   }
 
+  // ── LTI: the session could not start ───────────────────────────────────────
+  if (ltiMode && pageState === 'error') {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <p className="text-[#f5f3ee] text-[15px] mb-6">{ltiError}</p>
+          <button
+            onClick={() => {
+              setPageState('loading')
+              startSession()
+            }}
+            className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // ── Loading ────────────────────────────────────────────────────────────────
+  if (ltiMode && !isLoading && !scenario) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-6">
+        <p className="text-[#f5f3ee] text-[15px] text-center max-w-md">
+          We could not load this scenario. Go back to your course and start again.
+        </p>
+      </div>
+    )
+  }
   if (isLoading || !scenario || pageState === 'loading') {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -163,6 +269,33 @@ export function ImmersiveSimulationPage() {
   }
 
   // ── Complete ───────────────────────────────────────────────────────────────
+  if (ltiMode && pageState === 'complete') {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-6">
+        <div className="text-center animate-fade-in max-w-md">
+          {finishing || !ltiError ? (
+            <p className="font-display font-bold text-[18px] text-[#f5f3ee]">
+              Sending your score...
+            </p>
+          ) : (
+            <>
+              <p className="font-display font-bold text-[18px] text-[#f5f3ee] mb-2">
+                We could not send your score
+              </p>
+              <p className="text-[14px] text-slate-mid mb-6">{ltiError}</p>
+              <button
+                onClick={() => void finishLti()}
+                className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+              >
+                Retry
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   if (pageState === 'complete') {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -201,7 +334,11 @@ export function ImmersiveSimulationPage() {
         </div>
       </div>
 
-      <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
+      {ltiMode ? (
+        <LtiNav trackLabel={meta?.label} stepLabel={stepLabel} />
+      ) : (
+        <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
+      )}
 
       <div className="flex flex-1">
         {display && (
@@ -289,6 +426,21 @@ export function ImmersiveSimulationPage() {
               </p>
             </div>
 
+            {/* Question as text: the voice is a convenience, the learner can always read and answer */}
+            {ltiMode && isNarrating && pageState === 'narrating' && (
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    narration.stop()
+                    setPageState('responding')
+                  }}
+                  className="px-6 py-2.5 rounded-lg border border-white/10 text-slate-light hover:text-white text-[14px] transition-colors"
+                >
+                  Skip narration and answer
+                </button>
+              </div>
+            )}
+
             {/* Response prompt */}
             {pageState === 'responding' || pageState === 'submitting' ? (
               <div className="space-y-3">
@@ -300,9 +452,15 @@ export function ImmersiveSimulationPage() {
                     {currentNode.responsePrompt}
                   </p>
                 </div>
+                {ltiError && (
+                  <p className="text-[13px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                    {ltiError}
+                  </p>
+                )}
                 <ResponseRecorder
+                  key={recorderKey}
                   onSubmit={handleResponseSubmit}
-                  onSkip={handleSkip}
+                  onSkip={ltiMode ? undefined : handleSkip}
                   disabled={pageState === 'submitting'}
                 />
               </div>

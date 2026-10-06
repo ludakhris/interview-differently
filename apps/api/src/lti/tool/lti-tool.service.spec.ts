@@ -40,9 +40,11 @@ function setup(questions = ['Tell me about a time you led.', 'Why this role?']) 
   const prisma = {
     scenario: { findUnique: jest.fn().mockResolvedValue(scenario(questions)) },
     simulationResult: { findUnique: jest.fn() },
+    immersiveSession: { findUnique: jest.fn(), update: jest.fn().mockResolvedValue({}) },
   }
   const store = new MemoryLtiStore()
-  const svc = new LtiToolService(prisma as any, { scoreAnswers: jest.fn() } as any, store)
+  const engine = { scoreAnswers: jest.fn() }
+  const svc = new LtiToolService(prisma as any, engine as any, store)
   const calls: { url: string; init?: RequestInit }[] = []
   let scoreStatus = 200
   let tokenStatus = 200
@@ -58,6 +60,7 @@ function setup(questions = ['Tell me about a time you led.', 'Why this role?']) 
     svc,
     store,
     prisma,
+    engine,
     calls,
     setScoreStatus: (s: number) => (scoreStatus = s),
     setTokenStatus: (s: number) => (tokenStatus = s),
@@ -710,9 +713,46 @@ describe('launch of a text scenario', () => {
     expect(verifySession(token).datasets).toEqual([])
   })
 
-  it('keeps the typed page for an immersive scenario', async () => {
+  it('keeps the typed page for an immersive scenario without an interviewer', async () => {
     const out = await launchAgain(setup().svc)
     expect(typeof out).toBe('string')
+  })
+
+  it.each([[{}], [{ presenterId: 'p' }], [{ voiceId: 'v' }], [{ presenterId: '', voiceId: '' }]])(
+    'keeps the typed page for an incomplete interviewer %p',
+    async (interviewer) => {
+      const h = setup()
+      const base = scenario(['Q1?'])
+      h.prisma.scenario.findUnique.mockResolvedValue({
+        ...base,
+        data: { ...base.data, interviewer },
+      })
+      expect(typeof (await launchAgain(h.svc))).toBe('string')
+    }
+  )
+
+  it('redirects an immersive scenario with an interviewer to the web app', async () => {
+    const h = setup()
+    const base = scenario(['Q1?'])
+    h.prisma.scenario.findUnique.mockResolvedValue({
+      ...base,
+      data: { ...base.data, interviewer: { presenterId: 'p', voiceId: 'v' } },
+    })
+    const out = (await launchAgain(h.svc)) as { redirect: string }
+    const [path, token] = out.redirect.split('#session=')
+    expect(path).toBe('http://localhost:5173/lti/play/S1')
+    expect(verifySession(token)).toMatchObject({ sub: 'u1', ref: 'S1', lineitem: LINEITEM })
+  })
+
+  it('still refuses an unpublished immersive scenario with an interviewer', async () => {
+    const h = setup()
+    const base = scenario(['Q1?'])
+    h.prisma.scenario.findUnique.mockResolvedValue({
+      ...base,
+      status: 'draft',
+      data: { ...base.data, interviewer: { presenterId: 'p', voiceId: 'v' } },
+    })
+    await expect(launchAgain(h.svc)).rejects.toMatchObject({ status: 404 })
   })
 })
 
@@ -918,6 +958,260 @@ describe('complete', () => {
     for (let i = 0; i < 10; i++)
       await h.svc.complete({ ...session, jti: `j${i}` }, 'r1').catch(() => undefined)
     await expect(h.svc.complete({ ...session, jti: 'jx' }, 'r1')).rejects.toMatchObject({
+      status: 429,
+    })
+  })
+})
+
+describe('completeImmersive', () => {
+  const nowS = Math.floor(Date.now() / 1000)
+  const session: LtiSession = {
+    sub: 'u1',
+    ref: 'S1',
+    lineitem: LINEITEM,
+    returnUrl: 'http://learn.test/back',
+    jti: 'j1',
+    iat: nowS,
+    exp: nowS + 3600,
+  }
+  const voice = {
+    scenarioId: 'S1',
+    status: 'published',
+    data: {
+      mode: 'immersive',
+      interviewer: { presenterId: 'p', voiceId: 'v' },
+      briefing: { role: 'Analyst' },
+      nodes: [
+        { nodeId: 'n1', responsePrompt: ' First question? ' },
+        { nodeId: 'n2', type: 'decision', responsePrompt: 'Second question?' },
+      ],
+      rubric: {
+        dimensions: [
+          { name: 'Clarity', description: 'd' },
+          { name: 'Depth', description: 'd' },
+        ],
+      },
+    },
+  }
+  const response = (nodeId: string, transcript: string | null, over = {}) => ({
+    id: `r-${nodeId}`,
+    nodeId,
+    questionText: 'client supplied text',
+    transcript,
+    ...over,
+  })
+  const row = (over = {}) => ({
+    id: 'im1',
+    userId: 'u1',
+    scenarioId: 'S1',
+    status: 'active',
+    createdAt: new Date(),
+    responses: [response('n1', 'I would page the owner.'), response('n2', 'Then roll back.')],
+    ...over,
+  })
+  const scored = (a: number, b: number) => ({
+    score: Math.round((a + b) / 2),
+    dimensions: [
+      { dimension: 'Clarity', score: a },
+      { dimension: 'Depth', score: b },
+    ],
+    feedback: '',
+    strengths: '',
+    development: '',
+  })
+  function ready(over = {}) {
+    const h = setup()
+    process.env.LTI_TOOL_SCORING = 'engine'
+    process.env.ANTHROPIC_API_KEY = 'test-key'
+    h.prisma.scenario.findUnique.mockResolvedValue(voice)
+    h.prisma.immersiveSession.findUnique.mockResolvedValue(row(over))
+    h.engine.scoreAnswers.mockResolvedValue([scored(80, 60), scored(70, 90)])
+    return h
+  }
+  afterEach(() => {
+    process.env.LTI_TOOL_SCORING = 'stub'
+    delete process.env.ANTHROPIC_API_KEY
+  })
+
+  it('scores the transcripts on the server and posts the mean to the lineitem', async () => {
+    const h = ready()
+    expect(await h.svc.completeImmersive(session, 'im1')).toEqual({
+      score: 75,
+      returnUrl: 'http://learn.test/back',
+    })
+    expect(h.engine.scoreAnswers).toHaveBeenCalledWith({
+      role: 'Analyst',
+      rubric: [
+        { name: 'Clarity', description: 'd' },
+        { name: 'Depth', description: 'd' },
+      ],
+      questions: ['First question?', 'Second question?'],
+      answers: ['I would page the owner.', 'Then roll back.'],
+    })
+    const post = h.calls.find((c) => c.url === `${LINEITEM}/scores`)!
+    expect(JSON.parse(post.init!.body as string)).toEqual({
+      userId: 'u1',
+      scoreGiven: 75,
+      scoreMaximum: 100,
+      activityProgress: 'Completed',
+      gradingProgress: 'FullyGraded',
+      timestamp: expect.any(String),
+      [DIMENSIONS_FIELD]: [
+        { dimension: 'Clarity', score: 75 },
+        { dimension: 'Depth', score: 75 },
+      ],
+    })
+    expect(h.prisma.immersiveSession.update).toHaveBeenCalledWith({
+      where: { id: 'im1' },
+      data: { status: 'completed' },
+    })
+  })
+
+  it('asks the scenario for the question, not the client, and takes the latest answer per node', async () => {
+    const h = ready({
+      responses: [
+        response('n1', 'first try'),
+        response('n2', 'Then roll back.'),
+        response('n1', 'second try', { id: 'r-n1b' }),
+        response('zz', 'not a question of this scenario'),
+      ],
+    })
+    await h.svc.completeImmersive(session, 'im1')
+    expect(h.engine.scoreAnswers).toHaveBeenCalledWith(
+      expect.objectContaining({
+        questions: ['First question?', 'Second question?'],
+        answers: ['second try', 'Then roll back.'],
+      })
+    )
+  })
+
+  it('refuses a missing sessionId', async () => {
+    await expect(ready().svc.completeImmersive(session, undefined)).rejects.toMatchObject({
+      status: 400,
+    })
+  })
+
+  it.each([
+    ['null', null],
+    ['whitespace', '   '],
+  ])('refuses while a transcript is %s and posts nothing', async (_n, transcript) => {
+    const h = ready({ responses: [response('n1', 'ok'), response('n2', transcript)] })
+    await expect(h.svc.completeImmersive(session, 'im1')).rejects.toMatchObject({ status: 422 })
+    expect(h.engine.scoreAnswers).not.toHaveBeenCalled()
+    expect(h.calls).toEqual([])
+    // nothing was consumed: once the transcript lands, the same session completes
+    h.prisma.immersiveSession.findUnique.mockResolvedValue(row())
+    await expect(h.svc.completeImmersive(session, 'im1')).resolves.toMatchObject({ score: 75 })
+  })
+
+  it('refuses when a question has no response', async () => {
+    const h = ready({ responses: [response('n1', 'ok')] })
+    await expect(h.svc.completeImmersive(session, 'im1')).rejects.toMatchObject({ status: 400 })
+    expect(h.calls).toEqual([])
+  })
+
+  it.each([
+    ['another learner', { userId: 'u2' }],
+    ['another scenario', { scenarioId: 'S2' }],
+  ])('refuses a session of %s', async (_n, over) => {
+    const h = ready(over)
+    await expect(h.svc.completeImmersive(session, 'im1')).rejects.toMatchObject({ status: 404 })
+    expect(h.engine.scoreAnswers).not.toHaveBeenCalled()
+    expect(h.calls).toEqual([])
+  })
+
+  it('404s an unknown session', async () => {
+    const h = ready()
+    h.prisma.immersiveSession.findUnique.mockResolvedValue(null)
+    await expect(h.svc.completeImmersive(session, 'im1')).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('refuses a session that is not active', async () => {
+    const h = ready({ status: 'completed' })
+    await expect(h.svc.completeImmersive(session, 'im1')).rejects.toMatchObject({ status: 409 })
+    expect(h.calls).toEqual([])
+  })
+
+  it('refuses a session created before the LTI session, allowing a minute of skew', async () => {
+    const iatMs = session.iat * 1000
+    const stale = ready({ createdAt: new Date(iatMs - 61_000) })
+    await expect(stale.svc.completeImmersive(session, 'im1')).rejects.toMatchObject({ status: 400 })
+    expect(stale.calls).toEqual([])
+    const ok = ready({ createdAt: new Date(iatMs - 59_000) })
+    await expect(ok.svc.completeImmersive(session, 'im1')).resolves.toMatchObject({ score: 75 })
+  })
+
+  it('accepts an LTI session only once, 409 afterwards', async () => {
+    const h = ready()
+    await h.svc.completeImmersive(session, 'im1')
+    await expect(h.svc.completeImmersive(session, 'im1')).rejects.toMatchObject({ status: 409 })
+    expect(h.calls.filter((c) => c.url.endsWith('/scores'))).toHaveLength(1)
+  })
+
+  it('accepts an interview only once across LTI sessions', async () => {
+    const h = ready()
+    await h.svc.completeImmersive(session, 'im1')
+    await expect(h.svc.completeImmersive({ ...session, jti: 'j2' }, 'im1')).rejects.toMatchObject({
+      status: 409,
+    })
+    expect(h.calls.filter((c) => c.url.endsWith('/scores'))).toHaveLength(1)
+    expect(h.engine.scoreAnswers).toHaveBeenCalledTimes(1)
+  })
+
+  it('answers an engine failure with a generic 502 and releases both locks', async () => {
+    const h = ready()
+    h.engine.scoreAnswers.mockRejectedValueOnce(new Error('anthropic exploded: secret detail'))
+    await expect(h.svc.completeImmersive(session, 'im1')).rejects.toMatchObject({
+      status: 502,
+      message: 'Your answers could not be scored right now. Please try again.',
+    })
+    expect(h.calls).toEqual([])
+    await expect(h.svc.completeImmersive(session, 'im1')).resolves.toMatchObject({ score: 75 })
+  })
+
+  it('says scoring is not set up when the Anthropic key is missing, without calling the engine', async () => {
+    const h = ready()
+    delete process.env.ANTHROPIC_API_KEY
+    await expect(h.svc.completeImmersive(session, 'im1')).rejects.toMatchObject({
+      status: 502,
+      message: 'Interview scoring is not set up on this server.',
+    })
+    expect(h.engine.scoreAnswers).not.toHaveBeenCalled()
+    process.env.ANTHROPIC_API_KEY = 'test-key'
+    await expect(h.svc.completeImmersive(session, 'im1')).resolves.toMatchObject({ score: 75 })
+  })
+
+  it('answers a platform failure with a generic 502 and lets the same session retry', async () => {
+    const h = ready()
+    h.setScoreStatus(500)
+    await expect(h.svc.completeImmersive(session, 'im1')).rejects.toMatchObject({
+      status: 502,
+      message: 'The score could not be sent to your course. Please try again.',
+    })
+    expect(h.prisma.immersiveSession.update).not.toHaveBeenCalled()
+    h.setScoreStatus(200)
+    await expect(h.svc.completeImmersive(session, 'im1')).resolves.toMatchObject({ score: 75 })
+  })
+
+  it('stays successful when marking the session completed fails', async () => {
+    const h = ready()
+    h.prisma.immersiveSession.update.mockRejectedValue(new Error('db down'))
+    await expect(h.svc.completeImmersive(session, 'im1')).resolves.toMatchObject({ score: 75 })
+  })
+
+  it('uses the offline scorer when LTI_TOOL_SCORING=stub', async () => {
+    const h = ready()
+    process.env.LTI_TOOL_SCORING = 'stub'
+    delete process.env.ANTHROPIC_API_KEY
+    await expect(h.svc.completeImmersive(session, 'im1')).resolves.toMatchObject({ score: 20 })
+    expect(h.engine.scoreAnswers).not.toHaveBeenCalled()
+  })
+
+  it('rate limits by learner', async () => {
+    const h = ready()
+    for (let i = 0; i < 10; i++)
+      await h.svc.completeImmersive({ ...session, jti: `j${i}` }, 'im1').catch(() => undefined)
+    await expect(h.svc.completeImmersive({ ...session, jti: 'jx' }, 'im1')).rejects.toMatchObject({
       status: 429,
     })
   })

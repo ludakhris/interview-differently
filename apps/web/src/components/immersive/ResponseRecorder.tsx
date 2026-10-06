@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { mediaErrorMessage } from '@/lib/immersiveLti'
 
 export type RecordingMode = 'audio' | 'video'
 
@@ -10,7 +11,8 @@ export interface RecordingResult {
 
 interface Props {
   onSubmit: (result: RecordingResult) => void
-  onSkip: () => void
+  /** Omit to hide the Skip button (an LTI interview must be answered). */
+  onSkip?: () => void
   disabled?: boolean
 }
 
@@ -96,8 +98,9 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
       timerRef.current = setInterval(() => {
         setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000))
       }, 500)
-    } catch {
-      setError('Could not access microphone. Please check browser permissions.')
+    } catch (err) {
+      stopStream()
+      setError(mediaErrorMessage(err))
     }
   }, [mode])
 
@@ -203,13 +206,15 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
                 <span className="w-2 h-2 rounded-full bg-white" />
                 Start recording
               </button>
-              <button
-                onClick={onSkip}
-                disabled={disabled}
-                className="px-4 py-2.5 rounded-lg border border-white/10 text-slate-light hover:text-white text-[13px] transition-colors disabled:opacity-40"
-              >
-                Skip
-              </button>
+              {onSkip && (
+                <button
+                  onClick={onSkip}
+                  disabled={disabled}
+                  className="px-4 py-2.5 rounded-lg border border-white/10 text-slate-light hover:text-white text-[13px] transition-colors disabled:opacity-40"
+                >
+                  Skip
+                </button>
+              )}
             </>
           )}
 

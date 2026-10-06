@@ -160,6 +160,41 @@ describe('AuthenticatedOrLtiGuard datasets with an LTI token', () => {
   })
 })
 
+describe('AuthenticatedOrLtiGuard on immersive routes', () => {
+  it.each([
+    ['POST', '/api/immersive-sessions', { scenarioId: 'ops-001', userId: 'someone-else' }],
+    ['POST', '/api/immersive-sessions/s1/responses', undefined],
+    ['GET', '/api/immersive-sessions/s1', undefined],
+    ['GET', '/api/immersive-sessions/s1/responses/r1', undefined],
+    ['GET', '/api/immersive-sessions/s1/responses/r1/media-url', undefined],
+  ])('allows %s %s and forces the learner from the token', async (method, url, body) => {
+    const req = reqOf(method, url, body)
+    expect(await guard.canActivate(ctxOf(req))).toBe(true)
+    expect(req.userId).toBe('u1')
+    expect(req.lti?.ref).toBe('ops-001')
+  })
+
+  it.each([
+    ['POST', '/api/immersive-sessions', { scenarioId: 'other' }],
+    ['POST', '/api/immersive-sessions', {}],
+    ['POST', '/api/immersive-sessions', undefined],
+    ['GET', '/api/immersive-sessions/user/u1', undefined],
+    ['GET', '/api/immersive-sessions', undefined],
+    ['GET', '/api/immersive-sessions/s1/summary', undefined],
+    ['GET', '/api/immersive-sessions/s1/responses', undefined],
+    ['POST', '/api/immersive-sessions/s1', undefined],
+    ['POST', '/api/immersive-sessions/s1/responses/r1', undefined],
+    ['PUT', '/api/immersive-sessions/s1', undefined],
+    ['DELETE', '/api/immersive-sessions/s1', undefined],
+    ['POST', '/api/scenario-media/render/ops-001/n1', undefined],
+    ['DELETE', '/api/scenario-media/ops-001/n1', undefined],
+  ])('refuses %s %s', async (method, url, body) => {
+    await expect(guard.canActivate(ctxOf(reqOf(method, url, body)))).rejects.toBeInstanceOf(
+      ForbiddenException
+    )
+  })
+})
+
 describe('a Clerk token', () => {
   it('still goes to the existing guard, unchanged, for any route', async () => {
     clerkGuard.canActivate.mockClear()

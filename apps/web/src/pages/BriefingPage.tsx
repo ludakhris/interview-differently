@@ -5,6 +5,7 @@ import { Nav } from '@/components/Nav'
 import { LtiNav } from '@/components/LtiNav'
 import { TrackIcon } from '@/components/TrackIcon'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
+import { isVoiceInterview } from '@/lib/immersiveLti'
 
 export function BriefingPage({
   ltiMode = false,
@@ -188,7 +189,7 @@ export function BriefingPage({
           )}
           <button
             onClick={handleBegin}
-            disabled={ltiMode && scenario.mode === 'immersive'}
+            disabled={ltiMode && scenario.mode === 'immersive' && !isVoiceInterview(scenario)}
             className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors tracking-wide disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {scenario.mode === 'immersive' ? 'Begin Interview' : 'Begin Simulation'}

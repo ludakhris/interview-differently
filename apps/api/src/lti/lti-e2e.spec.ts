@@ -5,7 +5,10 @@ import { AdminGuard } from '../auth/admin.guard'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
 import { ClerkService } from '../auth/clerk.service'
 import { InstitutionScope } from '../auth/scope'
+import { ImmersiveSessionsController } from '../immersive-sessions/immersive-sessions.controller'
+import { ImmersiveSessionsService } from '../immersive-sessions/immersive-sessions.service'
 import { InterviewEngineService } from '../interview-engine/interview-engine.service'
+import { TranscriptionService } from '../transcription/transcription.service'
 import { DatasetsAdminController, DatasetsMeController } from '../datasets/datasets.controller'
 import { DatasetsService } from '../datasets/datasets.service'
 import { SqlRunnerService } from '../sql-runner/sql-runner.service'
@@ -83,7 +86,66 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
       },
     },
   }
+  const voiceScenario = {
+    status: 'published',
+    data: {
+      mode: 'immersive',
+      title: 'Voice interview',
+      interviewer: { presenterId: 'p', voiceId: 'v' },
+      briefing: { role: 'Analyst' },
+      nodes: [
+        { nodeId: 'q1', type: 'decision', responsePrompt: 'Tell me about yourself.' },
+        { nodeId: 'q2', type: 'decision', responsePrompt: 'Why this job?' },
+      ],
+      rubric: {
+        dimensions: [
+          { name: 'Clarity', description: 'Clear?' },
+          { name: 'Specifics', description: 'Examples?' },
+        ],
+      },
+    },
+  }
+  /** Immersive sessions, shared by the fake service (the player's routes) and the fake prisma (complete). */
+  const immersive: Record<string, any> = {}
+  let immersiveCount = 0
+  const fakeImmersive = {
+    createSession: jest.fn(async (scenarioId: string, userId: string) => {
+      const id = `im${++immersiveCount}`
+      return (immersive[id] = {
+        id,
+        scenarioId,
+        userId,
+        status: 'active',
+        createdAt: new Date(),
+        responses: [],
+      })
+    }),
+    createResponse: jest.fn(async (sessionId: string, nodeId: string, questionText: string) => {
+      const r = { id: `r${immersive[sessionId].responses.length + 1}`, nodeId, questionText }
+      immersive[sessionId].responses.push({ ...r, transcript: null })
+      return r
+    }),
+    updateTranscript: jest.fn(async (responseId: string, transcript: string) => {
+      for (const s of Object.values(immersive))
+        for (const r of s.responses) if (r.id === responseId) r.transcript = transcript
+    }),
+    storeResponseMedia: jest.fn(async () => undefined),
+    getSessionRef: jest.fn(async (id: string) => immersive[id] ?? null),
+    getSessionOwner: jest.fn(async (id: string) => immersive[id]?.userId ?? null),
+    getSession: jest.fn(async (id: string) => immersive[id]),
+    getResponse: jest.fn(async (id: string, rid: string) =>
+      immersive[id].responses.find((r: any) => r.id === rid)
+    ),
+    getResponseSignedUrl: jest.fn(async () => ({ url: 'http://media.test/x', expiresAt: 'soon' })),
+    getSessionSummary: jest.fn(),
+    getSessionsForUser: jest.fn(),
+  }
+  const scoreAnswers = jest.fn()
   const prisma = {
+    immersiveSession: {
+      findUnique: jest.fn(async (a: any) => immersive[a.where.id] ?? null),
+      update: jest.fn(async (a: any) => Object.assign(immersive[a.where.id], a.data)),
+    },
     cohort: {
       findUnique: jest.fn(async () => ({
         courseId: 'c1',
@@ -104,11 +166,13 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
       findUnique: jest.fn(async (a: any) =>
         a.where.scenarioId === 'ops-001'
           ? textScenario
-          : a.where.scenarioId === 'scn-1'
-            ? scenario
-            : a.where.scenarioId === 'data-001'
-              ? sqlScenario
-              : null
+          : a.where.scenarioId === 'voice-1'
+            ? voiceScenario
+            : a.where.scenarioId === 'scn-1'
+              ? scenario
+              : a.where.scenarioId === 'data-001'
+                ? sqlScenario
+                : null
       ),
     },
     dataset: { findUnique: jest.fn(async (a: any) => datasets[a.where.slug] ?? null) },
@@ -169,8 +233,11 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         ResultsController,
         DatasetsMeController,
         DatasetsAdminController,
+        ImmersiveSessionsController,
       ],
       providers: [
+        { provide: ImmersiveSessionsService, useValue: fakeImmersive },
+        { provide: TranscriptionService, useValue: { transcribe: async () => 'spoken words' } },
         DatasetsService,
         { provide: SqlRunnerService, useValue: {} },
         ScenariosService,
@@ -180,14 +247,18 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         { provide: ResultsService, useValue: fakeResults },
         {
           provide: ClerkService,
-          useValue: { verifyBearerToken: async () => null, getRole: async () => 'student' },
+          useValue: {
+            verifyBearerToken: async () => null,
+            getRole: async () => 'student',
+            isAdmin: async () => false,
+          },
         },
         LtiPlatformService,
         LtiToolService,
         { provide: LTI_STORE, useValue: new MemoryLtiStore() },
         { provide: PrismaService, useValue: prisma },
         { provide: LearnerService, useValue: { recordToolResult } },
-        { provide: InterviewEngineService, useValue: {} },
+        { provide: InterviewEngineService, useValue: { scoreAnswers } },
       ],
     }).compile()
     app = mod.createNestApplication()
@@ -442,6 +513,197 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
       })
       expect(done.status).toBe(404)
       expect(recordToolResult).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('a voice interview played in the web app', () => {
+    const api = (token: string, path: string, init: RequestInit = {}) =>
+      fetch(`${base}${path}`, {
+        ...init,
+        headers: {
+          ...(typeof init.body === 'string' ? { 'Content-Type': 'application/json' } : {}),
+          Authorization: `Bearer lti.${token}`,
+          ...init.headers,
+        },
+      })
+    const upload = (token: string, sessionId: string, nodeId: string) => {
+      const form = new FormData()
+      form.append('nodeId', nodeId)
+      form.append('questionText', 'whatever the client says')
+      form.append('transcript', 'a transcript the client made up')
+      form.append('durationSeconds', '12')
+      form.append('file', new Blob(['audio'], { type: 'audio/webm' }), 'response.webm')
+      return api(token, `/immersive-sessions/${sessionId}/responses`, {
+        method: 'POST',
+        body: form,
+      })
+    }
+    const settle = () => new Promise((r) => setTimeout(r, 20)) // the fake transcription is async
+
+    async function launchVoice(sub = 'u1') {
+      itemRef = 'voice-1'
+      void sub
+      const launch = await reachLaunchForm()
+      const res = await post(launch.action, launch.fields, launch.cookie)
+      expect(res.status).toBe(303)
+      expect(res.headers.get('location')).toContain('/lti/play/voice-1#session=')
+      return res.headers.get('location')!.split('#session=')[1]
+    }
+
+    beforeAll(() => {
+      process.env.LTI_TOOL_SCORING = 'engine'
+      process.env.ANTHROPIC_API_KEY = 'test-key'
+    })
+    afterAll(() => {
+      process.env.LTI_TOOL_SCORING = 'stub'
+      delete process.env.ANTHROPIC_API_KEY
+    })
+    beforeEach(() => scoreAnswers.mockReset())
+
+    it('records answers, scores the transcripts on the server and returns the score to the LMS', async () => {
+      const token = await launchVoice()
+      expect((await api(token, '/scenarios/voice-1')).status).toBe(200)
+
+      const created = await api(token, '/immersive-sessions', {
+        method: 'POST',
+        body: JSON.stringify({ scenarioId: 'voice-1', userId: 'attacker' }),
+      })
+      expect(created.status).toBe(201)
+      const { id } = (await created.json()) as { id: string }
+      expect(immersive[id]).toMatchObject({ userId: 'u1', scenarioId: 'voice-1' })
+
+      // no answers yet
+      const early = await api(token, '/lti/tool/complete', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId: id }),
+      })
+      expect(early.status).toBe(400)
+
+      expect((await upload(token, id, 'q1')).status).toBe(201)
+      expect((await upload(token, id, 'q2')).status).toBe(201)
+      expect((await api(token, `/immersive-sessions/${id}/responses/r1`)).status).toBe(200)
+      expect((await api(token, `/immersive-sessions/${id}/responses/r1/media-url`)).status).toBe(
+        200
+      )
+      await settle()
+      const session = (await (await api(token, `/immersive-sessions/${id}`)).json()) as {
+        responses: { transcript: string }[]
+      }
+      expect(session.responses.map((r) => r.transcript)).toEqual(['spoken words', 'spoken words'])
+
+      scoreAnswers.mockResolvedValue(
+        [80, 60].map((n) => ({
+          score: n,
+          dimensions: [
+            { dimension: 'Clarity', score: n },
+            { dimension: 'Specifics', score: n - 10 },
+          ],
+          feedback: '',
+          strengths: '',
+          development: '',
+        }))
+      )
+      const done = await api(token, '/lti/tool/complete', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId: id }),
+      })
+      expect(done.status).toBe(201)
+      expect(await done.json()).toEqual({
+        score: 70,
+        returnUrl: 'http://localhost:5174/lms/learning/k1/i1',
+      })
+      expect(scoreAnswers).toHaveBeenCalledWith({
+        role: 'Analyst',
+        rubric: [
+          { name: 'Clarity', description: 'Clear?' },
+          { name: 'Specifics', description: 'Examples?' },
+        ],
+        questions: ['Tell me about yourself.', 'Why this job?'],
+        answers: ['spoken words', 'spoken words'],
+      })
+      expect(recordToolResult).toHaveBeenCalledWith('u1', 'k1', 'i1', {
+        reportedAt: expect.any(String),
+        scorePct: 70,
+        dimensions: [
+          { dimension: 'Clarity', score: 70 },
+          { dimension: 'Specifics', score: 60 },
+        ],
+      })
+      expect(immersive[id].status).toBe('completed')
+
+      // once only
+      const again = await api(token, '/lti/tool/complete', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId: id }),
+      })
+      expect(again.status).toBe(409)
+      expect(recordToolResult).toHaveBeenCalledTimes(1)
+    })
+
+    it('lets the learner retry after the scoring engine fails', async () => {
+      const token = await launchVoice()
+      const { id } = (await (
+        await api(token, '/immersive-sessions', {
+          method: 'POST',
+          body: JSON.stringify({ scenarioId: 'voice-1' }),
+        })
+      ).json()) as { id: string }
+      await upload(token, id, 'q1')
+      await upload(token, id, 'q2')
+      await settle()
+      scoreAnswers.mockRejectedValueOnce(new Error('engine down'))
+      const failed = await api(token, '/lti/tool/complete', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId: id }),
+      })
+      expect(failed.status).toBe(502)
+      expect(recordToolResult).not.toHaveBeenCalled()
+      scoreAnswers.mockResolvedValue(
+        [50, 50].map((n) => ({
+          score: n,
+          dimensions: [
+            { dimension: 'Clarity', score: n },
+            { dimension: 'Specifics', score: n },
+          ],
+          feedback: '',
+          strengths: '',
+          development: '',
+        }))
+      )
+      const retried = await api(token, '/lti/tool/complete', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId: id }),
+      })
+      expect(retried.status).toBe(201)
+      expect(recordToolResult).toHaveBeenCalledTimes(1)
+    })
+
+    it('refuses another learner, another scenario and every other route', async () => {
+      const token = await launchVoice()
+      expect(
+        (
+          await api(token, '/immersive-sessions', {
+            method: 'POST',
+            body: JSON.stringify({ scenarioId: 'scn-1' }),
+          })
+        ).status
+      ).toBe(403)
+      // sessions of someone else, and of the same learner on another scenario
+      immersive.theirs = { id: 'theirs', userId: 'u2', scenarioId: 'voice-1', responses: [] }
+      immersive.other = { id: 'other', userId: 'u1', scenarioId: 'scn-1', responses: [] }
+      for (const sid of ['theirs', 'other']) {
+        expect((await api(token, `/immersive-sessions/${sid}`)).status).toBe(403)
+        expect((await upload(token, sid, 'q1')).status).toBe(403)
+        expect((await api(token, `/immersive-sessions/${sid}/responses/r1`)).status).toBe(403)
+        expect((await api(token, `/immersive-sessions/${sid}/responses/r1/media-url`)).status).toBe(
+          403
+        )
+      }
+      expect((await api(token, '/immersive-sessions/user/u1')).status).toBe(403)
+      expect((await api(token, '/immersive-sessions/theirs/summary')).status).toBe(403)
+      expect((await api(token, '/scenarios/scn-1')).status).toBe(403)
+      expect(recordToolResult).not.toHaveBeenCalled()
+      expect((await fetch(`${base}/immersive-sessions/theirs`)).status).toBe(401)
     })
   })
 
