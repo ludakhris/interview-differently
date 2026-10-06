@@ -31,7 +31,7 @@ export function SignInPage() {
       </SimpleShell>
     )
   }
-  const landing = withContext(ctx, '/dashboard')
+  const landing = withContext(ctx, '/lms/dashboard')
   if (ctx.brand === 'delaware') {
     return (
       <AppProvider value={ctx}>

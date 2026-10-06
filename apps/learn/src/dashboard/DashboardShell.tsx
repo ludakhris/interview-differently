@@ -15,31 +15,31 @@ import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 /** The app's navigation, defined once for both skins and the account menu. */
 function useNav(): MenuLink[] {
   const { href, tenant, current } = useApp()
-  if (window.location.pathname.startsWith('/catalog')) {
+  if (window.location.pathname.startsWith('/lms/catalog')) {
     return [
-      { label: 'Training catalog', href: href('/catalog') },
-      { label: 'My learning', href: href('/learning') },
+      { label: 'Training catalog', href: href('/lms/catalog') },
+      { label: 'My learning', href: href('/lms/learning') },
     ]
   }
-  if (window.location.pathname.startsWith('/learning')) {
-    return [{ label: 'My learning', href: href('/learning') }]
+  if (window.location.pathname.startsWith('/lms/learning')) {
+    return [{ label: 'My learning', href: href('/lms/learning') }]
   }
   if (current?.kind === 'provider') {
     return [
-      { label: 'Courses', href: href('/courses') },
-      { label: 'Cohorts', href: href('/cohorts') },
-      { label: 'Outcomes', href: href('/dashboard') },
+      { label: 'Courses', href: href('/lms/courses') },
+      { label: 'Cohorts', href: href('/lms/cohorts') },
+      { label: 'Outcomes', href: href('/lms/dashboard') },
     ]
   }
   if (current?.kind === 'organization' || current?.kind === 'academic') {
     return [
-      { label: 'Cohorts', href: href('/cohorts') },
-      { label: 'Outcomes', href: href('/dashboard') },
+      { label: 'Cohorts', href: href('/lms/cohorts') },
+      { label: 'Outcomes', href: href('/lms/dashboard') },
     ]
   }
   if (current?.kind === 'agency') {
     return [
-      { label: 'Outcomes dashboard', href: href('/dashboard') },
+      { label: 'Outcomes dashboard', href: href('/lms/dashboard') },
       ...(tenant === 'delaware' ? [{ label: 'Career Readiness Tool', href: href('/') }] : []),
     ]
   }
@@ -68,7 +68,7 @@ function AccountControl() {
     const params = new URLSearchParams(window.location.search)
     params.delete('site')
     const query = params.toString()
-    links.push({ label: 'All workspaces', href: `/dashboard${query ? `?${query}` : ''}` })
+    links.push({ label: 'All workspaces', href: `/lms/dashboard${query ? `?${query}` : ''}` })
   }
   return <AccountMenu signedOut={null} links={links} />
 }
@@ -76,10 +76,10 @@ function AccountControl() {
 /** The Delaware title bar names the area the visitor is in. */
 function titleFor(pathname: string): string {
   if (pathname.startsWith('/sign-in')) return 'Sign in'
-  if (pathname.startsWith('/catalog')) return 'Training Catalog'
-  if (pathname.startsWith('/learning')) return 'My Learning'
-  if (pathname.startsWith('/courses')) return 'Course Setup'
-  if (pathname.startsWith('/cohorts')) return 'Cohorts'
+  if (pathname.startsWith('/lms/catalog')) return 'Training Catalog'
+  if (pathname.startsWith('/lms/learning')) return 'My Learning'
+  if (pathname.startsWith('/lms/courses')) return 'Course Setup'
+  if (pathname.startsWith('/lms/cohorts')) return 'Cohorts'
   return 'Program Outcomes'
 }
 

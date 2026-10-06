@@ -79,7 +79,7 @@ export function CatalogPage() {
             <li key={c.id} className="dash-card dash-course">
               <div className="dash-course-main">
                 {c.sector && <p className="dash-kicker">{c.sector}</p>}
-                <a className="dash-course-title" href={href(`/catalog/${c.id}`)}>
+                <a className="dash-course-title" href={href(`/lms/catalog/${c.id}`)}>
                   {c.title}
                 </a>
                 <p className="dash-sub">{meta(c)}</p>
@@ -100,7 +100,7 @@ export function CatalogPage() {
                 </span>
               </div>
               <div className="dash-course-side">
-                <a className="dash-btn-secondary dash-btn-link" href={href(`/catalog/${c.id}`)}>
+                <a className="dash-btn-secondary dash-btn-link" href={href(`/lms/catalog/${c.id}`)}>
                   View offering
                 </a>
               </div>
@@ -123,7 +123,7 @@ export function OfferingPage({ courseId }: { courseId: string }) {
   if (error) {
     return (
       <Notice title="Offering not found">
-        That offering is not in the catalog. <a href={href('/catalog')}>Back to the catalog</a>.
+        That offering is not in the catalog. <a href={href('/lms/catalog')}>Back to the catalog</a>.
       </Notice>
     )
   }
@@ -131,7 +131,7 @@ export function OfferingPage({ courseId }: { courseId: string }) {
   return (
     <>
       <p className="dash-back">
-        <a href={href('/catalog')}>← Training catalog</a>
+        <a href={href('/lms/catalog')}>← Training catalog</a>
       </p>
       <div className="dash-head">
         <div>
@@ -209,7 +209,7 @@ export function OfferingPage({ courseId }: { courseId: string }) {
             <p className="dash-muted dash-record-note">
               Your training provider gives you a join code. Sign in, then enter it on My learning.
             </p>
-            <a className="dash-btn dash-btn-link" href={href('/learning')}>
+            <a className="dash-btn dash-btn-link" href={href('/lms/learning')}>
               Sign in and join
             </a>
           </div>

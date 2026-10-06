@@ -61,9 +61,9 @@ function Gate({ pathname, search }: { pathname: string; search: string }) {
 function Routes({ pathname }: { pathname: string }) {
   const { tenant, workspaces, workspacesError, current, href } = useApp()
   // Learner pages need no workspace: any signed-in LearnDifferently account can use them.
-  const learnerItem = /^\/learning\/([^/]+)\/([^/]+)\/?$/.exec(pathname)
-  const learnerCourse = /^\/learning\/([^/]+)\/?$/.exec(pathname)
-  if (pathname === '/learning' || pathname.startsWith('/learning/')) {
+  const learnerItem = /^\/lms\/learning\/([^/]+)\/([^/]+)\/?$/.exec(pathname)
+  const learnerCourse = /^\/lms\/learning\/([^/]+)\/?$/.exec(pathname)
+  if (pathname === '/lms/learning' || pathname.startsWith('/lms/learning/')) {
     return (
       <DashboardShell>
         {learnerItem ? (
@@ -100,11 +100,11 @@ function Routes({ pathname }: { pathname: string }) {
     )
   }
 
-  const course = /^\/courses\/([^/]+)\/?$/.exec(pathname)
-  const cohort = /^\/dashboard\/cohorts\/([^/]+)\/?$/.exec(pathname)
-  const runCohort = /^\/cohorts\/([^/]+)\/?$/.exec(pathname)
-  const onCourses = pathname === '/courses' || pathname.startsWith('/courses/')
-  const onCohorts = pathname === '/cohorts' || pathname.startsWith('/cohorts/')
+  const course = /^\/lms\/courses\/([^/]+)\/?$/.exec(pathname)
+  const cohort = /^\/lms\/dashboard\/cohorts\/([^/]+)\/?$/.exec(pathname)
+  const runCohort = /^\/lms\/cohorts\/([^/]+)\/?$/.exec(pathname)
+  const onCourses = pathname === '/lms/courses' || pathname.startsWith('/lms/courses/')
+  const onCohorts = pathname === '/lms/cohorts' || pathname.startsWith('/lms/cohorts/')
 
   if (
     current.kind === 'provider' ||
@@ -113,7 +113,7 @@ function Routes({ pathname }: { pathname: string }) {
   ) {
     const isProvider = current.kind === 'provider'
     // Providers and organizations see the results of their own cohorts too.
-    if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+    if (pathname === '/lms/dashboard' || pathname.startsWith('/lms/dashboard/')) {
       return (
         <DashboardShell>
           {cohort ? (
@@ -146,7 +146,7 @@ function Routes({ pathname }: { pathname: string }) {
         </DashboardShell>
       )
     }
-    window.location.replace(href(isProvider ? '/courses' : '/cohorts'))
+    window.location.replace(href(isProvider ? '/lms/courses' : '/lms/cohorts'))
     return null
   }
 

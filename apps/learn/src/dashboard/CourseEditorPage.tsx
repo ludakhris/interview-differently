@@ -195,14 +195,14 @@ function Editor({
     const ok = await run(async () => {
       await send<void>('DELETE', `/learn/courses/${course.id}`)
     })
-    if (ok) window.location.assign(href('/courses'))
+    if (ok) window.location.assign(href('/lms/courses'))
   }
 
   const published = course.status === 'published'
   return (
     <>
       <p className="dash-back">
-        <a href={href('/courses')}>← All courses</a>
+        <a href={href('/lms/courses')}>← All courses</a>
       </p>
       <div className="dash-head">
         <div>

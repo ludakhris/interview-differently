@@ -14,7 +14,7 @@ export function WorkspaceChooser() {
   }
   if (workspaces.length === 0) {
     // Not staff anywhere: this is a learner, so their home is My learning.
-    window.location.replace(href('/learning'))
+    window.location.replace(href('/lms/learning'))
     return null
   }
   const kinds = KIND_ORDER.filter((k) => workspaces.some((w) => w.kind === k))

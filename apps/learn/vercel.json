@@ -8,53 +8,64 @@
       "destination": "https://media.interviewdifferently.com/learn-scorm/:path*"
     },
     {
+      "source": "/lms/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "delaware.learndifferently.tech"
+        }
+      ],
+      "destination": "/delaware.html"
+    },
+    {
+      "source": "/lms/:path*",
+      "destination": "/home.html"
+    },
+    {
       "source": "/",
-      "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "delaware.learndifferently.tech"
+        }
+      ],
       "destination": "/delaware.html"
     },
     {
       "source": "/privacy",
-      "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "delaware.learndifferently.tech"
+        }
+      ],
       "destination": "/delaware.html"
     },
     {
       "source": "/sign-in/:path*",
-      "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "delaware.learndifferently.tech"
+        }
+      ],
       "destination": "/delaware.html"
     },
     {
-      "source": "/dashboard/:path*",
-      "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }],
-      "destination": "/delaware.html"
+      "source": "/products/:path*",
+      "destination": "/home.html"
     },
     {
-      "source": "/courses/:path*",
-      "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }],
-      "destination": "/delaware.html"
-    },
-    { "source": "/dashboard/:path*", "destination": "/home.html" },
-    {
-      "source": "/cohorts/:path*",
-      "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }],
-      "destination": "/delaware.html"
-    },
-    { "source": "/courses/:path*", "destination": "/home.html" },
-    {
-      "source": "/learning/:path*",
-      "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }],
-      "destination": "/delaware.html"
+      "source": "/",
+      "destination": "/home.html"
     },
     {
-      "source": "/catalog/:path*",
-      "has": [{ "type": "host", "value": "delaware.learndifferently.tech" }],
-      "destination": "/delaware.html"
+      "source": "/privacy",
+      "destination": "/home.html"
     },
-    { "source": "/cohorts/:path*", "destination": "/home.html" },
-    { "source": "/learning/:path*", "destination": "/home.html" },
-    { "source": "/catalog/:path*", "destination": "/home.html" },
-    { "source": "/products/:path*", "destination": "/home.html" },
-    { "source": "/", "destination": "/home.html" },
-    { "source": "/privacy", "destination": "/home.html" },
-    { "source": "/sign-in/:path*", "destination": "/home.html" }
+    {
+      "source": "/sign-in/:path*",
+      "destination": "/home.html"
+    }
   ]
 }

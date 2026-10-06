@@ -75,22 +75,22 @@ const ROLES = [
   {
     title: 'Job Seeker',
     body: 'Practice interviews for your target job and track your readiness.',
-    href: '/learning',
+    href: '/lms/learning',
   },
   {
     title: 'Student',
     body: 'Enrolled with an approved training provider? Add your cohort code to begin.',
-    href: '/catalog',
+    href: '/lms/catalog',
   },
   {
     title: 'Training Provider',
     body: 'List one offering, run your cohort, and report progress and completions.',
-    href: '/courses',
+    href: '/lms/courses',
   },
   {
     title: 'Case Manager',
     body: 'See participant progress and readiness in one place, by cohort.',
-    href: '/dashboard',
+    href: '/lms/dashboard',
   },
 ]
 
@@ -140,7 +140,7 @@ export function DelawarePage() {
 
   function search(e: FormEvent) {
     e.preventDefault()
-    const url = new URL(to('/catalog'), window.location.origin)
+    const url = new URL(to('/lms/catalog'), window.location.origin)
     if (q.trim()) url.searchParams.set('q', q.trim())
     window.location.assign(url)
   }
@@ -168,7 +168,7 @@ export function DelawarePage() {
               <a href="#catalog">Training Catalog</a>
             </li>
             <li>
-              <a href={to('/learning')}>My Progress</a>
+              <a href={to('/lms/learning')}>My Progress</a>
             </li>
             <li>
               <a href="#providers">For Providers</a>
@@ -197,9 +197,9 @@ export function DelawarePage() {
             </a>
           }
           links={[
-            { label: 'My learning', href: to('/learning') },
-            { label: 'Training catalog', href: to('/catalog') },
-            { label: 'Outcomes dashboard', href: to('/dashboard') },
+            { label: 'My learning', href: to('/lms/learning') },
+            { label: 'Training catalog', href: to('/lms/catalog') },
+            { label: 'Outcomes dashboard', href: to('/lms/dashboard') },
           ]}
         />
       </header>
@@ -227,10 +227,10 @@ export function DelawarePage() {
               Available to Delawareans enrolled with an approved training provider.
             </p>
             <div className="de-actions">
-              <a href={to('/learning')} className="de-btn">
+              <a href={to('/lms/learning')} className="de-btn">
                 Start a Practice Interview
               </a>
-              <a href={to('/catalog')} className="de-btn de-btn-outline">
+              <a href={to('/lms/catalog')} className="de-btn de-btn-outline">
                 Browse Training
               </a>
             </div>
@@ -273,7 +273,7 @@ export function DelawarePage() {
                 The Division of Employment and Training receives completion and skill-gain records
                 in the format Delaware JobLink reporting expects.
               </p>
-              <a href={to('/courses')} className="de-btn de-btn-white">
+              <a href={to('/lms/courses')} className="de-btn de-btn-white">
                 For Training Providers
               </a>
             </div>
@@ -316,7 +316,7 @@ export function DelawarePage() {
                 loud or by typing, get scored feedback on each answer, and try again. Your best
                 attempt goes on your readiness record.
               </p>
-              <a href={to('/learning')} className="de-btn de-btn-white">
+              <a href={to('/lms/learning')} className="de-btn de-btn-white">
                 Start a Practice Interview
               </a>
             </div>
@@ -346,12 +346,12 @@ export function DelawarePage() {
                 <p className="de-offering-meta">
                   {c.provider} · {c.length} · Credential: {c.credential}
                 </p>
-                <a href={to(c.id ? `/catalog/${c.id}` : '/catalog')}>View Offering</a>
+                <a href={to(c.id ? `/lms/catalog/${c.id}` : '/lms/catalog')}>View Offering</a>
               </article>
             ))}
             <article className="de-offering de-offering-more">
               <p className="de-card-title">More providers</p>
-              <a href={to('/catalog')}>See the Full Catalog</a>
+              <a href={to('/lms/catalog')}>See the Full Catalog</a>
             </article>
           </div>
         </section>

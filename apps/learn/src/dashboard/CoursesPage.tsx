@@ -41,7 +41,7 @@ export function CoursesPage({ workspace }: { workspace: string }) {
           ...(weeks ? { lengthWeeks: weeks } : {}),
         }
       )
-      window.location.assign(href(`/courses/${course.id}`))
+      window.location.assign(href(`/lms/courses/${course.id}`))
     } catch (err) {
       setFormError((err as Error).message)
       setBusy(false)
@@ -116,7 +116,7 @@ export function CoursesPage({ workspace }: { workspace: string }) {
           {data.map((c) => (
             <li key={c.id} className="dash-card dash-course">
               <div className="dash-course-main">
-                <a className="dash-course-title" href={href(`/courses/${c.id}`)}>
+                <a className="dash-course-title" href={href(`/lms/courses/${c.id}`)}>
                   {c.title}
                 </a>
                 <p className="dash-sub">

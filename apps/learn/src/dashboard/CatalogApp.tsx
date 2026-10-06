@@ -5,7 +5,7 @@ import { DashboardShell } from './DashboardShell'
 
 /** Public catalog pages: /catalog and /catalog/:id. No sign-in; the workspace comes from the host or ?site=. */
 export function CatalogApp({ context, pathname }: { context: AppContext; pathname: string }) {
-  const offering = /^\/catalog\/([^/]+)\/?$/.exec(pathname)
+  const offering = /^\/lms\/catalog\/([^/]+)\/?$/.exec(pathname)
   return (
     <AppProvider value={context}>
       <DashboardShell>

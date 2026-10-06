@@ -99,7 +99,7 @@ function Cohort({
   return (
     <>
       <p className="dash-back">
-        <a href={href('/cohorts')}>← All cohorts</a>
+        <a href={href('/lms/cohorts')}>← All cohorts</a>
       </p>
       <div className="dash-head">
         <div>

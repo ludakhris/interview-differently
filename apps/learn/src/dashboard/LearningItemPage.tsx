@@ -44,12 +44,14 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
   // The next item in the course, for "Continue".
   const flat = outline.data?.modules.flatMap((m) => m.items) ?? []
   const next = flat[flat.findIndex((i) => i.id === item.id) + 1]
-  const nextHref = next ? href(`/learning/${cohortId}/${next.id}`) : href(`/learning/${cohortId}`)
+  const nextHref = next
+    ? href(`/lms/learning/${cohortId}/${next.id}`)
+    : href(`/lms/learning/${cohortId}`)
 
   return (
     <>
       <p className="dash-back">
-        <a href={href(`/learning/${cohortId}`)}>
+        <a href={href(`/lms/learning/${cohortId}`)}>
           ← {outline.data?.cohort.courseTitle ?? 'Back to course'}
         </a>
       </p>

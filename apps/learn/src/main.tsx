@@ -20,14 +20,14 @@ function page(): ReactNode {
   if (pathname === '/privacy') return <PrivacyPage />
   if (pathname === '/sign-in' || pathname.startsWith('/sign-in/')) return <SignInPage />
   if (
-    pathname === '/dashboard' ||
-    pathname.startsWith('/dashboard/') ||
-    pathname === '/courses' ||
-    pathname.startsWith('/courses/') ||
-    pathname === '/cohorts' ||
-    pathname.startsWith('/cohorts/') ||
-    pathname === '/learning' ||
-    pathname.startsWith('/learning/')
+    pathname === '/lms/dashboard' ||
+    pathname.startsWith('/lms/dashboard/') ||
+    pathname === '/lms/courses' ||
+    pathname.startsWith('/lms/courses/') ||
+    pathname === '/lms/cohorts' ||
+    pathname.startsWith('/lms/cohorts/') ||
+    pathname === '/lms/learning' ||
+    pathname.startsWith('/lms/learning/')
   ) {
     // Same page on delaware.learndifferently.tech and on learndifferently.tech?site=delaware;
     // only the skin differs (see brand.ts).
@@ -39,7 +39,7 @@ function page(): ReactNode {
       />
     )
   }
-  if (pathname === '/catalog' || pathname.startsWith('/catalog/')) {
+  if (pathname === '/lms/catalog' || pathname.startsWith('/lms/catalog/')) {
     const context = resolveContext(hostname, search)
     return context.tenant ? <CatalogApp context={context} pathname={pathname} /> : <NotFoundPage />
   }

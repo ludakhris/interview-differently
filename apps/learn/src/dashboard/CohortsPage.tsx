@@ -55,7 +55,7 @@ export function CohortsPage({ workspace }: { workspace: string }) {
         name: shownName,
         maxLearners: maxLearners.trim() ? Number(maxLearners) : null,
       })
-      window.location.assign(href(`/cohorts/${created.id}`))
+      window.location.assign(href(`/lms/cohorts/${created.id}`))
     } catch (err) {
       setFormError((err as Error).message)
       setBusy(false)
@@ -188,7 +188,7 @@ export function CohortsPage({ workspace }: { workspace: string }) {
           {cohorts.data.map((c) => (
             <li key={c.id} className="dash-card dash-course">
               <div className="dash-course-main">
-                <a className="dash-course-title" href={href(`/cohorts/${c.id}`)}>
+                <a className="dash-course-title" href={href(`/lms/cohorts/${c.id}`)}>
                   {c.name}
                 </a>
                 <p className="dash-sub">

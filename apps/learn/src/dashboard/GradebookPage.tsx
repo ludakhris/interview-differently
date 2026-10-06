@@ -21,7 +21,7 @@ export function GradebookView({ data, role }: { data: Gradebook; role?: string }
   return (
     <>
       <p className="dash-back">
-        <a href={href('/dashboard')}>← All cohorts</a>
+        <a href={href('/lms/dashboard')}>← All cohorts</a>
       </p>
       <div className="dash-head">
         <div>

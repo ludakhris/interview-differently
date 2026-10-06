@@ -23,7 +23,7 @@ export function LearningPage() {
     setJoinError(null)
     try {
       const card = await send<LearnerCohortCard>('POST', '/learn/me/join', { code })
-      window.location.assign(href(`/learning/${card.cohortId}`))
+      window.location.assign(href(`/lms/learning/${card.cohortId}`))
     } catch (err) {
       setJoinError((err as Error).message)
       setBusy(false)
@@ -72,7 +72,7 @@ export function LearningPage() {
           {data.map((c) => (
             <li key={c.cohortId} className="dash-card dash-course">
               <div className="dash-course-main">
-                <a className="dash-course-title" href={href(`/learning/${c.cohortId}`)}>
+                <a className="dash-course-title" href={href(`/lms/learning/${c.cohortId}`)}>
                   {c.courseTitle}
                 </a>
                 <p className="dash-sub">

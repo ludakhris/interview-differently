@@ -256,7 +256,7 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
                   <td className="num">{points(c.avgGain)}</td>
                   <td className="num">{c.interviewReady}</td>
                   <td>
-                    <a href={href(`/dashboard/cohorts/${encodeURIComponent(c.cohortId)}`)}>
+                    <a href={href(`/lms/dashboard/cohorts/${encodeURIComponent(c.cohortId)}`)}>
                       Gradebook<span className="dash-visually-hidden"> for {c.cohort}</span>
                     </a>
                   </td>

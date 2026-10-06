@@ -21,7 +21,7 @@ export function LearningCoursePage({ cohortId }: { cohortId: string }) {
   return (
     <>
       <p className="dash-back">
-        <a href={href('/learning')}>← My learning</a>
+        <a href={href('/lms/learning')}>← My learning</a>
       </p>
       <div className="dash-head">
         <div>
@@ -54,7 +54,10 @@ export function LearningCoursePage({ cohortId }: { cohortId: string }) {
                 <ol className="dash-items">
                   {m.items.map((i) => (
                     <li key={i.id} className="dash-item">
-                      <a className="dash-item-link" href={href(`/learning/${cohortId}/${i.id}`)}>
+                      <a
+                        className="dash-item-link"
+                        href={href(`/lms/learning/${cohortId}/${i.id}`)}
+                      >
                         <span className="dash-item-type">
                           {LEARNER_TYPE_LABEL[i.type] ?? i.type}
                           {i.label ? ` · ${i.label}` : ''}

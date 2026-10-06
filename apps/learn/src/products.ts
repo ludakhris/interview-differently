@@ -25,7 +25,7 @@ export const PRODUCTS: Product[] = [
     role: 'Structure',
     tagline: 'Pathways, cohorts, progress and credentials.',
     status: 'available',
-    href: '/dashboard',
+    href: '/lms/dashboard',
   },
   {
     id: 'micro-learning',
