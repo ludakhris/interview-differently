@@ -32,7 +32,7 @@ To remove admin access, edit the same **Public metadata** field and either delet
 
 ## LearnDifferently demo data in production
 
-`apps/api/scripts/seed-learn-demo.ts` loads fictional sample data: two agencies (Delaware, Chesapeake), 8 providers, 8 courses, 24 cohorts, about 580 enrollments and 576 learners. It was loaded into production on 2026-10-06 for the 2026-10-07 Delaware Department of Labor demo.
+`apps/api/scripts/seed-learn-demo.ts` loads fictional sample data: two agencies (Delaware, Chesapeake), 8 providers, 8 courses, 24 cohorts, about 580 enrollments and 576 learners. Each course has two skills (tagged check questions, a hidden refresher lesson, and the skill's lesson set up as a review), and about 60 learners have missed a skill, so their plans include added items. That shows adaptive remediation in the gradebook and progress totals. Production was first loaded on 2026-10-06 for the 2026-10-07 Delaware Department of Labor demo, before the skills and plan items existed; reload it to add them.
 
 Every demo row has an id starting with `demo-`, so loading and removing touch nothing else. Ask the owner before running either command against production.
 

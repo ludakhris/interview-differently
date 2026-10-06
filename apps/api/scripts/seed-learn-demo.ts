@@ -64,6 +64,27 @@ const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, Math.ro
 
 // ── fictional content ───────────────────────────────────────────────────────
 
+const slugOf = (title: string): string =>
+  title
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+
+/** A stable id for a quiz question, so a learner's per-question results can point at it. */
+const questionId = (key: string, lesson: number, q: number): string =>
+  `q_${hash(`${key}-${lesson}-${q}`).toString(16).padStart(8, '0').slice(-8)}`
+
+interface ItemMeta {
+  id: string
+  type: string
+  label: string | null
+  skill?: string
+  reviewFor?: string
+  qids?: string[]
+}
+
 const FIRST = [
   'Aaliyah',
   'Marcus',
@@ -462,7 +483,7 @@ async function load(prisma: PrismaClient) {
   })
 
   const learnerRows = new Map<string, string>() // id -> displayName
-  const counts = { courses: 0, cohorts: 0, enrollments: 0, progress: 0 }
+  const counts = { courses: 0, cohorts: 0, enrollments: 0, progress: 0, plan: 0 }
 
   for (const p of PROFILES) {
     const providerId = `demo-inst-${p.key}`
@@ -477,7 +498,15 @@ async function load(prisma: PrismaClient) {
     })
 
     // Course: pre-assessment, five lessons with knowledge checks, interview, post-assessment.
+    // The two lessons that have a check are skills: a missed check adds extra content and sends
+    // the lesson back for review (adaptive remediation, #56).
     const courseId = `demo-course-${p.key}`
+    const skills = [1, 3].map((i) => ({
+      id: slugOf(p.lessons[i]),
+      label: p.lessons[i],
+      targetPct: 70,
+    }))
+    const skillOfLesson = new Map(skills.map((sk, n) => [[1, 3][n], sk.id]))
     await prisma.course.create({
       data: {
         id: courseId,
@@ -491,9 +520,11 @@ async function load(prisma: PrismaClient) {
         summary: summaryFor(p.key, p.program),
         outcomes: outcomesFor(p.key),
         targetRoles: rolesFor(p.key),
+        skills,
       },
     })
-    const items: { id: string; type: string; label: string | null }[] = []
+    const items: ItemMeta[] = []
+    const extraIds = new Map<string, string>() // skill id -> its extra content item
     const modules = [
       {
         title: 'Start here',
@@ -508,26 +539,51 @@ async function load(prisma: PrismaClient) {
       },
       {
         title: 'Core skills',
-        items: p.lessons.flatMap((title, i) => [
-          {
-            type: 'lesson',
-            title,
-            label: null,
-            config: { body: lessonBody(title, p.program) },
-          },
-          ...(i % 2 === 1
-            ? [
-                {
-                  type: 'knowledge_check',
-                  title: `Check: ${title}`,
-                  label: null,
-                  config: {
-                    questions: questionsFor(p.key).slice(i === 1 ? 0 : 2, i === 1 ? 2 : 4),
+        items: [
+          ...p.lessons.flatMap((title, i) => [
+            {
+              type: 'lesson',
+              title,
+              label: null,
+              config: {
+                body: lessonBody(title, p.program),
+                ...(skillOfLesson.has(i) ? { reviewFor: skillOfLesson.get(i) } : {}),
+              },
+              reviewFor: skillOfLesson.get(i),
+            },
+            ...(i % 2 === 1
+              ? [
+                  {
+                    type: 'knowledge_check',
+                    title: `Check: ${title}`,
+                    label: null,
+                    config: {
+                      questions: questionsFor(p.key)
+                        .slice(i === 1 ? 0 : 2, i === 1 ? 2 : 4)
+                        .map((q, qi) => ({
+                          ...q,
+                          id: questionId(p.key, i, qi),
+                          skill: skillOfLesson.get(i),
+                        })),
+                    },
+                    skill: skillOfLesson.get(i),
+                    qids: [0, 1].map((qi) => questionId(p.key, i, qi)),
                   },
-                },
-              ]
-            : []),
-        ]),
+                ]
+              : []),
+          ]),
+          // Extra content: kept out of the outline, only learners flagged on the skill get it.
+          ...skills.map((sk) => ({
+            type: 'lesson',
+            title: `${sk.label}: refresher`,
+            label: null,
+            config: {
+              body: lessonBody(`${sk.label}: refresher`, p.program),
+              remediationFor: sk.id,
+            },
+            extra: sk.id,
+          })),
+        ],
       },
       {
         title: 'Interview practice',
@@ -560,7 +616,22 @@ async function load(prisma: PrismaClient) {
       await prisma.courseItem.createMany({
         data: m.items.map((it, ii) => {
           const id = `demo-item-${p.key}-${mi + 1}-${ii + 1}`
-          items.push({ id, type: it.type, label: it.label })
+          const meta = it as {
+            skill?: string
+            reviewFor?: string
+            extra?: string
+            qids?: string[]
+          }
+          if (meta.extra) extraIds.set(meta.extra, id)
+          else
+            items.push({
+              id,
+              type: it.type,
+              label: it.label,
+              skill: meta.skill,
+              reviewFor: meta.reviewFor,
+              qids: meta.qids,
+            })
           return {
             id,
             moduleId,
@@ -632,6 +703,15 @@ async function load(prisma: PrismaClient) {
         score: number | null
         attempts: number
         completedAt: Date | null
+        data?: object
+      }[] = []
+      // What each learner's missed checks added to their plan.
+      const planRows: {
+        id: string
+        enrollmentId: string
+        itemId: string
+        reason: object
+        createdAt: Date
       }[] = []
 
       // Share of the course a still-running cohort has covered.
@@ -664,18 +744,44 @@ async function load(prisma: PrismaClient) {
         const doneCount = Math.floor(reach * itemCount)
         let lastDone: Date | null = null
 
+        // Checks this learner missed: the skill is flagged, so its extra content and the review of
+        // its lesson are added to their plan.
+        const fr = rng(`flags-${enrollmentId}`)
+        const flagged: {
+          skill: string
+          checkId: string
+          when: Date
+          reviewId: string
+          extraId: string
+          pct: number
+        }[] = []
+
         items.forEach((item, idx) => {
           const done = idx < doneCount
           const inProgress = !done && idx === doneCount && !withdrawn && !finished
           if (!done && !inProgress) return
           let score: number | null = null
           let attempts = 1
+          let data: object | undefined
+          let right = 2
           if (item.label === 'pre') score = pre
           else if (item.label === 'post') score = post
           else if (item.type === 'interview') {
             score = interviewBest
             attempts = interviewAttempts
-          } else if (item.type === 'knowledge_check') score = clamp(lr.normal(78 + plan.trend, 12))
+          } else if (item.type === 'knowledge_check') {
+            // Two tagged questions, so the score is 0, 50 or 100, with the results to match.
+            const raw = clamp(lr.normal(78 + plan.trend, 12))
+            right = raw >= 62 ? 2 : raw >= 40 ? 1 : 0
+            score = right * 50
+            const first = fr.next() < 0.5
+            data = {
+              results: (item.qids ?? []).map((id, qi) => ({
+                id,
+                correct: right === 2 ? true : right === 0 ? false : qi === 0 ? first : !first,
+              })),
+            }
+          }
           const when = new Date(
             startsAt.getTime() +
               ((idx + 1) / itemCount) * Math.min(elapsed, 1) * p.lengthWeeks * WEEK * 0.97
@@ -689,8 +795,68 @@ async function load(prisma: PrismaClient) {
             score: done ? score : null,
             attempts: done ? attempts : 0,
             completedAt: done ? when : null,
+            ...(done && data ? { data } : {}),
           })
+          if (done && item.type === 'knowledge_check' && item.skill && right < 2) {
+            const reviewId = items.find((x) => x.reviewFor === item.skill)?.id
+            const extraId = extraIds.get(item.skill)
+            if (reviewId && extraId) {
+              flagged.push({
+                skill: item.skill,
+                checkId: item.id,
+                when,
+                reviewId,
+                extraId,
+                pct: right * 50,
+              })
+            }
+          }
         })
+
+        let finalDone = lastDone as Date | null
+        for (const f of flagged) {
+          const planAt = new Date(f.when.getTime() + 60_000)
+          const label = skills.find((sk) => sk.id === f.skill)?.label ?? f.skill
+          const reason = {
+            skill: f.skill,
+            skillLabel: label,
+            pct: f.pct,
+            n: 2,
+            sourceItemId: f.checkId,
+          }
+          planRows.push(
+            ...[f.extraId, f.reviewId].map((itemId, n) => ({
+              id: `demo-plan-${enrollmentId}-${f.skill}-${n + 1}`,
+              enrollmentId,
+              itemId,
+              reason,
+              createdAt: planAt,
+            }))
+          )
+          // Everyone who finishes the course has done what was added; others may be part way.
+          const redo = finishes && (finished || fr.next() < 0.5)
+          if (!redo) continue
+          const redoAt = new Date(Math.min(f.when.getTime() + 2 * DAY, TODAY.getTime()))
+          if (redoAt.getTime() <= planAt.getTime()) continue
+          progress.push({
+            id: `demo-prog-${enrollmentId}-x-${f.skill}`,
+            enrollmentId,
+            itemId: f.extraId,
+            status: 'completed',
+            score: null,
+            attempts: 1,
+            completedAt: redoAt,
+          })
+          // The lesson was done before; doing it again after it was added is what counts for the plan.
+          const again = progress.find(
+            (r) => r.enrollmentId === enrollmentId && r.itemId === f.reviewId
+          )
+          if (again) {
+            again.completedAt = redoAt
+            again.attempts = 2
+          }
+          if (!finalDone || redoAt.getTime() > finalDone.getTime()) finalDone = redoAt
+        }
 
         const completed = finishes && finished
         enrollments.push({
@@ -699,7 +865,7 @@ async function load(prisma: PrismaClient) {
           userId: learner.id,
           status: completed ? 'completed' : withdrawn ? 'withdrawn' : 'enrolled',
           enrolledAt,
-          completedAt: completed ? lastDone : null,
+          completedAt: completed ? finalDone : null,
         })
         memberships.push({ userId: learner.id, institutionId: hostId, cohortId })
       }
@@ -710,7 +876,9 @@ async function load(prisma: PrismaClient) {
       })
       await prisma.membership.createMany({ data: memberships })
       await prisma.enrollment.createMany({ data: enrollments })
-      await prisma.itemProgress.createMany({ data: progress })
+      await prisma.itemProgress.createMany({ data: progress as never })
+      await prisma.planItem.createMany({ data: planRows as never })
+      counts.plan += planRows.length
       counts.enrollments += enrollments.length
       counts.progress += progress.length
     }
@@ -718,7 +886,8 @@ async function load(prisma: PrismaClient) {
 
   console.log(
     `Loaded demo tenant: ${counts.courses} courses, ${counts.cohorts} cohorts, ` +
-      `${counts.enrollments} enrollments, ${counts.progress} progress rows, ${learnerRows.size} learners.`
+      `${counts.enrollments} enrollments, ${counts.progress} progress rows, ${counts.plan} plan items, ` +
+      `${learnerRows.size} learners.`
   )
 }
 
