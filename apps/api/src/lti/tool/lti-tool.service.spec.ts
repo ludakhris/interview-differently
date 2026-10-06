@@ -1356,8 +1356,23 @@ describe('assessment launch', () => {
         return d
       }),
     }
+    // the learner's attempts: `delivery` is what the tool's where-clause filters on
+    const attempts: Row[] = []
+    h.prisma.assessmentAttempt = {
+      ...h.prisma.assessmentAttempt,
+      findMany: jest.fn(async (a: Row) =>
+        attempts.filter(
+          (t) =>
+            t.userId === a.where.userId &&
+            t.submittedAt &&
+            t.delivery.assessmentId === a.where.delivery.assessmentId &&
+            t.delivery.cohortId === a.where.delivery.cohortId &&
+            t.delivery.label.startsWith(a.where.delivery.label.startsWith)
+        )
+      ),
+    }
     h.svc.sleep = async () => undefined
-    return { ...h, deliveries }
+    return { ...h, deliveries, attempts }
   }
   async function launchWith(
     h: ReturnType<typeof ready>,
@@ -1393,6 +1408,161 @@ describe('assessment launch', () => {
       lineitem: LINEITEM,
     })
     expect(h.prisma.scenario.findUnique).not.toHaveBeenCalled()
+  })
+
+  describe('attempts and time limits', () => {
+    const attemptCustom = (extra: Record<string, unknown>) => ({
+      ref: 'sql-basics',
+      tool: 'id-assessment',
+      ...extra,
+    })
+    const submittedOn = (label: string, over: Row = {}) => ({
+      userId: 'u1',
+      submittedAt: new Date(),
+      delivery: { assessmentId: 'as1', cohortId: 'c1', label },
+      ...over,
+    })
+
+    it('uses the original label for attempt 1, with or without the claim', async () => {
+      const h = ready()
+      const a = await launchWith(h, attemptCustom({}))
+      const b = await launchWith(h, attemptCustom({ attempt: 1 }))
+      expect(h.deliveries.map((d) => d.label)).toEqual(['lti:item1'])
+      expect(sessionOf(a).deliveryId).toBe(sessionOf(b).deliveryId)
+    })
+
+    it('matches a delivery created before retakes existed', async () => {
+      const h = ready()
+      h.deliveries.push({ id: 'old', assessmentId: 'as1', cohortId: 'c1', label: 'lti:item1' })
+      const r = await launchWith(h, attemptCustom({ attempt: 1, timeLimitMinutes: 30 }))
+      expect(sessionOf(r).deliveryId).toBe('old')
+      // existing deliveries keep what they have
+      expect(h.deliveries).toHaveLength(1)
+      expect(h.deliveries[0]).not.toHaveProperty('timeLimitMinutes')
+    })
+
+    it('gives each retake its own delivery, labelled lti:<link>#<n>', async () => {
+      const h = ready()
+      const first = await launchWith(h, attemptCustom({}))
+      h.attempts.push(submittedOn('lti:item1'))
+      const second = await launchWith(h, attemptCustom({ attempt: 2 }))
+      h.attempts.push(submittedOn('lti:item1#2'))
+      const third = await launchWith(h, attemptCustom({ attempt: 3 }))
+      expect(h.deliveries.map((d) => d.label)).toEqual(['lti:item1', 'lti:item1#2', 'lti:item1#3'])
+      expect(new Set([first, second, third].map((r) => sessionOf(r).deliveryId)).size).toBe(3)
+      expect(sessionOf(second).deliveryId).toBe('d2')
+    })
+
+    it('resumes the same delivery when an attempt is relaunched, submitted or not', async () => {
+      const h = ready()
+      await launchWith(h, attemptCustom({}))
+      h.attempts.push(submittedOn('lti:item1'))
+      const a = await launchWith(h, attemptCustom({ attempt: 2 }))
+      // attempt 2 has not been submitted; launching it again finds the same delivery
+      const b = await launchWith(h, attemptCustom({ attempt: 2 }))
+      expect(sessionOf(b).deliveryId).toBe(sessionOf(a).deliveryId)
+      // a submitted attempt 1 can still be relaunched
+      const c = await launchWith(h, attemptCustom({ attempt: 1 }))
+      expect(sessionOf(c).deliveryId).toBe('d1')
+      expect(h.deliveries).toHaveLength(2)
+    })
+
+    it('refuses to skip ahead of the submitted attempts', async () => {
+      const h = ready()
+      await expect(launchWith(h, attemptCustom({ attempt: 2 }))).rejects.toMatchObject({
+        status: 400,
+      })
+      // an unsubmitted attempt 1 does not unlock attempt 2
+      h.attempts.push(submittedOn('lti:item1', { submittedAt: null }))
+      await expect(launchWith(h, attemptCustom({ attempt: 2 }))).rejects.toMatchObject({
+        status: 400,
+      })
+      h.attempts.push(submittedOn('lti:item1'))
+      await expect(launchWith(h, attemptCustom({ attempt: 3 }))).rejects.toMatchObject({
+        status: 400,
+      })
+      await expect(launchWith(h, attemptCustom({ attempt: 2 }))).resolves.toBeDefined()
+      expect(h.deliveries.map((d) => d.label)).toEqual(['lti:item1#2'])
+    })
+
+    it('counts only this learner, item, assessment and cohort', async () => {
+      const h = ready()
+      h.attempts.push(
+        submittedOn('lti:item1', { userId: 'someone-else' }),
+        submittedOn('lti:item2'),
+        submittedOn('lti:item1#2', {
+          delivery: { assessmentId: 'as2', cohortId: 'c1', label: 'lti:item1' },
+        }),
+        submittedOn('lti:item1', {
+          delivery: { assessmentId: 'as1', cohortId: 'c9', label: 'lti:item1' },
+        }),
+        // another item whose id merely starts with this one
+        submittedOn('lti:item1#x')
+      )
+      await expect(launchWith(h, attemptCustom({ attempt: 2 }))).rejects.toMatchObject({
+        status: 400,
+      })
+    })
+
+    it('creates the delivery with the time limit, only on creation', async () => {
+      const h = ready()
+      await launchWith(h, attemptCustom({ timeLimitMinutes: 45 }))
+      expect(h.deliveries[0]).toMatchObject({ label: 'lti:item1', timeLimitMinutes: 45 })
+      await launchWith(h, attemptCustom({ timeLimitMinutes: 90 }))
+      expect(h.deliveries).toHaveLength(1)
+      expect(h.deliveries[0].timeLimitMinutes).toBe(45)
+      h.attempts.push(submittedOn('lti:item1'))
+      await launchWith(h, attemptCustom({ attempt: 2, timeLimitMinutes: 60 }))
+      expect(h.deliveries[1]).toMatchObject({ label: 'lti:item1#2', timeLimitMinutes: 60 })
+    })
+
+    it.each([
+      [{ attempt: 0 }],
+      [{ attempt: -1 }],
+      [{ attempt: 1.5 }],
+      [{ attempt: '2' }],
+      [{ attempt: null }],
+      [{ attempt: 101 }],
+      [{ timeLimitMinutes: 4 }],
+      [{ timeLimitMinutes: 241 }],
+      [{ timeLimitMinutes: 30.5 }],
+      [{ timeLimitMinutes: '30' }],
+      [{ timeLimitMinutes: null }],
+    ])('rejects the claims %j with a 400 and creates nothing', async (extra) => {
+      const h = ready()
+      await expect(launchWith(h, attemptCustom(extra))).rejects.toMatchObject({ status: 400 })
+      expect(h.deliveries).toHaveLength(0)
+    })
+
+    it('accepts the limit bounds', async () => {
+      const h = ready()
+      await launchWith(h, attemptCustom({ timeLimitMinutes: 5 }))
+      expect(h.deliveries[0].timeLimitMinutes).toBe(5)
+      const h2 = ready()
+      await launchWith(h2, attemptCustom({ timeLimitMinutes: 240 }))
+      expect(h2.deliveries[0].timeLimitMinutes).toBe(240)
+    })
+
+    it('creates one delivery when two launches of the same retake race', async () => {
+      const h = ready()
+      h.attempts.push(submittedOn('lti:item1'))
+      const [a, b] = await Promise.all([
+        launchWith(h, attemptCustom({ attempt: 2, timeLimitMinutes: 20 })),
+        launchWith(h, attemptCustom({ attempt: 2, timeLimitMinutes: 20 })),
+      ])
+      expect(h.deliveries).toHaveLength(1)
+      expect(sessionOf(a).deliveryId).toBe(sessionOf(b).deliveryId)
+    })
+
+    it('locks on the exact label, so attempt 2 is not blocked by attempt 1 being set up', async () => {
+      const h = ready()
+      h.attempts.push(submittedOn('lti:item1'))
+      await h.store.claim('lti-delivery', 'as1:c1:lti:item1', 60)
+      await expect(launchWith(h, attemptCustom({ attempt: 2 }))).resolves.toBeDefined()
+      await expect(launchWith(h, attemptCustom({ attempt: 1 }))).rejects.toMatchObject({
+        status: 503,
+      })
+    })
   })
 
   it('reuses the delivery on a second launch and matches by id as a fallback', async () => {
@@ -1535,6 +1705,30 @@ describe('completeAssessment', () => {
       status: 409,
     })
     expect(h.calls.filter((c) => c.url.endsWith('/scores'))).toHaveLength(1)
+  })
+
+  it('posts a retake with its own score and dimensions, independent of the first attempt', async () => {
+    const h = ready()
+    await h.svc.completeAssessment(session, 'at1')
+    const retake = attempt({
+      id: 'at2',
+      deliveryId: 'd2',
+      sectionScores: [{ sectionId: 's1', title: 'Basics', correct: 3, total: 3, questions: [] }],
+    })
+    h.prisma.assessmentAttempt.findUnique.mockResolvedValue(retake)
+    await expect(
+      h.svc.completeAssessment({ ...session, deliveryId: 'd2', jti: 'j2' }, 'at2')
+    ).resolves.toMatchObject({ score: 100 })
+    const bodies = h.calls
+      .filter((c) => c.url.endsWith('/scores'))
+      .map((c) => JSON.parse(String(c.init!.body)))
+    expect(bodies.map((b) => b.scoreGiven)).toEqual([60, 100])
+    expect(bodies[1][DIMENSIONS_FIELD]).toEqual([{ dimension: 'Basics', score: 100 }])
+    // a session pinned to the retake cannot send the first attempt's score
+    h.prisma.assessmentAttempt.findUnique.mockResolvedValue(attempt())
+    await expect(
+      h.svc.completeAssessment({ ...session, deliveryId: 'd2', jti: 'j3' }, 'at1')
+    ).rejects.toMatchObject({ status: 404 })
   })
 
   it('releases both locks when the platform fails, so a retry works', async () => {

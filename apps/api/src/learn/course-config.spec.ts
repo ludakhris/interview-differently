@@ -393,7 +393,47 @@ describe('tool items', () => {
           label: 'pre',
           config: { ...assess.config, remediationFor: 'comms' },
         }).config
-      ).toEqual({ toolId: 'id-assessment', ref: 'cna-pre' })
+      ).toEqual({ toolId: 'id-assessment', ref: 'cna-pre', maxAttempts: 1 })
+    })
+
+    it('keeps maxAttempts (default 1) and an optional timeLimitMinutes', () => {
+      expect(validateItemInput(assess).config).toEqual({
+        toolId: 'id-assessment',
+        ref: 'cna-pre',
+        maxAttempts: 1,
+      })
+      expect(
+        validateItemInput({
+          ...assess,
+          config: { ...assess.config, maxAttempts: 5, timeLimitMinutes: 240 },
+        }).config
+      ).toEqual({ toolId: 'id-assessment', ref: 'cna-pre', maxAttempts: 5, timeLimitMinutes: 240 })
+      expect(
+        validateItemInput({ ...assess, config: { ...assess.config, timeLimitMinutes: 5 } }).config
+      ).toMatchObject({ timeLimitMinutes: 5 })
+    })
+
+    it('rejects attempts and time limits out of range or not whole numbers', () => {
+      for (const maxAttempts of [0, 6, 1.5, '2'])
+        expect(() =>
+          validateItemInput({ ...assess, config: { ...assess.config, maxAttempts } })
+        ).toThrow('Attempts allowed must be a whole number from 1 to 5')
+      for (const timeLimitMinutes of [4, 241, 10.5, '30', null])
+        expect(() =>
+          validateItemInput({ ...assess, config: { ...assess.config, timeLimitMinutes } })
+        ).toThrow('Time limit must be a whole number from 5 to 240')
+    })
+
+    it('drops attempts and time limit for a tool that is not an assessment', () => {
+      expect(
+        validateItemInput({
+          ...base,
+          config: { ...base.config, maxAttempts: 3, timeLimitMinutes: 30 },
+        }).config
+      ).toEqual({ toolId: 'id-interview', ref: 'cna' })
+      expect(
+        validateItemInput({ ...base, config: { ...base.config, maxAttempts: 99 } }).config
+      ).toEqual({ toolId: 'id-interview', ref: 'cna' })
     })
 
     it('refuses a label on a tool that is not labelable', () => {

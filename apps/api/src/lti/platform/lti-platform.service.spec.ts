@@ -21,6 +21,7 @@ const prisma = {
   institution: { findUnique: jest.fn() },
   enrollment: { findUnique: jest.fn() },
   courseItem: { findUnique: jest.fn() },
+  itemProgress: { findFirst: jest.fn() },
 }
 const learner = { recordToolResult: jest.fn() }
 
@@ -229,6 +230,73 @@ describe('startLaunch', () => {
   })
 })
 
+describe('assessment attempts and time limit', () => {
+  const assessment = (config: object = {}) =>
+    prisma.courseItem.findUnique.mockResolvedValue({
+      id: 'i1',
+      type: 'tool',
+      config: { toolId: 'id-assessment', ref: 'cna-pre', ...config },
+      module: { courseId: 'c1' },
+    })
+  const customOf = async () => {
+    const html = await service.authenticate(await authParams())
+    const claims = await verifyJwt(field(html, 'id_token'), {
+      issuer: reg.issuer,
+      audience: tool.clientId,
+      nonce: 'n1',
+      keyFor: async () => service.jwks().keys[0],
+    })
+    return claims[CLAIM.custom]
+  }
+
+  it('sends attempt 1 and no time limit by default', async () => {
+    assessment()
+    prisma.itemProgress.findFirst.mockResolvedValue(null)
+    expect(await customOf()).toEqual({ ref: 'cna-pre', tool: 'id-assessment', attempt: 1 })
+  })
+
+  it('sends the time limit and the next attempt number after the recorded scores', async () => {
+    assessment({ maxAttempts: 3, timeLimitMinutes: 45 })
+    prisma.itemProgress.findFirst.mockResolvedValue({ attempts: 1 })
+    expect(await customOf()).toEqual({
+      ref: 'cna-pre',
+      tool: 'id-assessment',
+      attempt: 2,
+      timeLimitMinutes: 45,
+    })
+  })
+
+  it('resumes an unfinished attempt: with no new score the attempt number is unchanged', async () => {
+    assessment({ maxAttempts: 3 })
+    prisma.itemProgress.findFirst.mockResolvedValue({ attempts: 1 })
+    expect(((await customOf()) as { attempt: number }).attempt).toBe(2)
+    expect(((await customOf()) as { attempt: number }).attempt).toBe(2)
+  })
+
+  it('refuses a launch with 409 once all attempts are used, and allows the last one', async () => {
+    assessment({ maxAttempts: 2 })
+    prisma.itemProgress.findFirst.mockResolvedValue({ attempts: 1 })
+    await expect(service.startLaunch('u1', 'k1', 'i1')).resolves.toBeTruthy()
+    prisma.itemProgress.findFirst.mockResolvedValue({ attempts: 2 })
+    await reject(service.startLaunch('u1', 'k1', 'i1'), 409, 'You have used all 2 attempts.')
+    assessment()
+    prisma.itemProgress.findFirst.mockResolvedValue({ attempts: 1 })
+    await reject(service.startLaunch('u1', 'k1', 'i1'), 409, 'You have used all 1 attempts.')
+  })
+
+  it('leaves interview tools unlimited and without attempt or time-limit claims', async () => {
+    prisma.itemProgress.findFirst.mockResolvedValue({ attempts: 50 })
+    await expect(service.startLaunch('u1', 'k1', 'i1')).resolves.toBeTruthy()
+    prisma.courseItem.findUnique.mockResolvedValue({
+      id: 'i1',
+      type: 'tool',
+      config: { toolId: 'id-interview', ref: 'x', maxAttempts: 1, timeLimitMinutes: 30 },
+      module: { courseId: 'c1' },
+    })
+    expect(await customOf()).toEqual({ ref: 'x', tool: 'id-interview' })
+  })
+})
+
 describe('auth for an assessment item', () => {
   it('puts the tool id and the assessment slug in the custom claim', async () => {
     prisma.courseItem.findUnique.mockResolvedValue({
@@ -244,7 +312,7 @@ describe('auth for an assessment item', () => {
       nonce: 'n1',
       keyFor: async () => service.jwks().keys[0],
     })
-    expect(claims[CLAIM.custom]).toEqual({ ref: 'cna-pre', tool: 'id-assessment' })
+    expect(claims[CLAIM.custom]).toEqual({ ref: 'cna-pre', tool: 'id-assessment', attempt: 1 })
   })
 })
 

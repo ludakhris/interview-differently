@@ -21,6 +21,7 @@ import { ResultsService } from '../results/results.service'
 import { ScenariosController } from '../scenarios/scenarios.controller'
 import { ScenariosService } from '../scenarios/scenarios.service'
 import { LTI_STORE, MemoryLtiStore } from './lti-store'
+import * as ltiSpec from './lti-spec'
 import { LtiPlatformController } from './platform/lti-platform.controller'
 import { LtiPlatformService } from './platform/lti-platform.service'
 import { LtiToolController } from './tool/lti-tool.controller'
@@ -40,6 +41,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
   let base: string
   let platform: LtiPlatformService
   const recordToolResult = jest.fn()
+  const store = new MemoryLtiStore()
 
   /** The ref of the launched item; set per test. */
   let itemRef = 'scn-1'
@@ -184,6 +186,8 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
   }
   const deliveries: Row[] = []
   const attempts: Row = {}
+  /** Extra custom-claim fields (attempt, timeLimitMinutes) merged into the next id_tokens. */
+  let customExtra: Record<string, unknown> = {}
   const prisma = {
     assessment: {
       findUnique: jest.fn(async (a: Row) =>
@@ -211,6 +215,20 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
       }),
     },
     assessmentAttempt: {
+      findMany: jest.fn(async (a: Row) =>
+        Object.values(attempts)
+          .filter((t: Row) => {
+            const d = deliveries.find((x) => x.id === t.deliveryId)!
+            return (
+              t.userId === a.where.userId &&
+              t.submittedAt &&
+              d.assessmentId === a.where.delivery.assessmentId &&
+              d.cohortId === a.where.delivery.cohortId &&
+              d.label.startsWith(a.where.delivery.label.startsWith)
+            )
+          })
+          .map((t: Row) => ({ delivery: deliveries.find((x) => x.id === t.deliveryId) }))
+      ),
       findUnique: jest.fn(async (a: Row) => {
         const row = a.where.id
           ? attempts[a.where.id]
@@ -261,6 +279,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         module: { courseId: 'c1' },
       })),
     },
+    itemProgress: { findFirst: jest.fn(async () => null) },
     scenario: {
       findMany: jest.fn(async () => []),
       findUnique: jest.fn(async (a: Row) =>
@@ -312,8 +331,8 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
    * Steps 1 to 4: start, login initiation, auth request; returns the launch form the tool receives
    * and the lti_state cookie the same browser carries from /login to /launch.
    */
-  async function reachLaunchForm() {
-    const start = await platform.startLaunch('u1', 'k1', 'i1')
+  async function reachLaunchForm(itemId = 'i1') {
+    const start = await platform.startLaunch('u1', 'k1', itemId)
     const login = await post(start.action, start.fields)
     expect(login.status).toBe(302)
     const cookie = cookieOf(login)
@@ -323,6 +342,16 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
   }
 
   beforeAll(async () => {
+    // the platform side states the attempt and time limit in the custom claim; until it does, the
+    // test plays that part by merging them into the id_token the platform signs
+    const realSign = ltiSpec.signJwt
+    jest.spyOn(ltiSpec, 'signJwt').mockImplementation((payload, key) => {
+      const custom = payload[ltiSpec.CLAIM.custom] as Row | undefined
+      return realSign(
+        custom ? { ...payload, [ltiSpec.CLAIM.custom]: { ...custom, ...customExtra } } : payload,
+        key
+      )
+    })
     process.env.LTI_TOOL_SCORING = 'stub'
     delete process.env.LTI_LEARN_URL
     const mod = await Test.createTestingModule({
@@ -357,7 +386,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         },
         LtiPlatformService,
         LtiToolService,
-        { provide: LTI_STORE, useValue: new MemoryLtiStore() },
+        { provide: LTI_STORE, useValue: store },
         { provide: PrismaService, useValue: prisma },
         { provide: LearnerService, useValue: { recordToolResult } },
         { provide: InterviewEngineService, useValue: { scoreAnswers } },
@@ -376,6 +405,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     await app.close()
   })
   beforeEach(() => {
+    customExtra = {}
     recordToolResult.mockClear()
     itemRef = 'scn-1'
     itemTool = 'id-interview'
@@ -732,6 +762,83 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         dimensions: [{ dimension: 'Basics', score: 50 }],
       })
       expect(recordToolResult).toHaveBeenCalledTimes(1)
+    })
+
+    describe('retakes and time limits', () => {
+      // these tests log in many times; keep them under the per-IP login and auth rate limits for the rest
+      afterEach(() => {
+        const entries = (store as unknown as { entries: Map<string, unknown> }).entries
+        for (const id of [...entries.keys()]) if (id.includes('rl:')) entries.delete(id)
+      })
+      async function launchAttempt(attempt: number, extra: Record<string, unknown> = {}) {
+        customExtra = { attempt, ...extra }
+        itemTool = 'id-assessment'
+        itemRef = 'sql-basics'
+        const launch = await reachLaunchForm('i2')
+        const res = await post(launch.action, launch.fields, launch.cookie)
+        return res
+      }
+      async function play(attempt: number, answers: Record<string, string>) {
+        const res = await launchAttempt(attempt, attempt === 1 ? { timeLimitMinutes: 30 } : {})
+        expect(res.status).toBe(303)
+        const [path, token] = res.headers.get('location')!.split('#session=')
+        const deliveryId = path.split('/lti/assessment/')[1]
+        const started = await api(token, `/me/deliveries/${deliveryId}/attempts`, {
+          method: 'POST',
+        })
+        const { id } = await started.json()
+        const paper = await (await api(token, `/me/attempts/${id}`)).json()
+        await api(token, `/me/attempts/${id}/submit`, {
+          method: 'POST',
+          body: JSON.stringify({ answers }),
+        })
+        const done = await api(token, '/lti/tool/complete', {
+          method: 'POST',
+          body: JSON.stringify({ attemptId: id }),
+        })
+        return { deliveryId, id, paper, done, token }
+      }
+
+      it('gives each attempt its own delivery, paper and score', async () => {
+        const first = await play(1, { '1.1': 'B', '1.2': 'B' }) // 1 of 2
+        expect(first.done.status).toBe(201)
+        expect(first.paper.deadlineAt).toBeTruthy() // the 30 minute limit from the claim
+        const second = await play(2, { '1.1': 'B', '1.2': 'A' }) // 2 of 2
+        expect(second.done.status).toBe(201)
+
+        expect(second.deliveryId).not.toBe(first.deliveryId)
+        expect(second.id).not.toBe(first.id)
+        expect(deliveries.find((d) => d.id === first.deliveryId)).toMatchObject({
+          label: 'lti:i2',
+          timeLimitMinutes: 30,
+        })
+        expect(deliveries.find((d) => d.id === second.deliveryId)).toMatchObject({
+          label: 'lti:i2#2',
+        })
+        expect(await first.done.json()).toMatchObject({ score: 50 })
+        expect(await second.done.json()).toMatchObject({ score: 100 })
+        expect(recordToolResult.mock.calls.map((c) => c[3].scorePct)).toEqual([50, 100])
+
+        // the attempt-1 session cannot reach attempt 2's delivery
+        expect(
+          (
+            await api(first.token, `/me/deliveries/${second.deliveryId}/attempts`, {
+              method: 'POST',
+            })
+          ).status
+        ).toBe(403)
+        // attempt 2 relaunched resumes its own (submitted) delivery
+        const again = await launchAttempt(2)
+        expect(again.headers.get('location')).toContain(`/lti/assessment/${second.deliveryId}#`)
+      })
+
+      it('refuses to skip ahead and rejects bad claims with a 400 page', async () => {
+        const skip = await launchAttempt(9)
+        expect(skip.status).toBe(400)
+        const bad = await launchAttempt(2, { timeLimitMinutes: 1 })
+        expect(bad.status).toBe(400)
+        expect(await bad.text()).toContain('Invalid time limit')
+      })
     })
 
     it('relaunching the same item reuses its delivery', async () => {

@@ -612,4 +612,49 @@ describe('LTI attempts (#63)', () => {
     // no pin (Clerk): unchanged behaviour
     await expect(svc.getResult('u1', 'a1')).resolves.toBeDefined()
   })
+
+  describe('time limit from the delivery', () => {
+    const run = async (startedMinutesAgo: number) => {
+      const timed = { ...delivery, timeLimitMinutes: 30 }
+      const attempt = {
+        id: 'a1',
+        userId: 'u1',
+        deliveryId: 'd1',
+        startedAt: new Date(Date.now() - startedMinutesAgo * 60 * 1000),
+        submittedAt: null,
+        drawnQuestionIds: ['1.1'],
+        answers: { '1.1': 'A' },
+        sectionScores: null,
+        delivery: timed,
+      }
+      const { svc, prisma } = make({ attempt })
+      const update = jest.fn(async () => ({}))
+      ;(prisma.assessmentAttempt as Record<string, unknown>).update = update
+      const paper = await svc.getAttempt('u1', 'a1', 'd1')
+      const result = await svc.submit('u1', 'a1', undefined, 'd1')
+      return { paper, result, update }
+    }
+
+    it('reports the deadline as start plus the limit', async () => {
+      const { paper } = await run(10)
+      expect(paper.deadlineAt!.getTime()).toBeGreaterThan(Date.now() + 19 * 60 * 1000)
+      expect(paper.deadlineAt!.getTime()).toBeLessThan(Date.now() + 21 * 60 * 1000)
+    })
+
+    it('records an on-time submit as not late', async () => {
+      const { update } = await run(10)
+      expect(update.mock.calls[0]).toMatchObject([{ data: { submittedLate: false } }])
+    })
+
+    it('still grades and stores a submit after the deadline, flagged late', async () => {
+      const { result, update } = await run(45)
+      expect(result.overall).toMatchObject({ correct: 1, total: 1, percent: 100 })
+      expect(update.mock.calls[0]).toMatchObject([{ data: { submittedLate: true } }])
+    })
+
+    it('treats a submit within the two minute grace as on time', async () => {
+      const { update } = await run(31)
+      expect(update.mock.calls[0]).toMatchObject([{ data: { submittedLate: false } }])
+    })
+  })
 })

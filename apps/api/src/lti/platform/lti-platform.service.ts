@@ -31,6 +31,7 @@ import {
 import type { JwtClaims, KeyPair, ToolRegistration } from '../lti-spec'
 import {
   apiBase,
+  assessmentLimits,
   learnUrl,
   platformRegistration,
   registeredTools,
@@ -115,7 +116,13 @@ export class LtiPlatformService {
 
   /** Checks the learner may open this tool item and returns the form that starts the OIDC login. */
   async startLaunch(userId: string, cohortId: string, itemId: string) {
-    const { tool } = await this.toolItem(cohortId, itemId, userId)
+    const { tool, config } = await this.toolItem(cohortId, itemId, userId)
+    if (tool.kind === 'assessment') {
+      const { maxAttempts } = assessmentLimits(config)
+      const used = await this.attemptsUsed(userId, cohortId, itemId)
+      if (used >= maxAttempts)
+        throw new ConflictException(`You have used all ${maxAttempts} attempts.`)
+    }
     const hint = this.signHint({ userId, cohortId, itemId })
     return {
       action: tool.loginUrl,
@@ -128,6 +135,15 @@ export class LtiPlatformService {
         lti_deployment_id: tool.deploymentId,
       },
     }
+  }
+
+  /** Scores recorded for this learner on the item (LearnDifferently's own count of attempts). */
+  private async attemptsUsed(userId: string, cohortId: string, itemId: string): Promise<number> {
+    const progress = await this.prisma.itemProgress.findFirst({
+      where: { itemId, enrollment: { cohortId, userId } },
+      select: { attempts: true },
+    })
+    return progress?.attempts ?? 0
   }
 
   /**
@@ -159,7 +175,7 @@ export class LtiPlatformService {
     const tool = toolById(config.toolId)
     if (!tool || typeof config.ref !== 'string')
       throw new ConflictException('This item has no valid tool')
-    return { tool, ref: config.ref }
+    return { tool, ref: config.ref, config: item.config }
   }
 
   private signHint(claims: { userId: string; cohortId: string; itemId: string }): string {
@@ -223,12 +239,23 @@ export class LtiPlatformService {
     const hint = this.readHint(str(p.lti_message_hint))
     if (str(p.login_hint) !== hint.userId) throw new HttpException('login_hint mismatch', 400)
     // The learner must still be allowed in, and the hint must belong to a tool item that launches this client; it is good for one use.
-    const { tool: itemTool, ref } = await this.toolItem(hint.cohortId, hint.itemId, hint.userId)
+    const {
+      tool: itemTool,
+      ref,
+      config: itemConfig,
+    } = await this.toolItem(hint.cohortId, hint.itemId, hint.userId)
     if (itemTool.clientId !== tool.clientId)
       throw new HttpException('This item does not launch that client', 400)
     if (!(await this.store.claim('lti-hint', hint.jti, Math.max(1, hint.exp - nowS() + 5))))
       throw new HttpException('lti_message_hint was already used', 400)
 
+    // Assessment tools also learn which attempt this is (the next one after those scored) and the time limit.
+    let custom: Record<string, unknown> = { ref, tool: itemTool.toolId }
+    if (itemTool.kind === 'assessment') {
+      const { timeLimitMinutes } = assessmentLimits(itemConfig)
+      const used = await this.attemptsUsed(hint.userId, hint.cohortId, hint.itemId)
+      custom = { ...custom, attempt: used + 1, ...(timeLimitMinutes ? { timeLimitMinutes } : {}) }
+    }
     const brand = await this.brandOf(hint.cohortId)
     const reg = platformRegistration()
     const iat = nowS()
@@ -249,7 +276,7 @@ export class LtiPlatformService {
         [CLAIM.resourceLink]: { id: hint.itemId },
         [CLAIM.context]: { id: hint.cohortId },
         [CLAIM.roles]: [LEARNER_ROLE],
-        [CLAIM.custom]: { ref, tool: itemTool.toolId },
+        [CLAIM.custom]: custom,
         [CLAIM.launchPresentation]: {
           document_target: 'window',
           return_url: `${learnUrl()}/lms/learning/${hint.cohortId}/${hint.itemId}`,

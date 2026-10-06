@@ -6,7 +6,7 @@ import { useApp } from './app-context'
 import { score } from './format'
 import { LEARNER_TYPE_LABEL } from './ItemEditor'
 import { errorNotice } from './shared'
-import { toolCopy } from './toolKinds'
+import { attemptLine, timeLimitNote, toolCopy } from './toolKinds'
 
 /** Plain text with blank-line paragraphs and "- " bullets. */
 function RichText({ text }: { text: string }) {
@@ -577,17 +577,29 @@ function ToolItem(props: {
 
   const completed = item.status === 'completed'
   const copy = toolCopy(tool)
+  const limited = tool.attemptsAllowed !== null
+  const limitNote = timeLimitNote(tool.timeLimitMinutes)
   return (
     <article className="dash-card dash-lesson">
       {completed ? (
         <p className="dash-muted">
           {item.score !== null && `Your best score: ${score(item.score)}. `}
-          {tool.retries && `Attempts: ${item.attempts}. `}
+          {limited
+            ? `${attemptLine(item.attempts, tool.attemptsAllowed as number, true)}. `
+            : `Attempts: ${item.attempts}. `}
           <span className="dash-chip dash-chip-on">Completed</span>
         </p>
       ) : (
-        <p>{copy.intro}</p>
+        <>
+          <p>{copy.intro}</p>
+          {limited && (
+            <p className="dash-muted">
+              {attemptLine(item.attempts, tool.attemptsAllowed as number, false)}
+            </p>
+          )}
+        </>
       )}
+      {limitNote && tool.retries && <p className="dash-muted">{limitNote}</p>}
       {error && <p className="dash-error">{error}</p>}
       <Actions>
         {completed ? (
@@ -611,7 +623,7 @@ function ToolItem(props: {
             type="button"
             className="dash-btn"
             onClick={open}
-            disabled={busy || !!item.locked}
+            disabled={busy || !!item.locked || !tool.retries}
           >
             {busy ? 'Opening…' : copy.start}
           </button>

@@ -311,7 +311,19 @@ function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | '
         return bad('Label must be pre, post or empty')
       if (given !== null && !tool.labelable)
         return bad(`${tool.name} cannot be a pre or post assessment`)
-      return { type, title, label: given, config: { toolId, ref, ...(skill ? { skill } : {}) } }
+      // Attempt rules apply to assessment tools only; for any other tool they are dropped.
+      const rules: Record<string, number> = {}
+      if (tool.kind === 'assessment') {
+        rules.maxAttempts = whole(config.maxAttempts, 'Attempts allowed', 1, 5) ?? 1
+        const limit = whole(config.timeLimitMinutes, 'Time limit', 5, 240)
+        if (limit !== undefined) rules.timeLimitMinutes = limit
+      }
+      return {
+        type,
+        title,
+        label: given,
+        config: { toolId, ref, ...(skill ? { skill } : {}), ...rules },
+      }
     }
   }
 }

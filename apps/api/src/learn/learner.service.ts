@@ -24,7 +24,7 @@ import { gradeQuiz, publicQuestions } from './grade-quiz'
 import { averageScore, DEFAULT_ATTEMPTS, MAX_ANSWER_CHARS } from './interview-scoring'
 import { InterviewScoringService } from './interview-scoring.service'
 import { parseExternalLink } from './external-link'
-import { isInterviewLike, toolById } from '../lti/platform/lti-platform-config'
+import { assessmentLimits, isInterviewLike, toolById } from '../lti/platform/lti-platform-config'
 import { imageUrl, isImageKey } from './item-image'
 import { doneSince, parseSkills, remediationOf, reviewOf, skillResults } from './skills'
 import { isVideoId, VIDEO_COMPLETE_PCT } from './youtube'
@@ -374,13 +374,17 @@ export class LearnerService {
       }
     }
     const registered = item.type === 'tool' ? toolById(config.toolId) : undefined
+    const limits = registered?.kind === 'assessment' ? assessmentLimits(config) : null
     const tool: LearnerItem['tool'] =
       registered && typeof config.ref === 'string'
         ? {
             toolId: registered.toolId,
             name: registered.name,
             ref: config.ref,
-            retries: registered.retries,
+            // Interviews are unlimited; an assessment allows `maxAttempts` recorded scores.
+            retries: limits ? (progress?.attempts ?? 0) < limits.maxAttempts : true,
+            attemptsAllowed: limits ? limits.maxAttempts : null,
+            timeLimitMinutes: limits ? limits.timeLimitMinutes : null,
           }
         : null
     return {

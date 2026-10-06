@@ -73,3 +73,17 @@ export const toolById = (id: unknown): PlatformTool | undefined =>
  */
 export const isInterviewLike = (i: { type: string; label: string | null }): boolean =>
   i.type === 'interview' || (i.type === 'tool' && !i.label)
+
+/** Attempt rules for an assessment-kind tool item, read from its stored config (defaults: one attempt, no time limit). */
+export function assessmentLimits(config: unknown): {
+  maxAttempts: number
+  timeLimitMinutes: number | null
+} {
+  const c = (config ?? {}) as { maxAttempts?: unknown; timeLimitMinutes?: unknown }
+  const inRange = (v: unknown, min: number, max: number): v is number =>
+    typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max
+  return {
+    maxAttempts: inRange(c.maxAttempts, 1, 5) ? c.maxAttempts : 1,
+    timeLimitMinutes: inRange(c.timeLimitMinutes, 5, 240) ? c.timeLimitMinutes : null,
+  }
+}

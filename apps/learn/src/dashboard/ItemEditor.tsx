@@ -1,6 +1,12 @@
 import type { CourseItemDto, CourseSkill, KnowledgeCheckQuestion } from '@id/types'
 import { useState } from 'react'
-import { TOOL_OPTIONS, toolItemLabel, toolLabelable } from './toolKinds'
+import {
+  TOOL_OPTIONS,
+  parseAttempts,
+  parseTimeLimit,
+  toolItemLabel,
+  toolLabelable,
+} from './toolKinds'
 
 export interface ItemDraft {
   type: string
@@ -77,6 +83,9 @@ export function ItemEditor(props: {
     String(item.config.remediationFor ?? item.config.reviewFor ?? '')
   )
   const [attempts, setAttempts] = useState(String(item.config.maxAttempts ?? 1))
+  const [timeLimit, setTimeLimit] = useState(
+    item.config.timeLimitMinutes ? String(item.config.timeLimitMinutes) : ''
+  )
   const [questionsText, setQuestionsText] = useState(
     Array.isArray(item.config.questions) && item.type === 'interview'
       ? (item.config.questions as string[]).join('\n')
@@ -103,7 +112,19 @@ export function ItemEditor(props: {
                   imageKey: item.config.imageKey,
                 }
               : item.type === 'tool'
-                ? { toolId, ref: toolRef.trim(), ...(skill ? { skill } : {}) }
+                ? {
+                    toolId,
+                    ref: toolRef.trim(),
+                    ...(skill ? { skill } : {}),
+                    ...(toolLabelable(toolId)
+                      ? {
+                          maxAttempts: parseAttempts(attempts),
+                          ...(parseTimeLimit(timeLimit)
+                            ? { timeLimitMinutes: parseTimeLimit(timeLimit) }
+                            : {}),
+                        }
+                      : {}),
+                  }
                 : {
                     role,
                     ...(skill ? { skill } : {}),
@@ -346,17 +367,44 @@ export function ItemEditor(props: {
             </select>
           </label>
           {toolLabelable(toolId) && (
-            <label className="dash-field">
-              <span>When it runs</span>
-              <select value={label} onChange={(e) => setLabel(e.target.value as 'pre' | 'post')}>
-                <option value="pre">Before the course (pre-assessment)</option>
-                <option value="post">After the course (post-assessment)</option>
-              </select>
-              <small className="dash-muted">
-                It stands in for the course's own pre or post assessment: it is required to finish
-                the course and its best score counts toward the gain.
-              </small>
-            </label>
+            <>
+              <label className="dash-field">
+                <span>When it runs</span>
+                <select value={label} onChange={(e) => setLabel(e.target.value as 'pre' | 'post')}>
+                  <option value="pre">Before the course (pre-assessment)</option>
+                  <option value="post">After the course (post-assessment)</option>
+                </select>
+                <small className="dash-muted">
+                  It stands in for the course's own pre or post assessment: it is required to finish
+                  the course and its best score counts toward the gain.
+                </small>
+              </label>
+              <label className="dash-field">
+                <span>Attempts allowed</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={5}
+                  value={attempts}
+                  onChange={(e) => setAttempts(e.target.value)}
+                />
+              </label>
+              <label className="dash-field">
+                <span>Time limit (minutes, optional)</span>
+                <input
+                  type="number"
+                  min={5}
+                  max={240}
+                  value={timeLimit}
+                  placeholder="No limit"
+                  onChange={(e) => setTimeLimit(e.target.value)}
+                />
+                <small className="dash-muted">
+                  The best score counts. A started attempt can be resumed. The timer starts when the
+                  learner opens the attempt.
+                </small>
+              </label>
+            </>
           )}
           <label className="dash-field">
             <span>Reference</span>

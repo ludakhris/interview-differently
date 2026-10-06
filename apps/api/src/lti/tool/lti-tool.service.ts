@@ -46,6 +46,10 @@ import {
   type LtiSession,
 } from './lti-session'
 
+/** Bounds for the launch's custom `attempt` and `timeLimitMinutes` claims. */
+const MAX_ATTEMPT = 100
+const MIN_TIME_LIMIT_MIN = 5
+const MAX_TIME_LIMIT_MIN = 240
 const STATE_TTL_S = 10 * 60
 const SUBMISSION_TTL_S = 30 * 60
 const ASSERTION_TTL_S = 5 * 60
@@ -225,6 +229,8 @@ export class LtiToolService {
         brand,
         contextId: claims[CLAIM.context]?.id,
         resourceLinkId: claims[CLAIM.resourceLink]?.id,
+        attempt: claims[CLAIM.custom]?.attempt,
+        timeLimitMinutes: claims[CLAIM.custom]?.timeLimitMinutes,
       })
     }
     const row = await this.prisma.scenario.findUnique({ where: { scenarioId: ref } })
@@ -274,7 +280,31 @@ export class LtiToolService {
     brand: ReturnType<typeof sanitizeBrand>
     contextId: unknown
     resourceLinkId: unknown
+    attempt: unknown
+    timeLimitMinutes: unknown
   }): Promise<{ redirect: string }> {
+    // never trust the claim: both are checked strictly before anything is looked up or created
+    const attempt = l.attempt === undefined ? 1 : l.attempt
+    if (
+      typeof attempt !== 'number' ||
+      !Number.isInteger(attempt) ||
+      attempt < 1 ||
+      attempt > MAX_ATTEMPT
+    ) {
+      throw new LtiError(`Invalid attempt number (an integer from 1 to ${MAX_ATTEMPT})`)
+    }
+    const limit = l.timeLimitMinutes
+    if (
+      limit !== undefined &&
+      (typeof limit !== 'number' ||
+        !Number.isInteger(limit) ||
+        limit < MIN_TIME_LIMIT_MIN ||
+        limit > MAX_TIME_LIMIT_MIN)
+    ) {
+      throw new LtiError(
+        `Invalid time limit (whole minutes from ${MIN_TIME_LIMIT_MIN} to ${MAX_TIME_LIMIT_MIN})`
+      )
+    }
     const include = { dataset: { select: { slug: true } } }
     const assessment =
       (await this.prisma.assessment.findUnique({ where: { slug: l.ref }, include })) ??
@@ -287,10 +317,25 @@ export class LtiToolService {
       : null
     const resourceLinkId =
       typeof l.resourceLinkId === 'string' && l.resourceLinkId ? l.resourceLinkId : 'default'
+    const baseLabel = `lti:${resourceLinkId}`
+    // each attempt number is its own delivery (one attempt per delivery and learner); attempt 1
+    // keeps the original label so deliveries created before retakes existed still match
+    if (attempt > 1) {
+      const submitted = await this.submittedAttempts(
+        l.sub,
+        assessment.id,
+        cohort?.id ?? null,
+        baseLabel
+      )
+      if (attempt > submitted + 1) {
+        throw new LtiError('That attempt is not available yet. Finish your earlier attempt first.')
+      }
+    }
     const deliveryId = await this.findOrCreateDelivery(
       assessment.id,
       cohort?.id ?? null,
-      `lti:${resourceLinkId}`
+      attempt === 1 ? baseLabel : `${baseLabel}#${attempt}`,
+      limit
     )
     const iat = Math.floor(this.now() / 1000)
     const token = signSession({
@@ -311,6 +356,31 @@ export class LtiToolService {
   }
 
   /**
+   * How many attempts the learner has submitted on this item's deliveries: label `base` (attempt 1)
+   * or `base#<n>`. The label prefix match is narrowed in code so another item whose id happens to
+   * start with `base#` is not counted.
+   */
+  private async submittedAttempts(
+    userId: string,
+    assessmentId: string,
+    cohortId: string | null,
+    base: string
+  ): Promise<number> {
+    const rows = await this.prisma.assessmentAttempt.findMany({
+      where: {
+        userId,
+        submittedAt: { not: null },
+        delivery: { assessmentId, cohortId, label: { startsWith: base } },
+      },
+      select: { delivery: { select: { label: true } } },
+    })
+    return rows.filter((r) => {
+      const rest = r.delivery.label.slice(base.length)
+      return rest === '' || /^#[1-9]\d*$/.test(rest)
+    }).length
+  }
+
+  /**
    * One delivery per (assessment, cohort, label). There is no unique index to lean on, so the
    * store claim is a short lock around find-then-create; a launch that loses the lock waits for the
    * winner's row and fails with a 503 page if it never appears.
@@ -318,7 +388,8 @@ export class LtiToolService {
   private async findOrCreateDelivery(
     assessmentId: string,
     cohortId: string | null,
-    label: string
+    label: string,
+    timeLimitMinutes?: number
   ): Promise<string> {
     const find = () =>
       this.prisma.assessmentDelivery.findFirst({
@@ -335,7 +406,12 @@ export class LtiToolService {
           const again = await find()
           if (again) return again.id
           const created = await this.prisma.assessmentDelivery.create({
-            data: { assessmentId, cohortId, label },
+            data: {
+              assessmentId,
+              cohortId,
+              label,
+              ...(timeLimitMinutes === undefined ? {} : { timeLimitMinutes }),
+            },
             select: { id: true },
           })
           return created.id

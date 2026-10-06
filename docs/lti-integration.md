@@ -77,9 +77,8 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
 
 - Two tools, `id-interview` (name "Interview Differently") and `id-assessment` ("Interview Differently assessment"), share
   one client id `ld-platform`, deployment id `1` and the same login/launch/jwks URLs. The id_token's custom claim says which
-  was launched: `{ ref, tool }`, where `tool` is the LearnDifferently tool id and, for `id-assessment`, `ref` is the Assessment slug.
-- Platform-only properties per tool (never on the wire): `kind` (`interview` | `assessment`), `retries` (interview true;
-  assessment false, one attempt per delivery) and `labelable` (assessment true). A `tool` course item may carry the `pre`/`post`
+  was launched: `{ ref, tool }` (plus `attempt` and `timeLimitMinutes?` for `id-assessment`, see "Attempts and time limits"), where `tool` is the LearnDifferently tool id and, for `id-assessment`, `ref` is the Assessment slug.
+- Platform-only properties per tool (never on the wire): `kind` (`interview` | `assessment`), `retries` (registry default only; the learner view derives `retries` per item, see "Attempts and time limits") and `labelable` (assessment true). A `tool` course item may carry the `pre`/`post`
   label only when its tool is labelable; such an item stands in for LearnDifferently's own assessment (required for course
   completion, its best score feeds pre/post/gain, not counted as an interview). An unlabelled tool item is interview-like.
 - Platform side config (`ToolRegistration`): loginUrl `${BASE}/lti/tool/login`, launchUrl `${BASE}/lti/tool/launch`,
@@ -99,7 +98,7 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
   Replies with an auto-submitting HTML form POSTing `id_token` and `state` to `redirect_uri`.
   The `id_token` is RS256, iss=platform issuer, aud=client id, sub=learner user id, `nonce` echoed, exp 5 minutes, with claims:
   message_type `LtiResourceLinkRequest`, version `1.3.0`, deployment_id, target_link_uri, resource_link `{id: itemId}`,
-  context `{id: cohortId}`, roles `[LEARNER_ROLE]`, custom `{ref, tool}` (the tool-specific reference stored on the item, and the LearnDifferently tool id),
+  context `{id: cohortId}`, roles `[LEARNER_ROLE]`, custom `{ref, tool}` (the tool-specific reference stored on the item, and the LearnDifferently tool id; for an assessment tool also `attempt` and `timeLimitMinutes?`),
   the `launch_presentation` claim `{document_target:'window', return_url}` (the LD item page, `${LTI_LEARN_URL}/lms/learning/${cohortId}/${itemId}`), and the AGS endpoint claim `{scope:[AGS_SCOPE_SCORE], lineitem: ${BASE}/lti/platform/ags/${cohortId}/lineitems/${itemId}}`, plus, when the cohort's tenant has one, the brand claim (see "Brand tokens").
 - `POST /token` OAuth2 client_credentials with `client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer`,
   `client_assertion` (RS256 JWT signed by the tool: iss=sub=clientId, aud=tokenUrl, jti unique, exp no more than 10 minutes away), `scope`. Verifies against the
@@ -173,16 +172,30 @@ in-flight fetch between concurrent callers, times fetches out after 3 seconds an
   `{score, returnUrl}`, or 502 with a generic message if the platform rejects it.
 - Assessments (`custom.tool === 'id-assessment'`; a missing `tool` means `id-interview`, any other value is refused with a 400 page). `ref` is the
   `Assessment.slug` (fallback: its `id`); unknown answers a 404 page "Assessment not found". The tool finds or creates the
-  `AssessmentDelivery` for (assessment, cohort = the launch's context id if a `Cohort` row with that id exists, else null, label `lti:<resource link id>`),
-  with no open/close dates or time limit. There is no unique index on that triple, so creation runs under a short `lti-delivery` store lock
-  (10 s) with a re-find inside it; a launch that loses the lock polls for the winner's row (up to about 2 s, then a 503 page). The launch answers
+  `AssessmentDelivery` for (assessment, cohort = the launch's context id if a `Cohort` row with that id exists, else null, label `lti:<resource link id>`
+  for attempt 1, `lti:<resource link id>#<n>` for attempt n > 1; see "Retakes and time limits" below), with no open/close dates. There is no unique index on that triple, so creation runs under a short `lti-delivery` store lock
+  (10 s, keyed on the exact label) with a re-find inside it; a launch that loses the lock polls for the winner's row (up to about 2 s, then a 503 page). The launch answers
   `303` to `${LTI_ID_WEB_URL}/lti/assessment/<deliveryId>#session=<token>`. The session has the extra claim `deliveryId` (and `datasets` = the bank's dataset slug, if any); a session
   with `deliveryId` can reach only the assessment routes below, `GET /me/datasets/<slug>`, `GET /lti/tool/session` (which then also answers `deliveryId`) and `POST /lti/tool/complete`; it is refused on every scenario route.
   A session without `deliveryId` can reach no assessment route. Allowed assessment routes (through `AuthenticatedOrLtiGuard`): `POST /me/deliveries/<deliveryId>/attempts`
   (the id must equal the session's), `GET /me/attempts/:id`, `PUT /me/attempts/:id/answers`, `POST /me/attempts/:id/submit`, `GET /me/attempts/:id/result`.
   The attempt must belong to `sub` and to the session's delivery (404 otherwise). For an LTI caller `startAttemptForLti` skips the cohort membership / tool-enabled
   check (LearnDifferently decides who may launch), keeps the open check, draws the paper once and resumes an existing attempt; answers are validated (object of at most 200 string values, ids at most 64 and values at most 20,000 characters).
-  The Clerk path is unchanged. One attempt exists per (delivery, learner), so one LD item is one attempt.
+  The Clerk path is unchanged. One attempt exists per (delivery, learner), so one attempt number is one delivery (see below).
+- Retakes and time limits (assessments only). The custom claim is `{ref, tool, attempt?, timeLimitMinutes?}`, both extras validated strictly
+  (any other value answers a 400 page and creates nothing):
+  - `attempt`: integer 1 to 100, the 1-based attempt number for this launch; missing means 1.
+  - `timeLimitMinutes`: integer 5 to 240, optional. It is written to the delivery **only when the delivery is created**; an existing delivery keeps its limit.
+  - Each attempt number has its own delivery (label above), so each draws a fresh paper through `startAttemptForLti`, and the session's `deliveryId`
+    is for that attempt only (the guard allowlist is unchanged). Relaunching an attempt number whose delivery already holds the learner's attempt
+    resumes it, submitted or not. Deliveries made before retakes existed carry `lti:<link>` and are attempt 1.
+  - Skip-ahead guard: for attempt n > 1 the tool counts the learner's submitted attempts on deliveries labelled `lti:<link>` or `lti:<link>#<k>` for the
+    same assessment and cohort, and refuses (400 page) unless `n <= submitted + 1`. LD enforces the maximum number of attempts; this only stops a learner
+    from jumping ahead to collect fresh papers.
+  - The deadline is `startedAt + timeLimitMinutes` (`deadlineAt` on `GET /me/attempts/:id`; the web client auto-submits at zero). The server does not
+    reject a late `submit`: it grades and stores it with `submittedLate = true` when it arrives more than 2 minutes after the deadline (grace for
+    client timers), so `POST /complete` still posts that score. Saving answers is not blocked by the deadline either.
+  - `POST /complete` is unchanged and single use per `attemptId`, so each attempt posts its own score and per-section dimensions from its own stored scores.
 - `POST /complete` also takes `{attemptId}` for an assessment: the attempt must belong to `sub`, to the session's `deliveryId`, be submitted (graded on the server) and have been
   created no earlier than the session `iat` minus 60 s. Score = the overall percent of its stored section scores (correct / total, rounded), with `DIMENSIONS_FIELD`
   = one entry per section `{dimension: section title, score: round(correct / total * 100)}`. Locks: `lti-complete` per LTI session and `lti-result` keyed `assessment:<attemptId>` (30 days); both are
@@ -199,9 +212,20 @@ in-flight fetch between concurrent callers, times fetches out after 3 seconds an
 
 ## LearnDifferently learner API and UI
 
-- New item type `tool`, config `{ toolId, ref, skill? }`.
+- New item type `tool`, config `{ toolId, ref, skill?, maxAttempts?, timeLimitMinutes? }` (the last two only for an assessment tool; see below).
 - `POST /api/learn/me/cohorts/:cohortId/items/:itemId/tool-launch` (learner auth) returns `{ action, fields }`. The SPA submits those
-  as a hidden `<form method=POST>` to `action` in the same window (`target=_self`; new tabs and named windows are unreliable: pop-up blockers, Safari and embedded browsers drop or downgrade them). The tool sends the learner back through the return link, and the item page then loads fresh data. The item page shows one primary action: "Start in <tool>", or once completed "Continue" with a quiet "Try again". The learner item view for a `tool` item exposes `tool: { toolId, name, ref }`
+  as a hidden `<form method=POST>` to `action` in the same window (`target=_self`; new tabs and named windows are unreliable: pop-up blockers, Safari and embedded browsers drop or downgrade them). The tool sends the learner back through the return link, and the item page then loads fresh data. The item page shows one primary action: "Start in <tool>" ("Start the assessment" for an assessment), or once completed "Continue" with a quiet "Try again" while attempts remain. The learner item view for a `tool` item exposes `tool: { toolId, name, ref, retries, attemptsAllowed, timeLimitMinutes }`
   and its score/status like other items.
 - `LearnerService.recordToolResult(userId, cohortId, itemId, { scorePct, dimensions? })` upserts `ItemProgress` (best score,
   attempts + 1, status completed), then runs the existing plan/completion updates.
+
+## Attempts and time limits (assessment tools)
+
+Only for tools whose registry `kind` is `assessment` (`id-assessment`); interview tools are unlimited and get neither field.
+
+- Item config: `maxAttempts` (integer 1-5, default 1) and `timeLimitMinutes` (optional integer 5-240). Out of range or non-integer values are refused with 400; for a non-assessment tool they are dropped on save.
+- Attempts are counted by LearnDifferently: `ItemProgress.attempts` is the number of scores recorded. `startLaunch` refuses with 409 `You have used all N attempts.` when `attempts >= maxAttempts`.
+- The launch custom claim for an assessment is `{ ref, tool, attempt, timeLimitMinutes? }`. `attempt` is the 1-based number this launch is for, `attempts + 1`; `timeLimitMinutes` is present only when the item sets one. An unfinished attempt (started in Interview Differently, never scored) is resumed by the next launch because `attempt` is unchanged until a score is recorded.
+- `recordToolResult` keeps the best score for assessment items (a lower later score never lowers it) and increments `attempts` once per recorded score; a repeated report of the same moment is ignored. Completion and the pre/post record are unchanged.
+- Learner view `tool`: `retries` is true for an interview always and for an assessment while `attempts < maxAttempts`; `attemptsAllowed` is `maxAttempts` (null = unlimited, an interview); `timeLimitMinutes` is the limit or null.
+- Authoring UI: "Attempts allowed" and "Time limit (minutes, optional)" beside the Pre/Post select. Learner UI: "Attempt n of N" / "Attempts used: n of N", "Time limit: X minutes", "Start the assessment", "Try again" while attempts remain, and the best score.

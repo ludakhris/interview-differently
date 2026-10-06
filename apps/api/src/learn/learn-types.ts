@@ -133,7 +133,7 @@ export interface CourseSkill {
  * interview { role, questions, skill? }, scorm { packageId, entry, version, files },
  * video { provider: 'youtube', videoId, startSeconds? },
  * external_link { url, summary?, instructions?, imageKey? } (authors also receive `imageUrl`),
- * tool { toolId, ref, skill? } (an LTI tool launched from the course; it reports a score back). A
+ * tool { toolId, ref, skill?, maxAttempts?, timeLimitMinutes? } (an LTI tool launched from the course; it reports a score back). A
  * tool item whose tool is an assessment may carry the pre or post label and then stands in for the
  * course's own assessment; any other tool item is interview-like.
  * Any item except an assessment, interview or tool may carry `remediationFor` (a skill id): it is then
@@ -380,8 +380,12 @@ export interface LearnerItem {
     toolId: string
     name: string
     ref: string
-    /** False for an assessment: one attempt per delivery, so the learner gets no "Try again". */
+    /** True while the learner may launch it again: always for an interview, until the attempts are used for an assessment. */
     retries: boolean
+    /** Attempts an assessment allows; null means unlimited (an interview). */
+    attemptsAllowed: number | null
+    /** Minutes an assessment attempt may take; null means no limit. */
+    timeLimitMinutes: number | null
   } | null
   status: ProgressStatus
   score: number | null

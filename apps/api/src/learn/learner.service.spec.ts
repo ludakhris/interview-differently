@@ -974,6 +974,8 @@ describe('recordToolResult', () => {
       name: 'Interview Differently',
       ref: 'cna-interview',
       retries: true,
+      attemptsAllowed: null,
+      timeLimitMinutes: null,
     })
     expect(prisma.courseModule.findMany).toHaveBeenCalled() // plan and completion checks ran
   })
@@ -1039,21 +1041,105 @@ describe('recordToolResult', () => {
       name: 'Interview Differently',
       ref: 'cna-interview',
       retries: true,
+      attemptsAllowed: null,
+      timeLimitMinutes: null,
     })
   })
 
-  it('shows an assessment tool without retries', async () => {
-    prisma.courseItem.findUnique.mockResolvedValue(
-      item('tool', 'pre', { toolId: 'id-assessment', ref: 'cna-pre' })
-    )
-    prisma.itemProgress.findUnique.mockResolvedValue(null)
-    const out = await service.item('u1', 'k1', 'i1')
-    expect(out.label).toBe('pre')
-    expect(out.tool).toEqual({
-      toolId: 'id-assessment',
-      name: 'Interview Differently assessment',
-      ref: 'cna-pre',
-      retries: false,
+  it('an interview tool always has retries, however many attempts were made', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(tool)
+    prisma.itemProgress.findUnique.mockResolvedValue({
+      status: 'completed',
+      score: 80,
+      attempts: 9,
+    })
+    expect((await service.item('u1', 'k1', 'i1')).tool).toMatchObject({
+      retries: true,
+      attemptsAllowed: null,
+    })
+  })
+
+  describe('assessment tool attempts', () => {
+    const assess = (config: object = {}) =>
+      item('tool', 'pre', { toolId: 'id-assessment', ref: 'cna-pre', ...config })
+
+    it('defaults to one attempt and no time limit; retries only while attempts remain', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(assess())
+      prisma.itemProgress.findUnique.mockResolvedValue(null)
+      const out = await service.item('u1', 'k1', 'i1')
+      expect(out.label).toBe('pre')
+      expect(out.tool).toEqual({
+        toolId: 'id-assessment',
+        name: 'Interview Differently assessment',
+        ref: 'cna-pre',
+        retries: true,
+        attemptsAllowed: 1,
+        timeLimitMinutes: null,
+      })
+      prisma.itemProgress.findUnique.mockResolvedValue({
+        status: 'completed',
+        score: 70,
+        attempts: 1,
+      })
+      expect((await service.item('u1', 'k1', 'i1')).tool?.retries).toBe(false)
+    })
+
+    it('exposes the configured limits and keeps retries until the last attempt is used', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(
+        assess({ maxAttempts: 3, timeLimitMinutes: 45 })
+      )
+      prisma.itemProgress.findUnique.mockResolvedValue({
+        status: 'completed',
+        score: 70,
+        attempts: 2,
+      })
+      expect((await service.item('u1', 'k1', 'i1')).tool).toMatchObject({
+        retries: true,
+        attemptsAllowed: 3,
+        timeLimitMinutes: 45,
+      })
+      prisma.itemProgress.findUnique.mockResolvedValue({
+        status: 'completed',
+        score: 70,
+        attempts: 3,
+      })
+      expect((await service.item('u1', 'k1', 'i1')).tool?.retries).toBe(false)
+    })
+
+    it('keeps the best score when a later attempt scores lower, and counts each recorded score', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(assess({ maxAttempts: 3 }))
+      prisma.itemProgress.findUnique.mockResolvedValue({
+        status: 'completed',
+        score: 85,
+        attempts: 1,
+      })
+      await service.recordToolResult('u1', 'k1', 'i1', { scorePct: 60 })
+      const up = prisma.itemProgress.upsert.mock.calls[0][0]
+      expect(up.update).toMatchObject({ score: 85, attempts: { increment: 1 } })
+      expect(up.update.data.lastScore).toBe(60)
+      prisma.itemProgress.upsert.mockClear()
+      prisma.itemProgress.findUnique.mockResolvedValue({
+        status: 'completed',
+        score: 85,
+        attempts: 2,
+      })
+      await service.recordToolResult('u1', 'k1', 'i1', { scorePct: 92 })
+      expect(prisma.itemProgress.upsert.mock.calls[0][0].update.score).toBe(92)
+    })
+
+    it('does not count a repeated report of the same result as another attempt', async () => {
+      prisma.courseItem.findUnique.mockResolvedValue(assess({ maxAttempts: 3 }))
+      prisma.itemProgress.findUnique.mockResolvedValue({
+        status: 'completed',
+        score: 85,
+        attempts: 1,
+        data: { reportedAt: '2026-10-06T12:00:00.000Z' },
+      })
+      await service.recordToolResult('u1', 'k1', 'i1', {
+        scorePct: 40,
+        reportedAt: '2026-10-06T12:00:00Z',
+      })
+      expect(prisma.itemProgress.upsert).not.toHaveBeenCalled()
     })
   })
 
