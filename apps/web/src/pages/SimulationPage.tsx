@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
+import { LtiNav } from '@/components/LtiNav'
 import { ChoiceCard } from '@/components/ChoiceCard'
 import { ContextPanel } from '@/components/ContextPanel'
 import { MetricChart } from '@/components/MetricChart'
@@ -12,14 +13,20 @@ import { InlineExhibits } from '@/components/InlineExhibits'
 import { KeyDataPanel, isKeyDataLayout } from '@/components/keydata/KeyDataPanel'
 import { QuantNode } from '@/components/quant/QuantNode'
 import { SqlNode } from '@/components/sql/SqlNode'
-import { saveResult, recordSimulationAttempt } from '@/services/resultsService'
+import { saveResult, saveResultStrict, recordSimulationAttempt } from '@/services/resultsService'
+import { completeLtiAttempt } from '@/services/ltiService'
 import { useSimulation } from '@/hooks/useSimulation'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import { buildPhaseViews, getPhaseForNode } from '@/lib/phases'
 import type { Scenario } from '@id/types'
 import type { TrackMeta } from '@/hooks/useScenarios'
 
-export function SimulationPage() {
+/**
+ * `ltiMode` (set by /lti/play/:scenarioId): the learner has no Clerk session,
+ * so the page behaves as signed in for saving and attempts, hands the score
+ * back to LearnDifferently on completion, and never links to other pages.
+ */
+export function SimulationPage({ ltiMode = false }: { ltiMode?: boolean } = {}) {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -47,13 +54,23 @@ export function SimulationPage() {
   // `scenario.nodes` (the summary form returned by the API for guests)
   // can't crash the hook. The summary still gives us scenario.track so
   // the Nav shows the right track label.
-  const isGated = isLoaded && !isSignedIn && !isPreview
+  const isGated = !ltiMode && isLoaded && !isSignedIn && !isPreview
 
   useEffect(() => {
-    if (!isLoading && !scenario && !isGated) {
+    if (!isLoading && !scenario && !isGated && !ltiMode) {
       navigate('/dashboard')
     }
-  }, [isLoading, scenario, navigate, isGated])
+  }, [isLoading, scenario, navigate, isGated, ltiMode])
+
+  if (ltiMode && !isLoading && !scenario) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-6">
+        <p className="text-[#f5f3ee] text-[15px] text-center max-w-md">
+          We could not load this scenario. Go back to your course and start again.
+        </p>
+      </div>
+    )
+  }
 
   if ((isLoading && !isPreview) || !scenario) {
     return (
@@ -81,6 +98,7 @@ export function SimulationPage() {
       scenarioId={scenarioId!}
       trackMeta={trackMeta}
       isPreview={isPreview}
+      ltiMode={ltiMode}
     />
   )
 }
@@ -100,17 +118,24 @@ function SimulationContent({
   scenarioId,
   trackMeta,
   isPreview = false,
+  ltiMode = false,
 }: {
   scenario: Scenario
   scenarioId: string
   trackMeta: Record<string, TrackMeta>
   isPreview?: boolean
+  ltiMode?: boolean
 }) {
   const navigate = useNavigate()
   const builderPath = `/builder/${scenarioId}`
   const meta = trackMeta[scenario.track]
 
-  const { isSignedIn, isLoaded, userId } = useAuth()
+  const auth = useAuth()
+  // LTI learners have no Clerk session; the API stamps the real user id from
+  // the LTI token, so the placeholder id here is ignored.
+  const isLoaded = ltiMode || auth.isLoaded
+  const isSignedIn = ltiMode || auth.isSignedIn
+  const userId = ltiMode ? 'lti' : auth.userId
 
   // Record one attempt per page mount, regardless of how many times React
   // re-runs the effect (StrictMode double-mount in dev would otherwise
@@ -156,7 +181,7 @@ function SimulationContent({
     // Gate covers the page — don't auto-navigate to /feedback for guests; the
     // sign-up overlay should prompt them first, then re-render the simulation
     // once authenticated. Preview mode + signed-in users continue as before.
-    if (isGated) return
+    if (isGated || ltiMode) return
     if (isPreview) {
       // Preview mode: skip writing results; return to builder canvas
       setTimeout(() => navigate(`/builder/${scenarioId}`), 600)
@@ -175,7 +200,32 @@ function SimulationContent({
     computeResult,
     isSignedIn,
     scenario.title,
+    ltiMode,
   ])
+
+  // LTI hand-back: save the result, then report it to LearnDifferently and
+  // return the learner there. Retry re-runs both (the API de-dupes by id).
+  const [ltiStatus, setLtiStatus] = useState<'idle' | 'sending' | 'error'>('idle')
+  const ltiResult = useRef<ReturnType<typeof computeResult> | null>(null)
+  const sendLtiScore = useCallback(async () => {
+    if (!ltiResult.current) ltiResult.current = computeResult()
+    const result = ltiResult.current
+    setLtiStatus('sending')
+    try {
+      await saveResultStrict({ ...result, scenarioTitle: scenario.title })
+      const { returnUrl } = await completeLtiAttempt(result.id)
+      window.location.assign(returnUrl)
+    } catch (err) {
+      console.warn('LTI score hand-back failed:', err)
+      setLtiStatus('error')
+    }
+  }, [computeResult, scenario.title])
+  const ltiStarted = useRef(false)
+  useEffect(() => {
+    if (!ltiMode || !isComplete || ltiStarted.current) return
+    ltiStarted.current = true
+    void sendLtiScore()
+  }, [ltiMode, isComplete, sendLtiScore])
 
   // ── Phase + exhibits plumbing ─────────────────────────────────────────────
   // Hooks must run on every render (rules-of-hooks), so they're declared
@@ -216,6 +266,36 @@ function SimulationContent({
         <Nav trackLabel={meta?.label} />
         <div className="relative flex-1 flex items-center justify-center">
           <PreviewGate scenarioId={scenarioId} />
+        </div>
+      </div>
+    )
+  }
+
+  if (isComplete && ltiMode) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-6">
+        <div className="text-center animate-fade-in max-w-md">
+          {ltiStatus === 'error' ? (
+            <>
+              <p className="font-display font-bold text-[18px] text-[#f5f3ee] mb-2">
+                We could not send your score
+              </p>
+              <p className="text-[14px] text-slate-mid mb-6">
+                Your answers are finished, but your score has not reached your course yet. Check
+                your connection and try again.
+              </p>
+              <button
+                onClick={() => void sendLtiScore()}
+                className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+              >
+                Retry
+              </button>
+            </>
+          ) : (
+            <p className="font-display font-bold text-[18px] text-[#f5f3ee]">
+              Sending your score...
+            </p>
+          )}
         </div>
       </div>
     )
@@ -277,7 +357,11 @@ function SimulationContent({
           </button>
         </div>
       )}
-      <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
+      {ltiMode ? (
+        <LtiNav trackLabel={meta?.label} stepLabel={stepLabel} />
+      ) : (
+        <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
+      )}
 
       {hasPhases && <PhaseStepper phases={phaseViews} accentColor={meta?.color} />}
 

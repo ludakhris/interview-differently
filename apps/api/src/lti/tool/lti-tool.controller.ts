@@ -1,8 +1,20 @@
-import { Body, Controller, Get, Headers, Post, Query, Req, Res } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpException,
+  Post,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common'
 import type { Request, Response } from 'express'
 import { LtiError } from '../lti-spec'
 import { returnUrl } from './lti-tool.config'
 import { errorPage } from './lti-tool.html'
+import { LtiOnlyGuard, type LtiRequest } from './lti-session.guard'
 import { LtiReturnError, LtiToolService } from './lti-tool.service'
 
 type Params = Record<string, string | undefined>
@@ -50,7 +62,8 @@ export class LtiToolController {
       const p = strings(b)
       const page = await this.tool.launch(p.id_token, p.state, cookieValue(cookie, STATE_COOKIE))
       res.setHeader('Set-Cookie', `${STATE_COOKIE}=; ${COOKIE_ATTRS}; Max-Age=0`)
-      this.send(res, 200, page)
+      if (typeof page === 'string') this.send(res, 200, page)
+      else res.redirect(303, page.redirect)
     })
   }
 
@@ -60,6 +73,18 @@ export class LtiToolController {
       const { status, html } = await this.tool.submit(strings(b))
       this.send(res, status, html)
     })
+  }
+
+  /** Posts the score of a finished text-scenario play; the LTI session is the credential. */
+  @Post('complete')
+  @UseGuards(LtiOnlyGuard)
+  async complete(@Req() req: LtiRequest, @Body() b: unknown) {
+    try {
+      return await this.tool.complete({ ...req.lti!, sub: req.userId! }, strings(b).resultId)
+    } catch (err) {
+      if (err instanceof LtiError) throw new HttpException(err.message, err.status)
+      throw err
+    }
   }
 
   /** Binds the login to this browser with a cookie holding the state, then sends it to the platform. */

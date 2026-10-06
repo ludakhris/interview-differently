@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { Inject, Injectable } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { assertLtiProductionConfig, loadSigningKeys } from '../lti-env'
@@ -25,8 +25,16 @@ import {
   verifyJwt,
   type KeyPair,
 } from '../lti-spec'
-import { launchUrl, platformRegistration, returnUrl, useStubScoring } from './lti-tool.config'
+import {
+  idWebUrl,
+  launchUrl,
+  learnUrl,
+  platformRegistration,
+  returnUrl,
+  useStubScoring,
+} from './lti-tool.config'
 import { errorPage, interviewPage, resultPage } from './lti-tool.html'
+import { SESSION_TTL_S, signSession, toolSecret, type LtiSession } from './lti-session'
 
 const STATE_TTL_S = 10 * 60
 const SUBMISSION_TTL_S = 30 * 60
@@ -34,8 +42,12 @@ const ASSERTION_TTL_S = 5 * 60
 /** How long a submission is locked while it is being scored and posted. */
 const IN_FLIGHT_TTL_S = 5 * 60
 const RATE_WINDOW_S = 60
+/** How long a sent result stays consumed. */
+const RESULT_TTL_S = 30 * 24 * 60 * 60
+const RESULT_CLOCK_SKEW_MS = 60 * 1000
 const LOGIN_PER_MINUTE_PER_IP = 30
 const SUBMIT_PER_MINUTE_PER_LEARNER = 10
+const COMPLETE_PER_MINUTE_PER_LEARNER = 10
 
 interface SubmissionClaims {
   sub: string
@@ -58,12 +70,17 @@ export class LtiReturnError extends LtiError {
   }
 }
 
-/** The claim's return_url when it is an http(s) URL; anything else (javascript:, relative, junk) is ignored. */
+/**
+ * The claim's return_url when it is an http(s) URL on the platform's issuer origin or the learn
+ * origin; anything else (javascript:, relative, junk, another site) is ignored.
+ */
 export function safeReturnUrl(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined
   try {
     const u = new URL(value)
-    return u.protocol === 'http:' || u.protocol === 'https:' ? u.toString() : undefined
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return undefined
+    const allowed = [platformRegistration().issuer, learnUrl()].map((x) => new URL(x).origin)
+    return allowed.includes(u.origin) ? u.toString() : undefined
   } catch {
     return undefined
   }
@@ -93,7 +110,7 @@ export class LtiToolService {
     )
     this.keys = current
     this.previousKeys = previous
-    this.secret = process.env.LTI_TOOL_SECRET || randomBytes(32).toString('hex')
+    this.secret = toolSecret()
   }
 
   jwks() {
@@ -140,14 +157,15 @@ export class LtiToolService {
   }
 
   /**
-   * Verifies the launch and returns the interview page. `cookieState` is the `lti_state` cookie the
+   * Verifies the launch and returns the typed interview page, or `{ redirect }` to the web app
+   * for a scenario that is played there (anything not immersive). `cookieState` is the `lti_state` cookie the
    * login set: it must equal the posted state, so only the browser that started the login can finish it.
    */
   async launch(
     idToken: string | undefined,
     state: string | undefined,
     cookieState: string | undefined
-  ): Promise<string> {
+  ): Promise<string | { redirect: string }> {
     const reg = platformRegistration()
     if (!state || cookieState !== state)
       throw new LtiError('Login state does not match this browser')
@@ -178,13 +196,29 @@ export class LtiToolService {
     if (!sameOrigin(lineitem, reg.issuer))
       throw new LtiError('Score endpoint is not on the platform')
     if (typeof claims.sub !== 'string' || !claims.sub) throw new LtiError('Missing sub')
+    const row = await this.prisma.scenario.findUnique({ where: { scenarioId: ref } })
+    if (!row || row.status !== 'published') throw new LtiError('Interview not found', 404)
+    const sessionReturn = safeReturnUrl(claims[CLAIM.launchPresentation]?.return_url)
+    if ((row.data as { mode?: unknown } | null)?.mode !== 'immersive') {
+      const token = signSession({
+        sub: claims.sub,
+        ref,
+        lineitem,
+        returnUrl: sessionReturn,
+        jti: newId(),
+        iat: Math.floor(this.now() / 1000),
+        exp: Math.floor(this.now() / 1000) + SESSION_TTL_S,
+      })
+      // the token rides in the fragment, which browsers never send to a server
+      return { redirect: `${idWebUrl()}/lti/play/${encodeURIComponent(ref)}#session=${token}` }
+    }
     const interview = await this.loadInterview(ref)
     const submission = this.signSubmission({
       sub: claims.sub,
       jti: newId(),
       lineitem,
       ref,
-      returnUrl: safeReturnUrl(claims[CLAIM.launchPresentation]?.return_url),
+      returnUrl: sessionReturn,
       exp: Math.floor(this.now() / 1000) + SUBMISSION_TTL_S,
     })
     return interviewPage({
@@ -313,8 +347,61 @@ export class LtiToolService {
     }))
   }
 
+  /**
+   * Posts the score of a finished text-scenario play (read from the stored result, never from the
+   * client) to the session's lineitem. Single use per session; a failed post can be retried.
+   */
+  async complete(
+    session: LtiSession,
+    resultId: unknown
+  ): Promise<{ score: number; returnUrl: string }> {
+    if (typeof resultId !== 'string' || !resultId) throw new LtiError('Missing resultId')
+    await this.limit('tool-complete', session.sub, COMPLETE_PER_MINUTE_PER_LEARNER)
+    const result = await this.prisma.simulationResult.findUnique({
+      where: { id: resultId },
+      include: { dimensionScores: true },
+    })
+    if (!result || result.userId !== session.sub || result.scenarioId !== session.ref) {
+      throw new LtiError('Result not found', 404)
+    }
+    // a result recorded before this session began cannot be the work done in it
+    if (result.completedAt.getTime() < session.iat * 1000 - RESULT_CLOCK_SKEW_MS) {
+      throw new LtiError('This result was not completed in this session', 400)
+    }
+    if (!(await this.store.claim('lti-complete', session.jti, IN_FLIGHT_TTL_S))) {
+      throw new LtiError('This score was already sent. Relaunch it from your course.', 409)
+    }
+    let posted = false
+    let resultClaimed = false
+    try {
+      // one result is sent once, whichever session it comes from
+      resultClaimed = await this.store.claim('lti-result', resultId, RESULT_TTL_S)
+      if (!resultClaimed) throw new LtiError('This result was already sent.', 409)
+      // overallScore is already 0-100 (the rounded mean of the 0-100 dimension scores)
+      const score = Math.round(result.overallScore)
+      try {
+        await this.postScore(
+          session,
+          score,
+          result.dimensionScores.map((d) => ({ dimension: d.dimension, score: d.score }))
+        )
+      } catch {
+        throw new LtiError('The score could not be sent to your course. Please try again.', 502)
+      }
+      posted = true
+      const ttl = Math.max(1, Math.ceil(session.exp - this.now() / 1000) + 60)
+      await this.store.put('lti-complete', session.jti, true, ttl)
+      return { score, returnUrl: session.returnUrl ?? returnUrl() }
+    } finally {
+      if (!posted) {
+        await this.store.release('lti-complete', session.jti)
+        if (resultClaimed) await this.store.release('lti-result', resultId)
+      }
+    }
+  }
+
   private async postScore(
-    claims: SubmissionClaims,
+    claims: Pick<SubmissionClaims, 'sub' | 'lineitem'>,
     score: number,
     dimensions: { dimension: string; score: number }[]
   ): Promise<void> {

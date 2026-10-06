@@ -11,6 +11,7 @@ import {
 } from '../lti-spec'
 import { MemoryLtiStore } from '../lti-store'
 import { LtiToolService } from './lti-tool.service'
+import { signSession, verifySession, type LtiSession } from './lti-session'
 
 const BASE = 'http://api.test/api'
 const ISS = 'http://api.test'
@@ -21,7 +22,9 @@ const otherKeys = generateKeyPair()
 
 const scenario = (questions: string[]) => ({
   scenarioId: 'S1',
+  status: 'published',
   data: {
+    mode: 'immersive',
     briefing: { role: 'Analyst' },
     nodes: questions.map((q) => ({ responsePrompt: q })),
     rubric: {
@@ -34,7 +37,10 @@ const scenario = (questions: string[]) => ({
 })
 
 function setup(questions = ['Tell me about a time you led.', 'Why this role?']) {
-  const prisma = { scenario: { findUnique: jest.fn().mockResolvedValue(scenario(questions)) } }
+  const prisma = {
+    scenario: { findUnique: jest.fn().mockResolvedValue(scenario(questions)) },
+    simulationResult: { findUnique: jest.fn() },
+  }
   const store = new MemoryLtiStore()
   const svc = new LtiToolService(prisma as any, { scoreAnswers: jest.fn() } as any, store)
   const calls: { url: string; init?: RequestInit }[] = []
@@ -95,7 +101,10 @@ function idToken(nonce: string, over: Record<string, unknown> = {}, key = platfo
   )
 }
 
-const submissionOf = (html: string) => /name="submission" value="([^"]+)"/.exec(html)![1]
+const submissionOf = (page: string | { redirect: string }) => {
+  if (typeof page !== 'string') throw new Error(`expected the typed page, got ${page.redirect}`)
+  return /name="submission" value="([^"]+)"/.exec(page)![1]
+}
 
 async function launchAgain(svc: LtiToolService) {
   const { state, nonce } = await startLogin(svc)
@@ -112,6 +121,7 @@ beforeEach(() => {
   process.env.LTI_API_BASE = BASE
   process.env.LTI_TOOL_SCORING = 'stub'
   process.env.LTI_RETURN_URL = 'http://return.test'
+  process.env.LTI_LEARN_URL = 'http://learn.test'
   for (const k of [
     'LTI_PLATFORM_ISSUER',
     'LTI_TOOL_PRIVATE_KEY',
@@ -328,6 +338,26 @@ describe('launch', () => {
   it('rejects a launch without a score endpoint', () =>
     reject((n) => idToken(n, { [CLAIM.agsEndpoint]: undefined }), 'score'))
   it('rejects a launch without ref', () => reject((n) => idToken(n, { [CLAIM.custom]: {} }), 'ref'))
+
+  it.each([['draft'], [undefined]])(
+    'refuses a scenario with status %p, typed or text',
+    async (status) => {
+      for (const mode of ['immersive', 'text']) {
+        const h = setup()
+        const row = scenario([])
+        h.prisma.scenario.findUnique.mockResolvedValue({
+          ...row,
+          status,
+          data: { ...row.data, mode },
+        })
+        const { state, nonce } = await startLogin(h.svc)
+        await expect(h.svc.launch(idToken(nonce), state, state)).rejects.toMatchObject({
+          status: 404,
+          message: 'Interview not found',
+        })
+      }
+    }
+  )
 
   it('404s when the scenario does not exist', async () => {
     const h = setup()
@@ -577,6 +607,8 @@ describe('return link', () => {
     ['data:text/html,x'],
     ['/relative/path'],
     ['not a url'],
+    ['http://evil.test/phish'],
+    ['https://learn.test/back'],
     [42],
     [undefined],
   ])('ignores a return_url of %p and falls back to LTI_RETURN_URL', async (value) => {
@@ -586,9 +618,249 @@ describe('return link', () => {
     expect(html).not.toContain('javascript:')
   })
 
+  it('accepts a return_url on the issuer origin', async () => {
+    const h = await withReturn('http://api.test/somewhere')
+    const { html } = await h.svc.submit(answers(h.submission))
+    expect(html).toContain('href="http://api.test/somewhere"')
+  })
+
   it('falls back to LTI_RETURN_URL when the launch has no launch_presentation claim', async () => {
     const h = await launched()
     const { html } = await h.svc.submit(answers(h.submission))
     expect(html).toContain('href="http://return.test"')
+  })
+})
+
+describe('launch of a text scenario', () => {
+  const textScenario = (mode?: string) => ({
+    ...scenario([]),
+    data: { ...scenario([]).data, mode },
+  })
+
+  it.each([[undefined], ['text']])(
+    'redirects to the web app with the session in the fragment (mode %p)',
+    async (mode) => {
+      const h = setup()
+      h.prisma.scenario.findUnique.mockResolvedValue(textScenario(mode))
+      process.env.LTI_ID_WEB_URL = 'http://id.test/'
+      const { state, nonce } = await startLogin(h.svc)
+      const out = await h.svc.launch(
+        idToken(nonce, {
+          [CLAIM.launchPresentation]: { return_url: 'http://learn.test/back' },
+        }),
+        state,
+        state
+      )
+      delete process.env.LTI_ID_WEB_URL
+      const { redirect } = out as { redirect: string }
+      const [path, token] = redirect.split('#session=')
+      expect(path).toBe('http://id.test/lti/play/S1')
+      expect(verifySession(token)).toMatchObject({
+        sub: 'u1',
+        ref: 'S1',
+        lineitem: LINEITEM,
+        returnUrl: 'http://learn.test/back',
+        jti: expect.any(String),
+        iat: expect.any(Number),
+      })
+    }
+  )
+
+  it('defaults the web app URL and encodes the ref', async () => {
+    const h = setup()
+    h.prisma.scenario.findUnique.mockResolvedValue(textScenario())
+    const { state, nonce } = await startLogin(h.svc)
+    const out = await h.svc.launch(
+      idToken(nonce, { [CLAIM.custom]: { ref: 'a b/c' } }),
+      state,
+      state
+    )
+    expect((out as { redirect: string }).redirect).toMatch(
+      /^http:\/\/localhost:5173\/lti\/play\/a%20b%2Fc#session=/
+    )
+  })
+
+  it('keeps the typed page for an immersive scenario', async () => {
+    const out = await launchAgain(setup().svc)
+    expect(typeof out).toBe('string')
+  })
+})
+
+describe('session token', () => {
+  const claims: LtiSession = {
+    sub: 'u1',
+    ref: 'S1',
+    lineitem: LINEITEM,
+    jti: 'j1',
+    iat: 1_000_000_000,
+    exp: 2_000_000_000,
+  }
+
+  it('round trips', () => expect(verifySession(signSession(claims), 1_000)).toEqual(claims))
+
+  it('rejects a changed claim, a bad mac, junk and an expired token', () => {
+    const [body, mac] = signSession(claims).split('.')
+    const forged = Buffer.from(JSON.stringify({ ...claims, sub: 'victim' })).toString('base64url')
+    expect(() => verifySession(`${forged}.${mac}`, 1_000)).toThrow('Invalid')
+    expect(() => verifySession(`${body}.AAAA`, 1_000)).toThrow('Invalid')
+    expect(() => verifySession(`${body}.${mac}.x`, 1_000)).toThrow('Invalid')
+    expect(() => verifySession(undefined)).toThrow('Invalid')
+    expect(() => verifySession(signSession(claims), 2_000_000_001)).toThrow('expired')
+  })
+
+  it('rejects a token without iat', () => {
+    const { iat: _iat, ...noIat } = claims
+    expect(() => verifySession(signSession(noIat as LtiSession), 1_000)).toThrow('Invalid')
+  })
+
+  it('does not verify with another secret', () =>
+    expect(() => verifySession(signSession(claims, 'other'), 1_000)).toThrow('Invalid'))
+
+  it('is not interchangeable with a submission token', async () => {
+    const h = await launched()
+    expect(() => verifySession(h.submission)).toThrow('Invalid')
+  })
+})
+
+describe('complete', () => {
+  const session: LtiSession = {
+    sub: 'u1',
+    ref: 'S1',
+    lineitem: LINEITEM,
+    returnUrl: 'http://learn.test/back',
+    jti: 'j1',
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 3600,
+  }
+  const result = (over = {}) => ({
+    id: 'r1',
+    userId: 'u1',
+    scenarioId: 'S1',
+    overallScore: 72,
+    completedAt: new Date(),
+    dimensionScores: [
+      { dimension: 'Clarity', score: 80 },
+      { dimension: 'Depth', score: 64 },
+    ],
+    ...over,
+  })
+  const ready = (over = {}) => {
+    const h = setup()
+    h.prisma.simulationResult.findUnique.mockResolvedValue(result(over))
+    return h
+  }
+
+  it('posts the score and dimensions to the lineitem and returns the return link', async () => {
+    const h = ready()
+    expect(await h.svc.complete(session, 'r1')).toEqual({
+      score: 72,
+      returnUrl: 'http://learn.test/back',
+    })
+    const post = h.calls.find((c) => c.url === `${LINEITEM}/scores`)!
+    expect((post.init!.headers as Record<string, string>)['Content-Type']).toBe(SCORE_CONTENT_TYPE)
+    expect(JSON.parse(post.init!.body as string)).toEqual({
+      userId: 'u1',
+      scoreGiven: 72,
+      scoreMaximum: 100,
+      activityProgress: 'Completed',
+      gradingProgress: 'FullyGraded',
+      timestamp: expect.any(String),
+      [DIMENSIONS_FIELD]: [
+        { dimension: 'Clarity', score: 80 },
+        { dimension: 'Depth', score: 64 },
+      ],
+    })
+  })
+
+  it('falls back to LTI_RETURN_URL', async () => {
+    const out = await ready().svc.complete({ ...session, returnUrl: undefined }, 'r1')
+    expect(out.returnUrl).toBe('http://return.test')
+  })
+
+  it.each([
+    ['another learner', { userId: 'u2' }],
+    ['another scenario', { scenarioId: 'S2' }],
+  ])('refuses a result of %s and posts nothing', async (_n, over) => {
+    const h = ready(over)
+    await expect(h.svc.complete(session, 'r1')).rejects.toMatchObject({ status: 404 })
+    expect(h.calls).toEqual([])
+  })
+
+  it('404s an unknown result and 400s a missing resultId', async () => {
+    const h = setup()
+    h.prisma.simulationResult.findUnique.mockResolvedValue(null)
+    await expect(h.svc.complete(session, 'r1')).rejects.toMatchObject({ status: 404 })
+    await expect(h.svc.complete(session, undefined)).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('refuses a result completed before the session began, allowing a minute of skew', async () => {
+    const iatMs = session.iat * 1000
+    const h = ready({ completedAt: new Date(iatMs - 61_000) })
+    await expect(h.svc.complete(session, 'r1')).rejects.toMatchObject({ status: 400 })
+    expect(h.calls).toEqual([])
+    const ok = ready({ completedAt: new Date(iatMs - 59_000) })
+    await expect(ok.svc.complete(session, 'r1')).resolves.toMatchObject({ score: 72 })
+  })
+
+  it('accepts a result only once across sessions, 409 afterwards', async () => {
+    const h = ready()
+    await h.svc.complete(session, 'r1')
+    await expect(h.svc.complete({ ...session, jti: 'j2' }, 'r1')).rejects.toMatchObject({
+      status: 409,
+    })
+    expect(h.calls.filter((c) => c.url.endsWith('/scores'))).toHaveLength(1)
+  })
+
+  it('does not burn the session when the result was already sent', async () => {
+    const h = ready()
+    await h.svc.complete(session, 'r1')
+    h.prisma.simulationResult.findUnique.mockResolvedValue(result({ id: 'r2' }))
+    await expect(h.svc.complete({ ...session, jti: 'j2' }, 'r1')).rejects.toMatchObject({
+      status: 409,
+    })
+    await expect(h.svc.complete({ ...session, jti: 'j2' }, 'r2')).resolves.toMatchObject({
+      score: 72,
+    })
+  })
+
+  it('accepts a session only once, 409 afterwards', async () => {
+    const h = ready()
+    await h.svc.complete(session, 'r1')
+    await expect(h.svc.complete(session, 'r1')).rejects.toMatchObject({ status: 409 })
+    expect(h.calls.filter((c) => c.url.endsWith('/scores'))).toHaveLength(1)
+  })
+
+  it('answers a platform failure with a generic 502 and lets the session retry', async () => {
+    const h = ready()
+    h.setScoreStatus(500)
+    await expect(h.svc.complete(session, 'r1')).rejects.toMatchObject({
+      status: 502,
+      message: 'The score could not be sent to your course. Please try again.',
+    })
+    h.setScoreStatus(200)
+    await expect(h.svc.complete(session, 'r1')).resolves.toMatchObject({ score: 72 })
+    // the result is consumed only by the success
+    await expect(h.svc.complete({ ...session, jti: 'j2' }, 'r1')).rejects.toMatchObject({
+      status: 409,
+    })
+  })
+
+  it('releases the result when the post fails, so another session can send it', async () => {
+    const h = ready()
+    h.setScoreStatus(500)
+    await expect(h.svc.complete(session, 'r1')).rejects.toMatchObject({ status: 502 })
+    h.setScoreStatus(200)
+    await expect(h.svc.complete({ ...session, jti: 'j2' }, 'r1')).resolves.toMatchObject({
+      score: 72,
+    })
+  })
+
+  it('rate limits by learner', async () => {
+    const h = ready()
+    for (let i = 0; i < 10; i++)
+      await h.svc.complete({ ...session, jti: `j${i}` }, 'r1').catch(() => undefined)
+    await expect(h.svc.complete({ ...session, jti: 'jx' }, 'r1')).rejects.toMatchObject({
+      status: 429,
+    })
   })
 })

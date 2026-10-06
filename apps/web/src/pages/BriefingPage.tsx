@@ -2,10 +2,17 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
+import { LtiNav } from '@/components/LtiNav'
 import { TrackIcon } from '@/components/TrackIcon'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
 
-export function BriefingPage() {
+export function BriefingPage({
+  ltiMode = false,
+  onBegin,
+}: {
+  ltiMode?: boolean
+  onBegin?: () => void
+} = {}) {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const navigate = useNavigate()
   const { isSignedIn } = useAuth()
@@ -15,10 +22,20 @@ export function BriefingPage() {
   const [showSignInPrompt, setShowSignInPrompt] = useState(false)
 
   useEffect(() => {
-    if (!isLoading && !scenario) {
+    if (!isLoading && !scenario && !ltiMode) {
       navigate('/dashboard')
     }
-  }, [isLoading, scenario, navigate])
+  }, [isLoading, scenario, navigate, ltiMode])
+
+  if (ltiMode && !isLoading && !scenario) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-6">
+        <p className="text-[#f5f3ee] text-[15px] text-center max-w-md">
+          We could not load this scenario. Go back to your course and start again.
+        </p>
+      </div>
+    )
+  }
 
   if (isLoading || !scenario) {
     return (
@@ -33,6 +50,10 @@ export function BriefingPage() {
   const immersiveUrl = `/scenario/${scenarioId}/immersive?mode=${narrationMode}`
 
   function handleBegin() {
+    if (ltiMode) {
+      onBegin?.()
+      return
+    }
     if (scenario!.mode === 'immersive' && !isSignedIn) {
       setShowSignInPrompt(true)
       return
@@ -42,7 +63,7 @@ export function BriefingPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
-      <Nav trackLabel={meta?.label} />
+      {ltiMode ? <LtiNav trackLabel={meta?.label} /> : <Nav trackLabel={meta?.label} />}
 
       <div className="max-w-2xl mx-auto px-6 py-14 animate-fade-in">
         <div
@@ -155,15 +176,20 @@ export function BriefingPage() {
         </div>
 
         <div className="flex items-center justify-between">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="text-[13px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
-          >
-            Back to dashboard
-          </button>
+          {ltiMode ? (
+            <span />
+          ) : (
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="text-[13px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+            >
+              Back to dashboard
+            </button>
+          )}
           <button
             onClick={handleBegin}
-            className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors tracking-wide"
+            disabled={ltiMode && scenario.mode === 'immersive'}
+            className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors tracking-wide disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {scenario.mode === 'immersive' ? 'Begin Interview' : 'Begin Simulation'}
           </button>

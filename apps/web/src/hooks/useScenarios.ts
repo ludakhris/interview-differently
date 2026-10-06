@@ -6,6 +6,7 @@ import {
   type ScenariosData,
   type TrackMeta,
 } from '@/services/scenariosService'
+import { getLtiToken, isLtiSession } from '@/services/ltiSession'
 import type { Scenario } from '@id/types'
 
 export type { TrackMeta }
@@ -55,8 +56,14 @@ export function useScenario(id: string | undefined) {
     // Wait for Clerk to finish loading before issuing the request — sending
     // it pre-load would race the session and we'd briefly fetch as a guest
     // even when the user is signed in, returning the stripped summary.
-    if (!isLoaded) return
-    const tokenFn = isSignedIn ? () => getToken() : undefined
+    // LTI launches have no Clerk session; the LTI token fetches the full scenario.
+    const lti = isLtiSession() ? getLtiToken() : null
+    if (!lti && !isLoaded) return
+    const tokenFn = lti
+      ? () => Promise.resolve(`lti.${lti}`)
+      : isSignedIn
+        ? () => getToken()
+        : undefined
     fetchScenario(id, tokenFn)
       .then(setScenario)
       .catch((err: unknown) => setError(err instanceof Error ? err : new Error(String(err))))

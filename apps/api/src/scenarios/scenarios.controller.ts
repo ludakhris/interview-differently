@@ -16,15 +16,19 @@ import { ScenariosService, type Viewer } from './scenarios.service'
 import { ClerkService } from '../auth/clerk.service'
 import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
 import { InstitutionScope, type AdminRequest } from '../auth/scope'
+import { SESSION_BEARER_PREFIX } from '../lti/tool/lti-session'
+import { LtiSessionGuard, type LtiRequest } from '../lti/tool/lti-session.guard'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Scenario = any
 
 /**
- * Reads use optional auth (anonymous gets public summaries). Mutations
+ * Reads use optional auth (anonymous gets public summaries); an LTI session (#63) may read its
+ * own scenario only (LtiSessionGuard). Mutations
  * require an admin: full admins own everything, institution-admins only
  * their institutions' scenarios (#15, closes #26).
  */
 @Controller('scenarios')
+@UseGuards(LtiSessionGuard)
 export class ScenariosController {
   constructor(
     private readonly scenariosService: ScenariosService,
@@ -52,7 +56,13 @@ export class ScenariosController {
    * body from a curl-and-scrape attack.
    */
   @Get(':id')
-  async findOne(@Param('id') id: string, @Headers('authorization') auth?: string) {
+  async findOne(
+    @Req() req: LtiRequest,
+    @Param('id') id: string,
+    @Headers('authorization') auth?: string
+  ) {
+    // an LTI session reaches only its own scenario (LtiSessionGuard), in full
+    if (req.lti) return this.scenariosService.findForLti(id)
     const viewer = await viewerFrom(this.clerk, auth)
     if (viewer) return this.scenariosService.findOne(id, viewer)
     return this.scenariosService.findSummary(id)
@@ -100,7 +110,8 @@ export class ScenariosController {
 async function viewerFrom(clerk: ClerkService, authHeader?: string): Promise<Viewer | null> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null
   const token = authHeader.slice('Bearer '.length).trim()
-  if (!token) return null
+  // an LTI session token is not a Clerk token: that viewer is anonymous here (LtiSessionGuard)
+  if (!token || token.startsWith(SESSION_BEARER_PREFIX)) return null
   const userId = await clerk.verifyBearerToken(token)
   if (!userId) return null
   return { userId, role: await clerk.getRole(userId) }

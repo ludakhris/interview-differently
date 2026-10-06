@@ -18,13 +18,14 @@ state is the `LtiSingleUse` table (see "Shared store").
 | `LTI_TOOL_SECRET`                   | required           | Tool's HMAC secret for submission tokens                                                                                                                                                                  |
 | `LTI_HINT_SECRET`                   | required           | Platform's HMAC secret for `lti_message_hint`                                                                                                                                                             |
 | `LTI_LEARN_URL`                     | required           | Public URL of the LearnDifferently web app (default `http://localhost:5174`, trailing slash trimmed); the platform sends `${LTI_LEARN_URL}/lms/learning/${cohortId}/${itemId}` as the launch `return_url` |
+| `LTI_ID_WEB_URL`                    | required           | Public URL of the Interview Differently web app (default `http://localhost:5173`, trailing slash trimmed); text scenarios are played at `${LTI_ID_WEB_URL}/lti/play/${ref}`                               |
 | `LTI_RETURN_URL`                    | optional           | Tool's fallback return link (default `http://localhost:5174`) when a launch carries no usable `return_url`                                                                                                |
 | `LTI_PLATFORM_PREVIOUS_PRIVATE_KEY` | optional           | Key being rotated out; published in the platform JWKS, never used to sign                                                                                                                                 |
 | `LTI_TOOL_PREVIOUS_PRIVATE_KEY`     | optional           | Same, for the tool                                                                                                                                                                                        |
 | `TRUST_PROXY`                       | set behind a proxy | Express `trust proxy` (a hop count such as `1`, or `true`), so `req.ip`, which the rate limits use, is the client and not the proxy                                                                       |
 
 With `NODE_ENV=production` the services refuse to boot (the constructors throw, naming every missing
-variable) unless all five required variables (every row marked required) are set. Outside production a missing key or secret is
+variable) unless all six required variables (every row marked required) are set. Outside production a missing key or secret is
 generated at boot, which is only safe for one instance and loses state on restart.
 
 ## Shared store
@@ -42,6 +43,7 @@ writes. `MemoryLtiStore` is for unit tests and a single local process. Uses:
 | `lti-assertion`  | `clientId:jti`           | client-assertion `jti` replay (claimed after the signature verifies)                                                                                |
 | `lti-login`      | state                    | tool login `{nonce}`, 10 minutes, taken at launch                                                                                                   |
 | `lti-submission` | submission jti           | in-flight lock (5 minutes), replaced by a "consumed" entry for the token's remaining life after a successful score post, released if the post fails |
+| `lti-complete`   | session jti              | same lock/consumed pattern for `POST /complete`, one score post per session                                                                         |
 | `rl:*`           | IP, client id or learner | rate-limit counters                                                                                                                                 |
 
 **Multiple instances are safe** provided they share the database and the required production variables
@@ -66,6 +68,7 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
 | --- | --- | --- | --- |
 | tool `GET|POST /login` | 30 / minute | client IP (`req.ip`) | HTML error page |
 | tool `POST /submit` | 10 / minute | learner `sub` from the verified submission token | HTML error page |
+| tool `POST /complete` | 10 / minute | learner `sub` from the LTI session | JSON |
 | platform `GET|POST /auth` | 30 / minute | client IP (`req.ip`) | JSON |
 | platform `POST /token` | 60 / minute | client id, counted only after the assertion signature verifies | JSON `{error:'rate_limited'}` |
 
@@ -122,6 +125,19 @@ in-flight fetch between concurrent callers, times fetches out after 3 seconds an
   `lti_state` cookie, then renders an HTML page for the interview named by
   the custom claim `ref` (questions from the tool's own store, one textarea each). The page carries a signed, short-lived
   `submission` token (tool-signed HMAC, 30 minutes) holding what the tool needs to post back: sub, jti, lineitem URL, ref, and the launch's `launch_presentation.return_url` (kept only if it is an http(s) URL; anything else, such as `javascript:`, is dropped).
+- Text scenarios (scenario data `mode` absent or `text`) are not played on a tool page. After the same verification, `POST /launch`
+  answers `303` to `${LTI_ID_WEB_URL}/lti/play/${encodeURIComponent(ref)}#session=<token>`; the token is in the fragment so it is
+  never sent to a server or logged. Immersive scenarios (`mode === 'immersive'`) keep the typed page below.
+- The session token is `base64url(JSON).base64url(HMAC-SHA256)` (secret `LTI_TOOL_SECRET`, MAC over `lti-session.` + body, so it
+  cannot be used as a submission token), claims `{sub, ref, lineitem, returnUrl?, jti, exp}`, valid 2 hours. The web app sends it as
+  `Authorization: Bearer lti.<token>`. It is accepted only by `lti-session.guard.ts` and only for: `GET /api/scenarios/<ref>`
+  (full scenario, any owner), `POST /api/results/attempts` and `POST /api/results` with `scenarioId === ref` (the user is always
+  the token `sub`), `GET /api/results/:id` for the learner's own result of `ref`, and `POST /api/lti/tool/complete`. Everything
+  else answers 403 (401 for a bad or expired token). The allowlist is by method and path in the guard.
+- `POST /complete` (LTI session required) body `{resultId}`: the result must exist, belong to `sub` and be for `ref`. The score is
+  `overallScore` (0-100) of the stored result, `scoreMaximum` 100, with its dimension scores under `DIMENSIONS_FIELD`; posted to the
+  lineitem like `/submit`. Single use per session `jti` (409 on reuse, released if the post fails), answers JSON
+  `{score, returnUrl}`, or 502 with a generic message if the platform rejects it.
 - `POST /submit` takes the `submission` token and answers, scores them with the tool's own scorer, obtains an access token from the
   platform `tokenUrl` (client-credentials with a signed assertion; the timestamp is always sent), POSTs the score to the lineitem scores URL, and renders a result page
   (overall score, per-dimension scores, feedback) with a primary "Back to your course" link to the launch's `return_url` (fallback `LTI_RETURN_URL`, default `http://localhost:5174`); error pages link there too. A submission token is single use: its `jti` is

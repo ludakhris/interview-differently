@@ -11,6 +11,7 @@ export const REQUIRED_IN_PRODUCTION = [
   'LTI_TOOL_SECRET',
   'LTI_HINT_SECRET',
   'LTI_LEARN_URL',
+  'LTI_ID_WEB_URL',
 ] as const
 
 /** Throws when production is missing any key or secret, so a boot never runs on per-process random ones. */

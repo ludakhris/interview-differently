@@ -109,6 +109,7 @@ describe('keys and secrets', () => {
       'LTI_TOOL_SECRET',
       'LTI_HINT_SECRET',
       'LTI_LEARN_URL',
+      'LTI_ID_WEB_URL',
     ])
       delete process.env[k]
     expect(() => makeService()).toThrow(/LTI_PLATFORM_PRIVATE_KEY.*LTI_HINT_SECRET.*LTI_LEARN_URL/)
@@ -119,6 +120,8 @@ describe('keys and secrets', () => {
     process.env.LTI_HINT_SECRET = 'h'
     expect(() => makeService()).toThrow('LTI_LEARN_URL')
     process.env.LTI_LEARN_URL = 'https://learn.test'
+    expect(() => makeService()).toThrow('LTI_ID_WEB_URL')
+    process.env.LTI_ID_WEB_URL = 'https://id.test'
     expect(() => makeService()).not.toThrow()
   })
 

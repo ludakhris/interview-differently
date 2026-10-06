@@ -35,6 +35,18 @@ export async function saveResult(
   }
 }
 
+/** Like saveResult but throws on failure — LTI hand-back must not proceed unsaved. */
+export async function saveResultStrict(
+  result: ScenarioResult & { scenarioTitle: string }
+): Promise<void> {
+  const res = await fetch(`${API_URL}/api/results`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify(result),
+  })
+  if (!res.ok) throw new Error(`Failed to save result: ${res.status}`)
+}
+
 /**
  * Records the start of a traditional simulation. Powers the completion-rate
  * metric on institution analytics — denominator is count(SimulationAttempt),

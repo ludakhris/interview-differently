@@ -20,3 +20,9 @@ export const launchUrl = (): string =>
   process.env.LTI_TOOL_LAUNCH_URL ?? `${base()}/lti/tool/launch`
 export const returnUrl = (): string => process.env.LTI_RETURN_URL ?? 'http://localhost:5174'
 export const useStubScoring = (): boolean => process.env.LTI_TOOL_SCORING === 'stub'
+/** Public URL of the Interview Differently web app, where text scenarios are played. */
+export const idWebUrl = (): string =>
+  (process.env.LTI_ID_WEB_URL ?? 'http://localhost:5173').replace(/\/+$/, '')
+/** Where learners return to LearnDifferently from a tool (no trailing slash). */
+export const learnUrl = (): string =>
+  (process.env.LTI_LEARN_URL ?? 'http://localhost:5174').replace(/\/+$/, '')

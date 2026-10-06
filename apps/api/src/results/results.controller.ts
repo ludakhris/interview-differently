@@ -5,34 +5,51 @@ import {
   Body,
   Param,
   HttpCode,
+  ForbiddenException,
   HttpException,
   HttpStatus,
+  Inject,
   Req,
   UseGuards,
 } from '@nestjs/common'
 import { ResultsService } from './results.service'
 import type { CreateResultDto } from './results.types'
-import { AuthenticatedGuard } from '../auth/authenticated.guard'
 import { ClerkService } from '../auth/clerk.service'
 import { assertOwnerOrAdmin, type AuthedRequest } from '../auth/owner'
+import { LTI_STORE, type LtiStore } from '../lti/lti-store'
+import { AuthenticatedOrLtiGuard, type LtiRequest } from '../lti/tool/lti-session.guard'
+
+type Req = AuthedRequest & Pick<LtiRequest, 'lti'>
+
+const LTI_WRITES_PER_MINUTE = 20
 
 /**
  * Simulation results. Every route needs a signed-in user; writes are
  * stamped with the caller's userId (the body's is ignored) and reads are
- * own-or-admin (#27).
+ * own-or-admin (#27). An LTI session (#63) is limited by the guard to its own scenario and, here,
+ * to its own results.
  */
 @Controller('results')
-@UseGuards(AuthenticatedGuard)
+@UseGuards(AuthenticatedOrLtiGuard)
 export class ResultsController {
   constructor(
     private readonly resultsService: ResultsService,
-    private readonly clerk: ClerkService
+    private readonly clerk: ClerkService,
+    @Inject(LTI_STORE) private readonly store: LtiStore
   ) {}
+
+  /** An LTI session may post at most 20 a minute per route; 429 over that. */
+  private async limit(req: Req, scope: string) {
+    if (!req.lti) return
+    if ((await this.store.count(`rl:${scope}`, req.userId, 60)) > LTI_WRITES_PER_MINUTE)
+      throw new HttpException('Too many requests. Wait a minute and try again.', 429)
+  }
 
   @Post()
   @HttpCode(201)
-  create(@Req() req: AuthedRequest, @Body() dto: CreateResultDto) {
-    return this.resultsService.create({ ...dto, userId: req.userId })
+  async create(@Req() req: Req, @Body() dto: CreateResultDto) {
+    await this.limit(req, 'results-create')
+    return this.resultsService.create({ ...dto, userId: req.userId }, { lti: !!req.lti })
   }
 
   /**
@@ -41,7 +58,8 @@ export class ResultsController {
    */
   @Post('attempts')
   @HttpCode(201)
-  createAttempt(@Req() req: AuthedRequest, @Body() body: { scenarioId: string; track: string }) {
+  async createAttempt(@Req() req: Req, @Body() body: { scenarioId: string; track: string }) {
+    await this.limit(req, 'results-attempt')
     return this.resultsService.createAttempt({
       userId: req.userId,
       scenarioId: body.scenarioId,
@@ -56,10 +74,13 @@ export class ResultsController {
   }
 
   @Get(':id')
-  async getById(@Req() req: AuthedRequest, @Param('id') id: string) {
+  async getById(@Req() req: Req, @Param('id') id: string) {
     try {
       const result = await this.resultsService.getById(id)
-      await assertOwnerOrAdmin(this.clerk, req, result.userId)
+      if (req.lti) {
+        if (result.userId !== req.userId || result.scenarioId !== req.lti.ref)
+          throw new ForbiddenException('Not authorised to access this record')
+      } else await assertOwnerOrAdmin(this.clerk, req, result.userId)
       return result
     } catch (err) {
       if (err instanceof HttpException) throw err

@@ -1,9 +1,17 @@
 import type { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 import type { AddressInfo } from 'node:net'
+import { AdminGuard } from '../auth/admin.guard'
+import { AuthenticatedGuard } from '../auth/authenticated.guard'
+import { ClerkService } from '../auth/clerk.service'
+import { InstitutionScope } from '../auth/scope'
 import { InterviewEngineService } from '../interview-engine/interview-engine.service'
 import { LearnerService } from '../learn/learner.service'
 import { PrismaService } from '../prisma/prisma.service'
+import { ResultsController } from '../results/results.controller'
+import { ResultsService } from '../results/results.service'
+import { ScenariosController } from '../scenarios/scenarios.controller'
+import { ScenariosService } from '../scenarios/scenarios.service'
 import { LTI_STORE, MemoryLtiStore } from './lti-store'
 import { LtiPlatformController } from './platform/lti-platform.controller'
 import { LtiPlatformService } from './platform/lti-platform.service'
@@ -21,8 +29,27 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
   let platform: LtiPlatformService
   const recordToolResult = jest.fn()
 
+  /** The ref of the launched item; set per test. */
+  let itemRef = 'scn-1'
+  const textScenario = {
+    scenarioId: 'ops-001',
+    status: 'published',
+    institutionId: 'inst-private',
+    institution: { name: 'Acme' },
+    data: { scenarioId: 'ops-001', title: 'Ops decision', nodes: [], rubric: { dimensions: [] } },
+  }
+  const stored: Record<string, any> = {}
+  const fakeResults = {
+    createAttempt: jest.fn(async (a: object) => ({ id: 'att1', ...a })),
+    create: jest.fn(
+      async (dto: any) => (stored[dto.id] = { ...dto, completedAt: new Date(dto.completedAt) })
+    ),
+    getById: jest.fn(async (id: string) => stored[id]),
+  }
   const scenario = {
+    status: 'published',
     data: {
+      mode: 'immersive',
       title: 'Practice interview',
       briefing: { role: 'Medical Assistant' },
       nodes: [{ responsePrompt: 'Tell me about yourself.' }, { responsePrompt: 'Why this job?' }],
@@ -46,11 +73,21 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     courseItem: {
       findUnique: jest.fn(async () => ({
         type: 'tool',
-        config: { toolId: 'id-interview', ref: 'scn-1' },
+        config: { toolId: 'id-interview', ref: itemRef },
         module: { courseId: 'c1' },
       })),
     },
-    scenario: { findUnique: jest.fn(async () => scenario) },
+    scenario: {
+      findMany: jest.fn(async () => []),
+      findUnique: jest.fn(async (a: any) =>
+        a.where.scenarioId === 'ops-001'
+          ? textScenario
+          : a.where.scenarioId === 'scn-1'
+            ? scenario
+            : null
+      ),
+    },
+    simulationResult: { findUnique: jest.fn(async (a: any) => stored[a.where.id] ?? null) },
   }
 
   const unescape = (s: string) =>
@@ -100,8 +137,19 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     process.env.LTI_TOOL_SCORING = 'stub'
     delete process.env.LTI_LEARN_URL
     const mod = await Test.createTestingModule({
-      controllers: [LtiPlatformController, LtiToolController],
+      controllers: [
+        LtiPlatformController,
+        LtiToolController,
+        ScenariosController,
+        ResultsController,
+      ],
       providers: [
+        ScenariosService,
+        AuthenticatedGuard,
+        AdminGuard,
+        InstitutionScope,
+        { provide: ResultsService, useValue: fakeResults },
+        { provide: ClerkService, useValue: { verifyBearerToken: async () => null } },
         LtiPlatformService,
         LtiToolService,
         { provide: LTI_STORE, useValue: new MemoryLtiStore() },
@@ -122,7 +170,10 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     delete process.env.LTI_TOOL_SCORING
     await app.close()
   })
-  beforeEach(() => recordToolResult.mockClear())
+  beforeEach(() => {
+    recordToolResult.mockClear()
+    itemRef = 'scn-1'
+  })
 
   const longAnswer = 'I helped patients feel at ease and kept careful records. '.repeat(5)
 
@@ -163,6 +214,132 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         { dimension: 'Clarity', score: 70 },
         { dimension: 'Specifics', score: 70 },
       ],
+    })
+  })
+
+  describe('a text scenario played in the web app', () => {
+    const api = (token: string, path: string, init: RequestInit = {}) =>
+      fetch(`${base}${path}`, {
+        ...init,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer lti.${token}`,
+          ...init.headers,
+        },
+      })
+
+    async function launchText() {
+      itemRef = 'ops-001'
+      const launch = await reachLaunchForm()
+      const res = await post(launch.action, launch.fields, launch.cookie)
+      expect(res.status).toBe(303)
+      const location = res.headers.get('location')!
+      expect(location).toContain('/lti/play/ops-001#session=')
+      return location.split('#session=')[1]
+    }
+
+    it('redirects, lets the token play its scenario, and returns the score to the LMS', async () => {
+      const token = await launchText()
+
+      // the list is open to the token, as an anonymous viewer (summaries only)
+      const list = await api(token, '/scenarios')
+      expect(list.status).toBe(200)
+      expect(prisma.scenario.findMany).toHaveBeenLastCalledWith(
+        expect.objectContaining({ where: { institutionId: null } })
+      )
+
+      const scn = await api(token, '/scenarios/ops-001')
+      expect(scn.status).toBe(200)
+      expect((await scn.json()) as { title: string }).toMatchObject({ title: 'Ops decision' })
+
+      const attempt = await api(token, '/results/attempts', {
+        method: 'POST',
+        body: JSON.stringify({ scenarioId: 'ops-001', track: 'ops' }),
+      })
+      expect(attempt.status).toBe(201)
+      expect(fakeResults.createAttempt).toHaveBeenLastCalledWith({
+        userId: 'u1',
+        scenarioId: 'ops-001',
+        track: 'ops',
+      })
+
+      const created = await api(token, '/results', {
+        method: 'POST',
+        body: JSON.stringify({
+          id: 'res1',
+          userId: 'attacker',
+          scenarioId: 'ops-001',
+          scenarioTitle: 'Ops decision',
+          track: 'ops',
+          completedAt: new Date().toISOString(),
+          overallScore: 81,
+          choiceSequence: [],
+          dimensionScores: [
+            { dimension: 'Clarity', score: 90, quality: 'strong', feedback: '' },
+            { dimension: 'Depth', score: 72, quality: 'proficient', feedback: '' },
+          ],
+        }),
+      })
+      expect(created.status).toBe(201)
+      expect(stored.res1.userId).toBe('u1')
+      expect((await api(token, '/results/res1')).status).toBe(200)
+
+      const done = await api(token, '/lti/tool/complete', {
+        method: 'POST',
+        body: JSON.stringify({ resultId: 'res1' }),
+      })
+      expect(done.status).toBe(201)
+      expect(await done.json()).toEqual({
+        score: 81,
+        returnUrl: 'http://localhost:5174/lms/learning/k1/i1',
+      })
+      expect(recordToolResult).toHaveBeenCalledWith('u1', 'k1', 'i1', {
+        reportedAt: expect.any(String),
+        scorePct: 81,
+        dimensions: [
+          { dimension: 'Clarity', score: 90 },
+          { dimension: 'Depth', score: 72 },
+        ],
+      })
+
+      const again = await api(token, '/lti/tool/complete', {
+        method: 'POST',
+        body: JSON.stringify({ resultId: 'res1' }),
+      })
+      expect(again.status).toBe(409)
+      expect(recordToolResult).toHaveBeenCalledTimes(1)
+    })
+
+    it('refuses the token on another scenario, another route and without it', async () => {
+      const token = await launchText()
+      expect((await api(token, '/scenarios/scn-1')).status).toBe(403)
+      expect((await api(token, '/scenarios', { method: 'POST', body: '{}' })).status).toBe(403)
+      expect((await api(token, '/results/profile/u1')).status).toBe(403)
+      expect((await api(token, '/results/res1/ai-feedback')).status).toBe(403)
+      expect(
+        (
+          await api(token, '/results', {
+            method: 'POST',
+            body: JSON.stringify({ scenarioId: 'scn-1' }),
+          })
+        ).status
+      ).toBe(403)
+      expect((await api(token, '/scenarios/ops-001', { method: 'DELETE' })).status).toBe(403)
+      expect((await api(`${token}x`, '/scenarios/ops-001')).status).toBe(401)
+      const noToken = await fetch(`${base}/lti/tool/complete`, { method: 'POST' })
+      expect(noToken.status).toBe(401)
+    })
+
+    it('refuses a result owned by someone else', async () => {
+      const token = await launchText()
+      stored.theirs = { id: 'theirs', userId: 'u2', scenarioId: 'ops-001', overallScore: 99 }
+      expect((await api(token, '/results/theirs')).status).toBe(403)
+      const done = await api(token, '/lti/tool/complete', {
+        method: 'POST',
+        body: JSON.stringify({ resultId: 'theirs' }),
+      })
+      expect(done.status).toBe(404)
+      expect(recordToolResult).not.toHaveBeenCalled()
     })
   })
 
