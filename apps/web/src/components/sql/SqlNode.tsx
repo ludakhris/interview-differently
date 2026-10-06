@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { useConfirm } from '@/components/ConfirmDialog'
 import type { ScenarioNode, SqlSpec } from '@id/types'
@@ -6,6 +6,7 @@ import { SqlWorkbench } from './SqlWorkbench'
 import { ResultsGrid } from './ResultsGrid'
 import { SandboxDb, type SandboxResult } from '@/lib/sql/sandboxDb'
 import { compareResults } from '@/lib/sql/compare'
+import { preferLtiToken } from '@/services/ltiSession'
 import { fetchMyDataset, type DatasetDetail } from '@/services/datasetsService'
 
 /**
@@ -33,7 +34,9 @@ interface Props {
 
 export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
   const spec = node.sql as SqlSpec
-  const { getToken } = useAuth()
+  const { getToken: clerkToken } = useAuth()
+  // an LTI launch has no Clerk session: its session token fetches the dataset instead
+  const getToken = useMemo(() => preferLtiToken(clerkToken), [clerkToken])
   const confirm = useConfirm()
   const [dataset, setDataset] = useState<DatasetDetail | null>(null)
   const [db, setDb] = useState<SandboxDb | null>(null)

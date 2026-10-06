@@ -7,6 +7,7 @@ import {
   isLtiPath,
   isLtiSession,
   parseSessionFromHash,
+  preferLtiToken,
 } from '../ltiSession'
 import { authHeader, registerTokenGetter } from '../authToken'
 
@@ -99,5 +100,33 @@ describe('captureLtiSession', () => {
     expect(await authHeader()).toEqual({ Authorization: `Bearer lti.${TOKEN}` })
     location.pathname = '/dashboard'
     expect(await authHeader()).toEqual({ Authorization: 'Bearer clerk-jwt' })
+  })
+})
+
+describe('preferLtiToken', () => {
+  afterEach(() => {
+    clearLtiSession()
+    vi.unstubAllGlobals()
+  })
+
+  it('uses the LTI session on an LTI play route', async () => {
+    stubBrowser(`#session=${TOKEN}`)
+    captureLtiSession()
+    const clerk = vi.fn(async () => 'clerk-jwt')
+    expect(await preferLtiToken(clerk)()).toBe(`lti.${TOKEN}`)
+    expect(clerk).not.toHaveBeenCalled()
+  })
+
+  it('falls through to Clerk off an LTI route, even with a stored token', async () => {
+    const b = stubBrowser(`#session=${TOKEN}`)
+    captureLtiSession()
+    b.location.pathname = '/dashboard'
+    const clerk = vi.fn(async () => 'clerk-jwt')
+    expect(await preferLtiToken(clerk)()).toBe('clerk-jwt')
+  })
+
+  it('falls through to Clerk when there is no LTI token', async () => {
+    stubBrowser('')
+    expect(await preferLtiToken(async () => null)()).toBeNull()
   })
 })

@@ -34,7 +34,13 @@ import {
   useStubScoring,
 } from './lti-tool.config'
 import { errorPage, interviewPage, resultPage } from './lti-tool.html'
-import { SESSION_TTL_S, signSession, toolSecret, type LtiSession } from './lti-session'
+import {
+  SESSION_TTL_S,
+  signSession,
+  sqlDatasetSlugs,
+  toolSecret,
+  type LtiSession,
+} from './lti-session'
 
 const STATE_TTL_S = 10 * 60
 const SUBMISSION_TTL_S = 30 * 60
@@ -205,6 +211,7 @@ export class LtiToolService {
         ref,
         lineitem,
         returnUrl: sessionReturn,
+        datasets: sqlDatasetSlugs(row.data),
         jti: newId(),
         iat: Math.floor(this.now() / 1000),
         exp: Math.floor(this.now() / 1000) + SESSION_TTL_S,

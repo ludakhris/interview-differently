@@ -77,6 +77,12 @@ describe('AuthenticatedOrLtiGuard with an LTI token', () => {
     )
   })
 
+  it('refuses an encoded dataset slug that decodes to another one', async () => {
+    await expect(
+      guard.canActivate(ctxOf(reqOf('GET', '/api/me/datasets/sql-fundamentals%2F..%2Fother')))
+    ).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
   it('refuses a result or attempt for another scenario, or without a scenario', async () => {
     for (const [url, body] of [
       ['/api/results', { scenarioId: 'other' }],
@@ -106,6 +112,51 @@ describe('AuthenticatedOrLtiGuard with an LTI token', () => {
       await expect(
         guard.canActivate(ctxOf(reqOf('GET', '/api/scenarios/ops-001', undefined, auth)))
       ).rejects.toBeInstanceOf(UnauthorizedException)
+  })
+})
+
+describe('AuthenticatedOrLtiGuard datasets with an LTI token', () => {
+  const sqlSession = { ...session, datasets: ['sql-fundamentals'] }
+  const withSql = (method: string, url: string) =>
+    reqOf(method, url, undefined, ltiHeader(sqlSession))
+
+  it('allows reading the dataset the launched scenario uses', async () => {
+    for (const url of [
+      '/api/me/datasets/sql-fundamentals',
+      '/api/me/datasets/sql-fundamentals?x=1',
+      '/api/me/datasets/sql-fundamentals/',
+    ]) {
+      const req = withSql('GET', url)
+      expect(await guard.canActivate(ctxOf(req))).toBe(true)
+      expect(req.userId).toBe('u1')
+    }
+  })
+
+  it.each([
+    ['GET', '/api/me/datasets/other-dataset'],
+    ['GET', '/api/me/datasets'],
+    ['GET', '/api/me/datasets/sql-fundamentals/extra'],
+    ['GET', '/api/admin/datasets'],
+    ['GET', '/api/admin/datasets/sql-fundamentals'],
+    ['GET', '/api/admin/datasets/cohort-options'],
+    ['POST', '/api/admin/datasets'],
+    ['POST', '/api/admin/datasets/validate'],
+    ['PUT', '/api/admin/datasets/sql-fundamentals'],
+    ['PUT', '/api/admin/datasets/sql-fundamentals/cohorts'],
+    ['DELETE', '/api/admin/datasets/sql-fundamentals'],
+    ['POST', '/api/me/datasets/sql-fundamentals'],
+    ['PUT', '/api/me/datasets/sql-fundamentals'],
+    ['DELETE', '/api/me/datasets/sql-fundamentals'],
+  ])('refuses %s %s', async (method, url) => {
+    await expect(guard.canActivate(ctxOf(withSql(method, url)))).rejects.toBeInstanceOf(
+      ForbiddenException
+    )
+  })
+
+  it('refuses every dataset for a session without a datasets claim', async () => {
+    await expect(
+      guard.canActivate(ctxOf(reqOf('GET', '/api/me/datasets/sql-fundamentals')))
+    ).rejects.toBeInstanceOf(ForbiddenException)
   })
 })
 

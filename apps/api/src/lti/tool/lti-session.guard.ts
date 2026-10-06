@@ -19,8 +19,8 @@ export interface LtiRequest {
   lti?: Omit<LtiSession, 'sub'>
 }
 
-type Allow = (ref: string, req: LtiRequest) => boolean
-const bodyScenario: Allow = (ref, req) => req.body?.scenarioId === ref
+type Allow = (session: LtiSession, req: LtiRequest) => boolean
+const bodyScenario: Allow = (s, req) => req.body?.scenarioId === s.ref
 
 /**
  * Everything an LTI session may reach, by method and path (without the /api prefix). Each entry
@@ -29,9 +29,19 @@ const bodyScenario: Allow = (ref, req) => req.body?.scenarioId === ref
  * accident. Ownership of a result is checked by the controller.
  */
 const ALLOWED: { method: string; path: RegExp; allow?: Allow }[] = [
-  { method: 'GET', path: /^\/scenarios\/[^/]+$/, allow: (ref, req) => idOf(req) === ref },
+  { method: 'GET', path: /^\/scenarios\/[^/]+$/, allow: (s, req) => idOf(req) === s.ref },
   { method: 'POST', path: /^\/results\/attempts$/, allow: bodyScenario },
   { method: 'POST', path: /^\/results$/, allow: bodyScenario },
+  {
+    // read-only, one dataset: a slug the launched scenario's sql nodes use (fixed in the token at
+    // launch); the controller re-checks it against the scenario. Never the list or admin routes.
+    method: 'GET',
+    path: /^\/me\/datasets\/[^/]+$/,
+    allow: (s, req) => {
+      const slug = datasetSlugOf(req)
+      return slug !== undefined && (s.datasets ?? []).includes(slug)
+    },
+  },
   { method: 'GET', path: /^\/results\/[^/]+$/ },
   { method: 'POST', path: /^\/lti\/tool\/complete$/ },
 ]
@@ -43,6 +53,15 @@ const pathOf = (req: LtiRequest): string => {
 
 function idOf(req: LtiRequest): string | undefined {
   const m = /^\/scenarios\/([^/]+)$/.exec(pathOf(req))
+  try {
+    return m ? decodeURIComponent(m[1]) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function datasetSlugOf(req: LtiRequest): string | undefined {
+  const m = /^\/me\/datasets\/([^/]+)$/.exec(pathOf(req))
   try {
     return m ? decodeURIComponent(m[1]) : undefined
   } catch {
@@ -71,7 +90,7 @@ function authorizeLti(req: LtiRequest, token: string): true {
   }
   const path = pathOf(req)
   const rule = ALLOWED.find((r) => r.method === req.method && r.path.test(path))
-  if (!rule || (rule.allow && !rule.allow(session.ref, req))) {
+  if (!rule || (rule.allow && !rule.allow(session, req))) {
     throw new ForbiddenException('This session cannot be used here')
   }
   req.userId = session.sub

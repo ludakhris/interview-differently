@@ -11,13 +11,11 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { AdminGuard, InstitutionAdminAllowed } from '../auth/admin.guard'
-import { AuthenticatedGuard } from '../auth/authenticated.guard'
 import { InstitutionScope, type AdminRequest } from '../auth/scope'
+import { AuthenticatedOrLtiGuard, type LtiRequest } from '../lti/tool/lti-session.guard'
 import { DatasetsService, type DatasetInput } from './datasets.service'
 
-interface AuthedRequest {
-  userId: string
-}
+type AuthedRequest = { userId: string } & Pick<LtiRequest, 'lti'>
 
 /**
  * Institution-admins see platform datasets (read-only) plus their own
@@ -94,8 +92,12 @@ export class DatasetsAdminController {
   }
 }
 
+/**
+ * A signed-in Clerk user, or an LTI session (#63), which the guard limits to reading one dataset
+ * by slug; `getForLti` then holds it to the datasets its launched scenario uses.
+ */
 @Controller('me/datasets')
-@UseGuards(AuthenticatedGuard)
+@UseGuards(AuthenticatedOrLtiGuard)
 export class DatasetsMeController {
   constructor(private readonly service: DatasetsService) {}
 
@@ -106,6 +108,7 @@ export class DatasetsMeController {
 
   @Get(':slug')
   get(@Req() req: AuthedRequest, @Param('slug') slug: string) {
+    if (req.lti) return this.service.getForLti(req.lti.ref, slug)
     return this.service.getForUser(req.userId, slug)
   }
 }

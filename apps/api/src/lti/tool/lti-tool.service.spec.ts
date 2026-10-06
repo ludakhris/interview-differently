@@ -11,7 +11,7 @@ import {
 } from '../lti-spec'
 import { MemoryLtiStore } from '../lti-store'
 import { LtiToolService } from './lti-tool.service'
-import { signSession, verifySession, type LtiSession } from './lti-session'
+import { signSession, sqlDatasetSlugs, verifySession, type LtiSession } from './lti-session'
 
 const BASE = 'http://api.test/api'
 const ISS = 'http://api.test'
@@ -680,6 +680,36 @@ describe('launch of a text scenario', () => {
     )
   })
 
+  it('puts the datasets of the scenario sql nodes in the session', async () => {
+    const h = setup()
+    const base = textScenario()
+    h.prisma.scenario.findUnique.mockResolvedValue({
+      ...base,
+      data: {
+        ...base.data,
+        nodes: [
+          { type: 'sql', sql: { datasetSlug: 'sql-fundamentals' } },
+          { type: 'decision' },
+          { type: 'sql', sql: { datasetSlug: 'sql-fundamentals' } },
+          { type: 'sql', sql: { datasetSlug: 'orders-2' } },
+        ],
+      },
+    })
+    const { state, nonce } = await startLogin(h.svc)
+    const out = await h.svc.launch(idToken(nonce), state, state)
+    const token = (out as { redirect: string }).redirect.split('#session=')[1]
+    expect(verifySession(token).datasets).toEqual(['sql-fundamentals', 'orders-2'])
+  })
+
+  it('puts no datasets in the session of a scenario without sql nodes', async () => {
+    const h = setup()
+    h.prisma.scenario.findUnique.mockResolvedValue(textScenario())
+    const { state, nonce } = await startLogin(h.svc)
+    const out = await h.svc.launch(idToken(nonce), state, state)
+    const token = (out as { redirect: string }).redirect.split('#session=')[1]
+    expect(verifySession(token).datasets).toEqual([])
+  })
+
   it('keeps the typed page for an immersive scenario', async () => {
     const out = await launchAgain(setup().svc)
     expect(typeof out).toBe('string')
@@ -711,6 +741,34 @@ describe('session token', () => {
   it('rejects a token without iat', () => {
     const { iat: _iat, ...noIat } = claims
     expect(() => verifySession(signSession(noIat as LtiSession), 1_000)).toThrow('Invalid')
+  })
+
+  it('rejects a datasets claim that is not a list of strings', () => {
+    for (const datasets of ['sql-fundamentals', [1], [null]])
+      expect(() =>
+        verifySession(signSession({ ...claims, datasets } as unknown as LtiSession), 1_000)
+      ).toThrow('Invalid')
+    expect(verifySession(signSession({ ...claims, datasets: ['a'] }), 1_000).datasets).toEqual([
+      'a',
+    ])
+  })
+
+  it('reads dataset slugs from sql nodes only, without duplicates', () => {
+    expect(sqlDatasetSlugs(null)).toEqual([])
+    expect(sqlDatasetSlugs({ nodes: 'x' })).toEqual([])
+    expect(
+      sqlDatasetSlugs({
+        nodes: [
+          null,
+          { type: 'decision', sql: { datasetSlug: 'no' } },
+          { type: 'sql' },
+          { type: 'sql', sql: { datasetSlug: '' } },
+          { type: 'sql', sql: { datasetSlug: 7 } },
+          { type: 'sql', sql: { datasetSlug: 'a' } },
+          { type: 'sql', sql: { datasetSlug: 'a' } },
+        ],
+      })
+    ).toEqual(['a'])
   })
 
   it('does not verify with another secret', () =>

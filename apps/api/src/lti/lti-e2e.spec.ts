@@ -6,6 +6,9 @@ import { AuthenticatedGuard } from '../auth/authenticated.guard'
 import { ClerkService } from '../auth/clerk.service'
 import { InstitutionScope } from '../auth/scope'
 import { InterviewEngineService } from '../interview-engine/interview-engine.service'
+import { DatasetsAdminController, DatasetsMeController } from '../datasets/datasets.controller'
+import { DatasetsService } from '../datasets/datasets.service'
+import { SqlRunnerService } from '../sql-runner/sql-runner.service'
 import { LearnerService } from '../learn/learner.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { ResultsController } from '../results/results.controller'
@@ -37,6 +40,25 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     institutionId: 'inst-private',
     institution: { name: 'Acme' },
     data: { scenarioId: 'ops-001', title: 'Ops decision', nodes: [], rubric: { dimensions: [] } },
+  }
+  const sqlScenario = {
+    scenarioId: 'data-001',
+    status: 'published',
+    institutionId: null,
+    institution: null,
+    data: {
+      scenarioId: 'data-001',
+      title: 'Top customers',
+      rubric: { dimensions: [{ name: 'Technical Accuracy' }] },
+      nodes: [
+        { nodeId: 'n1', type: 'sql', sql: { datasetSlug: 'sql-fundamentals' } },
+        { nodeId: 'n2', type: 'decision' },
+      ],
+    },
+  }
+  const datasets: Record<string, any> = {
+    'sql-fundamentals': { id: 'd1', slug: 'sql-fundamentals', setupSql: 'create table t(x int);' },
+    'someone-elses': { id: 'd2', slug: 'someone-elses', setupSql: 'create table secret(x int);' },
   }
   const stored: Record<string, any> = {}
   const fakeResults = {
@@ -84,9 +106,12 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
           ? textScenario
           : a.where.scenarioId === 'scn-1'
             ? scenario
-            : null
+            : a.where.scenarioId === 'data-001'
+              ? sqlScenario
+              : null
       ),
     },
+    dataset: { findUnique: jest.fn(async (a: any) => datasets[a.where.slug] ?? null) },
     simulationResult: { findUnique: jest.fn(async (a: any) => stored[a.where.id] ?? null) },
   }
 
@@ -142,14 +167,21 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         LtiToolController,
         ScenariosController,
         ResultsController,
+        DatasetsMeController,
+        DatasetsAdminController,
       ],
       providers: [
+        DatasetsService,
+        { provide: SqlRunnerService, useValue: {} },
         ScenariosService,
         AuthenticatedGuard,
         AdminGuard,
         InstitutionScope,
         { provide: ResultsService, useValue: fakeResults },
-        { provide: ClerkService, useValue: { verifyBearerToken: async () => null } },
+        {
+          provide: ClerkService,
+          useValue: { verifyBearerToken: async () => null, getRole: async () => 'student' },
+        },
         LtiPlatformService,
         LtiToolService,
         { provide: LTI_STORE, useValue: new MemoryLtiStore() },
@@ -328,6 +360,76 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
       expect((await api(`${token}x`, '/scenarios/ops-001')).status).toBe(401)
       const noToken = await fetch(`${base}/lti/tool/complete`, { method: 'POST' })
       expect(noToken.status).toBe(401)
+    })
+
+    describe('a SQL scenario', () => {
+      async function launchSql() {
+        itemRef = 'data-001'
+        const launch = await reachLaunchForm()
+        const res = await post(launch.action, launch.fields, launch.cookie)
+        expect(res.status).toBe(303)
+        return res.headers.get('location')!.split('#session=')[1]
+      }
+
+      it('lets the token fetch the dataset its scenario uses and nothing else', async () => {
+        const token = await launchSql()
+
+        const own = await api(token, '/me/datasets/sql-fundamentals')
+        expect(own.status).toBe(200)
+        expect(await own.json()).toMatchObject({
+          slug: 'sql-fundamentals',
+          setupSql: 'create table t(x int);',
+        })
+
+        // another dataset, the list and the admin routes are all refused
+        expect((await api(token, '/me/datasets/someone-elses')).status).toBe(403)
+        expect((await api(token, '/me/datasets')).status).toBe(403)
+        // the admin routes sit behind AdminGuard, which treats the LTI token as an invalid Clerk token
+        expect((await api(token, '/admin/datasets')).status).toBe(401)
+        expect((await api(token, '/admin/datasets/d1')).status).toBe(401)
+        expect(
+          (await api(token, '/admin/datasets/sql-fundamentals', { method: 'DELETE' })).status
+        ).toBe(401)
+        expect((await api(`${token}x`, '/me/datasets/sql-fundamentals')).status).toBe(401)
+        expect((await fetch(`${base}/me/datasets/sql-fundamentals`)).status).toBe(401)
+      })
+
+      it('refuses a text scenario token the dataset', async () => {
+        const token = await launchText()
+        expect((await api(token, '/me/datasets/sql-fundamentals')).status).toBe(403)
+      })
+
+      it('plays through: scenario, dataset, result with no sql in the choices, score return', async () => {
+        const token = await launchSql()
+        expect((await api(token, '/scenarios/data-001')).status).toBe(200)
+        expect((await api(token, '/me/datasets/sql-fundamentals')).status).toBe(200)
+        const created = await api(token, '/results', {
+          method: 'POST',
+          body: JSON.stringify({
+            id: 'sqlres',
+            scenarioId: 'data-001',
+            scenarioTitle: 'Top customers',
+            track: 'data',
+            completedAt: new Date().toISOString(),
+            overallScore: 66,
+            choiceSequence: ['c1'],
+            dimensionScores: [
+              { dimension: 'Technical Accuracy', score: 66, quality: 'proficient', feedback: '' },
+            ],
+          }),
+        })
+        expect(created.status).toBe(201)
+        const done = await api(token, '/lti/tool/complete', {
+          method: 'POST',
+          body: JSON.stringify({ resultId: 'sqlres' }),
+        })
+        expect(done.status).toBe(201)
+        expect(recordToolResult).toHaveBeenCalledWith('u1', 'k1', 'i1', {
+          reportedAt: expect.any(String),
+          scorePct: 66,
+          dimensions: [{ dimension: 'Technical Accuracy', score: 66 }],
+        })
+      })
     })
 
     it('refuses a result owned by someone else', async () => {

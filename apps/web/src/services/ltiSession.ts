@@ -77,6 +77,19 @@ export function isLtiSession(pathname: string = window.location.pathname): boole
   return isLtiPath(pathname) && getLtiToken() !== null
 }
 
+/**
+ * For services that take an explicit Clerk `getToken`: while on an LTI play route the LTI session
+ * (`lti.<token>`) is used instead, otherwise `getToken` is called untouched. Decided per call.
+ */
+export function preferLtiToken(
+  getToken: () => Promise<string | null>
+): () => Promise<string | null> {
+  return () => {
+    const lti = isLtiSession() ? getLtiToken() : null
+    return lti ? Promise.resolve(`lti.${lti}`) : getToken()
+  }
+}
+
 /** Test hook: forget the cached token. */
 export function clearLtiSession(): void {
   memoryToken = null

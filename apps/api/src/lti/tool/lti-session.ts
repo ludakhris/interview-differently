@@ -13,6 +13,11 @@ export interface LtiSession {
   lineitem: string
   /** Where the learner returns to: the launch's return_url (http or https only), else none. */
   returnUrl?: string
+  /**
+   * Slugs of the SQL datasets the launched scenario's sql nodes use, read from the scenario at
+   * launch. The only datasets this session may fetch. Absent (older tokens) means none.
+   */
+  datasets?: string[]
   jti: string
   /** Issued-at, epoch seconds: a result must be completed after the session began. */
   iat: number
@@ -57,6 +62,23 @@ export function verifySession(
     throw new LtiError('Session expired; relaunch from your course', 401)
   }
   if (typeof claims.iat !== 'number') throw invalid()
+  if (
+    claims.datasets !== undefined &&
+    (!Array.isArray(claims.datasets) || !claims.datasets.every((d) => typeof d === 'string'))
+  )
+    throw invalid()
   if (!claims.sub || !claims.jti || !claims.lineitem || !claims.ref) throw invalid()
   return claims
+}
+
+/** The distinct dataset slugs used by the `sql` nodes of a scenario's stored data. */
+export function sqlDatasetSlugs(data: unknown): string[] {
+  const nodes = (data as { nodes?: unknown } | null)?.nodes
+  if (!Array.isArray(nodes)) return []
+  const slugs = nodes.flatMap((n: { type?: string; sql?: { datasetSlug?: unknown } } | null) =>
+    n?.type === 'sql' && typeof n.sql?.datasetSlug === 'string' && n.sql.datasetSlug
+      ? [n.sql.datasetSlug]
+      : []
+  )
+  return [...new Set(slugs)]
 }

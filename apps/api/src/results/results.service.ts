@@ -124,7 +124,10 @@ export class ResultsService {
     )
       throw new BadRequestException('Invalid result: dimensions do not match the scenario rubric')
     const decisions = (data?.nodes ?? []).filter((n: { type?: string }) => n.type === 'decision')
-    if (dto.choiceSequence.length < 1 || dto.choiceSequence.length > decisions.length)
+    // choiceSequence holds only decision picks (quant and sql nodes answer elsewhere), so a
+    // scenario made of sql/quant nodes alone legitimately has none
+    const minChoices = decisions.length > 0 ? 1 : 0
+    if (dto.choiceSequence.length < minChoices || dto.choiceSequence.length > decisions.length)
       throw new BadRequestException('Invalid result: choiceSequence does not fit the scenario')
   }
 

@@ -132,7 +132,7 @@ in-flight fetch between concurrent callers, times fetches out after 3 seconds an
   cannot be used as a submission token), claims `{sub, ref, lineitem, returnUrl?, jti, exp}`, valid 2 hours. The web app sends it as
   `Authorization: Bearer lti.<token>`. It is accepted only by `lti-session.guard.ts` and only for: `GET /api/scenarios/<ref>`
   (full scenario, any owner), `POST /api/results/attempts` and `POST /api/results` with `scenarioId === ref` (the user is always
-  the token `sub`), `GET /api/results/:id` for the learner's own result of `ref`, and `POST /api/lti/tool/complete`. Everything
+  the token `sub`), `GET /api/results/:id` for the learner's own result of `ref`, `GET /api/me/datasets/<slug>` for a SQL dataset slug listed in the token's `datasets` claim (the slugs of the scenario's `sql` nodes, read at launch; the dataset service re-checks the slug against the launched scenario), and `POST /api/lti/tool/complete`. Everything
   else answers 403 (401 for a bad or expired token). The allowlist is by method and path in the guard.
 - `POST /complete` (LTI session required) body `{resultId}`: the result must exist, belong to `sub` and be for `ref`. The score is
   `overallScore` (0-100) of the stored result, `scoreMaximum` 100, with its dimension scores under `DIMENSIONS_FIELD`; posted to the

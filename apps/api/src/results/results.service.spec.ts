@@ -139,3 +139,34 @@ describe('ResultsService.create for an LTI session', () => {
     expect(h.prisma.scenario.findUnique).not.toHaveBeenCalled()
   })
 })
+
+describe('ResultsService.create for an LTI session on a scenario with sql nodes', () => {
+  const lti = { lti: true }
+  const withNodes = (nodes: { type: string }[]) => {
+    const h = setup()
+    h.prisma.scenario.findUnique.mockResolvedValue({
+      ...scenarioRow,
+      data: { ...scenarioRow.data, nodes },
+    })
+    return h
+  }
+
+  it('counts only decision nodes, so sql and quant nodes do not raise the limit', async () => {
+    const h = withNodes([{ type: 'sql' }, { type: 'decision' }, { type: 'sql' }, { type: 'quant' }])
+    await expect(h.svc.create(dto({ choiceSequence: ['a'] }), lti)).resolves.toBeDefined()
+    await expect(
+      h.svc.create(dto({ id: 'r2', choiceSequence: ['a', 'b'] }), lti)
+    ).rejects.toBeInstanceOf(BadRequestException)
+    await expect(h.svc.create(dto({ id: 'r3', choiceSequence: [] }), lti)).rejects.toBeInstanceOf(
+      BadRequestException
+    )
+  })
+
+  it('accepts an empty choiceSequence when the scenario has no decision nodes', async () => {
+    const h = withNodes([{ type: 'sql' }, { type: 'sql' }, { type: 'feedback' }])
+    await expect(h.svc.create(dto({ choiceSequence: [] }), lti)).resolves.toBeDefined()
+    await expect(
+      h.svc.create(dto({ id: 'r2', choiceSequence: ['a'] }), lti)
+    ).rejects.toBeInstanceOf(BadRequestException)
+  })
+})
