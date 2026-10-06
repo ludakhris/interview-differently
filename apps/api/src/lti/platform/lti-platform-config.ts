@@ -68,11 +68,12 @@ export const toolById = (id: unknown): PlatformTool | undefined =>
   registeredTools().find((t) => t.toolId === id)
 
 /**
- * Whether a course item is practice rather than required work (not needed for completion): an
- * interview, or a tool item that is not labelled as a pre/post assessment.
+ * Whether a course item is practice rather than required work (not needed for completion): a
+ * native interview. Every connected tool item is required, so a course is complete only once all
+ * its labs and assessments are done.
  */
 export const isPracticeItem = (i: { type: string; label: string | null }): boolean =>
-  i.type === 'interview' || (i.type === 'tool' && !i.label)
+  i.type === 'interview'
 
 /**
  * Whether a course item feeds interview readiness: a native interview, or an unlabelled tool item

@@ -38,9 +38,9 @@ describe('registered tools', () => {
     expect(isInterviewLike({ type: 'assessment', label: 'pre' })).toBe(false)
   })
 
-  it('treats an interview or any unlabelled tool item as practice (not required)', () => {
+  it('treats only a native interview as practice; every tool item is required', () => {
     expect(isPracticeItem({ type: 'interview', label: null })).toBe(true)
-    expect(isPracticeItem({ type: 'tool', label: null })).toBe(true)
+    expect(isPracticeItem({ type: 'tool', label: null })).toBe(false)
     expect(isPracticeItem({ type: 'tool', label: 'post' })).toBe(false)
     expect(isPracticeItem({ type: 'lesson', label: null })).toBe(false)
   })

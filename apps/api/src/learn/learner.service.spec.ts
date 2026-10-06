@@ -283,7 +283,7 @@ describe('completion', () => {
     })
   })
 
-  it('does not require unlabelled tool items, flagged as an interview or not', async () => {
+  it('requires every tool item, labelled or not, flagged as an interview or not', async () => {
     prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
     prisma.itemProgress.findUnique.mockResolvedValue(null)
     prisma.courseModule.findMany.mockResolvedValue([
@@ -299,6 +299,9 @@ describe('completion', () => {
       },
     ])
     finished('i1')
+    await service.completeLesson('u1', 'k1', 'i1')
+    expect(prisma.enrollment.update).not.toHaveBeenCalled()
+    finished('i1', 'i2', 'i3')
     await service.completeLesson('u1', 'k1', 'i1')
     expect(prisma.enrollment.update).toHaveBeenCalled()
   })
@@ -1097,12 +1100,15 @@ describe('recordToolResult', () => {
     expect(prisma.courseModule.findMany).toHaveBeenCalled() // plan and completion checks ran
   })
 
-  it('does not hold course completion back, like a practice interview', async () => {
+  it('holds course completion until the tool item itself is done', async () => {
     const lesson = item('lesson')
     prisma.courseItem.findUnique.mockResolvedValue(tool)
     prisma.itemProgress.findUnique.mockResolvedValue(null)
     prisma.courseModule.findMany.mockResolvedValue([{ items: [{ ...lesson, id: 'l1' }, tool] }])
     finished('l1')
+    await service.recordToolResult('u1', 'k1', 'i1', { scorePct: 80 })
+    expect(prisma.enrollment.update).not.toHaveBeenCalled()
+    finished('l1', tool.id)
     await service.recordToolResult('u1', 'k1', 'i1', { scorePct: 80 })
     expect(prisma.enrollment.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'completed' }) })
