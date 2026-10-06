@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common'
-import type { KnowledgeCheckQuestion, QuizResult } from '@id/types'
+import type { KnowledgeCheckQuestion, QuizResult } from './learn-types'
 
 /** Grades answers (one chosen option index per question) against the answer key. */
 export function gradeQuiz(questions: KnowledgeCheckQuestion[], answers: unknown): QuizResult {

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import type { CatalogCourse, CatalogOffering } from '@id/types'
+import type { CatalogCourse, CatalogOffering } from './learn-types'
 import { PrismaService } from '../prisma/prisma.service'
 import { cohortStatus } from './cohort-config'
 

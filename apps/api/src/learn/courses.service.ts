@@ -10,7 +10,7 @@ import type {
   CourseItemDto,
   CourseOutline,
   CourseSummary,
-} from '@id/types'
+} from './learn-types'
 import { PrismaService } from '../prisma/prisma.service'
 import { slugify, validateCourseFields, validateItemInput } from './course-config'
 import { LEARN_ROLES, LearnService } from './learn.service'

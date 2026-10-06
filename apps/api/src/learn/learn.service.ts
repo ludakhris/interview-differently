@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
-import type { AgencyOutcomes, Gradebook, LearnWorkspace } from '@id/types'
+import type { AgencyOutcomes, Gradebook, LearnWorkspace } from './learn-types'
 import { PrismaService } from '../prisma/prisma.service'
 import { agencyOutcomes, gradebook, type EnrollmentRow } from './outcomes'
 import { exitFileCsv } from './exit-file'

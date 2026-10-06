@@ -1,5 +1,5 @@
 import { BadGatewayException } from '@nestjs/common'
-import type { InterviewAnswerResult } from '@id/types'
+import type { InterviewAnswerResult } from './learn-types'
 
 /** Tries a learner gets at a practice interview unless the author allows more (1 to 5). */
 export const DEFAULT_ATTEMPTS = 1

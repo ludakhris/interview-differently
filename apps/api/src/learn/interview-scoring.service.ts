@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { BadGatewayException, Injectable, Logger } from '@nestjs/common'
-import type { InterviewAnswerResult } from '@id/types'
+import type { InterviewAnswerResult } from './learn-types'
 import { buildScoringPrompt, parseScores } from './interview-scoring'
 
 const TIMEOUT_MS = 30000

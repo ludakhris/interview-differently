@@ -6,7 +6,7 @@ import type {
   LearnMeasures,
   OutcomesCohortRow,
   OutcomesProviderRow,
-} from '@id/types'
+} from './learn-types'
 
 /** One enrollment with the results rolled up from its item progress. */
 export interface EnrollmentRow {

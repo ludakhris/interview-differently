@@ -11,7 +11,7 @@ import type {
   CourseOffers,
   OfferTarget,
   RunnableCourse,
-} from '@id/types'
+} from './learn-types'
 import { PrismaService } from '../prisma/prisma.service'
 import {
   cohortStatus,

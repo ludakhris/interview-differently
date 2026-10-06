@@ -15,7 +15,8 @@
     "backfill:media": "ts-node -r tsconfig-paths/register scripts/backfill-scenario-media.ts",
     "seed:fake": "ts-node -r tsconfig-paths/register scripts/seed-fake-cohort.ts",
     "remap:user": "ts-node -r tsconfig-paths/register scripts/remap-user-ids.ts",
-    "seed:learn-demo": "ts-node -r tsconfig-paths/register scripts/seed-learn-demo.ts"
+    "seed:learn-demo": "ts-node -r tsconfig-paths/register scripts/seed-learn-demo.ts",
+    "sync:types": "node scripts/sync-learn-types.mjs"
   },
   "prisma": {
     "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts"
@@ -41,7 +42,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
-    "@id/types": "*",
     "@nestjs/cli": "^10.0.0",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",

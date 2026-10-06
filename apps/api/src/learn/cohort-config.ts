@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common'
 import { randomInt } from 'node:crypto'
-import type { CohortStatus } from '@id/types'
+import type { CohortStatus } from './learn-types'
 
 const DAY = 24 * 60 * 60 * 1000
 

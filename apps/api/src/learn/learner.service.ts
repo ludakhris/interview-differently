@@ -14,7 +14,7 @@ import type {
   ProgressStatus,
   QuizResult,
   ReadinessRecord,
-} from '@id/types'
+} from './learn-types'
 import { ClerkService } from '../auth/clerk.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { cohortStatus } from './cohort-config'

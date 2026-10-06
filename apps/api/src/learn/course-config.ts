@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common'
 import { DEFAULT_ATTEMPTS } from './interview-scoring'
-import type { CourseItemType, CourseStatus, ItemInput, KnowledgeCheckQuestion } from '@id/types'
+import type { CourseItemType, CourseStatus, ItemInput, KnowledgeCheckQuestion } from './learn-types'
 
 export const ITEM_TYPES: CourseItemType[] = [
   'lesson',

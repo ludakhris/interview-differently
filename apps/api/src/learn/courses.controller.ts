@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common'
-import type { CourseOutline } from '@id/types'
+import type { CourseOutline } from './learn-types'
 import { LearnGuard } from '../auth/learn.guard'
 import { CoursesService } from './courses.service'
 
