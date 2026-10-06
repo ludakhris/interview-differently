@@ -38,3 +38,30 @@ export function loadSigningKeys(
   const previous = previousPem ? keyPairFromPem(previousPem) : undefined
   return { current, previous: previous && previous.kid !== current.kid ? previous : undefined }
 }
+
+/**
+ * Whether `value` (an origin or URL) is a LearnDifferently origin for the app at `learnUrl`: the
+ * exact learn origin (so local http development works), or https on the learn hostname or one of
+ * its subdomains (tenant hosts such as delaware.learndifferently.tech) with the learn port. No
+ * userinfo, no other scheme, no lookalike hosts.
+ */
+export function isLearnOrigin(value: unknown, learnUrl: string): boolean {
+  if (typeof value !== 'string') return false
+  try {
+    const u = new URL(value)
+    const learn = new URL(learnUrl)
+    if (u.origin === learn.origin) return u.username === '' && u.password === ''
+    return (
+      u.protocol === 'https:' &&
+      u.username === '' &&
+      u.password === '' &&
+      u.port === learn.port &&
+      (u.hostname === learn.hostname ||
+        (u.hostname.endsWith(`.${learn.hostname}`) &&
+          !u.hostname.startsWith('.') &&
+          !u.hostname.includes('..')))
+    )
+  } catch {
+    return false
+  }
+}

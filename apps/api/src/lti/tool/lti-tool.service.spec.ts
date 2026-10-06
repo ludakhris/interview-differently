@@ -620,7 +620,6 @@ describe('return link', () => {
     ['/relative/path'],
     ['not a url'],
     ['http://evil.test/phish'],
-    ['https://learn.test/back'],
     [42],
     [undefined],
   ])('ignores a return_url of %p and falls back to LTI_RETURN_URL', async (value) => {
@@ -628,6 +627,28 @@ describe('return link', () => {
     const { html } = await h.svc.submit(answers(h.submission))
     expect(html).toContain('href="http://return.test"')
     expect(html).not.toContain('javascript:')
+  })
+
+  it('accepts a return_url on a tenant subdomain of the learn host', async () => {
+    process.env.LTI_LEARN_URL = 'https://learn.test'
+    const h = await withReturn('https://delaware.learn.test/lms/learning/c1/i1')
+    const { html } = await h.svc.submit(answers(h.submission))
+    expect(html).toContain('href="https://delaware.learn.test/lms/learning/c1/i1"')
+  })
+
+  it.each([
+    ['https://evil-learn.test/back'],
+    ['https://learn.test.evil.test/back'],
+    ['https://evil.test/back'],
+    ['https://learn.test@evil.test/back'],
+    ['http://delaware.learn.test/back'],
+    ['https://delaware.learn.test:8443/back'],
+    ['ftp://delaware.learn.test/back'],
+  ])('rejects the lookalike return_url %p', async (value) => {
+    process.env.LTI_LEARN_URL = 'https://learn.test'
+    const h = await withReturn(value)
+    const { html } = await h.svc.submit(answers(h.submission))
+    expect(html).toContain('href="http://return.test"')
   })
 
   it('accepts a return_url on the issuer origin', async () => {

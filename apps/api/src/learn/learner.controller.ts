@@ -100,10 +100,24 @@ export class LearnerController {
 
   @Post('cohorts/:cohortId/items/:itemId/tool-launch')
   toolLaunch(
-    @Req() req: LearnRequest,
+    @Req() req: LearnRequest & { headers: Record<string, string | string[] | undefined> },
     @Param('cohortId') cohortId: string,
     @Param('itemId') itemId: string
   ) {
-    return this.lti.startLaunch(req.userId, cohortId, itemId)
+    // The host the learner launched from (a tenant host keeps its skin); the platform validates it.
+    const header = (name: string): string | undefined => {
+      const v = req.headers[name]
+      return typeof v === 'string' ? v : undefined
+    }
+    const origin = header('origin') ?? originOf(header('referer'))
+    return this.lti.startLaunch(req.userId, cohortId, itemId, origin)
+  }
+}
+
+function originOf(url: string | undefined): string | undefined {
+  try {
+    return url ? new URL(url).origin : undefined
+  } catch {
+    return undefined
   }
 }

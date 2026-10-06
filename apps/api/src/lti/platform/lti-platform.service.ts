@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common'
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { PrismaService } from '../../prisma/prisma.service'
-import { assertLtiProductionConfig, loadSigningKeys } from '../lti-env'
+import { assertLtiProductionConfig, isLearnOrigin, loadSigningKeys } from '../lti-env'
 import { LTI_STORE } from '../lti-store'
 import type { LtiStore } from '../lti-store'
 import { cohortStatus } from '../../learn/cohort-config'
@@ -115,7 +115,7 @@ export class LtiPlatformService {
   // ── launch ──────────────────────────────────────────────────────────────────
 
   /** Checks the learner may open this tool item and returns the form that starts the OIDC login. */
-  async startLaunch(userId: string, cohortId: string, itemId: string) {
+  async startLaunch(userId: string, cohortId: string, itemId: string, returnOrigin?: string) {
     const { tool, config } = await this.toolItem(cohortId, itemId, userId)
     if (tool.kind === 'assessment') {
       const { maxAttempts } = assessmentLimits(config)
@@ -123,7 +123,11 @@ export class LtiPlatformService {
       if (used >= maxAttempts)
         throw new ConflictException(`You have used all ${maxAttempts} attempts.`)
     }
-    const hint = this.signHint({ userId, cohortId, itemId })
+    // Only a LearnDifferently origin (the apex or a tenant host) is carried; anything else falls back to LTI_LEARN_URL.
+    const origin = isLearnOrigin(returnOrigin, learnUrl())
+      ? new URL(returnOrigin!).origin
+      : undefined
+    const hint = this.signHint({ userId, cohortId, itemId, returnOrigin: origin })
     return {
       action: tool.loginUrl,
       fields: {
@@ -178,7 +182,12 @@ export class LtiPlatformService {
     return { tool, ref: config.ref, config: item.config }
   }
 
-  private signHint(claims: { userId: string; cohortId: string; itemId: string }): string {
+  private signHint(claims: {
+    userId: string
+    cohortId: string
+    itemId: string
+    returnOrigin?: string
+  }): string {
     const body = b64url(JSON.stringify({ ...claims, jti: newId(), exp: nowS() + HINT_TTL_S }))
     const mac = createHmac('sha256', this.hintSecret).update(body).digest('base64url')
     return `${body}.${mac}`
@@ -196,6 +205,7 @@ export class LtiPlatformService {
       userId?: unknown
       cohortId?: unknown
       itemId?: unknown
+      returnOrigin?: unknown
       jti?: unknown
       exp?: unknown
     }
@@ -204,17 +214,23 @@ export class LtiPlatformService {
     } catch {
       throw new HttpException('Invalid lti_message_hint', 400)
     }
-    const { userId, cohortId, itemId, jti, exp } = claims
+    const { userId, cohortId, itemId, returnOrigin, jti, exp } = claims
     if (
       typeof userId !== 'string' ||
       typeof cohortId !== 'string' ||
       typeof itemId !== 'string' ||
+      (returnOrigin !== undefined && typeof returnOrigin !== 'string') ||
       typeof jti !== 'string' ||
       typeof exp !== 'number'
     )
       throw new HttpException('Invalid lti_message_hint', 400)
     if (exp < nowS()) throw new HttpException('lti_message_hint expired', 400)
-    return { userId, cohortId, itemId, jti, exp }
+    // Re-validated: a hint is signed by us, but the host rule is the single source of truth.
+    const origin =
+      typeof returnOrigin === 'string' && isLearnOrigin(returnOrigin, learnUrl())
+        ? returnOrigin
+        : undefined
+    return { userId, cohortId, itemId, returnOrigin: origin, jti, exp }
   }
 
   /** OIDC authentication request from a tool: replies with a form that posts the signed id_token. */
@@ -279,7 +295,7 @@ export class LtiPlatformService {
         [CLAIM.custom]: custom,
         [CLAIM.launchPresentation]: {
           document_target: 'window',
-          return_url: `${learnUrl()}/lms/learning/${hint.cohortId}/${hint.itemId}`,
+          return_url: `${hint.returnOrigin ?? learnUrl()}/lms/learning/${hint.cohortId}/${hint.itemId}`,
         },
         [CLAIM.agsEndpoint]: { scope: [AGS_SCOPE_SCORE], lineitem },
         ...(brand ? { [BRAND_CLAIM]: brand } : {}),

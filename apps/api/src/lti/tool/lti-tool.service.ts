@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { Inject, Injectable } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
-import { assertLtiProductionConfig, loadSigningKeys } from '../lti-env'
+import { assertLtiProductionConfig, isLearnOrigin, loadSigningKeys } from '../lti-env'
 import { LTI_STORE } from '../lti-store'
 import type { LtiStore } from '../lti-store'
 import { InterviewEngineService } from '../../interview-engine/interview-engine.service'
@@ -88,16 +88,16 @@ export class LtiReturnError extends LtiError {
 }
 
 /**
- * The claim's return_url when it is an http(s) URL on the platform's issuer origin or the learn
- * origin; anything else (javascript:, relative, junk, another site) is ignored.
+ * The claim's return_url when it is an http(s) URL on the platform's issuer origin, the learn
+ * origin or a tenant subdomain of the learn host (https); anything else (javascript:, relative, junk, another site) is ignored.
  */
 export function safeReturnUrl(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined
   try {
     const u = new URL(value)
     if (u.protocol !== 'http:' && u.protocol !== 'https:') return undefined
-    const allowed = [platformRegistration().issuer, learnUrl()].map((x) => new URL(x).origin)
-    return allowed.includes(u.origin) ? u.toString() : undefined
+    const issuerOrigin = new URL(platformRegistration().issuer).origin
+    return u.origin === issuerOrigin || isLearnOrigin(value, learnUrl()) ? u.toString() : undefined
   } catch {
     return undefined
   }

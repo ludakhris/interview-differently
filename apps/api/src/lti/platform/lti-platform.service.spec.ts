@@ -197,6 +197,65 @@ describe('startLaunch', () => {
     expect(out.fields.lti_message_hint).toBeTruthy()
   })
 
+  describe('return origin', () => {
+    const returnUrlFor = async (origin?: string) => {
+      const hint = (await service.startLaunch('u1', 'k1', 'i1', origin)).fields.lti_message_hint
+      const html = await service.authenticate(await authParams({ lti_message_hint: hint }))
+      const claims = await verifyJwt(field(html, 'id_token'), {
+        issuer: reg.issuer,
+        audience: tool.clientId,
+        nonce: 'n1',
+        keyFor: async () => service.jwks().keys[0],
+      })
+      return claims[CLAIM.launchPresentation].return_url
+    }
+    const hintClaims = (hint: string) =>
+      JSON.parse(Buffer.from(hint.split('.')[0], 'base64url').toString())
+
+    beforeEach(() => {
+      process.env.LTI_LEARN_URL = 'https://learn.test'
+    })
+
+    it('carries a tenant host in the hint and returns the learner to it', async () => {
+      const out = await service.startLaunch('u1', 'k1', 'i1', 'https://delaware.learn.test')
+      expect(hintClaims(out.fields.lti_message_hint).returnOrigin).toBe(
+        'https://delaware.learn.test'
+      )
+      expect(await returnUrlFor('https://delaware.learn.test')).toBe(
+        'https://delaware.learn.test/lms/learning/k1/i1'
+      )
+    })
+
+    it('accepts the apex host and the exact local-development origin', async () => {
+      expect(await returnUrlFor('https://learn.test')).toBe('https://learn.test/lms/learning/k1/i1')
+      process.env.LTI_LEARN_URL = 'http://localhost:5174'
+      expect(await returnUrlFor('http://localhost:5174')).toBe(
+        'http://localhost:5174/lms/learning/k1/i1'
+      )
+    })
+
+    it.each([
+      ['https://evil.test'],
+      ['https://evil-learn.test'],
+      ['https://learn.test.evil.test'],
+      ['http://delaware.learn.test'],
+      ['https://delaware.learn.test:8443'],
+      ['https://learn.test@evil.test'],
+      ['javascript:alert(1)'],
+      ['null'],
+      ['not a url'],
+      [''],
+    ])('ignores a bad origin %p and falls back to LTI_LEARN_URL', async (origin) => {
+      const out = await service.startLaunch('u1', 'k1', 'i1', origin)
+      expect(hintClaims(out.fields.lti_message_hint).returnOrigin).toBeUndefined()
+      expect(await returnUrlFor(origin)).toBe('https://learn.test/lms/learning/k1/i1')
+    })
+
+    it('falls back when no origin is given', async () => {
+      expect(await returnUrlFor(undefined)).toBe('https://learn.test/lms/learning/k1/i1')
+    })
+  })
+
   it('refuses a learner who is not enrolled, an ended cohort, and a non-tool item', async () => {
     prisma.enrollment.findUnique.mockResolvedValue(null)
     await reject(service.startLaunch('u1', 'k1', 'i1'), 404)

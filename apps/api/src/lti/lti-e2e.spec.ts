@@ -331,8 +331,8 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
    * Steps 1 to 4: start, login initiation, auth request; returns the launch form the tool receives
    * and the lti_state cookie the same browser carries from /login to /launch.
    */
-  async function reachLaunchForm(itemId = 'i1') {
-    const start = await platform.startLaunch('u1', 'k1', itemId)
+  async function reachLaunchForm(itemId = 'i1', returnOrigin?: string) {
+    const start = await platform.startLaunch('u1', 'k1', itemId, returnOrigin)
     const login = await post(start.action, start.fields)
     expect(login.status).toBe(302)
     const cookie = cookieOf(login)
@@ -451,6 +451,31 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         { dimension: 'Specifics', score: 70 },
       ],
     })
+  })
+
+  it('returns the learner to the tenant host they launched from', async () => {
+    process.env.LTI_LEARN_URL = 'https://learn.test'
+    try {
+      const launch = await reachLaunchForm('i1', 'https://delaware.learn.test')
+      const idClaims = JSON.parse(
+        Buffer.from(launch.fields.id_token.split('.')[1], 'base64url').toString()
+      )
+      const returnUrl = 'https://delaware.learn.test/lms/learning/k1/i1'
+      expect(idClaims['https://purl.imsglobal.org/spec/lti/claim/launch_presentation']).toEqual({
+        document_target: 'window',
+        return_url: returnUrl,
+      })
+      const page = await post(launch.action, launch.fields, launch.cookie)
+      const { fields } = formOf(await page.text())
+      const result = await post(`${base}/lti/tool/submit`, {
+        submission: fields.submission,
+        answer_0: longAnswer,
+        answer_1: longAnswer,
+      })
+      expect(await result.text()).toContain(`href="${returnUrl}"`)
+    } finally {
+      delete process.env.LTI_LEARN_URL
+    }
   })
 
   describe('a text scenario played in the web app', () => {
