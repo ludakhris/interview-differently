@@ -60,23 +60,7 @@ Pre and post assessments are Interview Differently assessments; the course item 
    - **Reference**: the assessment's slug. A wrong slug only shows up when a learner opens it, so open it yourself first.
 4. **Save**.
 
-There is no longer an **Assessment** button with questions typed into the course. Existing ones keep working and can still be edited until they are migrated (below).
-
-### Migrating existing assessments
-
-`apps/api/scripts/migrate-assessment-items.ts` converts every old in-course Assessment item into an Interview Differently assessment. Each item's questions become a bank with slug `ld-<item id>` (one section, every question asked, owned by the course's provider) and the item becomes a connected assessment with 1 attempt, keeping its Pre/Post label. Learners' existing scores, statuses and attempts are untouched. Rerunning converts nothing twice.
-
-From `apps/api`:
-
-```
-npm run migrate:assessment-items                       # dry run: report only
-npm run migrate:assessment-items -- --apply            # convert
-npm run migrate:assessment-items -- --allow-host <host>   # a database that is not local or the dev database
-```
-
-The report lists items converted, questions converted, learners with progress on them, items skipped and why, and items whose questions carried a skill tag: their per-question results are no longer read, so that evidence stops feeding the remediation plan (re-tag the skill on a knowledge check or interview if it matters).
-
-Production needs the owner's OK, and run it only after the API with connected-tool support is deployed; until then the converted items would not open.
+There is no Assessment button with questions typed into the course: pre and post assessments are always Interview Differently assessments. Knowledge checks (questions typed into the course) are unchanged.
 
 ### How do I add a SCORM package to a course?
 

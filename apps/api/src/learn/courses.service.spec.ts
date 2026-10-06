@@ -103,10 +103,10 @@ describe('CoursesService deletes', () => {
   })
 })
 
-describe('CoursesService native assessments', () => {
+describe('CoursesService assessment items', () => {
   const quiz = { prompt: 'Q?', options: ['a', 'b'], correctIndex: 0 }
 
-  it('refuses to add a new native assessment item', async () => {
+  it('refuses to add a native assessment item', async () => {
     prisma.courseModule.findUnique.mockResolvedValue({ id: 'm1', courseId: 'c1' })
     const add = service.addItem('u', 'agency-admin', 'm1', {
       type: 'assessment',
@@ -115,7 +115,7 @@ describe('CoursesService native assessments', () => {
       config: { questions: [quiz] },
     })
     await expect(add).rejects.toThrow(BadRequestException)
-    await expect(add).rejects.toThrow('Add an Interview Differently assessment instead')
+    await expect(add).rejects.toThrow(/Interview Differently assessment/)
     expect(prisma.courseItem.create).not.toHaveBeenCalled()
   })
 
@@ -132,24 +132,6 @@ describe('CoursesService native assessments', () => {
       type: 'tool',
       label: 'pre',
       config: { toolId: 'id-assessment', ref: 'ma-pre', maxAttempts: 1 },
-    })
-  })
-
-  it('still saves an existing native assessment item', async () => {
-    prisma.courseItem.findUnique.mockResolvedValue({
-      id: 'i1',
-      type: 'assessment',
-      module: { courseId: 'c1' },
-    })
-    await service.updateItem('u', 'agency-admin', 'i1', {
-      type: 'assessment',
-      title: 'Pre',
-      label: 'pre',
-      config: { questions: [quiz] },
-    })
-    expect(prisma.courseItem.update.mock.calls[0][0].data).toMatchObject({
-      type: 'assessment',
-      label: 'pre',
     })
   })
 })

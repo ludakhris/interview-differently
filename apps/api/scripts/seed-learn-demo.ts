@@ -27,7 +27,7 @@ import {
   rolesFor,
   summaryFor,
 } from './seed-learn-content'
-import { planItem, toolConfig } from '../src/learn/assessment-migration'
+import { planItem, toolConfig } from './demo-assessment-bank'
 
 const DEV_HOSTS = ['localhost', '127.0.0.1', 'zephyr.proxy.rlwy.net']
 const TODAY = new Date('2026-10-04T12:00:00Z')

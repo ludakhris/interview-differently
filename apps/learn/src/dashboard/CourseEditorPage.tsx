@@ -457,10 +457,16 @@ function Editor({
                   <li key={it.id} className="dash-item">
                     <div className="dash-item-head">
                       <span className="dash-item-type">
-                        {TYPE_LABEL[it.type] ?? it.type}
+                        {TYPE_LABEL[it.type] ?? 'Not supported'}
                         {it.label ? ` · ${it.label}` : ''}
                       </span>
                       <span className="dash-item-title">{it.title}</span>
+                      {!TYPE_LABEL[it.type] && (
+                        <span className="dash-chip">
+                          This item type is no longer supported and is hidden from learners. Delete
+                          it and add an Interview Differently assessment instead.
+                        </span>
+                      )}
                       {typeof it.config.remediationFor === 'string' && (
                         <span className="dash-chip">
                           Extra content for:{' '}
@@ -497,6 +503,7 @@ function Editor({
                         <button
                           type="button"
                           className="dash-btn-quiet"
+                          disabled={!TYPE_LABEL[it.type]}
                           onClick={() => setEditingItem(editingItem === it.id ? null : it.id)}
                         >
                           {editingItem === it.id ? 'Close' : 'Edit'}

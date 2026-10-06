@@ -80,7 +80,7 @@ export function skillResults(
       const p = progress.get(item.id)
       if (!p || p.status !== 'completed' || remediationOf(item.config)) continue
       const config = obj(item.config)
-      if (item.type === 'knowledge_check' || item.type === 'assessment') {
+      if (item.type === 'knowledge_check') {
         const results = obj(p.data).results
         if (!Array.isArray(results) || !Array.isArray(config.questions)) continue
         for (const q of config.questions) {

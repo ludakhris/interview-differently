@@ -1,5 +1,5 @@
 import { questionsFor } from '../../scripts/seed-learn-content'
-import { planItem, toolConfig } from './assessment-migration'
+import { planItem, toolConfig } from '../../scripts/demo-assessment-bank'
 
 // The demo seed (scripts/seed-learn-demo.ts) turns each program's question bank into an Interview
 // Differently assessment with this helper; every bank must come out valid with its answers intact.

@@ -99,7 +99,6 @@ export interface LearnWorkspace {
 export type CourseItemType =
   | 'lesson'
   | 'knowledge_check'
-  | 'assessment'
   | 'interview'
   | 'scorm'
   | 'video'
@@ -125,14 +124,14 @@ export interface CourseSkill {
 }
 
 /**
- * `config` by type: lesson { body }, knowledge_check and assessment { questions },
+ * `config` by type: lesson { body }, knowledge_check { questions },
  * interview { role, questions, skill? }, scorm { packageId, entry, version, files },
  * video { provider: 'youtube', videoId, startSeconds? },
  * external_link { url, summary?, instructions?, imageKey? } (authors also receive `imageUrl`),
  * tool { toolId, ref, skill?, maxAttempts?, timeLimitMinutes? } (an LTI tool launched from the course; it reports a score back). A
  * tool item whose tool is an assessment may carry the pre or post label and then stands in for the
  * course's own assessment; any other tool item is interview-like.
- * Any item except an assessment, interview or tool may carry `remediationFor` (a skill id): it is then
+ * Any item except an interview or tool may carry `remediationFor` (a skill id): it is then
  * extra content, kept out of the outline and added to a learner's plan when that skill is flagged.
  * Or `reviewFor`: it stays in the outline and is also added back to a flagged learner's plan, who
  * must complete it again.
@@ -351,7 +350,7 @@ export interface LearnerItem {
   type: string
   title: string
   label: string | null
-  /** lesson: body. quiz (knowledge check or assessment): questions. interview: see `interview`. */
+  /** lesson: body. knowledge check: questions. interview: see `interview`. */
   body: string | null
   questions: QuizQuestion[] | null
   /** A SCORM package: where to load it and what the learner saved last time. */

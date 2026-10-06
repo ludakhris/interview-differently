@@ -16,13 +16,16 @@ import type {
 export const ITEM_TYPES: CourseItemType[] = [
   'lesson',
   'knowledge_check',
-  'assessment',
   'interview',
   'scorm',
   'video',
   'external_link',
   'tool',
 ]
+
+/** False for a stored item whose type is no longer supported (for example the retired native 'assessment'). */
+export const isSupportedItemType = (type: string): boolean =>
+  (ITEM_TYPES as string[]).includes(type)
 
 export interface CourseFields {
   title?: string
@@ -161,20 +164,12 @@ function validateQuestions(v: unknown): KnowledgeCheckQuestion[] {
 }
 
 /**
- * Item fields from a request body, with the config checked for its type. `creating` is set when
- * the item is new: the native assessment type is no longer offered (pre and post assessments are
- * Interview Differently assessments), but an existing one can still be saved.
+ * Item fields from a request body, with the config checked for its type.
  */
-export function validateItemInput(
-  input: unknown,
-  creating = false
-): Required<Pick<ItemInput, 'type' | 'title'>> & {
+export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'type' | 'title'>> & {
   label: 'pre' | 'post' | null
   config: Record<string, unknown>
 } {
-  if (creating && isObject(input) && input.type === 'assessment') {
-    return bad('Add an Interview Differently assessment instead')
-  }
   const item = validateItemByType(input)
   // Remediation content: kept out of the outline until a flagged skill adds it to a learner's plan.
   // A scored assessment or an interview cannot be remediation.
@@ -186,13 +181,7 @@ export function validateItemInput(
   if (remedial && review) return bad('An item is either extra content or a review, not both')
   const mode = remedial ? 'remediationFor' : review ? 'reviewFor' : null
   const skill = remedial || review
-  if (
-    mode &&
-    skill &&
-    item.type !== 'assessment' &&
-    item.type !== 'interview' &&
-    item.type !== 'tool'
-  ) {
+  if (mode && skill && item.type !== 'interview' && item.type !== 'tool') {
     if (!SKILL_ID.test(skill)) return bad('Skill is not valid')
     item.config = { ...item.config, [mode]: skill }
   }
@@ -205,17 +194,15 @@ function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | '
 } {
   if (!isObject(input)) return bad('Body must be an object')
   const type = input.type as CourseItemType
-  if (!ITEM_TYPES.includes(type)) return bad(`Type must be one of ${ITEM_TYPES.join(', ')}`)
+  if (!ITEM_TYPES.includes(type))
+    return bad(
+      `Type must be one of ${ITEM_TYPES.join(', ')}. For a pre or post assessment, add an Interview Differently assessment (type tool).`
+    )
   const title = text(input.title, 'Title', 120, true) as string
   const config = input.config === undefined ? {} : input.config
   if (!isObject(config)) return bad('Config must be an object')
 
-  let label: 'pre' | 'post' | null = null
-  if (type === 'assessment') {
-    if (input.label !== 'pre' && input.label !== 'post')
-      return bad('An assessment is either pre or post')
-    label = input.label
-  }
+  const label: 'pre' | 'post' | null = null
 
   switch (type) {
     case 'lesson':
@@ -227,18 +214,6 @@ function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | '
         label,
         config: { questions: validateQuestions(config.questions ?? []) },
       }
-    case 'assessment': {
-      const slug = text(config.assessmentSlug, 'Assessment', 120)
-      return {
-        type,
-        title,
-        label,
-        config: {
-          questions: validateQuestions(config.questions ?? []),
-          ...(slug ? { assessmentSlug: slug } : {}),
-        },
-      }
-    }
     case 'scorm': {
       const packageId = text(config.packageId, 'Package', 60, true) as string
       if (!/^[0-9a-f-]{36}$/.test(packageId)) return bad('That is not a valid package')

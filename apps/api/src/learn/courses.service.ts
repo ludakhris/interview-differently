@@ -286,7 +286,7 @@ export class CoursesService {
 
   async addItem(userId: string, role: string | undefined, moduleId: string, body: unknown) {
     const mod = await this.moduleFor(userId, role, moduleId)
-    const input = validateItemInput(body, true)
+    const input = validateItemInput(body)
     if (input.type === 'scorm') {
       throw new BadRequestException('Upload a package file to add a SCORM item')
     }

@@ -46,26 +46,14 @@ describe('validateItemInput', () => {
     expect(() => validateItemInput({ type: 'lesson', title: ' ' })).toThrow(BadRequestException)
   })
 
-  it('needs pre or post on an assessment and drops the label elsewhere', () => {
-    expect(() => validateItemInput({ type: 'assessment', title: 'Quiz' })).toThrow(
-      BadRequestException
-    )
-    expect(
-      validateItemInput({
-        type: 'assessment',
-        title: 'Pre',
-        label: 'pre',
-        config: { assessmentSlug: 'ma-pre' },
-      })
-    ).toMatchObject({ label: 'pre', config: { questions: [], assessmentSlug: 'ma-pre' } })
+  it('drops the label on types that cannot carry one', () => {
     expect(validateItemInput({ type: 'lesson', title: 'x', label: 'pre' }).label).toBeNull()
   })
 
-  it('refuses a new native assessment but keeps saving an existing one', () => {
+  it('rejects the retired native assessment type and points to the Interview Differently tool', () => {
     const body = { type: 'assessment', title: 'Pre', label: 'pre', config: {} }
-    expect(() => validateItemInput(body, true)).toThrow('Add an Interview Differently assessment')
-    expect(validateItemInput(body).type).toBe('assessment')
-    expect(validateItemInput({ type: 'lesson', title: 'x' }, true).type).toBe('lesson')
+    expect(() => validateItemInput(body)).toThrow(BadRequestException)
+    expect(() => validateItemInput(body)).toThrow(/Interview Differently assessment/)
   })
 
   it('checks knowledge-check questions', () => {
@@ -249,20 +237,13 @@ describe('skills and remediation', () => {
     )
   })
 
-  it('marks lessons, videos and links as remediation, but not assessments or interviews', () => {
+  it('marks lessons, videos and links as remediation, but not interviews or tools', () => {
     const lesson = validateItemInput({
       type: 'lesson',
       title: 'Lifting',
       config: { body: 'x', remediationFor: 'safety' },
     })
     expect(lesson.config).toEqual({ body: 'x', remediationFor: 'safety' })
-    const assessment = validateItemInput({
-      type: 'assessment',
-      title: 'Post',
-      label: 'post',
-      config: { questions: [], remediationFor: 'safety' },
-    })
-    expect(assessment.config).not.toHaveProperty('remediationFor')
     expect(() =>
       validateItemInput({ type: 'lesson', title: 'x', config: { remediationFor: 'Not valid!' } })
     ).toThrow(BadRequestException)

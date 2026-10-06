@@ -1,14 +1,13 @@
-import { parseAssessmentMarkdown } from '../assessments/parse-markdown'
-import type { ParsedAssessment } from '../assessments/assessment.types'
+import { parseAssessmentMarkdown } from '../src/assessments/parse-markdown'
+import type { ParsedAssessment } from '../src/assessments/assessment.types'
 
 /**
- * Moves a native LearnDifferently pre/post assessment (inline multiple-choice questions on a
- * `CourseItem`) onto an Interview Differently assessment bank. The bank is written as the
- * markdown an admin would import and read back through the real parser, so what is stored is
- * exactly what an import would store (docs/assessment-format.md).
+ * Builds an Interview Differently assessment bank from a list of multiple-choice questions, for the
+ * demo seed. The bank is written as the markdown an admin would import and read back through the
+ * real parser, so what is stored is exactly what an import would store (docs/assessment-format.md).
  */
 
-/** A native question as stored on an `assessment` item (see KnowledgeCheckQuestion). */
+/** A multiple-choice question, shaped like a knowledge-check question. */
 export interface LegacyQuestion {
   id?: string
   prompt: string
@@ -70,8 +69,6 @@ export function questionsToMarkdown(
   return lines.join('\n')
 }
 
-export const migratedSlug = (itemId: string): string => `ld-${itemId}`
-
 export type ItemPlan =
   | {
       ok: true
@@ -84,12 +81,11 @@ export type ItemPlan =
   | { ok: false; reason: string }
 
 /**
- * What converting one native assessment item would create, or why it cannot be converted. The
- * slug is `ld-<itemId>` unless given (the demo seed names its banks itself).
+ * What building one bank would create, or why the questions cannot be used.
  */
 export function planItem(
   item: { id: string; title: string; config: unknown },
-  slug: string = migratedSlug(item.id)
+  slug: string
 ): ItemPlan {
   const questions = legacyQuestions(item.config)
   if (!questions) return { ok: false, reason: 'no inline questions (or they are malformed)' }
@@ -112,7 +108,7 @@ export function planItem(
   return { ok: true, slug, markdown, parsed, questionCount: questions.length, skills }
 }
 
-/** The item config after conversion: the tool item that launches the migrated bank. */
+/** The item config of the tool item that launches a bank. */
 export const toolConfig = (slug: string): Record<string, unknown> => ({
   toolId: 'id-assessment',
   ref: slug,

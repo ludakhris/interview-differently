@@ -78,7 +78,7 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
             nextLabel={next ? 'Continue' : 'Back to course'}
           />
         )}
-        {(item.type === 'knowledge_check' || item.type === 'assessment') && (
+        {item.type === 'knowledge_check' && (
           <Quiz
             item={item}
             onChange={setItem}
@@ -229,8 +229,7 @@ function Quiz(props: {
   const [result, setResult] = useState<QuizResult | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const isAssessment = item.type === 'assessment'
-  const finished = result !== null || (isAssessment && item.status === 'completed')
+  const finished = result !== null
 
   async function submit() {
     setBusy(true)
@@ -253,21 +252,6 @@ function Quiz(props: {
   if (questions.length === 0) {
     return <p className="dash-muted">The author has not added questions here yet.</p>
   }
-  if (isAssessment && item.status === 'completed' && !result) {
-    return (
-      <div className="dash-card">
-        <p>
-          You completed this assessment. Your score: <strong>{score(item.score)}</strong>
-        </p>
-        <Actions>
-          <a className="dash-btn" href={props.nextHref}>
-            {props.nextLabel}
-          </a>
-        </Actions>
-      </div>
-    )
-  }
-
   return (
     <form
       onSubmit={(e) => {
@@ -275,11 +259,6 @@ function Quiz(props: {
         void submit()
       }}
     >
-      {isAssessment && !finished && (
-        <p className="dash-banner">
-          This assessment counts once, so take your time. You will see your score when you finish.
-        </p>
-      )}
       <ol className="dash-quiz">
         {questions.map((q, i) => (
           <li key={i} className="dash-card dash-quiz-q">
@@ -324,18 +303,16 @@ function Quiz(props: {
           </p>
           <PlanAddedCard added={item.planAdded} cohortId={item.cohortId} />
           <Actions>
-            {!isAssessment && (
-              <button
-                type="button"
-                className="dash-btn-secondary"
-                onClick={() => {
-                  setResult(null)
-                  setAnswers(questions.map(() => null))
-                }}
-              >
-                Try again
-              </button>
-            )}
+            <button
+              type="button"
+              className="dash-btn-secondary"
+              onClick={() => {
+                setResult(null)
+                setAnswers(questions.map(() => null))
+              }}
+            >
+              Try again
+            </button>
             <a className="dash-btn" href={props.nextHref}>
               {props.nextLabel}
             </a>
@@ -348,9 +325,9 @@ function Quiz(props: {
             className="dash-btn"
             disabled={busy || !!item.locked || answers.some((a) => a === null)}
           >
-            {busy ? 'Checking…' : isAssessment ? 'Submit assessment' : 'Check my answers'}
+            {busy ? 'Checking…' : 'Check my answers'}
           </button>
-          {item.status === 'completed' && !isAssessment && (
+          {item.status === 'completed' && (
             <span className="dash-muted">Best score so far: {score(item.score)}</span>
           )}
         </Actions>

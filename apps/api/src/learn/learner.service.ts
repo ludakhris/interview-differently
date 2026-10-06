@@ -26,10 +26,9 @@ import { InterviewScoringService } from './interview-scoring.service'
 import { parseExternalLink } from './external-link'
 import { assessmentLimits, isInterviewLike, toolById } from '../lti/platform/lti-platform-config'
 import { imageUrl, isImageKey } from './item-image'
+import { isSupportedItemType } from './course-config'
 import { doneSince, parseSkills, remediationOf, reviewOf, skillResults } from './skills'
 import { isVideoId, VIDEO_COMPLETE_PCT } from './youtube'
-
-const QUIZ_TYPES = ['knowledge_check', 'assessment']
 
 /**
  * Done for what the learner is doing now: completed, and for an item their results
@@ -131,11 +130,13 @@ export class LearnerService {
   // ── reading ───────────────────────────────────────────────────────────────
 
   private async courseItems(courseId: string) {
-    return this.prisma.courseModule.findMany({
+    const modules = await this.prisma.courseModule.findMany({
       where: { courseId },
       orderBy: { position: 'asc' },
       include: { items: { orderBy: { position: 'asc' } } },
     })
+    // A stored item of a type that is no longer supported is skipped, not shown broken.
+    return modules.map((m) => ({ ...m, items: m.items.filter((i) => isSupportedItemType(i.type)) }))
   }
 
   async cards(userId: string): Promise<LearnerCohortCard[]> {
@@ -307,6 +308,8 @@ export class LearnerService {
     })
     if (!item || item.module.courseId !== e.cohort.course.id)
       throw new NotFoundException('Item not found')
+    if (!isSupportedItemType(item.type))
+      throw new NotFoundException('This item type is no longer supported')
     // The plan entry, if this learner's results added the item. Extra content opens only with one.
     const plan = await this.prisma.planItem.findUnique({
       where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
@@ -394,9 +397,10 @@ export class LearnerService {
       title: item.title,
       label: item.label,
       body: item.type === 'lesson' ? String(config.body ?? '') : null,
-      questions: QUIZ_TYPES.includes(item.type)
-        ? publicQuestions((config.questions ?? []) as KnowledgeCheckQuestion[])
-        : null,
+      questions:
+        item.type === 'knowledge_check'
+          ? publicQuestions((config.questions ?? []) as KnowledgeCheckQuestion[])
+          : null,
       scorm,
       interview,
       planAdded,
@@ -501,11 +505,7 @@ export class LearnerService {
     const { e, item, progress } = await this.itemOf(userId, cohortId, itemId)
     const locked = this.lockReason(e.cohort.startsAt, e.cohort.endsAt)
     if (locked) throw new ConflictException(locked)
-    if (!QUIZ_TYPES.includes(item.type)) throw new ConflictException('This item has no questions')
-    // Pre and post assessments count once; knowledge checks can be retaken.
-    if (item.type === 'assessment' && progress?.status === 'completed') {
-      throw new ConflictException('You have already completed this assessment.')
-    }
+    if (item.type !== 'knowledge_check') throw new ConflictException('This item has no questions')
     const questions =
       ((item.config ?? {}) as { questions?: KnowledgeCheckQuestion[] }).questions ?? []
     const result = gradeQuiz(questions, answers)
@@ -527,7 +527,7 @@ export class LearnerService {
       },
       update: {
         status: 'completed',
-        score: item.type === 'assessment' ? result.score : best,
+        score: best,
         attempts: { increment: 1 },
         completedAt: new Date(),
         data,

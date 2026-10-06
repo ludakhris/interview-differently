@@ -19,7 +19,6 @@ export interface ItemDraft {
 export const LEARNER_TYPE_LABEL: Record<string, string> = {
   lesson: 'Lesson',
   knowledge_check: 'Knowledge check',
-  assessment: 'Assessment',
   interview: 'Practice interview',
   scorm: 'Interactive lesson',
   video: 'Video',
@@ -30,7 +29,6 @@ export const LEARNER_TYPE_LABEL: Record<string, string> = {
 export const TYPE_LABEL: Record<string, string> = {
   lesson: 'Lesson',
   knowledge_check: 'Knowledge check',
-  assessment: 'Assessment',
   interview: 'Practice interview',
   scorm: 'SCORM package',
   video: 'Video',
@@ -92,15 +90,14 @@ export function ItemEditor(props: {
       : ''
   )
 
-  // An assessment or a practice interview is evidence, so it cannot be remediation content.
-  const canBeRemediation =
-    item.type !== 'assessment' && item.type !== 'interview' && item.type !== 'tool'
+  // A practice interview or an assessment tool is evidence, so it cannot be remediation content.
+  const canBeRemediation = item.type !== 'interview' && item.type !== 'tool'
 
   function save() {
     const config: Record<string, unknown> =
       item.type === 'lesson'
         ? { body }
-        : item.type === 'knowledge_check' || item.type === 'assessment'
+        : item.type === 'knowledge_check'
           ? { questions }
           : item.type === 'video'
             ? { url: videoUrl }
@@ -142,12 +139,7 @@ export function ItemEditor(props: {
     props.onSave({
       type: item.type,
       title,
-      label:
-        item.type === 'assessment'
-          ? label
-          : item.type === 'tool'
-            ? toolItemLabel(toolId, label)
-            : null,
+      label: item.type === 'tool' ? toolItemLabel(toolId, label) : null,
       config: saved,
     })
   }
@@ -172,24 +164,8 @@ export function ItemEditor(props: {
         </label>
       )}
 
-      {(item.type === 'knowledge_check' || item.type === 'assessment') && (
+      {item.type === 'knowledge_check' && (
         <QuestionBuilder questions={questions} skills={props.skills} onChange={setQuestions} />
-      )}
-
-      {item.type === 'assessment' && (
-        <>
-          <fieldset className="dash-field">
-            <legend>When it runs</legend>
-            <label className="dash-radio">
-              <input type="radio" checked={label === 'pre'} onChange={() => setLabel('pre')} />
-              Before the course (pre-assessment)
-            </label>
-            <label className="dash-radio">
-              <input type="radio" checked={label === 'post'} onChange={() => setLabel('post')} />
-              After the course (post-assessment)
-            </label>
-          </fieldset>
-        </>
       )}
 
       {item.type === 'video' && (

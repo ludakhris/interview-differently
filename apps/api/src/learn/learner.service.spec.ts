@@ -183,7 +183,9 @@ describe('item', () => {
 
 describe('submitQuiz', () => {
   it('grades on the server and records the score', async () => {
-    prisma.courseItem.findUnique.mockResolvedValue(item('assessment', 'pre', { questions: quiz }))
+    prisma.courseItem.findUnique.mockResolvedValue(
+      item('knowledge_check', null, { questions: quiz })
+    )
     prisma.itemProgress.findUnique.mockResolvedValue(null)
     const { result } = await service.submitQuiz('u1', 'k1', 'i1', [1, 0])
     expect(result.score).toBe(50)
@@ -193,10 +195,24 @@ describe('submitQuiz', () => {
     })
   })
 
-  it('lets a pre or post assessment be taken only once', async () => {
-    prisma.courseItem.findUnique.mockResolvedValue(item('assessment', 'post', { questions: quiz }))
+  it('lets a knowledge check be retaken after it is completed', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(
+      item('knowledge_check', null, { questions: quiz })
+    )
     prisma.itemProgress.findUnique.mockResolvedValue({ status: 'completed', score: 90 })
+    await expect(service.submitQuiz('u1', 'k1', 'i1', [1, 1])).resolves.toBeDefined()
+  })
+
+  it('has no questions to answer on a tool item', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(item('tool', 'pre', {}))
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
     await expect(service.submitQuiz('u1', 'k1', 'i1', [1, 1])).rejects.toThrow(ConflictException)
+  })
+
+  it('treats a stored item of an unsupported type as not found', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(item('assessment', 'pre', { questions: quiz }))
+    await expect(service.item('u1', 'k1', 'i1')).rejects.toThrow(NotFoundException)
+    await expect(service.submitQuiz('u1', 'k1', 'i1', [1, 1])).rejects.toThrow(NotFoundException)
   })
 
   it('keeps the best score when a knowledge check is retaken', async () => {
@@ -221,6 +237,25 @@ describe('submitQuiz', () => {
     )
     prisma.itemProgress.findUnique.mockResolvedValue(null)
     await expect(service.submitQuiz('u1', 'k1', 'i1', [1, 1])).rejects.toThrow(/ended/)
+  })
+})
+
+describe('outline with a legacy item', () => {
+  it('skips a stored item of an unsupported type instead of failing', async () => {
+    prisma.courseModule.findMany.mockResolvedValue([
+      {
+        id: 'm1',
+        title: 'M',
+        position: 1,
+        items: [
+          { ...item('assessment', 'pre', { questions: quiz }), id: 'old' },
+          { ...item('lesson'), id: 'l1' },
+        ],
+      },
+    ])
+    const out = await service.outline('u1', 'k1')
+    expect(out.modules[0].items.map((i) => i.id)).toEqual(['l1'])
+    expect(out.cohort.itemsTotal).toBe(1)
   })
 })
 
@@ -269,8 +304,8 @@ describe('completion', () => {
 
 describe('buildRecord', () => {
   const items = [
-    { id: 'a', type: 'assessment', label: 'pre' },
-    { id: 'b', type: 'assessment', label: 'post' },
+    { id: 'a', type: 'tool', label: 'pre' },
+    { id: 'b', type: 'tool', label: 'post' },
     { id: 'c', type: 'interview', label: null },
   ]
   const course = { targetScore: 75, readinessThreshold: 70 }
