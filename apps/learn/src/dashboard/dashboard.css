@@ -580,25 +580,160 @@
   font: inherit;
   font-weight: 700;
 }
-.dash-workspaces {
+.dash-chooser {
   display: grid;
-  gap: 12px;
-  max-width: 32em;
-  margin: 24px 0;
-  padding: 0;
-  list-style: none;
+  grid-template-columns: minmax(0, 1fr) 21em;
+  gap: 32px;
+  align-items: start;
+  margin-top: 20px;
 }
-.dash-workspaces a {
+.dash-chooser-list {
+  display: grid;
+  gap: 28px;
+}
+.dash-ws-card {
   display: block;
-  padding: 18px 20px;
+  padding: 16px 20px;
   border: 1px solid var(--border);
   border-radius: var(--dash-radius, 0);
   background: var(--surface);
-  font-weight: 700;
+  color: var(--ink);
   text-decoration: none;
 }
-.dash-workspaces a:hover {
+.dash-ws-card:hover,
+.dash-ws-card:focus-visible {
   border-color: var(--navy);
+}
+.dash-ws-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.dash-ws-body {
+  min-width: 0;
+}
+.dash-ws-body > span {
+  display: block;
+}
+.dash-ws-icon,
+.dash-type-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface-alt, #eef2f5);
+  color: var(--navy);
+}
+.dash-ws-agency .dash-ws-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--navy);
+  color: var(--on-dark, #fff);
+}
+.dash-ws-agency {
+  border-left: 6px solid var(--navy);
+  padding: 20px 22px;
+}
+.dash-ws-agency .dash-ws-name {
+  font-size: 19px;
+}
+.dash-ws-type {
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.dash-ws-name {
+  margin-top: 2px;
+  font-weight: 700;
+}
+.dash-ws-facts {
+  margin-top: 8px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+.dash-tree-kids {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15em, 1fr));
+  gap: 10px;
+  margin: 0 0 0 22px;
+  padding: 14px 0 0 22px;
+  border-left: 2px solid var(--border);
+  list-style: none;
+}
+.dash-tree-flat {
+  margin-left: 0;
+  padding-left: 0;
+  border-left: 0;
+}
+.dash-types {
+  position: sticky;
+  top: 16px;
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--dash-radius, 0);
+  background: var(--surface-alt, var(--surface));
+}
+.dash-types h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.dash-types h2 svg {
+  color: var(--navy);
+}
+.dash-types-tree {
+  margin: 0 0 14px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.dash-type {
+  padding: 12px 0 0 14px;
+  border-left: 4px solid var(--border);
+  margin-top: 14px;
+}
+.dash-type-agency {
+  border-left-color: var(--navy);
+}
+.dash-type h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.dash-type-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--surface);
+}
+.dash-type-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.dash-type p {
+  margin: 0 0 6px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.dash-type-can {
+  color: var(--ink);
+}
+@media (max-width: 900px) {
+  .dash-chooser {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dash-types {
+    position: static;
+  }
 }
 
 /* Account menu (shared with the homepage) in the dashboard skins. */

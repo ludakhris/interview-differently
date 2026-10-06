@@ -1,6 +1,11 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
-import type { AgencyOutcomes, Gradebook, LearnWorkspace } from './learn-types'
+import type {
+  AgencyOutcomes,
+  Gradebook,
+  LearnWorkspace,
+  LearnWorkspaceSummary,
+} from './learn-types'
 import { PrismaService } from '../prisma/prisma.service'
 import { agencyOutcomes, gradebook, type EnrollmentRow } from './outcomes'
 import { exitFileCsv } from './exit-file'
@@ -36,6 +41,59 @@ export class LearnService {
       orderBy: [{ kind: 'asc' }, { name: 'asc' }],
     })
     return rows.map((r) => ({ ...r, subdomain: r.subdomain as string }))
+  }
+
+  /** The workspaces the caller may open, each with what is in it, for the chooser. */
+  async workspaceSummaries(
+    userId: string,
+    role: string | undefined
+  ): Promise<LearnWorkspaceSummary[]> {
+    const list = await this.workspaces(userId, role)
+    if (list.length === 0) return []
+    const parentIds = [...new Set(list.map((w) => w.parentId).filter((id): id is string => !!id))]
+    const [parents, children, cohorts, courseCounts] = await Promise.all([
+      this.prisma.institution.findMany({
+        where: { id: { in: parentIds } },
+        select: { id: true, name: true },
+      }),
+      this.prisma.institution.findMany({
+        where: { parentId: { in: list.map((w) => w.id) } },
+        select: { id: true, parentId: true, kind: true },
+      }),
+      this.prisma.cohort.findMany({
+        select: {
+          institutionId: true,
+          institution: { select: { parentId: true } },
+          course: { select: { providerId: true, provider: { select: { parentId: true } } } },
+          _count: { select: { enrollments: { where: { status: { not: 'withdrawn' } } } } },
+        },
+      }),
+      this.prisma.course.groupBy({ by: ['providerId'], _count: { _all: true } }),
+    ])
+    const parentName = new Map(parents.map((p) => [p.id, p.name]))
+    const courses = new Map(courseCounts.map((c) => [c.providerId, c._count._all]))
+    return list.map((w) => {
+      const own = (c: (typeof cohorts)[number]): boolean =>
+        w.kind === 'agency'
+          ? c.institution.parentId === w.id || c.course?.provider.parentId === w.id
+          : w.kind === 'provider'
+            ? c.course?.providerId === w.id
+            : c.institutionId === w.id
+      const mine = cohorts.filter(own)
+      const partners = children.filter((c) => c.parentId === w.id)
+      return {
+        ...w,
+        parentName: (w.parentId && parentName.get(w.parentId)) || null,
+        courses:
+          w.kind === 'agency'
+            ? partners.reduce((n, p) => n + (courses.get(p.id) ?? 0), 0)
+            : (courses.get(w.id) ?? 0),
+        cohorts: mine.length,
+        learners: mine.reduce((n, c) => n + c._count.enrollments, 0),
+        providers: partners.filter((p) => p.kind === 'provider').length,
+        organizations: partners.filter((p) => p.kind !== 'provider').length,
+      }
+    })
   }
 
   /** Throws unless the caller may open this workspace. */

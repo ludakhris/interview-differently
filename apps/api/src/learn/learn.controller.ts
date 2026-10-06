@@ -26,6 +26,12 @@ export class LearnController {
     return this.service.workspaces(req.userId, req.userRole)
   }
 
+  /** The same workspaces with their counts, for the chooser page. */
+  @Get('workspaces/summary')
+  workspaceSummaries(@Req() req: LearnRequest) {
+    return this.service.workspaceSummaries(req.userId, req.userRole)
+  }
+
   @Get('agency/outcomes')
   async outcomes(@Req() req: LearnRequest, @Query('tenant') tenant: string) {
     this.service.assertRole(req.userRole, READERS)

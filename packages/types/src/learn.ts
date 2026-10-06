@@ -94,6 +94,21 @@ export interface LearnWorkspace {
   parentId: string | null
 }
 
+/** A workspace as shown on the chooser: who it reports to, and what is in it. */
+export interface LearnWorkspaceSummary extends LearnWorkspace {
+  parentName: string | null
+  /** Courses it authors (providers), or those authored by the providers under it (agencies). */
+  courses: number
+  /** Cohorts it runs or that run its courses; for an agency, every cohort under it. */
+  cohorts: number
+  /** Learners enrolled in those cohorts, withdrawn ones not counted. */
+  learners: number
+  /** Providers that report to it (agencies only). */
+  providers: number
+  /** Organizations and academic institutions that report to it (agencies only). */
+  organizations: number
+}
+
 // ── Course setup (#46) ──────────────────────────────────────────────────────
 
 export type CourseItemType =
