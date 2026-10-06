@@ -347,7 +347,7 @@ export function ItemEditor(props: {
               Which interview this opens. In Interview Differently, open the interview in the
               builder: its id is the last part of the page address (.../builder/your-interview-id).
               Check it before saving, since a wrong id only shows up when a learner opens it. The
-              learner opens the tool in a new tab and the score comes back here.
+              learner goes to the tool in the same window and comes back here with the score.
             </small>
           </label>
         </>

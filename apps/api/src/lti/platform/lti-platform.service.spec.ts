@@ -40,6 +40,7 @@ const makeService = (shared = store) =>
   )
 
 beforeEach(() => {
+  process.env.LTI_LEARN_URL = 'http://learn.test/'
   jest.resetAllMocks()
   prisma.cohort.findUnique.mockResolvedValue({ courseId: 'c1', startsAt: PAST, endsAt: FUTURE })
   prisma.enrollment.findUnique.mockResolvedValue({ status: 'enrolled' })
@@ -100,21 +101,24 @@ describe('keys and secrets', () => {
     Object.assign(process.env, saved)
   })
 
-  it('refuses to boot in production without the four LTI keys and secrets', () => {
+  it('refuses to boot in production without the LTI keys, secrets and learn URL', () => {
     process.env.NODE_ENV = 'production'
     for (const k of [
       'LTI_PLATFORM_PRIVATE_KEY',
       'LTI_TOOL_PRIVATE_KEY',
       'LTI_TOOL_SECRET',
       'LTI_HINT_SECRET',
+      'LTI_LEARN_URL',
     ])
       delete process.env[k]
-    expect(() => makeService()).toThrow(/LTI_PLATFORM_PRIVATE_KEY.*LTI_HINT_SECRET/)
+    expect(() => makeService()).toThrow(/LTI_PLATFORM_PRIVATE_KEY.*LTI_HINT_SECRET.*LTI_LEARN_URL/)
     process.env.LTI_PLATFORM_PRIVATE_KEY = generateKeyPair().privateKeyPem
     process.env.LTI_TOOL_PRIVATE_KEY = generateKeyPair().privateKeyPem
     process.env.LTI_TOOL_SECRET = 's'
     expect(() => makeService()).toThrow('LTI_HINT_SECRET')
     process.env.LTI_HINT_SECRET = 'h'
+    expect(() => makeService()).toThrow('LTI_LEARN_URL')
+    process.env.LTI_LEARN_URL = 'https://learn.test'
     expect(() => makeService()).not.toThrow()
   })
 
@@ -241,6 +245,10 @@ describe('auth', () => {
     expect(claims[CLAIM.context]).toEqual({ id: 'k1' })
     expect(claims[CLAIM.roles]).toEqual([LEARNER_ROLE])
     expect(claims[CLAIM.custom]).toEqual({ ref: 'cna-interview' })
+    expect(claims[CLAIM.launchPresentation]).toEqual({
+      document_target: 'window',
+      return_url: 'http://learn.test/lms/learning/k1/i1',
+    })
     expect(claims[CLAIM.agsEndpoint].scope).toEqual([AGS_SCOPE_SCORE])
     expect(claims[CLAIM.agsEndpoint].lineitem).toMatch(/\/lti\/platform\/ags\/k1\/lineitems\/i1$/)
     expect(claims.exp - claims.iat).toBe(300)

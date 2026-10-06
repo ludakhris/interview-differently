@@ -73,6 +73,7 @@ export default defineRailway((ctx) => {
       FRONTEND_URL: preserve(),
       LTI_API_BASE: preserve(),
       LTI_HINT_SECRET: preserve(),
+      LTI_LEARN_URL: preserve(),
       LTI_PLATFORM_PRIVATE_KEY: preserve(),
       LTI_RETURN_URL: preserve(),
       LTI_TOOL_PRIVATE_KEY: preserve(),

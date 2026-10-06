@@ -127,7 +127,7 @@ describe('keys and secrets', () => {
     process.env = env
   })
 
-  it('refuses to boot in production without the four LTI keys and secrets', () => {
+  it('refuses to boot in production without the LTI keys and secrets', () => {
     process.env = { ...env, NODE_ENV: 'production' }
     for (const k of [
       'LTI_PLATFORM_PRIVATE_KEY',
@@ -535,5 +535,60 @@ describe('submit', () => {
     const h = await launched(setup(['<img src=x onerror=1>']))
     const { html } = await h.svc.submit({ submission: h.submission, answer_0: long })
     expect(html).not.toContain('<img')
+  })
+})
+
+describe('return link', () => {
+  const long = 'x'.repeat(250)
+  const withReturn = async (value: unknown) => {
+    const h = setup()
+    const { state, nonce } = await startLogin(h.svc)
+    const html = await h.svc.launch(
+      idToken(nonce, {
+        [CLAIM.launchPresentation]: { document_target: 'window', return_url: value },
+      }),
+      state,
+      state
+    )
+    return { ...h, submission: submissionOf(html) }
+  }
+  const answers = (submission: string) => ({ submission, answer_0: long, answer_1: long })
+
+  it('links the result page back to the return_url of the launch', async () => {
+    const h = await withReturn('http://learn.test/lms/learning/c1/i1')
+    const { html } = await h.svc.submit(answers(h.submission))
+    expect(html).toContain('href="http://learn.test/lms/learning/c1/i1"')
+    expect(html).toContain('Back to your course')
+    expect(html).not.toContain('return.test')
+  })
+
+  it('links error pages back to it too, including a failed score post', async () => {
+    const h = await withReturn('http://learn.test/lms/learning/c1/i1')
+    h.setScoreStatus(500)
+    const { html } = await h.svc.submit(answers(h.submission))
+    expect(html).toContain('href="http://learn.test/lms/learning/c1/i1"')
+    await expect(h.svc.submit({ submission: h.submission, answer_0: 'a' })).rejects.toMatchObject({
+      returnUrl: 'http://learn.test/lms/learning/c1/i1',
+    })
+  })
+
+  it.each([
+    ['javascript:alert(1)'],
+    ['data:text/html,x'],
+    ['/relative/path'],
+    ['not a url'],
+    [42],
+    [undefined],
+  ])('ignores a return_url of %p and falls back to LTI_RETURN_URL', async (value) => {
+    const h = await withReturn(value)
+    const { html } = await h.svc.submit(answers(h.submission))
+    expect(html).toContain('href="http://return.test"')
+    expect(html).not.toContain('javascript:')
+  })
+
+  it('falls back to LTI_RETURN_URL when the launch has no launch_presentation claim', async () => {
+    const h = await launched()
+    const { html } = await h.svc.submit(answers(h.submission))
+    expect(html).toContain('href="http://return.test"')
   })
 })

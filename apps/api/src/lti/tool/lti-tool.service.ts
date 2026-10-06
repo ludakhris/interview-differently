@@ -42,7 +42,31 @@ interface SubmissionClaims {
   jti: string
   lineitem: string
   ref: string
+  /** Where the learner returns to: the launch's return_url (http or https only), else none. */
+  returnUrl?: string
   exp: number
+}
+
+/** A protocol error page that links the learner back to where they launched from. */
+export class LtiReturnError extends LtiError {
+  constructor(
+    message: string,
+    status: number,
+    readonly returnUrl: string
+  ) {
+    super(message, status)
+  }
+}
+
+/** The claim's return_url when it is an http(s) URL; anything else (javascript:, relative, junk) is ignored. */
+export function safeReturnUrl(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  try {
+    const u = new URL(value)
+    return u.protocol === 'http:' || u.protocol === 'https:' ? u.toString() : undefined
+  } catch {
+    return undefined
+  }
 }
 
 @Injectable()
@@ -160,6 +184,7 @@ export class LtiToolService {
       jti: newId(),
       lineitem,
       ref,
+      returnUrl: safeReturnUrl(claims[CLAIM.launchPresentation]?.return_url),
       exp: Math.floor(this.now() / 1000) + SUBMISSION_TTL_S,
     })
     return interviewPage({
@@ -175,6 +200,19 @@ export class LtiToolService {
     body: Record<string, string | undefined>
   ): Promise<{ status: number; html: string }> {
     const claims = this.verifySubmission(body.submission)
+    try {
+      return await this.submitVerified(claims, body)
+    } catch (err) {
+      if (err instanceof LtiError && !(err instanceof LtiReturnError))
+        throw new LtiReturnError(err.message, err.status, claims.returnUrl ?? returnUrl())
+      throw err
+    }
+  }
+
+  private async submitVerified(
+    claims: SubmissionClaims,
+    body: Record<string, string | undefined>
+  ): Promise<{ status: number; html: string }> {
     await this.limit('tool-submit', claims.sub, SUBMIT_PER_MINUTE_PER_LEARNER)
     // The claim is the in-flight lock; after a successful post it is replaced by a "consumed"
     // entry that lasts as long as the token could still be presented.
@@ -216,7 +254,7 @@ export class LtiToolService {
         status: 502,
         html: errorPage(
           `Your answers were scored, but the score could not be sent to your course (${msg}). Please try again.`,
-          returnUrl()
+          claims.returnUrl ?? returnUrl()
         ),
       }
     }
@@ -227,7 +265,7 @@ export class LtiToolService {
         dimensions,
         answers: scored,
         questions: interview.questions,
-        returnUrl: returnUrl(),
+        returnUrl: claims.returnUrl ?? returnUrl(),
       }),
     }
   }
@@ -350,6 +388,7 @@ export class LtiToolService {
     if (!claims.sub || !claims.jti || !claims.lineitem || !claims.ref) {
       throw new LtiError('Invalid submission token', 401)
     }
+    claims.returnUrl = safeReturnUrl(claims.returnUrl)
     return claims
   }
 }

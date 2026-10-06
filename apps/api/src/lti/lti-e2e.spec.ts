@@ -98,6 +98,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
 
   beforeAll(async () => {
     process.env.LTI_TOOL_SCORING = 'stub'
+    delete process.env.LTI_LEARN_URL
     const mod = await Test.createTestingModule({
       controllers: [LtiPlatformController, LtiToolController],
       providers: [
@@ -129,6 +130,14 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     const launch = await reachLaunchForm()
     expect(launch.action).toBe(`${base}/lti/tool/launch`)
     expect(launch.fields.id_token.split('.')).toHaveLength(3)
+    const idClaims = JSON.parse(
+      Buffer.from(launch.fields.id_token.split('.')[1], 'base64url').toString()
+    )
+    const returnUrl = 'http://localhost:5174/lms/learning/k1/i1'
+    expect(idClaims['https://purl.imsglobal.org/spec/lti/claim/launch_presentation']).toEqual({
+      document_target: 'window',
+      return_url: returnUrl,
+    })
 
     const page = await post(launch.action, launch.fields, launch.cookie)
     expect(page.status).toBe(200)
@@ -145,6 +154,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
       answer_1: longAnswer,
     })
     expect(result.status).toBe(200)
+    expect(await result.text()).toContain(`href="${returnUrl}"`)
     expect(recordToolResult).toHaveBeenCalledTimes(1)
     expect(recordToolResult).toHaveBeenCalledWith('u1', 'k1', 'i1', {
       reportedAt: expect.any(String),

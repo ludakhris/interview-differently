@@ -202,6 +202,7 @@ describe('assertLtiProductionConfig', () => {
     LTI_TOOL_PRIVATE_KEY: 'b',
     LTI_TOOL_SECRET: 'c',
     LTI_HINT_SECRET: 'd',
+    LTI_LEARN_URL: 'https://learn.test',
   }
 
   it('does nothing outside production', () => {
@@ -211,14 +212,18 @@ describe('assertLtiProductionConfig', () => {
 
   it('names every missing variable in production, blank counts as missing', () => {
     expect(() => assertLtiProductionConfig({ NODE_ENV: 'production' })).toThrow(
-      'LTI_PLATFORM_PRIVATE_KEY, LTI_TOOL_PRIVATE_KEY, LTI_TOOL_SECRET, LTI_HINT_SECRET'
+      'LTI_PLATFORM_PRIVATE_KEY, LTI_TOOL_PRIVATE_KEY, LTI_TOOL_SECRET, LTI_HINT_SECRET, LTI_LEARN_URL'
     )
     expect(() =>
       assertLtiProductionConfig({ NODE_ENV: 'production', ...all, LTI_TOOL_SECRET: '  ' })
     ).toThrow('LTI_TOOL_SECRET')
+    const { LTI_LEARN_URL: _omit, ...withoutLearnUrl } = all
+    expect(() => assertLtiProductionConfig({ NODE_ENV: 'production', ...withoutLearnUrl })).toThrow(
+      'LTI_LEARN_URL'
+    )
   })
 
-  it('passes in production when all four are set', () => {
+  it('passes in production when all are set', () => {
     expect(() => assertLtiProductionConfig({ NODE_ENV: 'production', ...all })).not.toThrow()
   })
 })

@@ -10,21 +10,25 @@ Base URL: `LTI_API_BASE` (default `http://localhost:3000/api`). Platform issuer:
 state is the `LtiSingleUse` table (see "Shared store").
 
 ## Environment variables
-| Variable | Production | Purpose |
-| --- | --- | --- |
-| `LTI_PLATFORM_PRIVATE_KEY` | required | Platform RS256 signing key (PEM; `\n` escapes allowed) |
-| `LTI_TOOL_PRIVATE_KEY` | required | Tool RS256 signing key (PEM) |
-| `LTI_TOOL_SECRET` | required | Tool's HMAC secret for submission tokens |
-| `LTI_HINT_SECRET` | required | Platform's HMAC secret for `lti_message_hint` |
-| `LTI_PLATFORM_PREVIOUS_PRIVATE_KEY` | optional | Key being rotated out; published in the platform JWKS, never used to sign |
-| `LTI_TOOL_PREVIOUS_PRIVATE_KEY` | optional | Same, for the tool |
-| `TRUST_PROXY` | set behind a proxy | Express `trust proxy` (a hop count such as `1`, or `true`), so `req.ip`, which the rate limits use, is the client and not the proxy |
+
+| Variable                            | Production         | Purpose                                                                                                                                                                                                   |
+| ----------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LTI_PLATFORM_PRIVATE_KEY`          | required           | Platform RS256 signing key (PEM; `\n` escapes allowed)                                                                                                                                                    |
+| `LTI_TOOL_PRIVATE_KEY`              | required           | Tool RS256 signing key (PEM)                                                                                                                                                                              |
+| `LTI_TOOL_SECRET`                   | required           | Tool's HMAC secret for submission tokens                                                                                                                                                                  |
+| `LTI_HINT_SECRET`                   | required           | Platform's HMAC secret for `lti_message_hint`                                                                                                                                                             |
+| `LTI_LEARN_URL`                     | required           | Public URL of the LearnDifferently web app (default `http://localhost:5174`, trailing slash trimmed); the platform sends `${LTI_LEARN_URL}/lms/learning/${cohortId}/${itemId}` as the launch `return_url` |
+| `LTI_RETURN_URL`                    | optional           | Tool's fallback return link (default `http://localhost:5174`) when a launch carries no usable `return_url`                                                                                                |
+| `LTI_PLATFORM_PREVIOUS_PRIVATE_KEY` | optional           | Key being rotated out; published in the platform JWKS, never used to sign                                                                                                                                 |
+| `LTI_TOOL_PREVIOUS_PRIVATE_KEY`     | optional           | Same, for the tool                                                                                                                                                                                        |
+| `TRUST_PROXY`                       | set behind a proxy | Express `trust proxy` (a hop count such as `1`, or `true`), so `req.ip`, which the rate limits use, is the client and not the proxy                                                                       |
 
 With `NODE_ENV=production` the services refuse to boot (the constructors throw, naming every missing
-variable) unless all four required variables are set. Outside production a missing key or secret is
+variable) unless all five required variables (every row marked required) are set. Outside production a missing key or secret is
 generated at boot, which is only safe for one instance and loses state on restart.
 
 ## Shared store
+
 Single-use state and rate-limit counters live in one `LtiStore` (`lti-store.ts`), backed in production by the
 Postgres table `LtiSingleUse` (`lti-store.prisma.ts`; unique on `scope` + `key`, `expiresAt` indexed). Each
 operation is one SQL statement, so it is atomic: `put`, `peek`, `take` (DELETE ... RETURNING), `claim`
@@ -32,29 +36,31 @@ operation is one SQL statement, so it is atomic: `put`, `peek`, `take` (DELETE .
 after the window). Expired rows are ignored on read and deleted in batches of 500 at start and on about 2% of
 writes. `MemoryLtiStore` is for unit tests and a single local process. Uses:
 
-| Scope | Key | What |
-| --- | --- | --- |
-| `lti-hint` | hint jti | `lti_message_hint` is single use (claimed after the item checks pass) |
-| `lti-assertion` | `clientId:jti` | client-assertion `jti` replay (claimed after the signature verifies) |
-| `lti-login` | state | tool login `{nonce}`, 10 minutes, taken at launch |
-| `lti-submission` | submission jti | in-flight lock (5 minutes), replaced by a "consumed" entry for the token's remaining life after a successful score post, released if the post fails |
-| `rl:*` | IP, client id or learner | rate-limit counters |
+| Scope            | Key                      | What                                                                                                                                                |
+| ---------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lti-hint`       | hint jti                 | `lti_message_hint` is single use (claimed after the item checks pass)                                                                               |
+| `lti-assertion`  | `clientId:jti`           | client-assertion `jti` replay (claimed after the signature verifies)                                                                                |
+| `lti-login`      | state                    | tool login `{nonce}`, 10 minutes, taken at launch                                                                                                   |
+| `lti-submission` | submission jti           | in-flight lock (5 minutes), replaced by a "consumed" entry for the token's remaining life after a successful score post, released if the post fails |
+| `rl:*`           | IP, client id or learner | rate-limit counters                                                                                                                                 |
 
-**Multiple instances are safe** provided they share the database and the four production variables
+**Multiple instances are safe** provided they share the database and the required production variables
 (every instance must use the same keys and secrets, so any instance can finish what another started).
 A restart loses nothing. Operational notes: a crash while a submission is being scored leaves its lock until
 it expires (5 minutes); apply the `20261006120000_lti_single_use` migration before deploying.
 
 ## Key rotation
+
 1. Set `LTI_PLATFORM_PREVIOUS_PRIVATE_KEY` (or `LTI_TOOL_PREVIOUS_PRIVATE_KEY`) to the current key and
    `LTI_PLATFORM_PRIVATE_KEY` (or `LTI_TOOL_PRIVATE_KEY`) to the new key. Deploy all instances.
 2. The JWKS now lists the new key first and the old one second; every new token is signed with the new `kid`,
    while tokens already issued with the old key still verify (the platform also accepts its own previous key on
    score posts).
 3. After the longest token lifetime has passed (the platform access token, 1 hour), remove the PREVIOUS variable.
-Counterparties cache a JWKS for 5 minutes and refetch on an unknown `kid`, so no coordination is needed.
+   Counterparties cache a JWKS for 5 minutes and refetch on an unknown `kid`, so no coordination is needed.
 
 ## Rate limits
+
 Counted in the shared store, fixed one-minute window from the first hit; over the limit answers 429.
 | Endpoint | Limit | Key | 429 body |
 | --- | --- | --- | --- |
@@ -64,6 +70,7 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
 | platform `POST /token` | 60 / minute | client id, counted only after the assertion signature verifies | JSON `{error:'rate_limited'}` |
 
 ## Registration (static)
+
 - Tool id `id-interview`, client id `ld-platform`, deployment id `1`.
 - Platform side config (`ToolRegistration`): loginUrl `${BASE}/lti/tool/login`, launchUrl `${BASE}/lti/tool/launch`,
   jwksUrl `${BASE}/lti/tool/jwks`.
@@ -72,6 +79,7 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
 - Each side's registration config is overridable by env so it can point at another host.
 
 ## Platform endpoints (`/api/lti/platform`)
+
 - `GET /jwks` public keys.
 - `GET|POST /auth` OIDC authentication request from the tool. Query/form: `scope=openid`, `response_type=id_token`,
   `client_id`, `redirect_uri` (must equal the registered launchUrl), `login_hint`, `lti_message_hint`, `state`, `nonce`,
@@ -82,7 +90,7 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
   The `id_token` is RS256, iss=platform issuer, aud=client id, sub=learner user id, `nonce` echoed, exp 5 minutes, with claims:
   message_type `LtiResourceLinkRequest`, version `1.3.0`, deployment_id, target_link_uri, resource_link `{id: itemId}`,
   context `{id: cohortId}`, roles `[LEARNER_ROLE]`, custom `{ref}` (the tool-specific reference stored on the item),
-  and the AGS endpoint claim `{scope:[AGS_SCOPE_SCORE], lineitem: ${BASE}/lti/platform/ags/${cohortId}/lineitems/${itemId}}`.
+  the `launch_presentation` claim `{document_target:'window', return_url}` (the LD item page, `${LTI_LEARN_URL}/lms/learning/${cohortId}/${itemId}`), and the AGS endpoint claim `{scope:[AGS_SCOPE_SCORE], lineitem: ${BASE}/lti/platform/ags/${cohortId}/lineitems/${itemId}}`.
 - `POST /token` OAuth2 client_credentials with `client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer`,
   `client_assertion` (RS256 JWT signed by the tool: iss=sub=clientId, aud=tokenUrl, jti unique, exp no more than 10 minutes away), `scope`. Verifies against the
   tool's jwksUrl, rejects replayed `jti`, answers failures with a generic `invalid_client`, returns `{access_token, token_type:'Bearer', expires_in:3600, scope}` where access_token is an
@@ -96,11 +104,13 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
   `{ action: <tool loginUrl>, fields: { iss, login_hint, target_link_uri, lti_message_hint, client_id, lti_deployment_id } }`.
 
 ## Key fetching
+
 `jwksKeyResolver` (lti-spec) caches a JWKS for 5 minutes, remembers unknown `kid`s for 60 seconds (no refetch in that window), shares one
 in-flight fetch between concurrent callers, times fetches out after 3 seconds and refuses bodies over 100 KB. Failures surface only as
 `Could not load signing keys` (502); the URL is never put in an error.
 
 ## Tool endpoints (`/api/lti/tool`)
+
 - `GET /jwks` public keys.
 - `GET|POST /login` third-party initiated login: takes `iss, login_hint, target_link_uri, lti_message_hint, client_id`. Looks up the
   platform registration by `iss` + `client_id`, requires non-empty `login_hint` and `lti_message_hint`, creates `state` and `nonce` (stored in the shared store, single use, 10 min), sets the cookie `lti_state=<state>; HttpOnly; Secure; SameSite=None; Path=/api/lti/tool; Max-Age=600`
@@ -111,10 +121,10 @@ in-flight fetch between concurrent callers, times fetches out after 3 seconds an
   iss, aud=clientId, exp, nonce), checks message_type, version and deployment_id, requires the AGS lineitem URL to be on the platform issuer's origin, clears the
   `lti_state` cookie, then renders an HTML page for the interview named by
   the custom claim `ref` (questions from the tool's own store, one textarea each). The page carries a signed, short-lived
-  `submission` token (tool-signed HMAC, 30 minutes) holding what the tool needs to post back: sub, jti, lineitem URL, ref.
+  `submission` token (tool-signed HMAC, 30 minutes) holding what the tool needs to post back: sub, jti, lineitem URL, ref, and the launch's `launch_presentation.return_url` (kept only if it is an http(s) URL; anything else, such as `javascript:`, is dropped).
 - `POST /submit` takes the `submission` token and answers, scores them with the tool's own scorer, obtains an access token from the
   platform `tokenUrl` (client-credentials with a signed assertion; the timestamp is always sent), POSTs the score to the lineitem scores URL, and renders a result page
-  (overall score, per-dimension scores, feedback) with a link back to the course (`LTI_RETURN_URL`, default `http://localhost:5174`). A submission token is single use: its `jti` is
+  (overall score, per-dimension scores, feedback) with a primary "Back to your course" link to the launch's `return_url` (fallback `LTI_RETURN_URL`, default `http://localhost:5174`); error pages link there too. A submission token is single use: its `jti` is
   consumed only once the score post succeeds (a failed post can be retried with the same token), and a reused token gets a 409 page.
   A concurrent submit of the same token also gets the 409 (the in-flight lock).
 - Scoring: `LTI_TOOL_SCORING=stub` uses a deterministic offline scorer (for tests and local runs without an Anthropic key);
@@ -123,9 +133,10 @@ in-flight fetch between concurrent callers, times fetches out after 3 seconds an
   the ID side (the tool). The platform never reads them.
 
 ## LearnDifferently learner API and UI
+
 - New item type `tool`, config `{ toolId, ref, skill? }`.
 - `POST /api/learn/me/cohorts/:cohortId/items/:itemId/tool-launch` (learner auth) returns `{ action, fields }`. The SPA submits those
-  as a hidden `<form method=POST>` to `action` in a new tab. The learner item view for a `tool` item exposes `tool: { toolId, name, ref }`
+  as a hidden `<form method=POST>` to `action` in the same window (`target=_self`; new tabs and named windows are unreliable: pop-up blockers, Safari and embedded browsers drop or downgrade them). The tool sends the learner back through the return link, and the item page then loads fresh data. The item page shows one primary action: "Start in <tool>", or once completed "Continue" with a quiet "Try again". The learner item view for a `tool` item exposes `tool: { toolId, name, ref }`
   and its score/status like other items.
 - `LearnerService.recordToolResult(userId, cohortId, itemId, { scorePct, dimensions? })` upserts `ItemProgress` (best score,
   attempts + 1, status completed), then runs the existing plan/completion updates.

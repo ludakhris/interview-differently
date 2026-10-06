@@ -3,7 +3,7 @@ import type { Request, Response } from 'express'
 import { LtiError } from '../lti-spec'
 import { returnUrl } from './lti-tool.config'
 import { errorPage } from './lti-tool.html'
-import { LtiToolService } from './lti-tool.service'
+import { LtiReturnError, LtiToolService } from './lti-tool.service'
 
 type Params = Record<string, string | undefined>
 
@@ -84,7 +84,11 @@ export class LtiToolController {
       await fn()
     } catch (err) {
       if (!(err instanceof LtiError)) throw err
-      this.send(res, err.status, errorPage(err.message, returnUrl()))
+      this.send(
+        res,
+        err.status,
+        errorPage(err.message, err instanceof LtiReturnError ? err.returnUrl : returnUrl())
+      )
     }
   }
 }

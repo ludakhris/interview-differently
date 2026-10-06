@@ -27,7 +27,13 @@ import {
   verifyJwt,
 } from '../lti-spec'
 import type { KeyPair, ToolRegistration } from '../lti-spec'
-import { apiBase, platformRegistration, registeredTools, toolById } from './lti-platform-config'
+import {
+  apiBase,
+  learnUrl,
+  platformRegistration,
+  registeredTools,
+  toolById,
+} from './lti-platform-config'
 
 const HINT_TTL_S = 60
 const ID_TOKEN_TTL_S = 5 * 60
@@ -240,6 +246,10 @@ export class LtiPlatformService {
         [CLAIM.context]: { id: hint.cohortId },
         [CLAIM.roles]: [LEARNER_ROLE],
         [CLAIM.custom]: { ref },
+        [CLAIM.launchPresentation]: {
+          document_target: 'window',
+          return_url: `${learnUrl()}/lms/learning/${hint.cohortId}/${hint.itemId}`,
+        },
         [CLAIM.agsEndpoint]: { scope: [AGS_SCOPE_SCORE], lineitem },
       },
       this.keys

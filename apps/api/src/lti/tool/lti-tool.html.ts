@@ -46,6 +46,7 @@ export const resultPage = (a: {
   page(
     'Interview result',
     `<h1>Interview result</h1><p>Overall score: <strong>${esc(a.score)}</strong> / 100. It has been sent to your course.</p>` +
+      `<p><a class="btn" href="${esc(a.returnUrl)}">Back to your course</a></p>` +
       `<h2>By dimension</h2><ul>${a.dimensions.map((d) => `<li>${esc(d.dimension)}: ${esc(d.score)}</li>`).join('')}</ul>` +
       `<h2>Feedback</h2>` +
       a.answers
@@ -56,8 +57,7 @@ export const resultPage = (a: {
             (r.strengths ? `<p>Strengths: ${esc(r.strengths)}</p>` : '') +
             (r.development ? `<p>To develop: ${esc(r.development)}</p>` : '')
         )
-        .join('') +
-      `<p><a class="btn" href="${esc(a.returnUrl)}">Back to your course</a></p>`
+        .join('')
   )
 
 export const errorPage = (message: string, returnUrl?: string): string =>

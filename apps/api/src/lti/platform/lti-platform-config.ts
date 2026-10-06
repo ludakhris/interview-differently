@@ -6,6 +6,10 @@ const env = (name: string): string | undefined => process.env[name]?.trim() || u
 export const apiBase = (): string =>
   (env('LTI_API_BASE') ?? 'http://localhost:3000/api').replace(/\/+$/, '')
 
+/** Where learners return to LearnDifferently from a tool (no trailing slash). */
+export const learnUrl = (): string =>
+  (env('LTI_LEARN_URL') ?? 'http://localhost:5174').replace(/\/+$/, '')
+
 /** The platform's own registration: where tools find its auth, token and key endpoints. */
 export function platformRegistration(): PlatformRegistration {
   const base = apiBase()
