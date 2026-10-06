@@ -12,21 +12,69 @@ export const toolLabelable = (toolId: string): boolean =>
 export const toolItemLabel = (toolId: string, label: 'pre' | 'post'): 'pre' | 'post' | null =>
   toolLabelable(toolId) ? label : null
 
-/** Learner-facing wording for a tool item: an assessment has limited attempts, an interview can be retried. */
-export function toolCopy(tool: { name: string; attemptsAllowed: number | null }): {
+/** What the "ready to start" card says: one wording for a graded assessment, one for a practice lab. */
+export interface ReadyCopy {
+  heading: string
   intro: string
+  points: { icon: string; title: string; body: string }[]
   start: string
-} {
-  return tool.attemptsAllowed === null
-    ? {
-        intro: `This activity runs in ${tool.name}. You will go there, then come back here with your score.`,
-        start: `Start in ${tool.name}`,
-      }
-    : {
-        intro:
-          'This assessment runs in Interview Differently. You will go there, then come back here with your score.',
-        start: 'Start the assessment',
-      }
+}
+
+/** Learner-facing wording before a tool item opens: an assessment has limited attempts, a lab can be retried. */
+export function readyCopy(
+  tool: { name: string; attemptsAllowed: number | null; timeLimitMinutes: number | null },
+  attemptsUsed: number
+): ReadyCopy {
+  const comeBack = {
+    icon: '🏁',
+    title: 'Your score comes back here',
+    body: 'When you finish, we bring you back to this course with your result.',
+  }
+  if (tool.attemptsAllowed === null) {
+    return {
+      heading: 'Ready to try it?',
+      intro: `A hands-on practice in ${tool.name}: make the calls, answer the questions and see how you handle it.`,
+      points: [
+        {
+          icon: '🎮',
+          title: 'Step into the scenario',
+          body: 'Work through a realistic situation, the way you would on the job. Some labs use your microphone; your browser will ask first.',
+        },
+        {
+          icon: '🔁',
+          title: 'Retry as often as you like',
+          body: 'Your best score counts, so take a few swings.',
+        },
+        comeBack,
+      ],
+      start: 'Start the simulation',
+    }
+  }
+  const max = tool.attemptsAllowed
+  const limit = tool.timeLimitMinutes
+  const resume = 'If you get disconnected, come back and pick up where you left off.'
+  return {
+    heading: 'Ready to show what you know?',
+    intro:
+      'This is a graded check, run in Interview Differently. Find a quiet spot, take a breath and give it your best.',
+    points: [
+      {
+        icon: '🎯',
+        title: `Attempt ${Math.min(attemptsUsed + 1, max)} of ${max}`,
+        body: 'Opening it starts an attempt, so start when you have the time. Your best score counts.',
+      },
+      {
+        icon: '⏱️',
+        title: limit === null ? 'No time limit' : `${limit} minutes`,
+        body:
+          limit === null
+            ? `Take the time you need. ${resume}`
+            : `The clock starts when you open it. ${resume}`,
+      },
+      comeBack,
+    ],
+    start: 'Start the assessment',
+  }
 }
 
 /** Parses the editor's text field for the attempts (1-5; blank or invalid means 1). */

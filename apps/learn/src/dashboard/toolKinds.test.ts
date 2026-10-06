@@ -6,7 +6,7 @@ import {
   parseTimeLimit,
   timeLimitNote,
   toolConfig,
-  toolCopy,
+  readyCopy,
   toolItemLabel,
   toolLabelable,
   toolRefProblem,
@@ -24,15 +24,30 @@ describe('toolKinds', () => {
     expect(toolItemLabel('id-interview', 'post')).toBeNull()
   })
 
-  it('uses assessment wording when the tool has no retries', () => {
-    expect(toolCopy({ name: 'X', attemptsAllowed: 2 })).toEqual({
-      intro:
-        'This assessment runs in Interview Differently. You will go there, then come back here with your score.',
-      start: 'Start the assessment',
-    })
-    expect(toolCopy({ name: 'Interview Differently', attemptsAllowed: null }).start).toBe(
-      'Start in Interview Differently'
+  it('words an assessment around its attempt, its clock and the score coming back', () => {
+    const c = readyCopy({ name: 'X', attemptsAllowed: 2, timeLimitMinutes: 30 }, 1)
+    expect(c.start).toBe('Start the assessment')
+    expect(c.points.map((p) => p.title)).toEqual([
+      'Attempt 2 of 2',
+      '30 minutes',
+      'Your score comes back here',
+    ])
+    expect(
+      readyCopy({ name: 'X', attemptsAllowed: 3, timeLimitMinutes: null }, 9).points[0].title
+    ).toBe('Attempt 3 of 3')
+    expect(
+      readyCopy({ name: 'X', attemptsAllowed: 3, timeLimitMinutes: null }, 0).points[1].title
+    ).toBe('No time limit')
+  })
+
+  it('words a lab as a retryable simulation', () => {
+    const c = readyCopy(
+      { name: 'Interview Differently', attemptsAllowed: null, timeLimitMinutes: null },
+      4
     )
+    expect(c.start).toBe('Start the simulation')
+    expect(c.heading).toBe('Ready to try it?')
+    expect(c.points[1].title).toBe('Retry as often as you like')
   })
 
   it('parses the attempts field to 1-5, defaulting to 1', () => {

@@ -6,7 +6,7 @@ import { useApp } from './app-context'
 import { score } from './format'
 import { LEARNER_TYPE_LABEL } from './ItemEditor'
 import { errorNotice } from './shared'
-import { attemptLine, onPageRestore, timeLimitNote, toolCopy } from './toolKinds'
+import { attemptLine, onPageRestore, readyCopy, timeLimitNote } from './toolKinds'
 
 /** Plain text with blank-line paragraphs and "- " bullets. */
 function RichText({ text }: { text: string }) {
@@ -564,7 +564,7 @@ function ToolItem(props: {
   }
 
   const completed = item.status === 'completed'
-  const copy = toolCopy(tool)
+  const copy = readyCopy(tool, item.attempts)
   const limited = tool.attemptsAllowed !== null
   const limitNote = timeLimitNote(tool.timeLimitMinutes)
   return (
@@ -578,16 +578,23 @@ function ToolItem(props: {
           <span className="dash-chip dash-chip-on">Completed</span>
         </p>
       ) : (
-        <>
-          <p>{copy.intro}</p>
-          {limited && (
-            <p className="dash-muted">
-              {attemptLine(item.attempts, tool.attemptsAllowed as number, false)}
-            </p>
-          )}
-        </>
+        <div className="dash-ready">
+          <h2 className="dash-ready-title">{copy.heading}</h2>
+          <p className="dash-ready-intro">{copy.intro}</p>
+          <ul className="dash-ready-points">
+            {copy.points.map((p) => (
+              <li key={p.title}>
+                <span className="dash-ready-icon" aria-hidden="true">
+                  {p.icon}
+                </span>
+                <strong>{p.title}</strong>
+                <span>{p.body}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
-      {limitNote && tool.retries && <p className="dash-muted">{limitNote}</p>}
+      {completed && limitNote && tool.retries && <p className="dash-muted">{limitNote}</p>}
       {error && <p className="dash-error">{error}</p>}
       <Actions>
         {completed ? (
@@ -617,6 +624,11 @@ function ToolItem(props: {
           </button>
         )}
       </Actions>
+      {!completed && (
+        <p className="dash-muted dash-ready-note">
+          It opens in this window, and you land back here with your score.
+        </p>
+      )}
     </article>
   )
 }

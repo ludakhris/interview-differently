@@ -1672,3 +1672,50 @@
 .dash-skill-add input[type='number'] {
   width: 5em;
 }
+
+/* Before a connected tool opens: what is about to happen, in three short cards. */
+.dash-ready-title {
+  margin: 0 0 6px;
+  font-size: 22px;
+}
+.dash-ready-intro {
+  margin: 0 0 18px;
+  max-width: 44em;
+  color: var(--ink-soft);
+}
+.dash-ready-points {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13em, 1fr));
+  gap: 12px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.dash-ready-points li {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--dash-radius, 0);
+  background: var(--surface-alt, var(--surface));
+}
+.dash-ready-points li span:last-child {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.dash-ready-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 20px;
+}
+.dash-ready-note {
+  margin-top: 10px;
+  font-size: 13px;
+}
