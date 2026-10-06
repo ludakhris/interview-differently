@@ -68,6 +68,7 @@ function AccountControl() {
     const params = new URLSearchParams(window.location.search)
     params.delete('site')
     const query = params.toString()
+    links.push({ label: 'My learning', href: `/lms/learning${query ? `?${query}` : ''}` })
     links.push({ label: 'All workspaces', href: `/lms/dashboard${query ? `?${query}` : ''}` })
   }
   return <AccountMenu signedOut={null} links={links} />
