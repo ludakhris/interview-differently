@@ -95,7 +95,7 @@ function HintControls({
         className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
           stage === 'shown'
             ? 'border-amber-500/35 bg-amber-500/10 text-amber-300'
-            : 'border-white/15 bg-white/5 text-white/65 hover:border-white/25 hover:text-[#f5f3ee]'
+            : 'border-edge/15 bg-ink/5 text-ink/65 hover:border-edge/25 hover:text-fg'
         }`}
         aria-haspopup="dialog"
       >
@@ -116,14 +116,14 @@ function HintControls({
             aria-label="Cancel"
             onClick={() => setStage('idle')}
           />
-          <div className="relative bg-[#111111] border border-white/15 rounded-2xl p-6 max-w-md w-[88%] mx-4 shadow-2xl animate-fade-in">
+          <div className="relative bg-surface-alt border border-edge/15 rounded-2xl p-6 max-w-md w-[88%] mx-4 shadow-2xl animate-fade-in">
             <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">
               Confirm
             </p>
-            <h3 className="mt-1 text-[16px] font-display font-bold text-[#f5f3ee]">
+            <h3 className="mt-1 text-[16px] font-display font-bold text-fg">
               Show the formula for this question?
             </h3>
-            <p className="mt-3 text-[14px] text-white/80 leading-relaxed">
+            <p className="mt-3 text-[14px] text-ink/80 leading-relaxed">
               If you use the hint, your highest possible score on this question drops from{' '}
               <span className="text-emerald-300 font-semibold">Strong</span> to{' '}
               <span className="text-amber-300 font-semibold">Proficient</span>. It will also show on
@@ -133,7 +133,7 @@ function HintControls({
               <button
                 type="button"
                 onClick={() => setStage('idle')}
-                className="px-4 py-2 rounded-lg text-[13px] font-semibold text-white/70 hover:text-[#f5f3ee] border border-white/15 hover:border-white/30 transition-colors"
+                className="px-4 py-2 rounded-lg text-[13px] font-semibold text-ink/70 hover:text-fg border border-edge/15 hover:border-edge/30 transition-colors"
               >
                 Cancel
               </button>
@@ -164,7 +164,7 @@ function HintControls({
               /* dismiss only — already marked used */
             }}
           />
-          <div className="relative bg-[#111111] border border-white/15 rounded-2xl p-6 max-w-md w-[88%] mx-4 shadow-2xl animate-fade-in">
+          <div className="relative bg-surface-alt border border-edge/15 rounded-2xl p-6 max-w-md w-[88%] mx-4 shadow-2xl animate-fade-in">
             <div className="flex items-start justify-between gap-3 mb-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">
                 Formula
@@ -172,21 +172,21 @@ function HintControls({
               <button
                 type="button"
                 onClick={() => setStage('idle')}
-                className="text-white/50 hover:text-white text-[18px] leading-none"
+                className="text-ink/50 hover:text-ink text-[18px] leading-none"
                 aria-label="Close"
               >
                 ×
               </button>
             </div>
-            <p className="text-[15px] font-mono text-[#f5f3ee] leading-relaxed whitespace-pre-wrap">
+            <p className="text-[15px] font-mono text-fg leading-relaxed whitespace-pre-wrap">
               {hint}
             </p>
             {footnote && (
-              <div className="mt-4 pt-3 border-t border-white/10">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1.5">
+              <div className="mt-4 pt-3 border-t border-edge/10">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40 mb-1.5">
                   Glossary
                 </p>
-                <p className="text-[12px] text-white/65 leading-relaxed whitespace-pre-wrap">
+                <p className="text-[12px] text-ink/65 leading-relaxed whitespace-pre-wrap">
                   {footnote}
                 </p>
               </div>
@@ -195,7 +195,7 @@ function HintControls({
               <button
                 type="button"
                 onClick={() => setStage('idle')}
-                className="bg-green hover:bg-green-light text-white font-display font-semibold text-[13px] px-5 py-2 rounded-lg transition-colors"
+                className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[13px] px-5 py-2 rounded-lg transition-colors"
               >
                 Got it
               </button>
@@ -307,7 +307,7 @@ function NumericRangeView({
           resultLabel={spec.field.label ?? 'Computed result'}
         />
       ) : (
-        <div className="bg-[#0d0d0d] border border-white/10 rounded-2xl p-5">
+        <div className="bg-surface-deep border border-edge/10 rounded-2xl p-5">
           <QuantNumberInput
             id={`${node.nodeId}-direct`}
             label={spec.field.label}
@@ -338,8 +338,8 @@ function NumericRangeView({
               font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
               ${
                 ready
-                  ? 'bg-green hover:bg-green-light text-white cursor-pointer'
-                  : 'bg-white/10 text-slate-light cursor-not-allowed'
+                  ? 'bg-green hover:bg-green-light text-on-primary cursor-pointer'
+                  : 'bg-ink/10 text-slate-light cursor-not-allowed'
               }
             `}
           >
@@ -425,7 +425,7 @@ function StructuredView({
         />
       )}
 
-      <div className="bg-[#0d0d0d] border border-white/10 rounded-2xl p-5 space-y-4">
+      <div className="bg-surface-deep border border-edge/10 rounded-2xl p-5 space-y-4">
         {spec.fields.map((f) => (
           <QuantNumberInput
             key={f.id}
@@ -459,8 +459,8 @@ function StructuredView({
               font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
               ${
                 ready
-                  ? 'bg-green hover:bg-green-light text-white cursor-pointer'
-                  : 'bg-white/10 text-slate-light cursor-not-allowed'
+                  ? 'bg-green hover:bg-green-light text-on-primary cursor-pointer'
+                  : 'bg-ink/10 text-slate-light cursor-not-allowed'
               }
             `}
           >
@@ -486,18 +486,16 @@ function QuestionHeader({
   hint?: React.ReactNode
 }) {
   return (
-    <div className="bg-[#111111] border border-white/10 rounded-2xl p-5">
+    <div className="bg-surface-alt border border-edge/10 rounded-2xl p-5">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Quant</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">Quant</p>
         {hint}
       </div>
-      <p className="mt-1 text-[16px] font-display font-semibold text-[#f5f3ee] leading-snug">
-        {prompt}
-      </p>
-      {context && <p className="mt-2 text-[14px] text-white/70 leading-relaxed">{context}</p>}
+      <p className="mt-1 text-[16px] font-display font-semibold text-fg leading-snug">{prompt}</p>
+      {context && <p className="mt-2 text-[14px] text-ink/70 leading-relaxed">{context}</p>}
       {field?.unit && (
-        <p className="mt-3 text-[11px] text-white/40">
-          Answer in <span className="text-white/70">{field.unit}</span>
+        <p className="mt-3 text-[11px] text-ink/40">
+          Answer in <span className="text-ink/70">{field.unit}</span>
           {field.format ? ` (${field.format})` : ''}.
         </p>
       )}
@@ -520,24 +518,24 @@ function BandFeedback({
       <p className="text-[10px] font-bold uppercase tracking-widest">{headline}</p>
       <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-white/40">Your answer</p>
-          <p className="mt-0.5 text-[16px] font-display font-bold text-[#f5f3ee]">
+          <p className="text-[10px] uppercase tracking-widest text-ink/40">Your answer</p>
+          <p className="mt-0.5 text-[16px] font-display font-bold text-fg">
             {formatQuantValue(userValue, field.format, field.unit)}
           </p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-white/40">Model answer</p>
-          <p className="mt-0.5 text-[16px] font-display font-bold text-[#f5f3ee]">
+          <p className="text-[10px] uppercase tracking-widest text-ink/40">Model answer</p>
+          <p className="mt-0.5 text-[16px] font-display font-bold text-fg">
             {formatQuantValue(field.modelAnswer, field.format, field.unit)}
           </p>
-          <p className="text-[10px] text-white/40 mt-0.5">
+          <p className="text-[10px] text-ink/40 mt-0.5">
             Accepted band: {formatQuantValue(field.acceptedRange.min, field.format, field.unit)} –{' '}
             {formatQuantValue(field.acceptedRange.max, field.format, field.unit)}
           </p>
         </div>
       </div>
       {field.derivation && (
-        <p className="mt-3 text-[12px] text-white/65 leading-relaxed border-t border-white/10 pt-3">
+        <p className="mt-3 text-[12px] text-ink/65 leading-relaxed border-t border-edge/10 pt-3">
           {field.derivation}
         </p>
       )}

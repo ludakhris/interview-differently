@@ -1,4 +1,5 @@
 import {
+  BRAND_CLAIM,
   CLAIM,
   AGS_SCOPE_SCORE,
   DIMENSIONS_FIELD,
@@ -702,6 +703,90 @@ describe('launch of a text scenario', () => {
     const out = await h.svc.launch(idToken(nonce), state, state)
     const token = (out as { redirect: string }).redirect.split('#session=')[1]
     expect(verifySession(token).datasets).toEqual(['sql-fundamentals', 'orders-2'])
+  })
+
+  describe('brand', () => {
+    const launchWith = async (claim: unknown, over: Record<string, unknown> = {}) => {
+      const h = setup()
+      h.prisma.scenario.findUnique.mockResolvedValue(textScenario())
+      const { state, nonce } = await startLogin(h.svc)
+      const out = await h.svc.launch(
+        idToken(nonce, claim === undefined ? over : { [BRAND_CLAIM]: claim, ...over }),
+        state,
+        state
+      )
+      return verifySession((out as { redirect: string }).redirect.split('#session=')[1])
+    }
+
+    it('carries the brand in the signed session', async () => {
+      const brand = { name: 'Delaware DOL', primary: '#05405c', scheme: 'light' }
+      expect((await launchWith(brand)).brand).toEqual(brand)
+    })
+
+    it('re-sanitizes the claim and never trusts it', async () => {
+      const s = await launchWith({
+        name: 'Acme',
+        logoUrl: 'javascript:alert(1)',
+        primary: '#ABCDEF',
+        accent: 'url(https://evil.test)',
+        extra: 'x',
+      })
+      expect(s.brand).toEqual({ name: 'Acme', primary: '#abcdef' })
+    })
+
+    it.each([[undefined], [null], ['Acme'], [[]], [{ primary: '#000000' }], [{ name: '<b>' }]])(
+      'has no brand for the claim %p',
+      async (claim) => {
+        const s = await launchWith(claim)
+        expect(s).not.toHaveProperty('brand')
+      }
+    )
+
+    it('rejects a session whose brand was altered after signing', async () => {
+      const brand = { name: 'Acme', primary: '#112233' }
+      const s = await launchWith(brand)
+      const token = signSession(s)
+      const [body, mac] = token.split('.')
+      const forged = Buffer.from(
+        JSON.stringify({ ...s, brand: { ...brand, primary: '#ff0000' } })
+      ).toString('base64url')
+      expect(() => verifySession(`${forged}.${mac}`)).toThrow('Invalid session token')
+      expect(body).not.toBe(forged)
+    })
+
+    it('rejects a correctly signed session holding an unsanitized brand', () => {
+      const s = {
+        sub: 'u1',
+        ref: 'S1',
+        lineitem: LINEITEM,
+        jti: 'j',
+        iat: 1,
+        exp: Math.floor(Date.now() / 1000) + 60,
+      }
+      for (const brand of [
+        { name: 'A', primary: '#ABCDEF' }, // not in sanitized (lowercase) form
+        { name: 'A', logoUrl: 'javascript:x' },
+        { name: 'A', other: 1 },
+        { primary: '#000000' },
+        'Acme',
+        null,
+      ])
+        expect(() => verifySession(signSession({ ...s, brand } as unknown as LtiSession))).toThrow(
+          'Invalid session token'
+        )
+    })
+
+    it('still verifies a session without a brand', () => {
+      const s = signSession({
+        sub: 'u1',
+        ref: 'S1',
+        lineitem: LINEITEM,
+        jti: 'j',
+        iat: 1,
+        exp: Math.floor(Date.now() / 1000) + 60,
+      })
+      expect(verifySession(s).brand).toBeUndefined()
+    })
   })
 
   it('puts no datasets in the session of a scenario without sql nodes', async () => {

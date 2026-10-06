@@ -136,16 +136,16 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0d0d0d] overflow-hidden">
+    <div className="rounded-xl border border-edge/10 bg-surface-deep overflow-hidden">
       {/* Mode selector — only shown when idle */}
       {state === 'idle' && (
-        <div className="flex border-b border-white/10">
+        <div className="flex border-b border-edge/10">
           {(['audio', 'video'] as RecordingMode[]).map((m) => (
             <button
               key={m}
               onClick={() => setMode(m)}
               className={`flex-1 py-2.5 text-[13px] font-medium transition-colors ${
-                mode === m ? 'text-white bg-white/5' : 'text-slate-light hover:text-white'
+                mode === m ? 'text-ink bg-ink/5' : 'text-slate-light hover:text-ink'
               }`}
             >
               {m === 'audio' ? 'Audio only' : 'Video + Audio'}
@@ -168,10 +168,10 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
 
         {/* Audio recording indicator */}
         {state === 'recording' && mode === 'audio' && (
-          <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-[#111111] border border-red-500/30">
+          <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-surface-alt border border-red-500/30">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-[13px] text-white">Recording…</span>
+              <span className="text-[13px] text-ink">Recording…</span>
             </div>
             <span className="font-mono text-[13px] text-slate-light">{formatTime(elapsed)}</span>
           </div>
@@ -179,7 +179,7 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
 
         {/* Playback preview */}
         {state === 'preview' && previewUrl && (
-          <div className="rounded-lg overflow-hidden bg-[#111111] border border-white/10">
+          <div className="rounded-lg overflow-hidden bg-surface-alt border border-edge/10">
             {mode === 'video' ? (
               <video src={previewUrl} controls className="w-full aspect-video" />
             ) : (
@@ -201,16 +201,16 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
               <button
                 onClick={startRecording}
                 disabled={disabled}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-green hover:bg-green/90 text-white text-[13px] font-medium transition-colors disabled:opacity-40"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-green hover:bg-green/90 text-on-primary text-[13px] font-medium transition-colors disabled:opacity-40"
               >
-                <span className="w-2 h-2 rounded-full bg-white" />
+                <span className="w-2 h-2 rounded-full bg-on-primary" />
                 Start recording
               </button>
               {onSkip && (
                 <button
                   onClick={onSkip}
                   disabled={disabled}
-                  className="px-4 py-2.5 rounded-lg border border-white/10 text-slate-light hover:text-white text-[13px] transition-colors disabled:opacity-40"
+                  className="px-4 py-2.5 rounded-lg border border-edge/10 text-slate-light hover:text-ink text-[13px] transition-colors disabled:opacity-40"
                 >
                   Skip
                 </button>
@@ -232,13 +232,13 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
             <>
               <button
                 onClick={handleSubmit}
-                className="flex-1 py-2.5 rounded-lg bg-green hover:bg-green/90 text-white text-[13px] font-medium transition-colors"
+                className="flex-1 py-2.5 rounded-lg bg-green hover:bg-green/90 text-on-primary text-[13px] font-medium transition-colors"
               >
                 Submit response
               </button>
               <button
                 onClick={handleRetake}
-                className="px-4 py-2.5 rounded-lg border border-white/10 text-slate-light hover:text-white text-[13px] transition-colors"
+                className="px-4 py-2.5 rounded-lg border border-edge/10 text-slate-light hover:text-ink text-[13px] transition-colors"
               >
                 Retake
               </button>
@@ -246,7 +246,7 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
           )}
 
           {state === 'submitting' && (
-            <div className="flex-1 py-2.5 rounded-lg bg-white/5 text-slate-light text-[13px] text-center">
+            <div className="flex-1 py-2.5 rounded-lg bg-ink/5 text-slate-light text-[13px] text-center">
               Uploading…
             </div>
           )}

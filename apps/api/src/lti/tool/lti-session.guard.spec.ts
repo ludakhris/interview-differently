@@ -40,6 +40,8 @@ describe('AuthenticatedOrLtiGuard with an LTI token', () => {
     ['POST', '/api/results', { scenarioId: 'ops-001', userId: 'someone-else' }],
     ['GET', '/api/results/r1', undefined],
     ['POST', '/api/lti/tool/complete', { resultId: 'r1' }],
+    ['GET', '/api/lti/tool/session', undefined],
+    ['GET', '/api/lti/tool/session?x=1', undefined],
   ])('allows %s %s and forces the learner from the token', async (method, url, body) => {
     const req = reqOf(method, url, body)
     expect(await guard.canActivate(ctxOf(req))).toBe(true)
@@ -70,6 +72,11 @@ describe('AuthenticatedOrLtiGuard with an LTI token', () => {
     ['GET', '/api/admin/students'],
     ['POST', '/api/lti/tool/submit'],
     ['GET', '/api/lti/tool/complete'],
+    ['POST', '/api/lti/tool/session'],
+    ['PUT', '/api/lti/tool/session'],
+    ['DELETE', '/api/lti/tool/session'],
+    ['GET', '/api/lti/tool/session/extra'],
+    ['GET', '/api/lti/tool/jwks'],
     ['GET', '/api/results/attempts/x'],
   ])('refuses %s %s', async (method, url) => {
     await expect(guard.canActivate(ctxOf(reqOf(method, url)))).rejects.toBeInstanceOf(
@@ -261,5 +268,33 @@ describe('LtiOnlyGuard', () => {
       g.canActivate(ctxOf(reqOf('POST', '/api/lti/tool/complete', {}, 'Bearer clerk.jwt')))
     ).toThrow(UnauthorizedException)
     expect(g.canActivate(ctxOf(reqOf('POST', '/api/lti/tool/complete', {})))).toBe(true)
+  })
+})
+
+describe('GET /api/lti/tool/session', () => {
+  const onlyGuard = new LtiOnlyGuard()
+  it('needs an lti token', () => {
+    expect(() =>
+      onlyGuard.canActivate(ctxOf(reqOf('GET', '/api/lti/tool/session', undefined, null)))
+    ).toThrow(UnauthorizedException)
+    expect(() =>
+      onlyGuard.canActivate(
+        ctxOf(reqOf('GET', '/api/lti/tool/session', undefined, 'Bearer clerk.jwt'))
+      )
+    ).toThrow(UnauthorizedException)
+  })
+
+  it('exposes the brand carried by the session on req.lti', () => {
+    const brand = { name: 'Acme', primary: '#112233' }
+    const req = reqOf('GET', '/api/lti/tool/session', undefined, ltiHeader({ ...session, brand }))
+    expect(onlyGuard.canActivate(ctxOf(req))).toBe(true)
+    expect(req.lti?.brand).toEqual(brand)
+  })
+
+  it('refuses a session whose brand was tampered with', () => {
+    const forged = ltiHeader({ ...session, brand: { name: 'Acme', primary: 'red' } as any })
+    expect(() =>
+      onlyGuard.canActivate(ctxOf(reqOf('GET', '/api/lti/tool/session', undefined, forged)))
+    ).toThrow(UnauthorizedException)
   })
 })

@@ -24,13 +24,13 @@ export function TextExhibit({ exhibit }: { exhibit: TextExhibitType }) {
 
 function Block({ block }: { block: TextExhibitBlock }) {
   if (block.kind === 'paragraph') {
-    return <p className="text-[15px] text-[#f5f3ee]/90 leading-relaxed">{block.text}</p>
+    return <p className="text-[15px] text-fg/90 leading-relaxed">{block.text}</p>
   }
   if (block.kind === 'bullets') {
     return (
-      <ul className="space-y-2 pl-4 list-disc marker:text-white/30">
+      <ul className="space-y-2 pl-4 list-disc marker:text-ink/30">
         {(block.items ?? []).map((it, i) => (
-          <li key={i} className="text-[15px] text-[#f5f3ee]/90 leading-relaxed">
+          <li key={i} className="text-[15px] text-fg/90 leading-relaxed">
             {it}
           </li>
         ))}
@@ -39,11 +39,9 @@ function Block({ block }: { block: TextExhibitBlock }) {
   }
   // quote
   return (
-    <blockquote className="border-l-2 border-[#4ea58a] pl-3 py-1">
-      <p className="text-[15px] italic text-[#f5f3ee]/90 leading-relaxed">“{block.text}”</p>
-      {block.attribution && (
-        <p className="mt-1.5 text-[12px] text-white/50">— {block.attribution}</p>
-      )}
+    <blockquote className="border-l-2 border-jade pl-3 py-1">
+      <p className="text-[15px] italic text-fg/90 leading-relaxed">“{block.text}”</p>
+      {block.attribution && <p className="mt-1.5 text-[12px] text-ink/50">— {block.attribution}</p>}
     </blockquote>
   )
 }

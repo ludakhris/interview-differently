@@ -10,8 +10,8 @@ export function typeBadge(type: string): { label: string; cls: string } {
   if (/date|time/.test(type))
     return { label: type.startsWith('time') ? 'ts' : 'date', cls: 'text-amber-400 bg-amber-400/10' }
   if (/bool/.test(type)) return { label: 'bool', cls: 'text-violet-400 bg-violet-400/10' }
-  if (/text|char/.test(type)) return { label: 'text', cls: 'text-slate-light bg-white/5' }
-  return { label: type.slice(0, 6), cls: 'text-white/40 bg-white/5' }
+  if (/text|char/.test(type)) return { label: 'text', cls: 'text-slate-light bg-ink/5' }
+  return { label: type.slice(0, 6), cls: 'text-ink/40 bg-ink/5' }
 }
 
 /** Collapsible table → column tree. Clicking a table or column name calls `onPick` with that bare name. */
@@ -35,25 +35,25 @@ export function SchemaTree({
             <div className="flex items-center gap-1 group">
               <button
                 onClick={() => setOpen((o) => ({ ...o, [t.table]: !expanded }))}
-                className="flex items-center gap-1 flex-1 min-w-0 py-1 text-left text-[#f5f3ee] hover:text-green-light transition-colors"
+                className="flex items-center gap-1 flex-1 min-w-0 py-1 text-left text-fg hover:text-green-light transition-colors"
               >
                 {expanded ? (
-                  <ChevronDown size={12} className="text-white/30 flex-shrink-0" />
+                  <ChevronDown size={12} className="text-ink/30 flex-shrink-0" />
                 ) : (
-                  <ChevronRight size={12} className="text-white/30 flex-shrink-0" />
+                  <ChevronRight size={12} className="text-ink/30 flex-shrink-0" />
                 )}
                 <span className="font-mono text-[12px] font-semibold truncate">{t.table}</span>
               </button>
               <button
                 onClick={() => onPick(t.table)}
                 title={`${t.rowCount} rows — click to insert table name`}
-                className="font-mono text-[10px] text-white/30 group-hover:text-white/60 hover:!text-green-light px-1.5 py-0.5 rounded bg-white/5 transition-colors"
+                className="font-mono text-[10px] text-ink/30 group-hover:text-ink/60 hover:!text-green-light px-1.5 py-0.5 rounded bg-ink/5 transition-colors"
               >
                 {t.rowCount}
               </button>
             </div>
             {expanded && (
-              <ul className="ml-4 mb-2 border-l border-white/8 pl-2.5">
+              <ul className="ml-4 mb-2 border-l border-edge/8 pl-2.5">
                 {t.columns.map((c) => {
                   const b = typeBadge(c.type)
                   return (
@@ -63,7 +63,7 @@ export function SchemaTree({
                         title={`${c.type} — click to insert`}
                         className="w-full flex items-center justify-between gap-2 py-[3px] group/col"
                       >
-                        <span className="font-mono text-[11px] text-white/60 group-hover/col:text-[#f5f3ee] truncate transition-colors">
+                        <span className="font-mono text-[11px] text-ink/60 group-hover/col:text-fg truncate transition-colors">
                           {c.name}
                         </span>
                         <span className={`font-mono text-[9px] px-1 py-px rounded ${b.cls}`}>

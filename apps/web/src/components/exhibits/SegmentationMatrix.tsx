@@ -17,13 +17,13 @@ export function SegmentationMatrix({ exhibit }: { exhibit: SegmentationMatrixExh
         {/* y-axis label */}
         <div className="flex items-stretch">
           <div className="flex flex-col items-center justify-between pr-3 py-1">
-            <span className="text-[10px] text-white/45 -rotate-90 whitespace-nowrap origin-center mb-3">
+            <span className="text-[10px] text-ink/45 -rotate-90 whitespace-nowrap origin-center mb-3">
               {exhibit.yAxis.highLabel}
             </span>
-            <span className="text-[9px] font-bold uppercase tracking-widest text-white/30 -rotate-90 whitespace-nowrap">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-ink/30 -rotate-90 whitespace-nowrap">
               {exhibit.yAxis.label}
             </span>
-            <span className="text-[10px] text-white/45 -rotate-90 whitespace-nowrap origin-center mt-3">
+            <span className="text-[10px] text-ink/45 -rotate-90 whitespace-nowrap origin-center mt-3">
               {exhibit.yAxis.lowLabel}
             </span>
           </div>
@@ -49,11 +49,11 @@ export function SegmentationMatrix({ exhibit }: { exhibit: SegmentationMatrixExh
 
         {/* x-axis labels */}
         <div className="flex items-center mt-2 pl-12">
-          <span className="text-[10px] text-white/45 flex-1">{exhibit.xAxis.lowLabel}</span>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-white/30">
+          <span className="text-[10px] text-ink/45 flex-1">{exhibit.xAxis.lowLabel}</span>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-ink/30">
             {exhibit.xAxis.label}
           </span>
-          <span className="text-[10px] text-white/45 flex-1 text-right">
+          <span className="text-[10px] text-ink/45 flex-1 text-right">
             {exhibit.xAxis.highLabel}
           </span>
         </div>
@@ -74,13 +74,13 @@ function Quadrant({
   return (
     <div
       className={`rounded-lg border p-3 min-h-[100px] ${
-        accent ? 'bg-[#4ea58a14] border-[#4ea58a55]' : 'bg-white/3 border-white/10'
+        accent ? 'bg-jade/[0.0784] border-jade/[0.3333]' : 'bg-ink/3 border-edge/10'
       }`}
     >
       {label && (
         <p
           className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${
-            accent ? 'text-[#7fc8b2]' : 'text-white/50'
+            accent ? 'text-mint' : 'text-ink/50'
           }`}
         >
           {label}
@@ -89,8 +89,8 @@ function Quadrant({
       <ul className="space-y-1.5">
         {items.map((it, i) => (
           <li key={i}>
-            <p className="text-[14px] font-medium text-[#f5f3ee] leading-snug">{it.label}</p>
-            {it.caption && <p className="text-[12px] text-white/55 leading-snug">{it.caption}</p>}
+            <p className="text-[14px] font-medium text-fg leading-snug">{it.label}</p>
+            {it.caption && <p className="text-[12px] text-ink/55 leading-snug">{it.caption}</p>}
           </li>
         ))}
       </ul>

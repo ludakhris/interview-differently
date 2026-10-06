@@ -93,7 +93,7 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
   The `id_token` is RS256, iss=platform issuer, aud=client id, sub=learner user id, `nonce` echoed, exp 5 minutes, with claims:
   message_type `LtiResourceLinkRequest`, version `1.3.0`, deployment_id, target_link_uri, resource_link `{id: itemId}`,
   context `{id: cohortId}`, roles `[LEARNER_ROLE]`, custom `{ref}` (the tool-specific reference stored on the item),
-  the `launch_presentation` claim `{document_target:'window', return_url}` (the LD item page, `${LTI_LEARN_URL}/lms/learning/${cohortId}/${itemId}`), and the AGS endpoint claim `{scope:[AGS_SCOPE_SCORE], lineitem: ${BASE}/lti/platform/ags/${cohortId}/lineitems/${itemId}}`.
+  the `launch_presentation` claim `{document_target:'window', return_url}` (the LD item page, `${LTI_LEARN_URL}/lms/learning/${cohortId}/${itemId}`), and the AGS endpoint claim `{scope:[AGS_SCOPE_SCORE], lineitem: ${BASE}/lti/platform/ags/${cohortId}/lineitems/${itemId}}`, plus, when the cohort's tenant has one, the brand claim (see "Brand tokens").
 - `POST /token` OAuth2 client_credentials with `client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer`,
   `client_assertion` (RS256 JWT signed by the tool: iss=sub=clientId, aud=tokenUrl, jti unique, exp no more than 10 minutes away), `scope`. Verifies against the
   tool's jwksUrl, rejects replayed `jti`, answers failures with a generic `invalid_client`, returns `{access_token, token_type:'Bearer', expires_in:3600, scope}` where access_token is an
@@ -105,6 +105,30 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
   `toolId` matches the token's client. Records it (best score kept) via `LearnerService.recordToolResult`.
 - Launch start (called by the learner API, not public): `LtiPlatformService.startLaunch(userId, cohortId, itemId)` returns
   `{ action: <tool loginUrl>, fields: { iss, login_hint, target_link_uri, lti_message_hint, client_id, lti_deployment_id } }`.
+
+## Brand tokens (white-labelling, look only)
+
+The platform tells the tool which tenant brand to wear. The id_token carries the custom claim
+`BRAND_CLAIM` = `https://learndifferently.tech/lti/brand` (lti-spec.ts); it is omitted when the tenant has no valid brand.
+The platform takes the `brand` JSON of the cohort's institution, else of the nearest ancestor via `parentId` (at most 5 hops
+up) whose brand is valid. Both sides validate with the one function `sanitizeBrand` in `lti-brand.ts` (imports nothing from
+the project), which never throws and drops what it cannot trust. The tool re-validates the claim on launch (never trusts it).
+
+Schema v1, a JSON object, every field optional except `name`; unknown fields are dropped:
+
+| Field                                                                      | Rule                                                                                                                                |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                                                                     | string, trimmed, 1-60 chars, no control characters or `<` `>`. Missing or invalid: the whole brand is absent                        |
+| `logoUrl`                                                                  | `https` URL, or `http` only for host `localhost` / `127.0.0.1`; at most 300 chars; no credentials; no whitespace or `" ' ( ) < > \` |
+| `scheme`                                                                   | `"light"` or `"dark"`                                                                                                               |
+| `primary`, `accent`, `surface`, `surfaceAlt`, `text`, `textSoft`, `border` | exactly `#rrggbb` (`/^#[0-9a-fA-F]{6}$/`), lowercased                                                                               |
+
+An invalid optional field is dropped on its own; the rest of the brand survives.
+
+The tool carries the sanitized brand inside the signed LTI session (optional `brand` claim; a session without it still
+verifies, one whose brand is not already in sanitized form is refused with 401). `GET /api/lti/tool/session` (LTI session
+required; allowlisted for GET only) answers `{ brand: <brand or null>, ref }` so the web app can theme the player.
+Typed placeholder pages (immersive scenarios without an interviewer) ignore the brand.
 
 ## Key fetching
 
@@ -129,10 +153,10 @@ in-flight fetch between concurrent callers, times fetches out after 3 seconds an
   answers `303` to `${LTI_ID_WEB_URL}/lti/play/${encodeURIComponent(ref)}#session=<token>`; the token is in the fragment so it is
   never sent to a server or logged. Immersive scenarios (`mode === 'immersive'`) that have an `interviewer` persona (`presenterId` and `voiceId`) are redirected the same way and played by voice in the web app; immersive scenarios without one keep the typed page below.
 - The session token is `base64url(JSON).base64url(HMAC-SHA256)` (secret `LTI_TOOL_SECRET`, MAC over `lti-session.` + body, so it
-  cannot be used as a submission token), claims `{sub, ref, lineitem, returnUrl?, jti, exp}`, valid 2 hours. The web app sends it as
+  cannot be used as a submission token), claims `{sub, ref, lineitem, returnUrl?, datasets?, brand?, jti, iat, exp}`, valid 2 hours. The web app sends it as
   `Authorization: Bearer lti.<token>`. It is accepted only by `lti-session.guard.ts` and only for: `GET /api/scenarios/<ref>`
   (full scenario, any owner), `POST /api/results/attempts` and `POST /api/results` with `scenarioId === ref` (the user is always
-  the token `sub`), `GET /api/results/:id` for the learner's own result of `ref`, `GET /api/me/datasets/<slug>` for a SQL dataset slug listed in the token's `datasets` claim (the slugs of the scenario's `sql` nodes, read at launch; the dataset service re-checks the slug against the launched scenario), and `POST /api/lti/tool/complete`. Everything
+  the token `sub`), `GET /api/results/:id` for the learner's own result of `ref`, `GET /api/me/datasets/<slug>` for a SQL dataset slug listed in the token's `datasets` claim (the slugs of the scenario's `sql` nodes, read at launch; the dataset service re-checks the slug against the launched scenario), `GET /api/lti/tool/session`, and `POST /api/lti/tool/complete`. Everything
   else answers 403 (401 for a bad or expired token). The allowlist is by method and path in the guard.
   For a voice interview it also allows `POST /api/immersive-sessions` (body `scenarioId === ref`, the user is the token `sub`), and, only for a session owned by `sub` whose `scenarioId === ref` (checked in the controller, no admin override), `POST /api/immersive-sessions/:id/responses`, `GET /api/immersive-sessions/:id`, `GET .../responses/:responseId` and `.../media-url`. `GET /api/scenario-media/<ref>` is public and needs no token.
 - `POST /complete` also takes `{sessionId}` for a voice interview: the immersive session must be owned by `sub`, for `ref`, `active`, and created no earlier than the LTI session `iat` minus 60 s; every question node of the scenario needs a non-empty transcript (422 while transcription is pending, 400 if a question is unanswered). The tool scores the transcripts itself (questions are the scenario's own prompts for each response's `nodeId`; the latest response per node counts), posts the mean to the lineitem with the per-dimension means, marks the session `completed`, and answers `{score, returnUrl}`. Locks: `lti-complete` per LTI session and `lti-result` keyed `immersive:<sessionId>`; both are released if scoring (502) or the post (502) fails.

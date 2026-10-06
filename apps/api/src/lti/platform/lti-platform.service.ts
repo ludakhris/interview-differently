@@ -13,8 +13,10 @@ import { LTI_STORE } from '../lti-store'
 import type { LtiStore } from '../lti-store'
 import { cohortStatus } from '../../learn/cohort-config'
 import { LearnerService } from '../../learn/learner.service'
+import { sanitizeBrand } from '../lti-brand'
 import {
   AGS_SCOPE_SCORE,
+  BRAND_CLAIM,
   CLAIM,
   DIMENSIONS_FIELD,
   LEARNER_ROLE,
@@ -35,6 +37,7 @@ import {
   toolById,
 } from './lti-platform-config'
 
+const MAX_BRAND_HOPS = 5
 const HINT_TTL_S = 60
 const ID_TOKEN_TTL_S = 5 * 60
 const ACCESS_TOKEN_TTL_S = 3600
@@ -226,6 +229,7 @@ export class LtiPlatformService {
     if (!(await this.store.claim('lti-hint', hint.jti, Math.max(1, hint.exp - nowS() + 5))))
       throw new HttpException('lti_message_hint was already used', 400)
 
+    const brand = await this.brandOf(hint.cohortId)
     const reg = platformRegistration()
     const iat = nowS()
     const lineitem = `${apiBase()}/lti/platform/ags/${hint.cohortId}/lineitems/${hint.itemId}`
@@ -251,10 +255,32 @@ export class LtiPlatformService {
           return_url: `${learnUrl()}/lms/learning/${hint.cohortId}/${hint.itemId}`,
         },
         [CLAIM.agsEndpoint]: { scope: [AGS_SCOPE_SCORE], lineitem },
+        ...(brand ? { [BRAND_CLAIM]: brand } : {}),
       },
       this.keys
     )
     return autoSubmitForm(tool.launchUrl, { id_token: idToken, state })
+  }
+
+  /** The cohort's institution brand, else the nearest ancestor's valid one (at most 5 hops up). */
+  private async brandOf(cohortId: string) {
+    const cohort = await this.prisma.cohort.findUnique({
+      where: { id: cohortId },
+      select: { institutionId: true },
+    })
+    let id: string | null | undefined = cohort?.institutionId
+    for (let hop = 0; id && hop <= MAX_BRAND_HOPS; hop++) {
+      const inst: { brand: unknown; parentId: string | null } | null =
+        await this.prisma.institution.findUnique({
+          where: { id },
+          select: { brand: true, parentId: true },
+        })
+      if (!inst) return null
+      const brand = sanitizeBrand(inst.brand)
+      if (brand) return brand
+      id = inst.parentId
+    }
+    return null
   }
 
   // ── token ───────────────────────────────────────────────────────────────────

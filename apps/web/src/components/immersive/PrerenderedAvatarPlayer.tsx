@@ -52,7 +52,7 @@ export function PrerenderedAvatarPlayer({
   }, [])
 
   return (
-    <div className={`relative rounded-2xl overflow-hidden bg-[#0d0d0d] ${className ?? ''}`}>
+    <div className={`relative rounded-2xl overflow-hidden bg-surface-deep ${className ?? ''}`}>
       <video
         ref={videoRef}
         src={mediaUrl}
@@ -64,7 +64,7 @@ export function PrerenderedAvatarPlayer({
       />
 
       {error && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#0d0d0d] p-4">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-deep p-4">
           <p className="text-[12px] text-red-400 text-center">{error}</p>
         </div>
       )}

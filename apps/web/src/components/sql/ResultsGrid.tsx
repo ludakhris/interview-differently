@@ -21,9 +21,9 @@ export function ResultsGrid({ result, limit }: { result: SandboxResult; limit?: 
   )
   return (
     <table className="min-w-full text-[12px] font-mono border-collapse">
-      <thead className="sticky top-0 z-10 bg-[#111111] shadow-[0_1px_0_rgba(255,255,255,0.08)]">
+      <thead className="sticky top-0 z-10 bg-surface-alt shadow-[0_1px_0_rgba(255,255,255,0.08)]">
         <tr>
-          <th className="px-3 py-2 text-right text-[10px] text-white/25 font-normal w-10">#</th>
+          <th className="px-3 py-2 text-right text-[10px] text-ink/25 font-normal w-10">#</th>
           {result.columns.map((c, i) => (
             <th
               key={i}
@@ -38,12 +38,12 @@ export function ResultsGrid({ result, limit }: { result: SandboxResult; limit?: 
       </thead>
       <tbody>
         {rows.map((row, ri) => (
-          <tr key={ri} className="odd:bg-white/[0.02] hover:bg-[#2d9e5f]/10">
-            <td className="px-3 py-1.5 text-right text-white/25">{ri + 1}</td>
+          <tr key={ri} className="odd:bg-ink/[0.02] hover:bg-green-light/10">
+            <td className="px-3 py-1.5 text-right text-ink/25">{ri + 1}</td>
             {row.map((v, ci) => (
               <td
                 key={ci}
-                className={`px-3 py-1.5 whitespace-nowrap ${numeric[ci] ? 'text-right text-[#f5f3ee]' : 'text-left text-[#f5f3ee]/85'}`}
+                className={`px-3 py-1.5 whitespace-nowrap ${numeric[ci] ? 'text-right text-fg' : 'text-left text-fg/85'}`}
               >
                 {formatCell(v)}
               </td>
@@ -56,12 +56,12 @@ export function ResultsGrid({ result, limit }: { result: SandboxResult; limit?: 
 }
 
 function formatCell(v: unknown): React.ReactNode {
-  if (v === null || v === undefined) return <span className="text-white/25 italic">null</span>
+  if (v === null || v === undefined) return <span className="text-ink/25 italic">null</span>
   if (typeof v === 'boolean')
     return v ? (
       <span className="text-emerald-400">true</span>
     ) : (
-      <span className="text-white/40">false</span>
+      <span className="text-ink/40">false</span>
     )
   if (typeof v === 'object') return JSON.stringify(v)
   return String(v)

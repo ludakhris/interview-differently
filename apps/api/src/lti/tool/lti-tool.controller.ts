@@ -75,6 +75,13 @@ export class LtiToolController {
     })
   }
 
+  /** What the web app needs to render the launch: the tenant's brand tokens (or null) and the scenario ref. */
+  @Get('session')
+  @UseGuards(LtiOnlyGuard)
+  session(@Req() req: LtiRequest) {
+    return { brand: req.lti!.brand ?? null, ref: req.lti!.ref }
+  }
+
   /**
    * Posts the score of a finished play; the LTI session is the credential. `{resultId}` is a text
    * scenario's stored result, `{sessionId}` an immersive (voice) interview scored here.

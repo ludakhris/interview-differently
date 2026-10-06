@@ -31,6 +31,8 @@ export const CLAIM = {
 export const AGS_SCOPE_SCORE = 'https://purl.imsglobal.org/spec/lti-ags/scope/score'
 export const SCORE_CONTENT_TYPE = 'application/vnd.ims.lis.v1.score+json'
 export const LEARNER_ROLE = 'http://purl.imsglobal.org/vocab/lis/v2/membership#Learner'
+/** LD extension on a launch: brand tokens (see lti-brand.ts) the tool renders. Absent when the tenant has none. */
+export const BRAND_CLAIM = 'https://learndifferently.tech/lti/brand'
 /** LD extension on a score: per-rubric-dimension results. Not part of the LTI standard. */
 export const DIMENSIONS_FIELD = 'https://learndifferently.tech/lti/dimensions'
 

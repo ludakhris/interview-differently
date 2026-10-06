@@ -141,13 +141,21 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     getSessionsForUser: jest.fn(),
   }
   const scoreAnswers = jest.fn()
+  const institutions: Record<string, { brand: unknown; parentId: string | null }> = {
+    'inst-child': { brand: null, parentId: 'inst-agency' },
+    'inst-agency': { brand: null, parentId: null },
+  }
   const prisma = {
     immersiveSession: {
       findUnique: jest.fn(async (a: any) => immersive[a.where.id] ?? null),
       update: jest.fn(async (a: any) => Object.assign(immersive[a.where.id], a.data)),
     },
+    institution: {
+      findUnique: jest.fn(async (a: any) => institutions[a.where.id] ?? null),
+    },
     cohort: {
       findUnique: jest.fn(async () => ({
+        institutionId: 'inst-child',
         courseId: 'c1',
         startsAt: new Date('2020-01-01T00:00:00Z'),
         endsAt: new Date('2099-01-01T00:00:00Z'),
@@ -411,6 +419,42 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
       })
       expect(again.status).toBe(409)
       expect(recordToolResult).toHaveBeenCalledTimes(1)
+    })
+
+    describe('white-label brand', () => {
+      const brand = {
+        name: 'Delaware Department of Labor',
+        logoUrl: 'http://localhost:5174/tenants/delaware/dol-logo.png',
+        scheme: 'light',
+        primary: '#05405c',
+        accent: '#d76f0f',
+      }
+      afterEach(() => {
+        institutions['inst-agency'].brand = null
+      })
+
+      it('returns the ancestor brand from /lti/tool/session, sanitized', async () => {
+        institutions['inst-agency'].brand = { ...brand, text: 'url(x)', sky: '#daf2fd' }
+        const token = await launchText()
+        const res = await api(token, '/lti/tool/session')
+        expect(res.status).toBe(200)
+        expect(await res.json()).toEqual({ brand, ref: 'ops-001' })
+      })
+
+      it('returns brand null for an unbranded tenant', async () => {
+        const token = await launchText()
+        const res = await api(token, '/lti/tool/session')
+        expect(await res.json()).toEqual({ brand: null, ref: 'ops-001' })
+      })
+
+      it('needs an LTI session and is GET only', async () => {
+        institutions['inst-agency'].brand = brand
+        const token = await launchText()
+        expect((await fetch(`${base}/lti/tool/session`)).status).toBe(401)
+        expect((await api(token, '/lti/tool/session', { method: 'POST', body: '{}' })).status).toBe(
+          404
+        ) // no such POST route
+      })
     })
 
     it('refuses the token on another scenario, another route and without it', async () => {

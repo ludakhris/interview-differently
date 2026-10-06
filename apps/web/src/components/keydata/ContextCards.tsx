@@ -24,7 +24,7 @@ export function ContextCards({ panels }: { panels: ContextPanel[] }) {
                 {p.value}
               </p>
               {p.unit && (
-                <span className="text-[12px] text-white/55 whitespace-nowrap">{p.unit}</span>
+                <span className="text-[12px] text-ink/55 whitespace-nowrap">{p.unit}</span>
               )}
             </div>
 
@@ -32,7 +32,7 @@ export function ContextCards({ panels }: { panels: ContextPanel[] }) {
 
             {hasBar && (
               <div className="mt-3">
-                <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-white/8">
+                <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-ink/8">
                   <div
                     className={toneBar[tone]}
                     style={{ width: `${Math.max(0, Math.min(100, p.share!))}%` }}
@@ -41,9 +41,7 @@ export function ContextCards({ panels }: { panels: ContextPanel[] }) {
               </div>
             )}
 
-            {p.caption && (
-              <p className="mt-2 text-[13px] leading-snug text-white/55">{p.caption}</p>
-            )}
+            {p.caption && <p className="mt-2 text-[13px] leading-snug text-ink/55">{p.caption}</p>}
           </div>
         )
       })}

@@ -1,4 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import { sanitizeBrand, type LtiBrand } from '../lti-brand'
 import { LtiError } from '../lti-spec'
 
 /** Lifetime of the session a launch hands to the Interview Differently web app. */
@@ -18,6 +19,8 @@ export interface LtiSession {
    * launch. The only datasets this session may fetch. Absent (older tokens) means none.
    */
   datasets?: string[]
+  /** The launching tenant's sanitized brand tokens, if it has one. */
+  brand?: LtiBrand
   jti: string
   /** Issued-at, epoch seconds: a result must be completed after the session began. */
   iat: number
@@ -67,6 +70,11 @@ export function verifySession(
     (!Array.isArray(claims.datasets) || !claims.datasets.every((d) => typeof d === 'string'))
   )
     throw invalid()
+  if (claims.brand !== undefined) {
+    // validated again, and the stored form must already be the sanitized form
+    const clean = sanitizeBrand(claims.brand)
+    if (!clean || JSON.stringify(clean) !== JSON.stringify(claims.brand)) throw invalid()
+  }
   if (!claims.sub || !claims.jti || !claims.lineitem || !claims.ref) throw invalid()
   return claims
 }

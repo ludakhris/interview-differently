@@ -1,4 +1,5 @@
 import { authHeader } from './authToken'
+import type { Brand } from '@/lib/brand'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
@@ -34,4 +35,20 @@ export async function completeLtiInterview(
     throw new Error('Score hand-back returned no return link')
   }
   return data
+}
+
+/** What the API knows about this launch: the tenant's brand tokens (unvalidated) and a reference. */
+export interface LtiToolSession {
+  brand: Brand | null
+  ref: string
+}
+
+/** Fetches the launch session. Callers treat any failure as "no brand". */
+export async function fetchLtiToolSession(): Promise<LtiToolSession> {
+  const res = await fetch(`${API_URL}/api/lti/tool/session`, {
+    headers: { ...(await authHeader()) },
+  })
+  if (!res.ok) throw new Error(`Session lookup failed: ${res.status}`)
+  const data = (await res.json()) as Partial<LtiToolSession>
+  return { brand: data.brand ?? null, ref: typeof data.ref === 'string' ? data.ref : '' }
 }

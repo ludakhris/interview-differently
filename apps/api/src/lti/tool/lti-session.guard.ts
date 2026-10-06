@@ -50,6 +50,7 @@ const ALLOWED: { method: string; path: RegExp; allow?: Allow }[] = [
   { method: 'GET', path: /^\/immersive-sessions\/[^/]+$/ },
   { method: 'GET', path: /^\/immersive-sessions\/[^/]+\/responses\/[^/]+$/ },
   { method: 'GET', path: /^\/immersive-sessions\/[^/]+\/responses\/[^/]+\/media-url$/ },
+  { method: 'GET', path: /^\/lti\/tool\/session$/ },
   { method: 'POST', path: /^\/lti\/tool\/complete$/ },
 ]
 

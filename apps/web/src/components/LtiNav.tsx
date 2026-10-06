@@ -1,14 +1,43 @@
+import { useState } from 'react'
+import { useLtiBrand } from '@/components/LtiBrandProvider'
+
 /** Nav for LTI launches: brand and track label only, nothing that leads away. */
 export function LtiNav({ trackLabel, stepLabel }: { trackLabel?: string; stepLabel?: string }) {
+  const brand = useLtiBrand()
+  const [logoFailed, setLogoFailed] = useState(false)
+  const branded = Boolean(brand?.name)
   return (
-    <nav className="flex items-center justify-between px-8 py-4 bg-[#0a0a0a] sticky top-0 z-50">
-      <span className="font-display font-extrabold text-[17px] text-[#f5f3ee] tracking-tight">
-        Interview<span className="text-green-light">Differently</span>
-      </span>
+    <nav
+      className={`flex items-center justify-between px-8 py-4 bg-surface sticky top-0 z-50 ${branded ? 'border-b border-edge/10' : ''}`}
+    >
+      {branded && brand ? (
+        <span className="flex items-center gap-3 min-w-0">
+          {brand.logoUrl && !logoFailed ? (
+            <img
+              src={brand.logoUrl}
+              alt={brand.name ?? ''}
+              referrerPolicy="no-referrer"
+              onError={() => setLogoFailed(true)}
+              className="h-7 max-w-[160px] object-contain"
+            />
+          ) : (
+            <span className="font-display font-extrabold text-[17px] text-fg tracking-tight truncate">
+              {brand.name}
+            </span>
+          )}
+          <span className="hidden sm:inline text-[10px] tracking-wide text-ink/40 whitespace-nowrap">
+            Powered by Interview Differently
+          </span>
+        </span>
+      ) : (
+        <span className="font-display font-extrabold text-[17px] text-fg tracking-tight">
+          Interview<span className="text-green-light">Differently</span>
+        </span>
+      )}
       {trackLabel && (
-        <span className="text-[11px] font-medium tracking-widest uppercase text-slate-light bg-white/8 px-3 py-1 rounded-full border border-white/10">
+        <span className="text-[11px] font-medium tracking-widest uppercase text-slate-light bg-ink/8 px-3 py-1 rounded-full border border-edge/10">
           {trackLabel}
-          {stepLabel && <span className="text-white/40 ml-2">{stepLabel}</span>}
+          {stepLabel && <span className="text-ink/40 ml-2">{stepLabel}</span>}
         </span>
       )}
     </nav>

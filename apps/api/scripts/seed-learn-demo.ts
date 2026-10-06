@@ -440,12 +440,19 @@ function makeLearners(
 }
 
 async function load(prisma: PrismaClient) {
+  // Brand tokens v1 (src/lti/lti-brand.ts): sent to tools in the LTI launch, so the logo must be an absolute URL.
+  const learnOrigin = (process.env.LTI_LEARN_URL || 'http://localhost:5174').replace(/\/+$/, '')
   const brand = {
+    name: 'Delaware Department of Labor',
+    logoUrl: `${learnOrigin}/tenants/delaware/dol-logo.png`,
+    scheme: 'light',
     primary: '#05405c',
     accent: '#d76f0f',
-    sky: '#daf2fd',
-    logoUrl: '/tenants/delaware/dol-logo.png',
-    name: 'Delaware Department of Labor',
+    surface: '#ffffff',
+    surfaceAlt: '#f2f2f2',
+    text: '#353535',
+    textSoft: '#4a4a4a',
+    border: '#e5e5e5',
   }
   await prisma.institution.create({
     data: {

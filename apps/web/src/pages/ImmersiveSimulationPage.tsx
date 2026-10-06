@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
 import { LtiNav } from '@/components/LtiNav'
+import { useLtiBrand } from '@/components/LtiBrandProvider'
 import { ContextPanel } from '@/components/ContextPanel'
 import { MetricChart } from '@/components/MetricChart'
 import { ScenarioSidebar } from '@/components/ScenarioSidebar'
@@ -48,6 +49,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
   const { scenario, isLoading } = useScenario(scenarioId)
   const { trackMeta } = useScenarios()
   const narration = useNarration()
+  const brand = useLtiBrand()
 
   const [narrationMode] = useState<NarrationMode>(
     !ltiMode && searchParams.get('mode') === 'avatar' ? 'avatar' : 'voice'
@@ -233,15 +235,15 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
   // ── LTI: the session could not start ───────────────────────────────────────
   if (ltiMode && pageState === 'error') {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-6">
+      <div className="min-h-screen bg-surface flex items-center justify-center px-6">
         <div className="text-center max-w-md">
-          <p className="text-[#f5f3ee] text-[15px] mb-6">{ltiError}</p>
+          <p className="text-fg text-[15px] mb-6">{ltiError}</p>
           <button
             onClick={() => {
               setPageState('loading')
               startSession()
             }}
-            className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+            className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
           >
             Retry
           </button>
@@ -253,8 +255,8 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
   // ── Loading ────────────────────────────────────────────────────────────────
   if (ltiMode && !isLoading && !scenario) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-6">
-        <p className="text-[#f5f3ee] text-[15px] text-center max-w-md">
+      <div className="min-h-screen bg-surface flex items-center justify-center px-6">
+        <p className="text-fg text-[15px] text-center max-w-md">
           We could not load this scenario. Go back to your course and start again.
         </p>
       </div>
@@ -262,7 +264,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
   }
   if (isLoading || !scenario || pageState === 'loading') {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <p className="text-slate-mid text-[14px]">Preparing interview…</p>
       </div>
     )
@@ -271,21 +273,19 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
   // ── Complete ───────────────────────────────────────────────────────────────
   if (ltiMode && pageState === 'complete') {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-6">
+      <div className="min-h-screen bg-surface flex items-center justify-center px-6">
         <div className="text-center animate-fade-in max-w-md">
           {finishing || !ltiError ? (
-            <p className="font-display font-bold text-[18px] text-[#f5f3ee]">
-              Sending your score...
-            </p>
+            <p className="font-display font-bold text-[18px] text-fg">Sending your score...</p>
           ) : (
             <>
-              <p className="font-display font-bold text-[18px] text-[#f5f3ee] mb-2">
+              <p className="font-display font-bold text-[18px] text-fg mb-2">
                 We could not send your score
               </p>
               <p className="text-[14px] text-slate-mid mb-6">{ltiError}</p>
               <button
                 onClick={() => void finishLti()}
-                className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
               >
                 Retry
               </button>
@@ -298,10 +298,10 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
 
   if (pageState === 'complete') {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="text-center animate-fade-in">
           <div className="text-4xl mb-4">✓</div>
-          <p className="font-display font-bold text-[18px] text-[#f5f3ee]">
+          <p className="font-display font-bold text-[18px] text-fg">
             Interview complete — generating feedback…
           </p>
         </div>
@@ -311,7 +311,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
 
   if (!currentNode) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <p className="text-slate-mid text-[14px]">
           This scenario has no immersive questions configured.
         </p>
@@ -326,10 +326,10 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
   const stepLabel = `Question ${nodeIndex + 1} of ${totalNodes}`
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+    <div className="min-h-screen bg-surface flex flex-col">
       {/* Immersive mode badge */}
       <div className="fixed top-0 left-0 right-0 z-40 flex justify-center pointer-events-none">
-        <div className="mt-2 px-3 py-1 rounded-full bg-[#111] border border-white/10 text-[11px] font-semibold text-slate-light uppercase tracking-widest">
+        <div className="mt-2 px-3 py-1 rounded-full bg-surface-alt border border-edge/10 text-[11px] font-semibold text-slate-light uppercase tracking-widest">
           Interview Mode
         </div>
       </div>
@@ -345,7 +345,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
           <ScenarioSidebar
             sections={display.sidebar}
             contextStyle={ctxStyle}
-            accentColor={meta?.color}
+            accentColor={brand?.accent ?? meta?.color}
           />
         )}
 
@@ -361,7 +361,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
                   <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">
                     {display.alertBanner.title}
                   </p>
-                  <p className="text-[13px] text-[#f5f3ee]/80 leading-relaxed">
+                  <p className="text-[13px] text-fg/80 leading-relaxed">
                     {display.alertBanner.body}
                   </p>
                 </div>
@@ -371,7 +371,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
             {/* Data context */}
             {currentNode.contextPanels && currentNode.contextPanels.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-ink/30 mb-3">
                   {ctxLabel}
                 </p>
                 {currentNode.chart && <MetricChart config={currentNode.chart} />}
@@ -393,11 +393,11 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
                   className="w-full aspect-video"
                 />
               ) : mediaAssets === null ? (
-                <div className="w-full aspect-video rounded-2xl bg-[#0d0d0d] flex items-center justify-center">
+                <div className="w-full aspect-video rounded-2xl bg-surface-deep flex items-center justify-center">
                   <p className="text-[12px] text-slate-mid">Loading interviewer…</p>
                 </div>
               ) : (
-                <div className="w-full aspect-video rounded-2xl bg-[#0d0d0d] border border-red-400/30 flex flex-col items-center justify-center gap-2 p-6 text-center">
+                <div className="w-full aspect-video rounded-2xl bg-surface-deep border border-red-400/30 flex flex-col items-center justify-center gap-2 p-6 text-center">
                   <p className="text-[13px] text-red-400 font-semibold">
                     Interviewer clip unavailable
                   </p>
@@ -420,8 +420,8 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
             )}
 
             {/* Scenario context text */}
-            <div className="bg-[#111111] rounded-2xl border border-white/10 p-6">
-              <p className="text-[15px] text-[#f5f3ee] leading-[1.75] font-light">
+            <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6">
+              <p className="text-[15px] text-fg leading-[1.75] font-light">
                 {currentNode.narrative}
               </p>
             </div>
@@ -434,7 +434,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
                     narration.stop()
                     setPageState('responding')
                   }}
-                  className="px-6 py-2.5 rounded-lg border border-white/10 text-slate-light hover:text-white text-[14px] transition-colors"
+                  className="px-6 py-2.5 rounded-lg border border-edge/10 text-slate-light hover:text-ink text-[14px] transition-colors"
                 >
                   Skip narration and answer
                 </button>
@@ -444,11 +444,11 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
             {/* Response prompt */}
             {pageState === 'responding' || pageState === 'submitting' ? (
               <div className="space-y-3">
-                <div className="px-4 py-3 rounded-xl bg-white/5 border border-white/10">
+                <div className="px-4 py-3 rounded-xl bg-ink/5 border border-edge/10">
                   <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-1">
                     Your turn
                   </p>
-                  <p className="text-[14px] text-[#f5f3ee] leading-relaxed">
+                  <p className="text-[14px] text-fg leading-relaxed">
                     {currentNode.responsePrompt}
                   </p>
                 </div>
@@ -469,7 +469,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
                 <div className="flex justify-end">
                   <button
                     onClick={() => setPageState('responding')}
-                    className="px-6 py-2.5 rounded-lg bg-green hover:bg-green/90 text-white text-[14px] font-medium transition-colors"
+                    className="px-6 py-2.5 rounded-lg bg-green hover:bg-green/90 text-on-primary text-[14px] font-medium transition-colors"
                   >
                     Ready to respond
                   </button>

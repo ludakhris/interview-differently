@@ -62,8 +62,8 @@ describe('LTI boundary: the platform and a tool talk over HTTP only', () => {
     }
   })
 
-  it('platform and tool share only lti-spec, lti-env and the store files', () => {
-    const shared = /lti-(spec|env|store(\.prisma|\.module)?)$/
+  it('platform and tool share only lti-spec, lti-env, lti-brand and the store files', () => {
+    const shared = /lti-(spec|env|brand|store(\.prisma|\.module)?)$/
     for (const side of [platform, tool])
       for (const file of sourceFiles(side))
         for (const target of importsOf(file).filter(

@@ -17,7 +17,7 @@ export function PhaseStepper({ phases, accentColor = '#0f5b89' }: PhaseStepperPr
 
   return (
     <div
-      className="w-full bg-[#0f0f0f] border-b border-white/8"
+      className="w-full bg-surface-bar border-b border-edge/8"
       role="navigation"
       aria-label="Case phases"
     >
@@ -27,7 +27,7 @@ export function PhaseStepper({ phases, accentColor = '#0f5b89' }: PhaseStepperPr
             <li key={p.phase.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <PhaseChip view={p} accentColor={accentColor} />
               {i < phases.length - 1 && (
-                <span className="h-px w-4 sm:w-8 bg-white/15 flex-shrink-0" aria-hidden />
+                <span className="h-px w-4 sm:w-8 bg-ink/15 flex-shrink-0" aria-hidden />
               )}
             </li>
           ))}
@@ -51,7 +51,7 @@ function PhaseChip({ view, accentColor }: { view: PhaseView; accentColor: string
           // Brighter pill — solid tinted fill + accent ring instead of a
           // washed-out 13% alpha that disappears on dark backgrounds.
           backgroundColor: `${accentColor}33`,
-          color: '#f5f3ee',
+          color: 'rgb(var(--ld-text, 245 243 238))',
           border: `1px solid ${accentColor}`,
           boxShadow: `0 0 0 3px ${accentColor}22`,
         }}
@@ -60,13 +60,13 @@ function PhaseChip({ view, accentColor }: { view: PhaseView; accentColor: string
       >
         <span
           className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold"
-          style={{ backgroundColor: accentColor, color: '#fff' }}
+          style={{ backgroundColor: accentColor, color: 'rgb(var(--ld-on-accent, 255 255 255))' }}
         >
           {index + 1}
         </span>
         <span className="whitespace-nowrap">{phase.label}</span>
         {view.totalCount > 1 && (
-          <span className="font-mono text-[10px] text-white/50">
+          <span className="font-mono text-[10px] text-ink/50">
             {view.answeredCount}/{view.totalCount}
           </span>
         )}
@@ -77,10 +77,10 @@ function PhaseChip({ view, accentColor }: { view: PhaseView; accentColor: string
   if (status === 'complete') {
     return (
       <span
-        className={`${baseClasses} bg-green/10 text-[#f5f3ee] border border-green/40`}
+        className={`${baseClasses} bg-green/10 text-fg border border-green/40`}
         title={phase.description}
       >
-        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green text-white text-[10px] font-bold">
+        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green text-on-primary text-[10px] font-bold">
           ✓
         </span>
         <span className="whitespace-nowrap">{phase.label}</span>
@@ -92,10 +92,10 @@ function PhaseChip({ view, accentColor }: { view: PhaseView; accentColor: string
   // not a faint placeholder.
   return (
     <span
-      className={`${baseClasses} bg-white/3 text-white/55 border border-white/12`}
+      className={`${baseClasses} bg-ink/3 text-ink/55 border border-edge/12`}
       title={phase.description}
     >
-      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/8 text-white/50 text-[10px] font-bold">
+      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-ink/8 text-ink/50 text-[10px] font-bold">
         {index + 1}
       </span>
       <span className="whitespace-nowrap">{phase.label}</span>

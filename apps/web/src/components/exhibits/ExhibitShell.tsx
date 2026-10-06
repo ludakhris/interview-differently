@@ -31,7 +31,7 @@ export function ExhibitShell({ title, caption, footnote, badge, children, bodyCl
             {caption && <p className={exhibitCaption}>{caption}</p>}
           </div>
           {badge && (
-            <span className="flex-shrink-0 text-[9px] font-bold uppercase tracking-widest text-white/40 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+            <span className="flex-shrink-0 text-[9px] font-bold uppercase tracking-widest text-ink/40 bg-ink/5 border border-edge/10 px-2 py-0.5 rounded-full">
               {badge}
             </span>
           )}

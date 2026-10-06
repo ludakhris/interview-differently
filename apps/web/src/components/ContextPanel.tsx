@@ -45,7 +45,7 @@ function MonitorGrid({ panels }: { panels: ContextPanelType[] }) {
                 {s.label}
               </span>
             </div>
-            <div className="text-[10px] font-medium uppercase tracking-wider text-white/40 mb-1">
+            <div className="text-[10px] font-medium uppercase tracking-wider text-ink/40 mb-1">
               {panel.label}
             </div>
             <div className={`font-display font-black text-[20px] leading-tight ${s.val}`}>
@@ -63,18 +63,18 @@ function MonitorGrid({ panels }: { panels: ContextPanelType[] }) {
 const tableValColor = {
   alert: 'text-red-400',
   metric: 'text-amber-400',
-  info: 'text-[#f5f3ee]',
+  info: 'text-fg',
 }
 
 function TableDisplay({ panels }: { panels: ContextPanelType[] }) {
   return (
-    <div className="bg-[#111111] border border-white/10 rounded-xl overflow-hidden">
+    <div className="bg-surface-alt border border-edge/10 rounded-xl overflow-hidden">
       {panels.map((panel, i) => (
         <div
           key={i}
-          className="flex justify-between items-center px-4 py-3 border-b border-white/5 last:border-0"
+          className="flex justify-between items-center px-4 py-3 border-b border-edge/5 last:border-0"
         >
-          <span className="text-[12px] text-white/50">{panel.label}</span>
+          <span className="text-[12px] text-ink/50">{panel.label}</span>
           <span className={`text-[13px] font-semibold font-display ${tableValColor[panel.type]}`}>
             {panel.value}
           </span>
@@ -89,7 +89,7 @@ function TableDisplay({ panels }: { panels: ContextPanelType[] }) {
 const findingValColor = {
   alert: 'text-red-400',
   metric: 'text-amber-400',
-  info: 'text-white/60',
+  info: 'text-ink/60',
 }
 
 function formatElapsed(secs: number): string {
@@ -137,14 +137,14 @@ function FindingDisplay({
           {/* Incident fields grid */}
           <div className="grid grid-cols-2 gap-x-6 gap-y-3">
             <div>
-              <div className="text-[9px] font-medium uppercase tracking-widest text-white/30 mb-0.5">
+              <div className="text-[9px] font-medium uppercase tracking-widest text-ink/30 mb-0.5">
                 Discovered
               </div>
-              <div className="text-[12px] text-[#f5f3ee]/80">{incidentMeta.discoveredAt}</div>
+              <div className="text-[12px] text-fg/80">{incidentMeta.discoveredAt}</div>
             </div>
 
             <div>
-              <div className="text-[9px] font-medium uppercase tracking-widest text-white/30 mb-0.5">
+              <div className="text-[9px] font-medium uppercase tracking-widest text-ink/30 mb-0.5">
                 Time Since Finding
               </div>
               <div className="text-[13px] font-mono font-bold text-amber-400 tabular-nums">
@@ -153,19 +153,17 @@ function FindingDisplay({
             </div>
 
             <div>
-              <div className="text-[9px] font-medium uppercase tracking-widest text-white/30 mb-0.5">
+              <div className="text-[9px] font-medium uppercase tracking-widest text-ink/30 mb-0.5">
                 Severity
               </div>
               <div className="text-[12px] font-semibold text-red-400">{incidentMeta.severity}</div>
             </div>
 
             <div>
-              <div className="text-[9px] font-medium uppercase tracking-widest text-white/30 mb-0.5">
+              <div className="text-[9px] font-medium uppercase tracking-widest text-ink/30 mb-0.5">
                 Assigned To
               </div>
-              <div className="text-[12px] text-white/50 italic">
-                {incidentMeta.assignedTo ?? '—'}
-              </div>
+              <div className="text-[12px] text-ink/50 italic">{incidentMeta.assignedTo ?? '—'}</div>
             </div>
           </div>
 
@@ -191,7 +189,7 @@ function FindingDisplay({
               key={i}
               className="flex justify-between items-center py-2 border-b border-red-500/10 last:border-0"
             >
-              <span className="text-[12px] text-white/50">{panel.label}</span>
+              <span className="text-[12px] text-ink/50">{panel.label}</span>
               <span className={`text-[12px] font-semibold ${findingValColor[panel.type]}`}>
                 {panel.value}
               </span>

@@ -3,6 +3,7 @@ import type { PrismaService } from '../../prisma/prisma.service'
 import type { LearnerService } from '../../learn/learner.service'
 import {
   AGS_SCOPE_SCORE,
+  BRAND_CLAIM,
   CLAIM,
   DIMENSIONS_FIELD,
   LEARNER_ROLE,
@@ -17,6 +18,7 @@ import { LtiPlatformService, autoSubmitForm, escapeHtml } from './lti-platform.s
 
 const prisma = {
   cohort: { findUnique: jest.fn() },
+  institution: { findUnique: jest.fn() },
   enrollment: { findUnique: jest.fn() },
   courseItem: { findUnique: jest.fn() },
 }
@@ -608,5 +610,92 @@ describe('scores', () => {
       HttpException
     )
     expect(learner.recordToolResult).not.toHaveBeenCalled()
+  })
+})
+
+describe('brand claim', () => {
+  type Inst = { brand: unknown; parentId: string | null }
+  const brand = { name: 'Delaware DOL', primary: '#05405c', logoUrl: 'https://l.test/a.png' }
+  const withInstitutions = (map: Record<string, Inst>, institutionId = 'child') => {
+    prisma.cohort.findUnique.mockResolvedValue({
+      courseId: 'c1',
+      startsAt: PAST,
+      endsAt: FUTURE,
+      institutionId,
+    })
+    prisma.institution.findUnique.mockImplementation(
+      async (a: { where: { id: string } }) => map[a.where.id] ?? null
+    )
+  }
+  const idTokenClaims = async () => {
+    const html = await service.authenticate(await authParams())
+    return JSON.parse(Buffer.from(field(html, 'id_token').split('.')[1], 'base64url').toString())
+  }
+
+  it('carries the brand of the cohort institution', async () => {
+    withInstitutions({ child: { brand, parentId: 'parent' } })
+    expect((await idTokenClaims())[BRAND_CLAIM]).toEqual(brand)
+    expect(prisma.institution.findUnique).toHaveBeenCalledTimes(1)
+  })
+
+  it('sanitizes the stored brand before signing it', async () => {
+    withInstitutions({
+      child: {
+        brand: { ...brand, primary: 'url(https://evil.test)', accent: '#ABCDEF', sky: '#000000' },
+        parentId: null,
+      },
+    })
+    expect((await idTokenClaims())[BRAND_CLAIM]).toEqual({
+      name: 'Delaware DOL',
+      logoUrl: 'https://l.test/a.png',
+      accent: '#abcdef',
+    })
+  })
+
+  it('walks up to the first ancestor with a valid brand', async () => {
+    withInstitutions({
+      child: { brand: null, parentId: 'mid' },
+      mid: { brand: { primary: '#000000' }, parentId: 'top' }, // invalid: no name
+      top: { brand, parentId: null },
+    })
+    expect((await idTokenClaims())[BRAND_CLAIM]).toEqual(brand)
+  })
+
+  it('prefers the nearest brand over an ancestor', async () => {
+    withInstitutions({
+      child: { brand: { name: 'Child' }, parentId: 'top' },
+      top: { brand, parentId: null },
+    })
+    expect((await idTokenClaims())[BRAND_CLAIM]).toEqual({ name: 'Child' })
+  })
+
+  it('omits the claim when nothing on the chain has a brand', async () => {
+    withInstitutions({
+      child: { brand: null, parentId: 'top' },
+      top: { brand: { name: '' }, parentId: null },
+    })
+    expect(await idTokenClaims()).not.toHaveProperty([BRAND_CLAIM])
+  })
+
+  it('omits the claim when the cohort has no institution', async () => {
+    withInstitutions({}, null as unknown as string)
+    expect(await idTokenClaims()).not.toHaveProperty([BRAND_CLAIM])
+    expect(prisma.institution.findUnique).not.toHaveBeenCalled()
+  })
+
+  it('stops after 5 hops and survives a parent cycle', async () => {
+    const chain: Record<string, Inst> = {}
+    for (let i = 0; i < 10; i++) chain[`i${i}`] = { brand: null, parentId: `i${i + 1}` }
+    chain.i7 = { brand, parentId: null }
+    withInstitutions(chain, 'i0')
+    expect(await idTokenClaims()).not.toHaveProperty([BRAND_CLAIM])
+    expect(prisma.institution.findUnique).toHaveBeenCalledTimes(6)
+
+    prisma.institution.findUnique.mockClear()
+    chain.i5 = { brand, parentId: null }
+    expect((await idTokenClaims())[BRAND_CLAIM]).toEqual(brand) // i0 + 5 hops = i5
+
+    withInstitutions({ a: { brand: null, parentId: 'b' }, b: { brand: null, parentId: 'a' } }, 'a')
+    expect(await idTokenClaims()).not.toHaveProperty([BRAND_CLAIM])
   })
 })

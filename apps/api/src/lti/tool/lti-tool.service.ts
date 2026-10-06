@@ -12,8 +12,10 @@ import {
   type ScoredAnswer,
 } from '../../interview-engine/interview-engine'
 import { interviewOf, type InterviewSource } from '../../interview-engine/interview-scenario'
+import { sanitizeBrand } from '../lti-brand'
 import {
   AGS_SCOPE_SCORE,
+  BRAND_CLAIM,
   CLAIM,
   DIMENSIONS_FIELD,
   jwksKeyResolver,
@@ -204,6 +206,8 @@ export class LtiToolService {
     if (typeof claims.sub !== 'string' || !claims.sub) throw new LtiError('Missing sub')
     const row = await this.prisma.scenario.findUnique({ where: { scenarioId: ref } })
     if (!row || row.status !== 'published') throw new LtiError('Interview not found', 404)
+    // never trust the claim: the same validator the platform used, again
+    const brand = sanitizeBrand(claims[BRAND_CLAIM])
     const sessionReturn = safeReturnUrl(claims[CLAIM.launchPresentation]?.return_url)
     if (!isTypedPlaceholder(row.data)) {
       const token = signSession({
@@ -212,6 +216,7 @@ export class LtiToolService {
         lineitem,
         returnUrl: sessionReturn,
         datasets: sqlDatasetSlugs(row.data),
+        ...(brand ? { brand } : {}),
         jti: newId(),
         iat: Math.floor(this.now() / 1000),
         exp: Math.floor(this.now() / 1000) + SESSION_TTL_S,
