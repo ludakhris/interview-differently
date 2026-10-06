@@ -922,6 +922,94 @@ async function load(prisma: PrismaClient) {
     }
   }
 
+  // A hidden "Practice labs" course for showing Interview Differently from LearnDifferently: a
+  // decision simulation, a SQL simulation, a voice interview and a timed assessment, all launched
+  // through the connected-tool item. It is a draft, so the public catalog does not list it, but a
+  // learner can still join with its code (de-practice-labs). No synthetic learners, so none of the
+  // eight programs' numbers change.
+  const labsProvider = 'demo-inst-lantern-hill'
+  const labsCourse = 'demo-course-practice-labs'
+  await prisma.course.create({
+    data: {
+      id: labsCourse,
+      providerId: labsProvider,
+      slug: 'practice-labs',
+      title: 'Practice labs: Interview Differently',
+      summary: 'Try the Interview Differently simulations and assessment from inside a course.',
+      status: 'draft',
+      targetScore: 75,
+    },
+  })
+  const labs = [
+    {
+      title: 'Simulations',
+      items: [
+        {
+          type: 'tool',
+          title: 'Incident response simulation',
+          label: null,
+          config: { toolId: 'id-interview', ref: 'ops-001' },
+        },
+        {
+          type: 'tool',
+          title: 'Data analysis simulation (SQL)',
+          label: null,
+          config: { toolId: 'id-interview', ref: 'data-001' },
+        },
+        {
+          type: 'tool',
+          title: 'Incident response interview (voice)',
+          label: null,
+          config: { toolId: 'id-interview', ref: 'ops-001-immersive' },
+        },
+      ],
+    },
+    {
+      title: 'Assessment',
+      items: [
+        {
+          type: 'tool',
+          title: 'IT Support skills check (timed, two attempts)',
+          label: 'pre',
+          config: {
+            ...toolConfig('demo-assessment-lantern-hill'),
+            maxAttempts: 2,
+            timeLimitMinutes: 15,
+          },
+        },
+      ],
+    },
+  ]
+  for (const [mi, m] of labs.entries()) {
+    const moduleId = `demo-module-practice-labs-${mi + 1}`
+    await prisma.courseModule.create({
+      data: { id: moduleId, courseId: labsCourse, title: m.title, position: mi + 1 },
+    })
+    await prisma.courseItem.createMany({
+      data: m.items.map((it, ii) => ({
+        id: `demo-item-practice-labs-${mi + 1}-${ii + 1}`,
+        moduleId,
+        type: it.type,
+        title: it.title,
+        position: ii + 1,
+        label: it.label,
+        config: it.config as object,
+      })),
+    })
+  }
+  await prisma.cohort.create({
+    data: {
+      id: 'demo-cohort-practice-labs-a',
+      institutionId: labsProvider,
+      courseId: labsCourse,
+      name: 'Practice labs',
+      joinKey: 'de-practice-labs',
+      startsAt: new Date(TODAY.getTime() - WEEK),
+      endsAt: new Date(TODAY.getTime() + 90 * DAY),
+      maxLearners: 50,
+    },
+  })
+
   console.log(
     `Loaded demo tenant: ${counts.courses} courses, ${counts.cohorts} cohorts, ` +
       `${counts.enrollments} enrollments, ${counts.progress} progress rows, ${counts.plan} plan items, ` +
