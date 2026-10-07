@@ -875,9 +875,63 @@ describe('the staff list', () => {
     expect(ada.getByText('Shared')).toBeTruthy()
     expect(ada.getByText('Aerospace, IT')).toBeTruthy()
     expect(ada.getByText('Complete')).toBeTruthy()
-    expect(within(rows[2]).getByText('Not shared')).toBeTruthy()
+    // Not shared: the pill plus a muted "Not shared" in each of the Industries and Years cells.
+    expect(within(rows[2]).getAllByText('Not shared')).toHaveLength(3)
     expect(within(rows[2]).getByText('Started, out of date')).toBeTruthy()
+    // No profile: the pill says None and the profile cells say so instead of staying blank.
     expect(within(rows[3]).getByText('None')).toBeTruthy()
+    expect(within(rows[3]).getAllByText('No profile')).toHaveLength(2)
+  })
+  it('shows one chip per cohort, with a muted withdrawn mark', () => {
+    render(
+      <ParticipantTable
+        rows={[
+          row({
+            cohorts: [
+              {
+                cohortId: 'c1',
+                cohortName: 'Spring',
+                courseTitle: 'T',
+                enrollmentStatus: 'enrolled',
+              },
+              {
+                cohortId: 'c2',
+                cohortName: 'Fall',
+                courseTitle: 'T',
+                enrollmentStatus: 'withdrawn',
+              },
+            ],
+          }),
+        ]}
+      />
+    )
+    const chips = within(screen.getByRole('list', { name: 'Cohorts' })).getAllByRole('listitem')
+    expect(chips.map((c) => c.textContent)).toEqual(['Spring', 'Fall · withdrawn'])
+    expect(chips[1].className).toContain('tl-cohort-out')
+    expect(chips[0].className).not.toContain('tl-cohort-out')
+  })
+  it('names whose list it is when no one is enrolled, and when a filter matches nobody', () => {
+    const { rerender } = render(
+      <ParticipantTable rows={[]} providerName="Cedar Mill" filtered={false} />
+    )
+    expect(screen.getByText(/No one is enrolled in Cedar Mill's cohorts yet/)).toBeTruthy()
+    rerender(<ParticipantTable rows={[]} providerName="Cedar Mill" filtered />)
+    expect(screen.getByText(/No one matches/)).toBeTruthy()
+  })
+  it('explains what the page shows and what the Profile column means', () => {
+    loads['/learn/providers/P1/participants'] = [row()]
+    render(<TalentPage providerId="P1" workspace="cm" providerName="Cedar Mill Trades Institute" />)
+    expect(
+      screen.getByText(
+        /Everyone enrolled in Cedar Mill Trades Institute's cohorts, across all of them/
+      )
+    ).toBeTruthy()
+    expect(screen.getByText(/Each person appears once with every cohort they are in/)).toBeTruthy()
+    const legend = screen.getByRole('list', { name: 'What the Profile column means' })
+    expect(legend.textContent).toMatch(
+      /show only when the person shared their profile with Cedar Mill Trades Institute/
+    )
+    expect(screen.getByText(/people who have withdrawn are included/)).toBeTruthy()
   })
   it('says so when nobody matches', () => {
     render(<ParticipantTable rows={[]} />)

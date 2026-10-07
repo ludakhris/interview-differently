@@ -21,6 +21,24 @@ export function workspaceHref(search: string, slug: string): string {
   return `/lms/dashboard?${params.toString()}`
 }
 
+/**
+ * Where the select goes: stay on the same section (Talent, Courses, Cohorts, Activity) when the
+ * new workspace has it, otherwise its dashboard. Detail pages belong to one workspace, so they fall back to the section list.
+ */
+export function switchHref(
+  pathname: string,
+  search: string,
+  target: { subdomain: string; kind: string }
+): string {
+  const section = /^\/lms\/(talent|courses|cohorts|activity)(?:\/|$)/.exec(pathname)
+  if (!section || (section[1] === 'talent' && target.kind !== 'provider')) {
+    return workspaceHref(search, target.subdomain)
+  }
+  const params = new URLSearchParams(search)
+  params.set('site', target.subdomain)
+  return `/lms/${section[1]}?${params.toString()}`
+}
+
 /** Workspace bar at the top of the page. Hidden on a tenant host, where the host fixes the workspace. */
 export function WorkspaceSwitcher() {
   const { fixedTenant, tenant, workspaces: data } = useApp()
@@ -39,9 +57,12 @@ export function WorkspaceSwitcher() {
         <select
           aria-labelledby="dash-workspace-label"
           value={tenant ?? ''}
-          onChange={(e) =>
-            window.location.assign(workspaceHref(window.location.search, e.target.value))
-          }
+          onChange={(e) => {
+            const target = data.find((w) => w.subdomain === e.target.value)
+            if (target) {
+              window.location.assign(switchHref(pathname, window.location.search, target))
+            }
+          }}
         >
           {!tenant && <option value="">Choose…</option>}
           {data.map((w) => (

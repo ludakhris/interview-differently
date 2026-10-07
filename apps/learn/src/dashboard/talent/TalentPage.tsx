@@ -52,10 +52,35 @@ function status(r: TalentParticipantRow): string {
   return (r.complete ? 'Complete' : 'Started') + (r.fresh === false ? ', out of date' : '')
 }
 
+/**
+ * A cell that comes from the person's shared profile. A person who has not shared it shows a muted
+ * "Not shared" and a person with no profile a muted "No profile", never a blank.
+ */
+function profileCell(r: TalentParticipantRow, value: string | null) {
+  if (r.profileStatus === 'not_shared') return <span className="tl-quiet">Not shared</span>
+  if (r.profileStatus === 'none') return <span className="tl-quiet">No profile</span>
+  return value ?? <span className="tl-quiet">—</span>
+}
+
 /** The people in a list, as a table. Exported for tests. */
-export function ParticipantTable({ rows }: { rows: TalentParticipantRow[] }) {
+export function ParticipantTable({
+  rows,
+  providerName,
+  filtered = true,
+}: {
+  rows: TalentParticipantRow[]
+  providerName?: string
+  filtered?: boolean
+}) {
   const { href } = useApp()
-  if (rows.length === 0) return <p className="dash-muted">No one matches. Try clearing a filter.</p>
+  if (rows.length === 0)
+    return (
+      <p className="dash-muted">
+        {filtered
+          ? 'No one matches. Try clearing a filter.'
+          : `No one is enrolled in ${providerName ?? 'this provider'}'s cohorts yet. People appear here once they join one of its cohorts.`}
+      </p>
+    )
   return (
     <div className="dash-tablewrap">
       <table className="dash-table tl-table">
@@ -80,9 +105,30 @@ export function ParticipantTable({ rows }: { rows: TalentParticipantRow[] }) {
                 <a href={href(`/lms/talent/${r.userId}`)}>{r.name}</a>
                 {r.email && <div className="dash-muted tl-email">{r.email}</div>}
               </th>
-              <td>{r.cohorts.map((c) => c.cohortName).join(', ')}</td>
-              <td>{r.profile?.industries.join(', ') || '—'}</td>
-              <td className="num">{r.profile?.yearsExperience ?? '—'}</td>
+              <td>
+                <ul className="tl-cohortchips" aria-label="Cohorts">
+                  {r.cohorts.map((c) => (
+                    <li
+                      key={c.cohortId}
+                      className={`tl-cohort${c.enrollmentStatus === 'withdrawn' ? ' tl-cohort-out' : ''}`}
+                    >
+                      {c.cohortName}
+                      {c.enrollmentStatus === 'withdrawn' && (
+                        <span className="tl-cohort-mark"> · withdrawn</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </td>
+              <td>{profileCell(r, r.profile?.industries.join(', ') || null)}</td>
+              <td className="num">
+                {profileCell(
+                  r,
+                  r.profile?.yearsExperience === null || r.profile === null
+                    ? null
+                    : String(r.profile?.yearsExperience)
+                )}
+              </td>
               <td>
                 <span className="dash-pill">{PROFILE_WORD[r.profileStatus]}</span>
                 {r.profile?.hasResume && <span className="tl-tag">Resume</span>}
@@ -116,7 +162,15 @@ export function ParticipantTable({ rows }: { rows: TalentParticipantRow[] }) {
  * Mounted at /lms/talent in a provider workspace only. `providerId` is the workspace's institution id.
  * Pay is never in these rows; it is only in the export, and only when asked for.
  */
-export function TalentPage({ providerId }: { providerId: string; workspace: string }) {
+export function TalentPage({
+  providerId,
+  providerName,
+}: {
+  providerId: string
+  workspace: string
+  providerName?: string
+}) {
+  const who = providerName ?? 'your organization'
   const apiFetch = useApiFetch()
   const [draft, setDraft] = useState('')
   const [filters, setFilters] = useState<Filters>(noFilters)
@@ -168,9 +222,22 @@ export function TalentPage({ providerId }: { providerId: string; workspace: stri
     <>
       <h1 className="dash-h2">Talent</h1>
       <p className="tl-lede">
-        The people in your programs. Each person chooses whether your organization can read their
-        profile; you always see whether they have one and whether it is complete.
+        Everyone enrolled in {providerName ? `${providerName}'s` : 'your'} cohorts, across all of
+        them. Each person appears once with every cohort they are in.
       </p>
+      <ul className="tl-legend" aria-label="What the Profile column means">
+        <li>
+          <strong>Industries</strong> and <strong>Years</strong> show only when the person shared
+          their profile with {who}.
+        </li>
+        <li>
+          <span className="dash-pill">Not shared</span> means they have not; you still see whether
+          the profile is complete.
+        </li>
+        <li>
+          <span className="dash-pill">None</span> means they have no profile yet.
+        </li>
+      </ul>
 
       <form
         className="tl-search"
@@ -311,8 +378,9 @@ export function TalentPage({ providerId }: { providerId: string; workspace: stri
           <p className="dash-muted" role="status">
             {rows.length} {rows.length === 1 ? 'person' : 'people'}
             {active ? ' match' : ''}
+            <span className="dash-muted"> · people who have withdrawn are included</span>
           </p>
-          <ParticipantTable rows={rows} />
+          <ParticipantTable rows={rows} providerName={providerName} filtered={active} />
         </>
       )}
     </>

@@ -184,7 +184,11 @@ function Routes({ pathname }: { pathname: string }) {
           ) : talent ? (
             <TalentParticipantPage providerId={current.id} userId={decodeURIComponent(talent[1])} />
           ) : (
-            <TalentPage providerId={current.id} workspace={current.subdomain} />
+            <TalentPage
+              providerId={current.id}
+              workspace={current.subdomain}
+              providerName={current.name}
+            />
           )}
         </DashboardShell>
       )

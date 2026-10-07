@@ -595,3 +595,44 @@
 .tl-ind-link:focus-visible {
   text-decoration: underline;
 }
+
+/* The Talent list: cohort chips, the profile legend, and quiet placeholders. */
+.tl-cohortchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tl-cohort {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 1px solid var(--navy, currentColor);
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.tl-cohort-out {
+  border-style: dashed;
+  color: var(--ink-soft, #5a6a7a);
+  border-color: currentColor;
+}
+.tl-cohort-mark {
+  font-size: 12px;
+}
+.tl-quiet {
+  color: var(--ink-soft, #5a6a7a);
+  font-size: 14px;
+}
+.tl-legend {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  font-size: 14px;
+  color: var(--ink-soft, #4a5a6c);
+  max-width: 78ch;
+}
+.tl-legend li {
+  margin: 2px 0;
+}
