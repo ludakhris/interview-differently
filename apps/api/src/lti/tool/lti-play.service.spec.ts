@@ -1,6 +1,7 @@
 import { MemoryLtiStore } from '../lti-store'
 import { LtiError } from '../lti-spec'
 import type { LtiSession } from './lti-session'
+import { SqlRunnerBusyError } from '../../sql-runner/sql-runner.service'
 import { LtiPlayService } from './lti-play.service'
 
 /**
@@ -640,6 +641,43 @@ describe('LtiPlayService', () => {
       } as never)
       await fails(h.svc.view(session), 409)
       await fails(h.svc.grantQuant(session, 'q1', { value: 100 }), 409)
+    })
+  })
+
+  describe('a learner query that cannot be run in time', () => {
+    async function toSql(h: ReturnType<typeof setup>) {
+      await h.svc.choose(session, 'd1', 'A')
+      await h.svc.grantQuant(session, 'q1', { value: 100 })
+      await h.svc.grantQuant(session, 'q2', { fields: { a: 100, b: 1.5 } })
+    }
+
+    it('is marked wrong with the reason, and the reference output is still shown', async () => {
+      const h = setup()
+      await toSql(h)
+      h.runner.executeMany.mockResolvedValue([
+        rows([[1]]),
+        { ok: false, error: 'Your query took longer than 5 seconds and was stopped.' },
+      ])
+      const out = await h.svc.gradeSql(session, 's1', 'select pg_sleep(60)')
+      expect(out).toMatchObject({
+        correct: false,
+        reason: 'Your query took longer than 5 seconds and was stopped.',
+        expected: { rows: [[1]] },
+      })
+    })
+
+    it("does not use up the learner's answer when every grading slot is busy", async () => {
+      const h = setup()
+      await toSql(h)
+      h.runner.executeMany.mockRejectedValueOnce(new SqlRunnerBusyError())
+      await expect(h.svc.gradeSql(session, 's1', 'select 1')).rejects.toMatchObject({
+        status: 503,
+        message: 'Grading is busy. Try again in a moment.',
+      })
+      expect((await h.svc.view(session)).node).toBe('s1')
+      await expect(h.svc.gradeSql(session, 's1', 'select 1')).resolves.toMatchObject({
+        correct: true,
+      })
     })
   })
 })

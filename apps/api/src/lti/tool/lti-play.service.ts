@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto'
 import { Inject, Injectable } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { compareResults } from '../../assessments/grade'
-import { SqlRunnerService, type QueryResult } from '../../sql-runner/sql-runner.service'
+import {
+  SqlRunnerBusyError,
+  SqlRunnerService,
+  type QueryResult,
+} from '../../sql-runner/sql-runner.service'
 import {
   fieldsOf,
   firstNodeId,
@@ -24,8 +28,8 @@ const RATE_WINDOW_S = 60
 const PLAY_PER_MINUTE_PER_LEARNER = 60
 /** The state outlives the session by this long, so a late score retry still finds it. */
 const STATE_GRACE_S = 60
-/** Long enough for a SQL answer to be graded while it holds the lock. */
-const LOCK_TTL_S = 60
+/** Longer than grading may take (the runner's whole-call budget, kill grace included). */
+const LOCK_TTL_S = 90
 const LOCK_TRIES = 20
 const LOCK_WAIT_MS = 100
 const MAX_SQL_CHARS = 20_000
@@ -176,12 +180,16 @@ export class LtiPlayService {
       try {
         // the reference runs first: a student statement can change the data later queries see
         outcomes = await this.runner.executeMany(dataset.setupSql, [spec.referenceSql, sql.trim()])
-      } catch {
+      } catch (err) {
+        // every grading slot was busy for too long: nothing was run, so the answer is not used up
+        if (err instanceof SqlRunnerBusyError) throw new LtiError(err.message, 503)
         throw new LtiError('This question could not be graded. Please try again.', 503)
       }
       const [reference, student] = outcomes
-      // a broken reference is an authoring fault: it must not cost the learner their one answer
-      if (!reference.ok) throw new LtiError('This question could not be graded', 503)
+      // a broken or stopped reference, or grading itself failing, is nobody's wrong answer: it must
+      // not cost the learner their one answer
+      if (!reference.ok || (!student.ok && student.infra))
+        throw new LtiError('This question could not be graded. Please try again.', 503)
       let correct = false
       let reason: string | undefined
       if (!student.ok) reason = student.error.slice(0, MAX_REASON_CHARS)

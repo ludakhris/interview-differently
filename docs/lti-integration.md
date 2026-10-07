@@ -363,7 +363,9 @@ answer key (`lti-play.service.ts`, `sim-scoring.ts`, `answer-key.ts`):
 - If the browser and the server disagree about where the play is (a lost reply, a second tab), the server answers 409 and the player re-reads
   `GET /play` and moves to the server's position.
 - A SQL answer runs the reference query first, then the learner's, on one fresh database (the assessment grader runs all references first, then the
-  learner queries).
+  learner queries). SQL for grading runs in a separate process (`apps/api/src/sql-runner`): a query that runs longer than 5 seconds or grows past
+  1 GB (checked on Linux) is stopped and counts as a wrong answer with that reason, queries after it still run, and at most 2 grading processes run at
+  once (a call waits up to 10 seconds for a free one, then answers 503 "Grading is busy").
 - Scoring is `apps/api/src/scoring/sim-scoring.ts`: signals to dimension scores to the rounded mean. The browser's own scoring for a learner's
   practice on the Interview Differently site is its twin, `apps/web/src/lib/scoring.ts`; `scoring.parity.test.ts` runs both on the same plays.
   The API is built on its own, so it cannot import the shared package.

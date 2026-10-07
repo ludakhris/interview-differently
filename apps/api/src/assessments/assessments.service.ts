@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common'
 import { randomBytes } from 'crypto'
 import { Prisma } from '@prisma/client'
@@ -775,6 +776,12 @@ export class AssessmentsService {
     sqlIds.forEach((id, i) =>
       sqlOutcome.set(id, { student: outcomes[sqlIds.length + i], reference: outcomes[i] })
     )
+    // Grading failing (it would not start, it ran out of time) or an answer-key query being stopped is
+    // nobody's wrong answer. Refuse before the attempt is locked, so the learner can submit again.
+    if (outcomes.some((o, i) => !o.ok && (o.infra || (i < sqlIds.length && o.stopped))))
+      throw new ServiceUnavailableException(
+        'Grading is unavailable right now. Try submitting again in a moment.'
+      )
 
     const sectionScores: SectionScore[] = sections
       .map((s) => {
