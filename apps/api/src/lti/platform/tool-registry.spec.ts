@@ -90,6 +90,43 @@ describe('validateToolInput', () => {
   })
 })
 
+describe('reference wording for a tool', () => {
+  it('is optional: blank or missing means the generic wording', () => {
+    expect(validateToolInput(goodTool)).toMatchObject({ referenceLabel: null, referenceHelp: null })
+    expect(
+      validateToolInput({ ...goodTool, referenceLabel: '  ', referenceHelp: '' })
+    ).toMatchObject({ referenceLabel: null, referenceHelp: null })
+  })
+
+  it('is trimmed, kept, and limited in length and type', () => {
+    expect(
+      validateToolInput({
+        ...goodTool,
+        referenceLabel: ' Course id ',
+        referenceHelp: ' Find it in the URL. ',
+      })
+    ).toMatchObject({ referenceLabel: 'Course id', referenceHelp: 'Find it in the URL.' })
+    expect(() => validateToolInput({ ...goodTool, referenceLabel: 'x'.repeat(61) })).toThrow(
+      /Reference label is too long/
+    )
+    expect(() => validateToolInput({ ...goodTool, referenceHelp: 'x'.repeat(601) })).toThrow(
+      /Reference help is too long/
+    )
+    expect(() => validateToolInput({ ...goodTool, referenceLabel: 5 })).toThrow(/must be text/)
+  })
+
+  it('is shown to everyone who picks a tool, since authors need it, and is part of the history', () => {
+    const [t] = defaultTools()
+    expect(toolView(t, false)).toMatchObject({
+      referenceLabel: 'Interview scenario id',
+      referenceHelp: expect.stringContaining('builder'),
+    })
+    expect(diffTool(t, { ...t, referenceLabel: 'Scenario' })).toEqual({
+      referenceLabel: { from: 'Interview scenario id', to: 'Scenario' },
+    })
+  })
+})
+
 describe('validateConnectionInput', () => {
   it('accepts a complete connection', () => {
     expect(validateConnectionInput(goodConnection)).toEqual(goodConnection)

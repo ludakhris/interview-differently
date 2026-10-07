@@ -104,6 +104,7 @@ Rules:
   superset of `agency-admin`). A tool receives each launching learner's name and ID, so registering one is a
   security decision. Authors see only the tools their course's provider may use, with nothing about who else may
   use them and no connection settings (`GET /api/learn/courses/:id/tools`).
+- **Reference wording:** each tool can say what its items' reference is called (for example "Assessment slug") and how an author finds it. The course editor shows that label and help text for the selected tool, and a generic "Reference" with generic help where a tool has none. Set on the tool form; visible to authors and recorded in the history.
 - **History:** every change writes a row to `LtiRegistryChange` in the same transaction: who (their name or
   email when they did it), when, what, and each changed field's old and new value. Rows are kept after the tool
   or connection is removed. The admin page shows them, filterable to one tool or connection. Saving without

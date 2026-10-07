@@ -110,6 +110,8 @@ export const FIELD_LABELS: Record<string, string> = {
   labelable: 'Can be a pre or post assessment',
   enabled: 'Status',
   workspaceIds: 'Available to',
+  referenceLabel: 'Reference label',
+  referenceHelp: 'Reference help',
   clientId: 'Client id',
   deploymentId: 'Deployment id',
   loginUrl: 'Login URL',

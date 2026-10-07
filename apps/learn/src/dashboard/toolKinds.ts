@@ -169,11 +169,23 @@ export const timeLimitNote = (minutes: number | null): string | null =>
 /** Reference values the add menu used to save as placeholders; never a real reference. */
 const PLACEHOLDER_REFS = ['assessment-slug', 'interview-id']
 
+/** What to call an item's reference for a tool, and how to find it: the tool's own wording, else generic. */
+export function referenceWording(
+  tool: { referenceLabel: string | null; referenceHelp: string | null } | undefined
+): { label: string; help: string } {
+  return {
+    label: tool?.referenceLabel?.trim() || 'Reference',
+    help:
+      tool?.referenceHelp?.trim() ||
+      'The id of what this tool opens, as the tool names it. A wrong value only shows up when a learner opens it.',
+  }
+}
+
 /** Why a tool reference cannot be saved, or null when it can. */
 export function toolRefProblem(ref: string): string | null {
   const r = ref.trim()
   if (!r || PLACEHOLDER_REFS.includes(r)) {
-    return 'Enter the reference of the assessment or interview this opens before saving.'
+    return 'Enter the reference of what this tool opens before saving.'
   }
   return null
 }

@@ -62,6 +62,8 @@ const toolColumns = (t: ToolRow) => ({
   labelable: t.labelable,
   enabled: t.enabled,
   workspaceIds: t.workspaceIds,
+  referenceLabel: t.referenceLabel,
+  referenceHelp: t.referenceHelp,
 })
 
 /** The connections and tools the platform launches, read into memory and changed by a system admin. */
@@ -107,6 +109,8 @@ export class ToolRegistryService implements OnModuleInit {
           labelable: t.labelable,
           enabled: t.enabled,
           workspaceIds: t.workspaceIds ?? [],
+          referenceLabel: t.referenceLabel,
+          referenceHelp: t.referenceHelp,
           // Where it launches comes from its connection.
           clientId: t.connection.clientId,
           deploymentId: t.connection.deploymentId,

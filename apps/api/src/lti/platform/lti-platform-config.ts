@@ -43,6 +43,9 @@ export interface StoredTool extends PlatformTool {
   enabled: boolean
   /** The connection (registration with a vendor) it launches through; its settings are copied in above. */
   connectionId: string
+  /** What the course editor calls an item's reference for this tool, and how to find the value. */
+  referenceLabel: string | null
+  referenceHelp: string | null
 }
 
 /** A registration with a tool vendor: the client id the platform knows it by, and where it lives. */

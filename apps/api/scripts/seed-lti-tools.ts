@@ -94,6 +94,8 @@ async function main() {
           labelable: t.labelable,
           enabled: t.enabled,
           workspaceIds: t.workspaceIds,
+          referenceLabel: t.referenceLabel,
+          referenceHelp: t.referenceHelp,
         })),
         skipDuplicates: true,
       }),

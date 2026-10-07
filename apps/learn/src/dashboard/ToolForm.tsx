@@ -11,6 +11,9 @@ export interface ToolDraft {
   retries: boolean
   labelable: boolean
   enabled: boolean
+  /** What the course editor calls an item's reference for this tool, and how to find it (blank: generic). */
+  referenceLabel: string
+  referenceHelp: string
   access: Access
   /** Chosen agencies and providers this person can see. */
   selected: string[]
@@ -25,6 +28,8 @@ export interface ToolBody {
   labelable: boolean
   enabled: boolean
   workspaceIds: string[]
+  referenceLabel: string
+  referenceHelp: string
 }
 
 /** Practice labs can be retried and never stand in for an assessment; graded assessments are the reverse. */
@@ -43,6 +48,8 @@ export function draftOf(t: LearnTool | null, connectionId: string): ToolDraft {
     retries: t?.retries ?? kindDefaults(kind).retries,
     labelable: t?.labelable ?? kindDefaults(kind).labelable,
     enabled: t?.enabled ?? true,
+    referenceLabel: t?.referenceLabel ?? '',
+    referenceHelp: t?.referenceHelp ?? '',
     access: t && t.workspaceIds.length > 0 ? 'chosen' : 'all',
     selected: t?.workspaceIds ?? [],
   }
@@ -115,6 +122,8 @@ export function ToolForm({
       labelable: draft.kind === 'assessment' && draft.labelable,
       enabled: draft.enabled,
       workspaceIds,
+      referenceLabel: draft.referenceLabel.trim(),
+      referenceHelp: draft.referenceHelp.trim(),
     })
     if (message) setError(message)
   }
@@ -228,6 +237,35 @@ export function ToolForm({
             title={draft.enabled ? 'On' : 'Off'}
             text="Turn it off to stop it opening and hide it from the course editor. Items that use it keep their settings."
           />
+        </section>
+
+        <section className="dash-tl-section" aria-labelledby="tf-ref">
+          <h3 id="tf-ref">Reference field</h3>
+          <p className="dash-muted">
+            Each course item for this tool stores one reference: the id of what it opens, as the
+            tool names it. Say what to call it and where authors find it, so they get the right
+            guidance in the course editor.
+          </p>
+          <label className="dash-field">
+            <span>What it is called</span>
+            <input
+              value={draft.referenceLabel}
+              maxLength={60}
+              placeholder="Reference"
+              onChange={(e) => set({ referenceLabel: e.target.value })}
+            />
+            <small className="dash-muted">For example: Assessment slug, Course id.</small>
+          </label>
+          <label className="dash-field">
+            <span>How to find it</span>
+            <textarea
+              rows={3}
+              value={draft.referenceHelp}
+              maxLength={600}
+              placeholder="Where an author finds this value in the tool."
+              onChange={(e) => set({ referenceHelp: e.target.value })}
+            />
+          </label>
         </section>
 
         <section className="dash-tl-section" aria-labelledby="tf-who">

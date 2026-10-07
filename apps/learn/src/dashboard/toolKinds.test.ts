@@ -10,6 +10,7 @@ import {
   resultCopy,
   toolItemLabel,
   toolLabelable,
+  referenceWording,
   toolOptions,
   toolRefProblem,
 } from './toolKinds'
@@ -224,5 +225,17 @@ describe('toolOptions', () => {
     expect(toolLabelable('a', opts)).toBe(false)
     expect(toolItemLabel('lab', 'post', opts)).toBe('post')
     expect(toolItemLabel('a', 'post', opts)).toBeNull()
+  })
+})
+
+describe('referenceWording', () => {
+  it("uses the tool's own wording, and the generic wording where it has none", () => {
+    expect(
+      referenceWording({ referenceLabel: 'Course id', referenceHelp: 'In the course URL.' })
+    ).toEqual({ label: 'Course id', help: 'In the course URL.' })
+    const generic = referenceWording({ referenceLabel: null, referenceHelp: ' ' })
+    expect(generic.label).toBe('Reference')
+    expect(generic.help).toMatch(/what this tool opens/)
+    expect(referenceWording(undefined).label).toBe('Reference')
   })
 })

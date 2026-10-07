@@ -588,6 +588,10 @@ model LtiTool {
   retries      Boolean
   labelable    Boolean
   enabled      Boolean       @default(true)
+  // What the course editor calls the item's "Reference" for this tool, and how to find the value
+  // (null: a generic label and help text).
+  referenceLabel String?
+  referenceHelp  String?
   // Institution ids (agencies or providers) that may use the tool; empty means every workspace.
   // A workspace is allowed when it, or the agency it reports to, is listed.
   workspaceIds String[]      @default([])

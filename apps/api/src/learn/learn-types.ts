@@ -428,6 +428,9 @@ export interface LearnTool {
   enabled: boolean
   /** Agencies and providers that may use it; empty means every workspace. */
   workspaceIds: string[]
+  /** What the course editor calls an item's reference for this tool, and how to find the value; null: generic. */
+  referenceLabel: string | null
+  referenceHelp: string | null
 }
 
 /** A registration with a tool vendor: the client id and URLs one or more tools launch through. */

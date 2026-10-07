@@ -6,6 +6,7 @@ import {
   toolConfig,
   toolItemLabel,
   toolLabelable as labelableIn,
+  referenceWording,
   toolOptions,
   toolRefProblem,
 } from './toolKinds'
@@ -104,6 +105,9 @@ export function ItemEditor(props: {
             ? 'No connected tools are available to this provider. Ask a system administrator.'
             : null
   const toolLabelable = (id: string) => labelableIn(id, tools)
+  const { label: refLabel, help: refHelp } = referenceWording(
+    registry.data?.tools.find((t) => t.toolId === toolId)
+  )
   const [toolRef, setToolRef] = useState(String(item.config.ref ?? ''))
   // How this item is used in a learner's plan: ordinary content, extra content only flagged
   // learners get, or ordinary content that flagged learners must complete again.
@@ -445,27 +449,14 @@ export function ItemEditor(props: {
             </label>
           )}
           <label className="dash-field">
-            <span>Reference</span>
+            <span>{refLabel}</span>
             <input
               value={toolRef}
               maxLength={200}
-              placeholder={toolLabelable(toolId) ? 'Assessment slug' : 'Interview scenario id'}
+              placeholder={refLabel}
               onChange={(e) => setToolRef(e.target.value)}
             />
-            {toolLabelable(toolId) ? (
-              <small className="dash-muted">
-                The assessment's slug, as set when it was imported in Interview Differently (Admin,
-                Assessments). A wrong slug only shows up when a learner opens it.
-              </small>
-            ) : (
-              <small className="dash-muted">
-                Which interview this opens. In Interview Differently, open the interview in the
-                builder: its id is the last part of the page address
-                (.../builder/your-interview-id). Check it before saving, since a wrong id only shows
-                up when a learner opens it. The learner goes to the tool in the same window and
-                comes back here with the score.
-              </small>
-            )}
+            <small className="dash-muted">{refHelp}</small>
           </label>
           {!toolLabelable(toolId) && (
             <label className="dash-check">

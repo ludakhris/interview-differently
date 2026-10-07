@@ -131,6 +131,15 @@ function workspaceIds(v: unknown): string[] {
   return [...new Set(ids)]
 }
 
+/** An optional piece of text: blank means none; too long is refused. */
+function optionalText(v: unknown, field: string, max: number): string | null {
+  if (v === undefined || v === null) return null
+  if (typeof v !== 'string') return bad(`${field} must be text`)
+  const t = v.trim()
+  if (t.length > max) return bad(`${field} is too long`)
+  return t === '' ? null : t
+}
+
 /** A tool as saved: what it is and who may use it. Where it lives is its connection's. */
 export type ToolRow = Omit<
   StoredTool,
@@ -156,6 +165,8 @@ export function validateToolInput(input: unknown, toolId?: string): ToolRow {
     labelable: flag(b.labelable, 'Pre/post label', b.kind === 'assessment'),
     enabled: flag(b.enabled, 'Enabled', true),
     workspaceIds: workspaceIds(b.workspaceIds),
+    referenceLabel: optionalText(b.referenceLabel, 'Reference label', 60),
+    referenceHelp: optionalText(b.referenceHelp, 'Reference help', 600),
   }
 }
 
@@ -189,6 +200,8 @@ export function toolView(t: StoredTool, canManage: boolean): LearnTool {
     labelable: t.labelable,
     enabled: t.enabled,
     workspaceIds: canManage ? t.workspaceIds : [],
+    referenceLabel: t.referenceLabel,
+    referenceHelp: t.referenceHelp,
   }
 }
 
@@ -223,6 +236,8 @@ const TOOL_FIELDS = [
   'connectionId',
   'enabled',
   'workspaceIds',
+  'referenceLabel',
+  'referenceHelp',
 ] as const satisfies readonly (keyof ToolRow)[]
 
 const CONNECTION_FIELDS = [

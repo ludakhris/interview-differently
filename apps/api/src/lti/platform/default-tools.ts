@@ -47,6 +47,9 @@ export function defaultTools(): StoredTool[] {
       kind: 'interview',
       retries: true,
       labelable: false,
+      referenceLabel: 'Interview scenario id',
+      referenceHelp:
+        'Which interview this opens. In Interview Differently, open the interview in the builder: its id is the last part of the page address (.../builder/your-interview-id). Check it before saving, since a wrong id only shows up when a learner opens it. The learner goes to the tool in the same window and comes back here with the score.',
     },
     {
       toolId: 'id-assessment',
@@ -55,6 +58,9 @@ export function defaultTools(): StoredTool[] {
       kind: 'assessment',
       retries: false,
       labelable: true,
+      referenceLabel: 'Assessment slug',
+      referenceHelp:
+        "The assessment's slug, as set when it was imported in Interview Differently (Admin, Assessments). A wrong slug only shows up when a learner opens it.",
     },
   ]
 }
