@@ -8,6 +8,10 @@
 - Reference the issue in commit messages with `Closes #N` (or `Refs #N` for partial work) so the issue auto-closes when the commit lands on `main`.
 - Don't reintroduce a sprawling `TASKS.md` — drift across edits is the failure mode that motivated the migration on 2026-05-03.
 
+## Release notes
+
+`docs/release-notes/index.html` is the checked-in, plain-words changelog (newest first, with screenshots). When a feature is finished or ships, add an entry at the top (copy an `<article class="entry">` block; the how-to is in the comment at the top of the file) and reference screenshots from `docs/screenshots/<feature>/`. The repo is public: fictional data only, no production configuration, contacts or funding details.
+
 ## Reviewing larger PRs
 
 For a PR over about 500 changed lines (`git diff --stat origin/main...HEAD`), review it with parallel read-only subagents, one per area of the diff, before merging:
