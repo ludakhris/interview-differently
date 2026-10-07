@@ -1,7 +1,8 @@
 import type { CohortDetail } from '@id/types'
-import { useEffect, useState, type FormEvent } from 'react'
+import { Fragment, useEffect, useState, type FormEvent } from 'react'
 import { useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
+import { AttemptsPanel } from './AttemptsPanel'
 import { Meter } from './charts'
 import { CohortStatusChip } from './CohortsPage'
 import { dateOnly, dateShort } from './format'
@@ -36,6 +37,7 @@ function Cohort({
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [attemptsFor, setAttemptsFor] = useState<string | null>(null)
 
   async function run(action: () => Promise<CohortDetail>, ok?: string): Promise<boolean> {
     setBusy(true)
@@ -212,41 +214,67 @@ function Cohort({
               </thead>
               <tbody>
                 {cohort.roster.map((r) => (
-                  <tr key={r.enrollmentId}>
-                    <th scope="row">{r.name}</th>
-                    <td>{r.email ?? '—'}</td>
-                    <td>{STATUS_LABEL[r.status]}</td>
-                    <td>
-                      <Meter
-                        value={r.itemsTotal ? r.itemsDone / r.itemsTotal : null}
-                        label="Course progress"
-                      />
-                    </td>
-                    <td>{dateShort(r.enrolledAt)}</td>
-                    <td>
-                      {r.status !== 'withdrawn' && (
-                        <>
-                          <button
-                            type="button"
-                            className="dash-btn-quiet"
-                            disabled={busy}
-                            title="Check this learner's course status and completion date against the current rules"
-                            onClick={() => void recompute(r.enrollmentId, r.name)}
-                          >
-                            Recompute
-                          </button>{' '}
-                          <button
-                            type="button"
-                            className="dash-btn-quiet"
-                            disabled={busy}
-                            onClick={() => withdraw(r.enrollmentId, r.name)}
-                          >
-                            Withdraw
-                          </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
+                  <Fragment key={r.enrollmentId}>
+                    <tr>
+                      <th scope="row">{r.name}</th>
+                      <td>{r.email ?? '—'}</td>
+                      <td>{STATUS_LABEL[r.status]}</td>
+                      <td>
+                        <Meter
+                          value={r.itemsTotal ? r.itemsDone / r.itemsTotal : null}
+                          label="Course progress"
+                        />
+                      </td>
+                      <td>{dateShort(r.enrolledAt)}</td>
+                      <td>
+                        {r.status !== 'withdrawn' && (
+                          <>
+                            <button
+                              type="button"
+                              className="dash-btn-quiet"
+                              aria-expanded={attemptsFor === r.enrollmentId}
+                              title="Each recorded attempt at a connected-tool item"
+                              onClick={() =>
+                                setAttemptsFor(
+                                  attemptsFor === r.enrollmentId ? null : r.enrollmentId
+                                )
+                              }
+                            >
+                              Attempts
+                            </button>{' '}
+                            <button
+                              type="button"
+                              className="dash-btn-quiet"
+                              disabled={busy}
+                              title="Check this learner's course status and completion date against the current rules"
+                              onClick={() => void recompute(r.enrollmentId, r.name)}
+                            >
+                              Recompute
+                            </button>{' '}
+                            <button
+                              type="button"
+                              className="dash-btn-quiet"
+                              disabled={busy}
+                              onClick={() => withdraw(r.enrollmentId, r.name)}
+                            >
+                              Withdraw
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                    {attemptsFor === r.enrollmentId && (
+                      <tr className="dash-attempts-row">
+                        <td colSpan={6}>
+                          <AttemptsPanel
+                            courseId={cohort.courseId}
+                            enrollmentId={r.enrollmentId}
+                            name={r.name}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

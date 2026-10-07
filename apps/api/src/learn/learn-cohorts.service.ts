@@ -11,6 +11,7 @@ import type {
   CourseOffers,
   OfferTarget,
   RunnableCourse,
+  ToolAttempt,
 } from './learn-types'
 import { PrismaService } from '../prisma/prisma.service'
 import {
@@ -329,6 +330,35 @@ export class LearnCohortsService {
     await this.cohortFor(userId, role, e.cohortId)
     const { change } = await this.learner.recomputeCompletion(enrollmentId)
     return { change, cohort: await this.detail(userId, role, e.cohortId) }
+  }
+
+  /** One learner's recorded scores for a connected-tool item (#67); same access as recompute. */
+  async attempts(
+    userId: string,
+    role: string | undefined,
+    enrollmentId: string,
+    itemId: string | undefined
+  ): Promise<{ attempts: ToolAttempt[]; attemptsBeforeLog: number }> {
+    const e = await this.prisma.enrollment.findUnique({ where: { id: enrollmentId } })
+    if (!e) throw new NotFoundException('Enrollment not found')
+    const cohort = await this.cohortFor(userId, role, e.cohortId)
+    if (!itemId) throw new BadRequestException('itemId is required')
+    const item = await this.prisma.courseItem.findUnique({
+      where: { id: itemId },
+      include: { module: { select: { courseId: true } } },
+    })
+    if (!item || item.module.courseId !== cohort.course.id || item.type !== 'tool')
+      throw new NotFoundException('Item not found')
+    const progress = await this.prisma.itemProgress.findUnique({
+      where: { enrollmentId_itemId: { enrollmentId, itemId } },
+    })
+    const { attemptLog, attemptsBeforeLog } = await this.learner.attemptLogOf(
+      enrollmentId,
+      item,
+      progress?.attempts ?? 0,
+      progress?.score ?? null
+    )
+    return { attempts: attemptLog, attemptsBeforeLog }
   }
 
   // ── offering a course to organizations ───────────────────────────────────

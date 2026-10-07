@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common'
 import type { PrismaService } from '../prisma/prisma.service'
 import { LearnCohortsService } from './learn-cohorts.service'
 import type { LearnService } from './learn.service'
@@ -21,12 +26,14 @@ const prisma = {
     update: jest.fn(),
     count: jest.fn(),
   },
+  courseItem: { findUnique: jest.fn() },
+  itemProgress: { findUnique: jest.fn() },
   membership: { upsert: jest.fn() },
   user: { findUnique: jest.fn() },
   courseOffer: { findMany: jest.fn(), upsert: jest.fn(), deleteMany: jest.fn() },
 }
 const learn = { assertRole: jest.fn(), assertWorkspace: jest.fn() }
-const learner = { recomputeCompletion: jest.fn() }
+const learner = { recomputeCompletion: jest.fn(), attemptLogOf: jest.fn() }
 const service = new LearnCohortsService(
   prisma as unknown as PrismaService,
   learn as unknown as LearnService,
@@ -173,6 +180,59 @@ describe('recompute', () => {
     prisma.enrollment.findUnique.mockResolvedValue(null)
     await expect(service.recompute('u', 'agency-admin', 'nope')).rejects.toThrow(NotFoundException)
     expect(learner.recomputeCompletion).not.toHaveBeenCalled()
+  })
+})
+
+describe('attempts', () => {
+  const toolItem = { id: 'i1', type: 'tool', label: null, config: {}, module: { courseId: 'c1' } }
+  beforeEach(() => {
+    prisma.enrollment.findUnique.mockResolvedValue({ id: 'e1', cohortId: 'k1' })
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    prisma.courseItem.findUnique.mockResolvedValue(toolItem)
+    prisma.itemProgress.findUnique.mockResolvedValue({ attempts: 4 })
+    learner.attemptLogOf.mockResolvedValue({ attemptLog: [], attemptsBeforeLog: 4 })
+  })
+
+  it('returns the learner log after the same staff checks as recompute', async () => {
+    const out = await service.attempts('u', 'agency-admin', 'e1', 'i1')
+    expect(learn.assertRole).toHaveBeenCalled()
+    expect(learn.assertWorkspace).toHaveBeenCalledWith('u', 'agency-admin', 'harborpoint')
+    expect(learner.attemptLogOf).toHaveBeenCalledWith('e1', toolItem, 4, null)
+    expect(out).toEqual({ attempts: [], attemptsBeforeLog: 4 })
+  })
+
+  it('refuses staff of another workspace, reading nothing', async () => {
+    learn.assertWorkspace.mockRejectedValue(new ForbiddenException())
+    await expect(service.attempts('u', 'agency-admin', 'e1', 'i1')).rejects.toThrow(
+      ForbiddenException
+    )
+    expect(learner.attemptLogOf).not.toHaveBeenCalled()
+  })
+
+  it('refuses a role that may not manage cohorts', async () => {
+    learn.assertRole.mockImplementation(() => {
+      throw new ForbiddenException()
+    })
+    await expect(service.attempts('u', 'learner', 'e1', 'i1')).rejects.toThrow(ForbiddenException)
+    expect(learner.attemptLogOf).not.toHaveBeenCalled()
+  })
+
+  it('refuses an unknown enrollment, a missing itemId, and an item outside the course or not a tool', async () => {
+    prisma.enrollment.findUnique.mockResolvedValueOnce(null)
+    await expect(service.attempts('u', 'agency-admin', 'x', 'i1')).rejects.toThrow(
+      NotFoundException
+    )
+    await expect(service.attempts('u', 'agency-admin', 'e1', undefined)).rejects.toThrow(
+      BadRequestException
+    )
+    prisma.courseItem.findUnique.mockResolvedValueOnce({ ...toolItem, module: { courseId: 'c9' } })
+    await expect(service.attempts('u', 'agency-admin', 'e1', 'i1')).rejects.toThrow(
+      NotFoundException
+    )
+    prisma.courseItem.findUnique.mockResolvedValueOnce({ ...toolItem, type: 'lesson' })
+    await expect(service.attempts('u', 'agency-admin', 'e1', 'i1')).rejects.toThrow(
+      NotFoundException
+    )
   })
 })
 

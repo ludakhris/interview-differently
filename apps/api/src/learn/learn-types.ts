@@ -363,6 +363,17 @@ export interface QuizResult {
   correctIndexes: number[]
 }
 
+/** One counted score a connected tool sent back (#67). */
+export interface ToolAttempt {
+  score: number
+  /** ISO time the score was recorded. */
+  at: string
+  /** The highest score of the log; the earliest when tied. */
+  best: boolean
+  /** Score reached the item's pass mark; null when the item has no pass mark. */
+  passed: boolean | null
+}
+
 export interface LearnerItem {
   id: string
   cohortId: string
@@ -408,6 +419,10 @@ export interface LearnerItem {
   status: ProgressStatus
   score: number | null
   attempts: number
+  /** A connected tool's counted scores, newest first (at most 50). Empty for other item types. */
+  attemptLog: ToolAttempt[]
+  /** Attempts counted before the log existed, so `attempts` still adds up: max(0, attempts - log length). */
+  attemptsBeforeLog: number
   /** Set when the learner can still act on it. */
   locked: string | null
 }

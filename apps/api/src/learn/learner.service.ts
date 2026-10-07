@@ -10,6 +10,7 @@ import type {
   LearnerAddedItem,
   LearnerCohortCard,
   LearnerItem,
+  ToolAttempt,
   LearnerOutline,
   LearnerOutlineItem,
   PlanAddition,
@@ -44,6 +45,7 @@ import { randomUUID } from 'node:crypto'
 export const TOOL_SCORE_GRACE_MS = 24 * 60 * 60 * 1000
 /** How many recent `reportedAt` values are kept to recognise a repeated report. */
 const RECENT_REPORTS_KEPT = 10
+const ATTEMPT_LOG_MAX = 50
 
 /** Whether this exact report (by its timestamp) is already recorded in a tool item's progress data. */
 export function alreadyReported(data: unknown, reportedAt: string): boolean {
@@ -58,13 +60,16 @@ export function alreadyReported(data: unknown, reportedAt: string): boolean {
  * Records one tool score in a single statement, so concurrent reports cannot lose each other.
  * $1 new row id, $2 enrollment, $3 item, $4 score, $5 data (json: lastScore, at, reportedAt?,
  * dimensions?), $6 reportedAt (text or null), $7 attempt cap (int or null for none),
- * $8 pass mark (int or null: any score passes). A score below it leaves the item in progress; once
+ * $8 pass mark (int or null: any score passes), $9 new ItemAttempt row id. A score below it leaves the item in progress; once
  * an attempt has passed, the item stays completed.
  * The ON CONFLICT branch runs on the row's latest committed version (row-locked), and its WHERE
  * skips the update, returning no row, when the report is a repeat (same reportedAt) or the cap
  * is reached. Score is the best seen; dimensions stay those of the best attempt.
+ * The attempt log row (#67) is inserted from the upsert's RETURNING in the same statement, so it
+ * exists exactly when the counter moved: a skipped report returns no row and logs nothing.
  */
 export const RECORD_TOOL_RESULT_SQL = `
+WITH counted AS (
 INSERT INTO "ItemProgress" AS ip
   ("id", "enrollmentId", "itemId", "status", "score", "attempts", "completedAt", "data", "updatedAt")
 VALUES (
@@ -113,6 +118,12 @@ WHERE ($7::int IS NULL OR ip."attempts" < $7::int)
         NOT (COALESCE(ip."data"->'recentReportedAt', '[]'::jsonb) @> to_jsonb($6::text))
         AND COALESCE(ip."data"->>'reportedAt', '') <> $6::text))
 RETURNING ip."attempts" AS "attempts"
+), logged AS (
+  INSERT INTO "ItemAttempt" ("id", "enrollmentId", "itemId", "score", "reportedAt", "dimensions")
+  SELECT $9, $2, $3, $4::int, ($6::timestamptz AT TIME ZONE 'UTC'), ($5::jsonb)->'dimensions'
+  FROM counted
+)
+SELECT "attempts" FROM counted
 `
 
 /**
@@ -422,6 +433,44 @@ export class LearnerService {
     return { e, item, progress, plan }
   }
 
+  /** A tool item's attempt log (newest first, at most 50) and how many counted attempts predate it. */
+  async attemptLogOf(
+    enrollmentId: string,
+    item: { id: string; label: string | null; config: unknown },
+    attempts: number,
+    bestScore: number | null
+  ): Promise<{ attemptLog: ToolAttempt[]; attemptsBeforeLog: number }> {
+    const rows = await this.prisma.itemAttempt.findMany({
+      where: { enrollmentId, itemId: item.id },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: ATTEMPT_LOG_MAX,
+      select: { score: true, createdAt: true },
+    })
+    // Only a full page can hide more rows; "not recorded" means counted before the log existed.
+    const logged =
+      rows.length < ATTEMPT_LOG_MAX
+        ? rows.length
+        : await this.prisma.itemAttempt.count({ where: { enrollmentId, itemId: item.id } })
+    const pass = passScoreOf(item.config, item.label)
+    // The chip goes on the attempt that IS the item's best score (the earliest one on a tie). When
+    // the best was made before the log existed, no listed attempt is it, so none gets the chip.
+    let bestAt = -1
+    for (let i = rows.length - 1; i >= 0; i--)
+      if (rows[i].score === bestScore) {
+        bestAt = i
+        break
+      }
+    return {
+      attemptLog: rows.map((r, i) => ({
+        score: r.score,
+        at: r.createdAt.toISOString(),
+        best: i === bestAt,
+        passed: pass === null ? null : r.score >= pass,
+      })),
+      attemptsBeforeLog: Math.max(0, attempts - logged),
+    }
+  }
+
   async item(
     userId: string,
     cohortId: string,
@@ -494,6 +543,10 @@ export class LearnerService {
             optional: isPracticeItem(item),
           }
         : null
+    const log =
+      item.type === 'tool'
+        ? await this.attemptLogOf(e.id, item, progress?.attempts ?? 0, progress?.score ?? null)
+        : { attemptLog: [], attemptsBeforeLog: 0 }
     return {
       id: item.id,
       cohortId,
@@ -515,6 +568,7 @@ export class LearnerService {
       status: review ? 'not_started' : this.statusOf(progress ?? undefined),
       score: progress?.score ?? null,
       attempts: progress?.attempts ?? 0,
+      ...log,
       locked: this.lockReason(e.cohort.startsAt, e.cohort.endsAt),
     }
   }
@@ -769,7 +823,8 @@ export class LearnerService {
       JSON.stringify(data),
       reportedAt,
       cap,
-      passScoreOf(item.config, item.label)
+      passScoreOf(item.config, item.label),
+      randomUUID()
     )
     if (rows.length === 0) {
       // Another request got there first: it was this very report, or it used the last attempt.

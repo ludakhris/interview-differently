@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common'
 import { LearnGuard } from '../auth/learn.guard'
 import { LearnCohortsService } from './learn-cohorts.service'
 
@@ -46,6 +57,11 @@ export class LearnCohortsController {
   @Post('enrollments/:id/recompute')
   recompute(@Req() req: LearnRequest, @Param('id') id: string) {
     return this.cohorts.recompute(req.userId, req.userRole, id)
+  }
+
+  @Get('enrollments/:id/attempts')
+  attempts(@Req() req: LearnRequest, @Param('id') id: string, @Query('itemId') itemId?: string) {
+    return this.cohorts.attempts(req.userId, req.userRole, id, itemId)
   }
 
   @Delete('enrollments/:id')

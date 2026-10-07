@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { Scorm12API, Scorm2004API } from 'scorm-again'
 import { useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
+import { YourAttempts } from './AttemptsList'
 import { score } from './format'
 import { LEARNER_TYPE_LABEL } from './ItemEditor'
 import { errorNotice } from './shared'
@@ -534,6 +535,7 @@ function ToolItem(props: {
     )
   }
 
+  const log = item
   const completed = item.status === 'completed'
   const copy = readyCopy(tool, item.attempts)
   const result = resultCopy(item.score)
@@ -590,6 +592,7 @@ function ToolItem(props: {
           </ul>
         </div>
       )}
+      <YourAttempts attempts={log.attemptLog} attemptsBeforeLog={log.attemptsBeforeLog} />
       {completed && limitNote && tool.retries && <p className="dash-muted">{limitNote}</p>}
       {error && <p className="dash-error">{error}</p>}
       <Actions>

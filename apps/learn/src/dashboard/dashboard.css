@@ -3070,3 +3070,45 @@ a.dash-tool:focus-visible {
     display: none;
   }
 }
+
+/* Attempts at a connected-tool item (#67) */
+.dash-attempts-section {
+  margin-top: 16px;
+}
+.dash-attempts-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dash-attempts-section[open] > .dash-attempts-title {
+  margin-bottom: 8px;
+}
+.dash-attempts {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+.dash-attempt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ink-soft);
+}
+.dash-attempt-when {
+  flex: 1 1 11em;
+}
+.dash-attempt-chip {
+  padding: 1px 8px;
+}
+.dash-attempts-note {
+  margin: 8px 0 0;
+}
+.dash-attempts-row > td {
+  background: transparent;
+}
+.dash-attempts-panel {
+  max-width: 560px;
+}

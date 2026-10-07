@@ -395,6 +395,13 @@ Only for tools whose registry `kind` is `assessment` (`id-assessment`); intervie
 - Learner view `tool`: `retries` is true for an interview always and for an assessment while `attempts < maxAttempts`; `attemptsAllowed` is `maxAttempts` (null = unlimited, an interview); `timeLimitMinutes` is the limit or null.
 - Authoring UI: "Attempts allowed" and "Time limit (minutes, optional)" beside the Pre/Post select. Learner UI: "Attempt n of N" / "Attempts used: n of N", "Time limit: X minutes", "Start the assessment", "Try again" while attempts remain, and the best score.
 
+## Attempt log (#67)
+
+`ItemProgress` keeps only the best score and a counter, so each counted score of a tool item is also kept as an `ItemAttempt` row (`enrollmentId`, `itemId`, `score`, tool `reportedAt` if sent, that attempt's `dimensions`, `createdAt`). The row is inserted by `RECORD_TOOL_RESULT_SQL` in the same statement as the progress upsert (a data-modifying CTE fed from the upsert's `RETURNING`), so it exists exactly when `attempts` moved: a repeat report (same `reportedAt`) or a capped one writes nothing. Attempts counted before this shipped have no row and are not back-filled.
+
+- Learner: the item payload (`GET /learn/cohorts/:cohortId/items/:itemId` and the other item responses) carries `attemptLog: { score, at, best, passed }[]` for tool items (newest first, at most 50; `at` is when LearnDifferently recorded the score; `best` is the highest score, the earliest if tied; `passed` is `score >= passScore`, null when the item has no pass mark) and `attemptsBeforeLog = max(0, attempts - attemptLog.length)` so the UI can say earlier attempts were not recorded. Other item types get `[]` and `0`. A learner only ever reads their own enrollment's rows.
+- Staff: `GET /api/learn/enrollments/:id/attempts?itemId=<id>` returns `{ attempts, attemptsBeforeLog }` in the same shape. Same access as `POST /api/learn/enrollments/:id/recompute` (agency or provider admin of the cohort's workspace; another institution gets 403, an unknown enrollment 404). `itemId` is required (400) and must be a tool item of the enrollment's course (404).
+
 ## Return host
 
 LearnDifferently runs on tenant hosts such as `delaware.learndifferently.tech`, so the return link must go back to the host the learner launched from, not always `LTI_LEARN_URL`.

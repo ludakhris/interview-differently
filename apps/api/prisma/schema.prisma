@@ -450,6 +450,7 @@ model CourseItem {
   config   Json           @default("{}")
   module   CourseModule   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   progress ItemProgress[]
+  attempts ItemAttempt[]
   plan     PlanItem[]
 
   @@index([moduleId])
@@ -477,6 +478,7 @@ model Enrollment {
   cohort      Cohort         @relation(fields: [cohortId], references: [id], onDelete: Cascade)
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   progress    ItemProgress[]
+  attempts    ItemAttempt[]
   plan        PlanItem[]
 
   @@unique([cohortId, userId])
@@ -499,6 +501,22 @@ model ItemProgress {
 
   @@unique([enrollmentId, itemId])
   @@index([itemId])
+}
+
+// One row per counted score a connected tool sent back (#67), written in the same statement as the
+// ItemProgress update so the log and `attempts` agree. Attempts before this table existed are not here.
+model ItemAttempt {
+  id           String     @id @default(uuid())
+  enrollmentId String
+  itemId       String
+  score        Int
+  reportedAt   DateTime? // the tool's own timestamp, when it sent one
+  dimensions   Json?
+  createdAt    DateTime   @default(now())
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  item         CourseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([enrollmentId, itemId, createdAt])
 }
 
 // Content added to one learner's plan because a skill was flagged. The author's outline is
