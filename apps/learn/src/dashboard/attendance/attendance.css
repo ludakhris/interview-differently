@@ -339,20 +339,49 @@
 .at-grid-head {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+  align-items: stretch;
+  gap: 10px;
 }
 .at-fold {
+  flex: 1 1 320px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 16px;
+  text-align: left;
   font: inherit;
-  font-size: 18px;
-  font-weight: 700;
-  min-height: 44px;
-  padding: 0;
-  border: 0;
-  background: none;
   color: var(--navy, inherit);
+  background: var(--sky, #e8f1f8);
+  border: 1px solid var(--navy, currentColor);
+  border-radius: 10px;
   cursor: pointer;
+}
+.at-fold:hover {
+  background: color-mix(in srgb, var(--sky, #e8f1f8) 70%, var(--navy, #0b2a4a) 14%);
+}
+.at-fold-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+.at-fold-text {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+.at-fold-text strong {
+  font-size: 17px;
+}
+.at-fold-text small {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink-soft, inherit);
+}
+.at-fold-action {
+  flex: none;
+  font-weight: 700;
+  font-size: 14px;
 }
 .at-rule,
 .at-filter {

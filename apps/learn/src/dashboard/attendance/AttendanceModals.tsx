@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useApiSend, useLoad } from '../api'
 import { AttendanceSheet } from './AttendanceSheet'
 import { Modal, UNSAVED_PROMPT } from '../Modal'
+import { StaffOnlyNotice } from '../StaffOnlyNotice'
 import {
   STATUS_LABEL,
   STATUS_LETTER,
@@ -61,6 +62,7 @@ export function RecordModal({
       wide
     >
       <p className="dash-muted at-modal-sub">{sub(session)}</p>
+      <StaffOnlyNotice compact />
       <SheetState sheet={sheet}>
         {(data) => (
           <AttendanceSheet
@@ -109,6 +111,7 @@ export function ViewModal({
       }
     >
       <p className="dash-muted at-modal-sub">{sub(session)}</p>
+      <StaffOnlyNotice compact />
       <SheetState sheet={sheet}>
         {(data) =>
           data.rows.length === 0 ? (

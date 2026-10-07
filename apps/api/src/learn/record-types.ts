@@ -31,6 +31,8 @@ export interface LearnerRecordMark {
 export interface LearnerRecordAttendanceNote {
   sessionId: string
   sessionTitle: string
+  /** The cohort the note is about (always this cohort). */
+  cohortName: string
   startsAt: string
   note: string
   /** Name of the staff member who took the register. */
@@ -73,6 +75,8 @@ export interface LearnerRecord {
     attendance: LearnerRecordAttendanceNote[]
     /** Null when `restricted`. Newest first. */
     participant: ParticipantNoteDto[] | null
+    /** Names of the cohorts the participant notes are about, by cohort id (empty when `restricted`). */
+    cohortNames: Record<string, string>
     /** Null when `restricted`. */
     support: SupportItemDto[] | null
     /** True when the caller may not read participant notes and support items. */

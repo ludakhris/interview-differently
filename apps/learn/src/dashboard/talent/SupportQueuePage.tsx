@@ -2,7 +2,7 @@ import type { SupportQueueRow } from '@id/types'
 import { useState } from 'react'
 import { useLoad } from '../api'
 import { useApp } from '../app-context'
-import { StaffOnlyReminder } from './StaffOnlyReminder'
+import { StaffOnlyNotice } from '../StaffOnlyNotice'
 import { DueText, StatusChip } from './SupportSection'
 import { SUPPORT_CATEGORY_LABEL, SUPPORT_STATUSES, SUPPORT_STATUS_LABEL } from './supportLogic'
 import './notes.css'
@@ -36,7 +36,7 @@ export function SupportQueuePage({ providerId }: { providerId: string }) {
   return (
     <>
       <h1 className="dash-h2">Support follow-ups</h1>
-      <StaffOnlyReminder />
+      <StaffOnlyNotice />
       <form className="nt-filters" onSubmit={(e) => e.preventDefault()} aria-label="Filters">
         <label className="dash-field">
           <span>Show</span>

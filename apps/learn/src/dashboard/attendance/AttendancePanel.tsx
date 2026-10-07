@@ -265,7 +265,22 @@ export function AttendancePanel({ cohortId }: { cohortId: string }) {
                 aria-controls="at-grid-body"
                 onClick={() => setGridOpen(!open)}
               >
-                <span aria-hidden="true">{open ? '▾' : '▸'}</span> Attendance by learner
+                <svg className="at-fold-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M4 5h16v14H4zM4 10h16M4 15h16M9 5v14"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span className="at-fold-text">
+                  <strong>Attendance by learner</strong>
+                  <small>See every learner across every session</small>
+                </span>
+                <span className="at-fold-action">
+                  {open ? 'Hide' : 'Show'} <span aria-hidden="true">{open ? '▾' : '▸'}</span>
+                </span>
               </button>
               <button
                 type="button"

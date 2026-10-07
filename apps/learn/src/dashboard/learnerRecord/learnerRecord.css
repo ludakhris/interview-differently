@@ -71,6 +71,7 @@
 }
 .lr-nav ul {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   margin: 0;
   padding: 0;
@@ -152,14 +153,6 @@
   white-space: pre-wrap;
 }
 
-.lr-reminder {
-  margin: 0 0 16px;
-  padding: 8px 12px;
-  border-left: 4px solid var(--navy);
-  background: var(--sky);
-  font-size: 14px;
-  font-weight: 600;
-}
 .lr-form {
   display: grid;
   gap: 12px;
@@ -197,14 +190,29 @@
 .lr-tag {
   display: inline-block;
   padding: 1px 8px;
-  border: 1px solid var(--navy);
+  border: 1px solid var(--ink-soft);
   border-radius: 999px;
-  color: var(--navy);
+  color: var(--ink);
   font-size: 12px;
   font-weight: 700;
 }
-.lr-tag-attendance {
-  background: var(--sky);
+.lr-detail {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.lr-count {
+  display: inline-block;
+  min-width: 1.5em;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--navy);
+  color: var(--on-dark, #fff);
+  font-size: 12px;
+  text-align: center;
+}
+.lr-helper {
+  margin: 0 0 12px;
 }
 .lr-body {
   margin: 0;
@@ -262,4 +270,8 @@
   .lr-note-cell {
     min-width: 0;
   }
+}
+.lr-saved-to {
+  margin: 0;
+  font-size: 13px;
 }

@@ -2,7 +2,7 @@ import type { ParticipantNoteDto, TalentParticipantHeader } from '@id/types'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { useApiSend, useLoad } from '../api'
 import { dateShort } from '../format'
-import { StaffOnlyReminder } from './StaffOnlyReminder'
+import { StaffOnlyNotice } from '../StaffOnlyNotice'
 import './notes.css'
 
 const MAX = 4000
@@ -69,8 +69,10 @@ function NoteItem({
   return (
     <li className="nt-note">
       <p className="nt-meta">
+        <span className="nt-tag">
+          {cohortName ?? (note.cohortId ? 'Another cohort' : 'All cohorts')}
+        </span>{' '}
         <strong>{note.authorName}</strong> · {dateShort(note.createdAt)}
-        {cohortName ? ` · ${cohortName}` : ''}
         {edited ? ' · edited' : ''}
       </p>
       {mode === 'edit' ? (
@@ -211,7 +213,7 @@ export function NotesSection({
       <h2 id="nt-notes-h" ref={heading} tabIndex={-1} className="dash-card-title">
         Notes
       </h2>
-      <StaffOnlyReminder />
+      <StaffOnlyNotice />
       <form onSubmit={add} className="nt-form">
         <label className="dash-field">
           <span>Add a note</span>

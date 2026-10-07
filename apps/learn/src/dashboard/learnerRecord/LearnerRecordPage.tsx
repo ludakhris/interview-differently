@@ -1,9 +1,4 @@
-import type {
-  LearnerActivityReport,
-  LearnerRecord,
-  ParticipantNoteDto,
-  SupportItemDto,
-} from '@id/types'
+import type { LearnerActivityReport, LearnerRecord, ParticipantNoteDto } from '@id/types'
 import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { useApiSend, useLoad } from '../api'
 import { useApp } from '../app-context'
@@ -13,8 +8,8 @@ import { dayLabel, formatDuration, localTz, presetRange } from '../activity/acti
 import { STATUS_LABEL, STATUS_LETTER } from '../attendance/attendanceLogic'
 import { dateShort } from '../format'
 import { errorNotice } from '../shared'
-import { DueText, StatusChip } from '../talent/SupportSection'
-import { SUPPORT_CATEGORY_LABEL } from '../talent/supportLogic'
+import { StaffOnlyNotice } from '../StaffOnlyNotice'
+import { SupportSection } from '../talent/SupportSection'
 import {
   PROFILE_LABEL,
   SKIPPED_LABEL,
@@ -37,6 +32,7 @@ const SECTIONS = [
   { id: 'lr-attendance', label: 'Attendance' },
   { id: 'lr-activity', label: 'Activity' },
   { id: 'lr-notes', label: 'Notes' },
+  { id: 'lr-support', label: 'Support follow-ups' },
 ] as const
 
 /**
@@ -50,6 +46,7 @@ export function LearnerRecordPage({ cohortId, userId }: { cohortId: string; user
   const record = useLoad<LearnerRecord>(
     `/learn/cohorts/${encodeURIComponent(cohortId)}/learners/${encodeURIComponent(userId)}/record?tz=${encodeURIComponent(tz)}`
   )
+  const [counted, setCounted] = useState<number | null>(null)
   const back = (
     <p className="dash-back">
       <a href={href(`/lms/cohorts/${encodeURIComponent(cohortId)}`)}>← Back to the cohort</a>
@@ -77,14 +74,18 @@ export function LearnerRecordPage({ cohortId, userId }: { cohortId: string; user
     )
   }
   const r = record.data
+  const openCount =
+    counted ??
+    (r.notes.support ?? []).filter((i) => i.status === 'open' || i.status === 'in_progress').length
   return (
     <div className="lr">
       {back}
       <Header record={r} cohortId={cohortId} />
-      <SectionNav />
+      <SectionNav openCount={openCount} restricted={r.notes.restricted} />
       <AttendanceSection record={r} tz={tz} />
       <ActivitySection record={r} cohortId={cohortId} userId={userId} tz={tz} />
       <NotesSection record={r} cohortId={cohortId} userId={userId} tz={tz} />
+      <SupportFollowUps record={r} userId={userId} onOpenCount={setCounted} />
     </div>
   )
 }
@@ -144,7 +145,7 @@ function Header({ record, cohortId }: { record: LearnerRecord; cohortId: string 
   )
 }
 
-function SectionNav() {
+function SectionNav({ openCount, restricted }: { openCount: number; restricted: boolean }) {
   function go(e: React.MouseEvent, id: string) {
     e.preventDefault()
     const el = document.getElementById(id)
@@ -158,6 +159,11 @@ function SectionNav() {
           <li key={s.id}>
             <a href={`#${s.id}`} onClick={(e) => go(e, s.id)}>
               {s.label}
+              {s.id === 'lr-support' && !restricted && (
+                <span className="lr-count" aria-label={`, ${openCount} open`}>
+                  {openCount}
+                </span>
+              )}
             </a>
           </li>
         ))}
@@ -342,16 +348,15 @@ function NotesSection({
   const providerId = record.header.providerId
   const [added, setAdded] = useState<ParticipantNoteDto[]>([])
   const [text, setText] = useState('')
-  const [about, setAbout] = useState(cohortId)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
   const box = useRef<HTMLTextAreaElement>(null)
 
   const feed = useMemo(
-    () => mergeFeed(n.participant ? [...added, ...n.participant] : null, n.attendance),
-    [n.participant, n.attendance, added]
+    () =>
+      mergeFeed(n.participant ? [...added, ...n.participant] : null, n.attendance, n.cohortNames),
+    [n.participant, n.attendance, n.cohortNames, added]
   )
-  const open = (n.support ?? []).filter((i) => i.status === 'open' || i.status === 'in_progress')
 
   async function add(e: FormEvent) {
     e.preventDefault()
@@ -362,7 +367,7 @@ function NotesSection({
       const saved = await send<ParticipantNoteDto>(
         'POST',
         `/learn/providers/${encodeURIComponent(providerId)}/participants/${encodeURIComponent(userId)}/notes`,
-        { body: text, cohortId: about || null }
+        { body: text, cohortId }
       )
       setAdded((a) => [saved, ...a])
       setText('')
@@ -380,9 +385,7 @@ function NotesSection({
       <h2 className="dash-h2 lr-h" id="lr-h-notes" tabIndex={-1}>
         Notes
       </h2>
-      <p className="lr-reminder">
-        Only your organization&apos;s staff can see notes. Learners never can.
-      </p>
+      <StaffOnlyNotice />
       {n.restricted ? (
         <p className="dash-muted">
           Staff notes and support items are kept by the learner&apos;s provider, so only its staff
@@ -401,13 +404,9 @@ function NotesSection({
               placeholder="What would the next instructor want to know?"
             />
           </label>
-          <label className="dash-field">
-            <span>About this cohort</span>
-            <select value={about} onChange={(e) => setAbout(e.target.value)}>
-              <option value={cohortId}>{record.header.cohortName}</option>
-              <option value="">Not specific to one cohort</option>
-            </select>
-          </label>
+          <p className="dash-muted lr-saved-to">
+            Saved to {record.header.cohortName}. Notes follow this person across all your cohorts.
+          </p>
           <div className="lr-actions">
             <button type="submit" className="dash-btn" disabled={busy || !text.trim()}>
               Add note
@@ -433,28 +432,6 @@ function NotesSection({
           ))}
         </ol>
       )}
-
-      {!n.restricted && (
-        <>
-          <h3 className="lr-h3">Open support items</h3>
-          {open.length === 0 ? (
-            <p className="dash-muted">No open support items.</p>
-          ) : (
-            <ul className="lr-support">
-              {open.map((i: SupportItemDto) => (
-                <li key={i.id}>
-                  <strong>{i.title}</strong> <StatusChip status={i.status} />
-                  <span className="dash-muted">
-                    {' '}
-                    · {SUPPORT_CATEGORY_LABEL[i.category]} · <DueText item={i} />
-                  </span>
-                  {i.details && <p className="lr-body">{i.details}</p>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      )}
     </section>
   )
 }
@@ -463,9 +440,12 @@ function FeedEntry({ item, tz }: { item: FeedItem; tz: string }) {
   return (
     <li className="lr-entry">
       <p className="lr-meta">
-        {item.kind === 'attendance' ? (
+        <span className="lr-tag">{item.tag}</span> <strong>{item.author}</strong> ·{' '}
+        {dateIn(item.at, tz)}
+      </p>
+      {item.kind === 'attendance' && (
+        <p className="lr-detail">
           <a
-            className="lr-tag lr-tag-attendance"
             href={`#lr-session-${item.sessionId}`}
             onClick={(e) => {
               const row = document.getElementById(`lr-session-${item.sessionId}`)
@@ -477,12 +457,46 @@ function FeedEntry({ item, tz }: { item: FeedItem; tz: string }) {
           >
             {attendanceTag(item.sessionTitle, item.startsAt, tz)}
           </a>
-        ) : (
-          <span className="lr-tag">Note</span>
-        )}{' '}
-        <strong>{item.author}</strong> · {dateIn(item.at, tz)}
-      </p>
+        </p>
+      )}
       <p className="lr-body">{item.body}</p>
     </li>
+  )
+}
+
+/** Things staff track to help this person succeed. Provider staff manage them here; others see why not. */
+function SupportFollowUps({
+  record,
+  userId,
+  onOpenCount,
+}: {
+  record: LearnerRecord
+  userId: string
+  onOpenCount: (n: number) => void
+}) {
+  const n = record.notes
+  return (
+    <section id="lr-support" className="lr-section" aria-labelledby="lr-h-support">
+      <h2 className="dash-h2 lr-h" id="lr-h-support" tabIndex={-1}>
+        Support follow-ups
+      </h2>
+      {n.support === null ? (
+        <p className="dash-muted">Support follow-ups are visible to provider staff only.</p>
+      ) : (
+        <>
+          <p className="dash-sub lr-helper">
+            Things you are tracking to help this person succeed, such as transportation or
+            childcare.
+          </p>
+          <SupportSection
+            providerId={record.header.providerId}
+            userId={userId}
+            initial={n.support}
+            embedded
+            onOpenCount={onOpenCount}
+          />
+        </>
+      )}
+    </section>
   )
 }

@@ -2,7 +2,7 @@ import type { SupportCategory, SupportItemDto, SupportItemInput, SupportStatus }
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { useApiSend, useLoad } from '../api'
 import { dateOnly } from '../format'
-import { StaffOnlyReminder } from './StaffOnlyReminder'
+import { StaffOnlyNotice } from '../StaffOnlyNotice'
 import {
   DUE_LABEL,
   SUPPORT_CATEGORIES,
@@ -156,10 +156,26 @@ function ItemRow({
 }
 
 /** #69 B, staff only: a participant's support follow-ups, across all of the provider's cohorts. */
-export function SupportSection({ providerId, userId }: { providerId: string; userId: string }) {
+export function SupportSection({
+  providerId,
+  userId,
+  initial,
+  embedded = false,
+  onOpenCount,
+}: {
+  providerId: string
+  userId: string
+  /** Items the page already loaded (and audited): used instead of loading them a second time. */
+  initial?: SupportItemDto[]
+  /** Inside another page's section: a sub-heading, and no notice of its own. */
+  embedded?: boolean
+  /** Told how many items are still open or in progress whenever that changes. */
+  onOpenCount?: (n: number) => void
+}) {
   const send = useApiSend()
   const prefix = `/learn/providers/${providerId}/participants/${userId}`
-  const items = useLoad<SupportItemDto[]>(`${prefix}/support-items`)
+  const loaded = useLoad<SupportItemDto[]>(initial ? null : `${prefix}/support-items`)
+  const items = initial ? { ...loaded, data: initial, loading: false, error: null } : loaded
   const staff = useLoad<{ id: string; name: string }[]>(
     `/learn/providers/${providerId}/staff-members`
   )
@@ -181,6 +197,9 @@ export function SupportSection({ providerId, userId }: { providerId: string; use
       .filter((i) => !gone.includes(i.id))
       .map((i) => edits[i.id] ?? i)
   )
+
+  const openCount = list.filter((i) => i.status === 'open' || i.status === 'in_progress').length
+  useEffect(() => onOpenCount?.(openCount), [openCount, onOpenCount])
 
   async function add(e: FormEvent) {
     e.preventDefault()
@@ -212,10 +231,16 @@ export function SupportSection({ providerId, userId }: { providerId: string; use
 
   return (
     <section className="nt-section" aria-labelledby="nt-support-h">
-      <h2 id="nt-support-h" ref={heading} tabIndex={-1} className="dash-card-title">
-        Ways to support
-      </h2>
-      <StaffOnlyReminder />
+      {embedded ? (
+        <h3 id="nt-support-h" ref={heading} tabIndex={-1} className="dash-visually-hidden">
+          Follow-up list
+        </h3>
+      ) : (
+        <h2 id="nt-support-h" ref={heading} tabIndex={-1} className="dash-card-title">
+          Ways to support
+        </h2>
+      )}
+      {!embedded && <StaffOnlyNotice />}
       <form onSubmit={add} className="nt-form">
         <label className="dash-field">
           <span>What would help?</span>

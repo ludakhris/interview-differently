@@ -43,6 +43,9 @@ const ITEM = { id: 'i1', providerId: 'P1', userId: 'learner-1', title: 'Bus pass
 const stamp = new Date('2026-10-01T10:00:00Z')
 const prisma = {
   cohort: {
+    findMany: jest.fn(async ({ where }: { where: { id: { in: string[] } } }) =>
+      where.id.in.filter((id) => id === 'C1').map((id) => ({ id, name: 'Fall 2026' }))
+    ),
     findUnique: jest.fn(async () => ({
       id: 'C1',
       delivery: 'live',
@@ -279,6 +282,7 @@ describe('restricted callers (cohort staff who are not staff of the provider)', 
       expect(r.notes.restricted).toBe(true)
       expect(r.notes.participant).toBeNull()
       expect(r.notes.support).toBeNull()
+      expect(r.notes.cohortNames).toEqual({})
       expect(r.header.profile).toBeNull()
       expect(r.notes.attendance.map((n) => n.sessionId)).toEqual(['s3', 's1'])
       expect(r.attendance.ratePct).toBe(50)
@@ -295,6 +299,7 @@ describe('staff of the provider', () => {
   it('gets notes and support items, and the audit rows for reading them', async () => {
     const r = await ask('staff-p1', 'provider-admin')
     expect(r.notes.restricted).toBe(false)
+    expect(r.notes.cohortNames).toEqual({ C1: 'Fall 2026' })
     expect(r.notes.participant?.map((n) => n.body)).toEqual(['Needs a laptop'])
     expect(r.notes.support?.map((i) => i.title)).toEqual(['Bus pass'])
     expect(r.header.profile).toEqual({ status: 'shared', complete: true, fresh: null })
@@ -350,6 +355,7 @@ describe('what the record holds', () => {
       ['s3', 'Staff'],
       ['s1', 'Olu Org'],
     ])
+    expect(r.notes.attendance.every((n) => n.cohortName === 'Fall 2026')).toBe(true)
   })
 
   it('passes the range and timezone to the activity report', async () => {

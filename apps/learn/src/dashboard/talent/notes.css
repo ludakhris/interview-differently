@@ -2,15 +2,6 @@
 .nt-section {
   margin: 0 0 32px;
 }
-.nt-reminder {
-  margin: 0 0 16px;
-  padding: 8px 12px;
-  border-left: 4px solid var(--navy);
-  background: var(--sky);
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 600;
-}
 .nt-form {
   display: grid;
   gap: 12px;
@@ -192,4 +183,13 @@
   .nt-item {
     grid-template-columns: 44px 1fr;
   }
+}
+.nt-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--ink-soft);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
 }

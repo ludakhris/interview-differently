@@ -19,9 +19,6 @@ export const SUPPORT_CATEGORY_LABEL: Record<SupportCategory, string> = {
 }
 export const SUPPORT_CATEGORIES = Object.keys(SUPPORT_CATEGORY_LABEL) as SupportCategory[]
 
-export const STAFF_ONLY_REMINDER =
-  "Only your organization's staff can see this. Learners never can."
-
 export type DueState = 'overdue' | 'today' | 'soon' | 'later' | 'none'
 
 /** Today as YYYY-MM-DD in the viewer's timezone (due dates are calendar days). */

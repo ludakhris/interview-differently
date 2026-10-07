@@ -97,6 +97,7 @@ export class RecordService {
       .map((m) => ({
         sessionId: m.sessionId,
         sessionTitle: m.session.title,
+        cohortName: e.cohort.name,
         startsAt: m.session.startsAt.toISOString(),
         note: m.note as string,
         markedBy: markerName.get(m.markedBy) ?? 'Staff',
@@ -111,6 +112,16 @@ export class RecordService {
           this.talent.profileStatus(ctx.providerId, learnerId),
         ])
       : [null, null, null]
+    // Which cohort each participant note is about, by name (the notes service only holds ids).
+    const noteCohortIds = [
+      ...new Set((participant ?? []).flatMap((n) => (n.cohortId ? [n.cohortId] : []))),
+    ]
+    const cohortRows = noteCohortIds.length
+      ? await this.prisma.cohort.findMany({
+          where: { id: { in: noteCohortIds } },
+          select: { id: true, name: true },
+        })
+      : []
 
     return {
       header: {
@@ -148,6 +159,7 @@ export class RecordService {
       notes: {
         attendance: attendanceNotes,
         participant,
+        cohortNames: Object.fromEntries(cohortRows.map((c) => [c.id, c.name])),
         support,
         restricted: !canSeeNotes,
       },

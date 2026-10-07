@@ -6,6 +6,8 @@ export type FeedItem =
   | {
       kind: 'note'
       id: string
+      /** The pill: the cohort the note is about, or "All cohorts". */
+      tag: string
       /** When it was written (ISO). The feed is sorted on this, newest first. */
       at: string
       author: string
@@ -14,6 +16,7 @@ export type FeedItem =
   | {
       kind: 'attendance'
       id: string
+      tag: string
       at: string
       author: string
       body: string
@@ -23,16 +26,22 @@ export type FeedItem =
       startsAt: string
     }
 
+/** The cohort a note is about; a note tied to no cohort is about all of them. */
+export const cohortTag = (cohortId: string | null, names: Record<string, string>): string =>
+  cohortId ? (names[cohortId] ?? 'Another cohort') : 'All cohorts'
+
 /** Staff notes and attendance notes in one list, newest written first. */
 export function mergeFeed(
   participant: ParticipantNoteDto[] | null,
-  attendance: LearnerRecord['notes']['attendance']
+  attendance: LearnerRecord['notes']['attendance'],
+  cohortNames: Record<string, string> = {}
 ): FeedItem[] {
   const items: FeedItem[] = [
     ...(participant ?? []).map(
       (n): FeedItem => ({
         kind: 'note',
         id: n.id,
+        tag: cohortTag(n.cohortId, cohortNames),
         at: n.createdAt,
         author: n.authorName,
         body: n.body,
@@ -42,6 +51,7 @@ export function mergeFeed(
       (n): FeedItem => ({
         kind: 'attendance',
         id: `attendance-${n.sessionId}`,
+        tag: n.cohortName,
         at: n.markedAt,
         author: n.markedBy,
         body: n.note,
@@ -78,7 +88,7 @@ export function dateTimeIn(iso: string, tz: string): string {
     .replace(/\u202f/g, ' ')
 }
 
-/** "Attendance · Week 2 · Oct 8, 2026" */
+/** "Attendance · Week 2 · Oct 8, 2026" (the secondary line of an attendance note) */
 export const attendanceTag = (title: string, startsAt: string, tz: string): string =>
   `Attendance · ${title} · ${dateIn(startsAt, tz)}`
 

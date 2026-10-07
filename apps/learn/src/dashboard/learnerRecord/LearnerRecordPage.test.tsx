@@ -111,6 +111,7 @@ function record(over: Partial<LearnerRecord['notes']> = {}, profile = true): Lea
         {
           sessionId: 's1',
           sessionTitle: 'Week 1',
+          cohortName: 'Fall 2026',
           startsAt: '2026-10-01T14:00:00.000Z',
           note: 'Left early for work',
           markedBy: 'Olu Org',
@@ -180,6 +181,7 @@ function record(over: Partial<LearnerRecord['notes']> = {}, profile = true): Lea
         },
       ],
       restricted: false,
+      cohortNames: { c1: 'Fall 2026' },
       ...over,
     },
   }
@@ -225,12 +227,13 @@ describe('LearnerRecordPage', () => {
       '/lms/talent/u1'
     )
     const h2 = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    expect(h2).toEqual(['Attendance', 'Activity', 'Notes'])
+    expect(h2).toEqual(['Attendance', 'Activity', 'Notes', 'Support follow-ups'])
     const nav = within(screen.getByRole('navigation', { name: 'On this page' }))
     expect(nav.getAllByRole('link').map((a) => a.textContent)).toEqual([
       'Attendance',
       'Activity',
       'Notes',
+      'Support follow-ups1',
     ])
   })
 
@@ -283,7 +286,7 @@ describe('LearnerRecordPage', () => {
     expect(screen.getByText(/No activity was recorded/)).toBeTruthy()
   })
 
-  it('merges notes and attendance notes into one feed, newest written first, with tags', () => {
+  it('merges notes and attendance notes into one feed, newest written first, tagged by cohort', () => {
     loads[RECORD] = record()
     open()
     const feed = within(screen.getByRole('list', { name: 'Notes, newest first' }))
@@ -291,22 +294,37 @@ describe('LearnerRecordPage', () => {
     expect(items[0]).toContain('Needs a laptop')
     expect(items[1]).toContain('Left early for work')
     expect(items[2]).toContain('Older note')
-    const tag = feed.getByRole('link', { name: 'Attendance · Week 1 · Oct 1, 2026' })
-    expect(tag.getAttribute('href')).toBe('#lr-session-s1')
-    expect(feed.getAllByText('Note')).toHaveLength(2)
-    expect(
-      screen.getByText("Only your organization's staff can see notes. Learners never can.")
-    ).toBeTruthy()
+    // The pill is the cohort; a note about no cohort says so. There is no generic "Note" pill.
+    expect(items[0]).toContain('Fall 2026')
+    expect(items[1]).toContain('Fall 2026')
+    expect(items[2]).toContain('All cohorts')
+    expect(feed.queryByText('Note')).toBeNull()
+    // The attendance detail stays as the secondary line, linking to the session row.
+    const detail = feed.getByRole('link', { name: 'Attendance · Week 1 · Oct 1, 2026' })
+    expect(detail.getAttribute('href')).toBe('#lr-session-s1')
   })
 
-  it('lists only open support items', () => {
+  it('shows the staff-only notice with a lock', () => {
     loads[RECORD] = record()
     open()
-    expect(screen.getByText('Bus pass')).toBeTruthy()
-    expect(screen.queryByText('Old ride')).toBeNull()
+    const note = screen.getByRole('note')
+    expect(note.textContent).toBe(
+      "Only your organization's staff can see notes. Learners never can."
+    )
+    expect(note.querySelector('svg[aria-hidden="true"]')).toBeTruthy()
   })
 
-  it('adds a note through the existing notes endpoint, pre-selecting this cohort, and shows it first', async () => {
+  it('shows support follow-ups for provider staff: helper, add form, open ones counted', () => {
+    loads[RECORD] = record()
+    open()
+    expect(screen.getByText(/Things you are tracking to help this person succeed/)).toBeTruthy()
+    expect(screen.getByLabelText('What would help?')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Add item' })).toBeTruthy()
+    expect(screen.getAllByText('Bus pass').length).toBeGreaterThan(0)
+    expect(screen.getByRole('link', { name: /Support follow-ups/ }).textContent).toContain('1')
+  })
+
+  it('adds a note through the existing notes endpoint, saved with this cohort, and shows it first', async () => {
     loads[RECORD] = record()
     send.mockResolvedValue({
       id: 'n2',
@@ -320,8 +338,10 @@ describe('LearnerRecordPage', () => {
       updatedAt: '2026-10-07T10:00:00.000Z',
     })
     open()
-    const cohort = screen.getByLabelText('About this cohort') as HTMLSelectElement
-    expect(cohort.value).toBe('c1')
+    expect(screen.queryByLabelText('About this cohort')).toBeNull()
+    expect(
+      screen.getByText('Saved to Fall 2026. Notes follow this person across all your cohorts.')
+    ).toBeTruthy()
     await userEvent.type(screen.getByLabelText('Add a note'), 'Called today')
     await userEvent.click(screen.getByRole('button', { name: 'Add note' }))
     expect(send).toHaveBeenCalledWith('POST', '/learn/providers/p1/participants/u1/notes', {
@@ -333,7 +353,7 @@ describe('LearnerRecordPage', () => {
       .getAllByRole('listitem')
       .find((li) => li.textContent?.includes('Called today'))
     expect(first).toBeTruthy()
-    expect(screen.getByRole('status').textContent).toBe('Note added.')
+    expect(screen.getAllByRole('status')[0].textContent).toBe('Note added.')
   })
 
   it('shows an error and keeps the text when adding fails', async () => {
@@ -342,16 +362,19 @@ describe('LearnerRecordPage', () => {
     open()
     await userEvent.type(screen.getByLabelText('Add a note'), 'x')
     await userEvent.click(screen.getByRole('button', { name: 'Add note' }))
-    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/Write something/))
+    await waitFor(() =>
+      expect(screen.getAllByRole('status')[0].textContent).toMatch(/Write something/)
+    )
     expect((screen.getByLabelText('Add a note') as HTMLTextAreaElement).value).toBe('x')
   })
 
-  it('restricted: no add box, no support list, no profile chip; attendance notes still show', () => {
+  it('restricted: no add box, no follow-up form, no profile chip; attendance notes still show', () => {
     loads[RECORD] = record({ participant: null, support: null, restricted: true }, false)
     open()
     expect(screen.queryByLabelText('Add a note')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Add note' })).toBeNull()
-    expect(screen.queryByText('Open support items')).toBeNull()
+    expect(screen.queryByLabelText('What would help?')).toBeNull()
+    expect(screen.getByText('Support follow-ups are visible to provider staff only.')).toBeTruthy()
     expect(screen.queryByText(/Profile/)).toBeNull()
     expect(screen.getByText(/only its staff can see or add them/)).toBeTruthy()
     const items = screen.getAllByRole('listitem').map((li) => li.textContent ?? '')
@@ -381,7 +404,7 @@ describe('LearnerRecordPage', () => {
     expect(screen.getByText(/No sessions have been held/)).toBeTruthy()
     expect(screen.getByText(/No activity was recorded/)).toBeTruthy()
     expect(screen.getByText('No notes yet.')).toBeTruthy()
-    expect(screen.getByText('No open support items.')).toBeTruthy()
+    expect(screen.getByText('Nothing to follow up on yet.')).toBeTruthy()
   })
 
   it('shows loading, then an error with a retry', async () => {

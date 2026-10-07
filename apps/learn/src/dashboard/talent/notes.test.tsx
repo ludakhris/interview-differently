@@ -71,11 +71,11 @@ const item = (over = {}) => ({
 })
 
 describe('NotesSection', () => {
-  it('shows the privacy reminder, empty state, and the cohort name', async () => {
+  it('shows the privacy notice, empty state, and the cohort name', async () => {
     loads[`${P}/notes`] = { data: [] }
     render(<NotesSection providerId="P1" userId="U1" />)
     expect(
-      screen.getByText("Only your organization's staff can see this. Learners never can.")
+      screen.getByText("Only your organization's staff can see notes. Learners never can.")
     ).toBeTruthy()
     expect(screen.getByText('No notes yet. Add the first one above.')).toBeTruthy()
   })
