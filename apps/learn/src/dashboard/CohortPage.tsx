@@ -6,7 +6,7 @@ import { AttemptsPanel } from './AttemptsPanel'
 import { AttendancePanel } from './attendance/AttendancePanel'
 import { Meter } from './charts'
 import { CohortConfigModal } from './CohortConfigModal'
-import { CohortStatusChip } from './CohortsPage'
+import { CohortDeliveryChip, CohortStatusChip } from './CohortsPage'
 import { dateOnly, dateShort } from './format'
 import type { PendingJoinRequest } from './joinRequests'
 import { errorNotice } from './shared'
@@ -243,6 +243,7 @@ function Cohort({
             </svg>
             Edit cohort configuration
           </button>
+          <CohortDeliveryChip delivery={cohort.delivery} />
           <CohortStatusChip status={cohort.status} />
         </div>
       </div>

@@ -1,3 +1,4 @@
+import './cohortConfig.css'
 import type { CohortDetail, CohortListItem, RunnableCourse } from '@id/types'
 import { useState, type FormEvent } from 'react'
 import { useApiSend, useLoad } from './api'
@@ -11,6 +12,26 @@ export function CohortStatusChip({ status }: { status: keyof typeof STATUS_LABEL
   return (
     <span className={status === 'running' ? 'dash-chip dash-chip-on' : 'dash-chip'}>
       {STATUS_LABEL[status]}
+    </span>
+  )
+}
+
+const DELIVERY_LABEL = { online: 'Online', live: 'Live', hybrid: 'Hybrid' } as const
+
+/** How the cohort meets, as a chip: shown on the cohorts list and the cohort page. */
+export function CohortDeliveryChip({ delivery }: { delivery: keyof typeof DELIVERY_LABEL }) {
+  return (
+    <span
+      className={`dash-chip dash-chip-delivery dash-chip-delivery-${delivery}`}
+      title={
+        delivery === 'online'
+          ? 'Online: self-paced, no live meetings'
+          : delivery === 'live'
+            ? 'Live: meets at scheduled times'
+            : 'Hybrid: online work plus live meetings'
+      }
+    >
+      {DELIVERY_LABEL[delivery]}
     </span>
   )
 }
@@ -212,6 +233,7 @@ export function CohortsPage({ workspace }: { workspace: string }) {
               </dl>
               <div className="dash-course-side">
                 <CohortStatusChip status={c.status} />
+                <CohortDeliveryChip delivery={c.delivery} />
               </div>
             </li>
           ))}

@@ -88,3 +88,16 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* How the cohort meets: a quiet chip beside the status chip. */
+.dash-chip-delivery {
+  background: transparent;
+  border: 1px solid currentColor;
+  color: var(--navy, inherit);
+}
+.dash-chip-delivery-live {
+  color: #0b5d6b;
+}
+.dash-chip-delivery-hybrid {
+  color: #5b3f8c;
+}
