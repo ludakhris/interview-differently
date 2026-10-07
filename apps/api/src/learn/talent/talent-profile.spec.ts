@@ -107,8 +107,17 @@ describe('parseProfileInput', () => {
 })
 
 describe('isProfileComplete', () => {
-  const ok = { educationCount: 1, yearsExperience: 0, industries: ['IT'], targetRoles: [] }
+  const ok = {
+    educationCount: 1,
+    yearsExperience: 0,
+    industries: ['IT'],
+    targetRoles: [],
+    hasResume: true,
+  }
   it('is true when enough; zero years counts', () => expect(isProfileComplete(ok)).toBe(true))
+  it('needs a resume, even when everything else is filled in', () => {
+    expect(isProfileComplete({ ...ok, hasResume: false })).toBe(false)
+  })
   it('needs an education entry, years of experience, and an industry or a target role', () => {
     expect(isProfileComplete({ ...ok, educationCount: 0 })).toBe(false)
     expect(isProfileComplete({ ...ok, yearsExperience: null })).toBe(false)

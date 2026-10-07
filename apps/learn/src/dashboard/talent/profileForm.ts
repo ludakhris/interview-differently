@@ -217,8 +217,11 @@ export interface Check {
   done: boolean
 }
 
-/** What makes a profile complete, as the person has filled it in so far. Mirrors the server rule. */
-export function checklist(v: FormValues): Check[] {
+/**
+ * What makes a profile complete, as the person has filled it in so far. Mirrors the server rule.
+ * The resume is not a form field: it is uploaded on its own, so it comes from the live state.
+ */
+export function checklist(v: FormValues, hasResume: boolean): Check[] {
   return [
     { label: 'an education entry', done: v.educations.some((e) => !!e.level) },
     { label: 'your years of experience', done: whole(v.yearsExperience) !== null },
@@ -226,6 +229,7 @@ export function checklist(v: FormValues): Check[] {
       label: 'at least one industry or job you want',
       done: v.industries.length > 0 || v.targetRoles.length > 0,
     },
+    { label: 'a resume', done: hasResume },
   ]
 }
 
@@ -236,33 +240,25 @@ export function missingFromSaved(p: ProfileDto): string[] {
   if (p.yearsExperience === null) out.push('your years of experience')
   if (p.industries.length === 0 && p.targetRoles.length === 0)
     out.push('an industry or a job you want')
+  if (!p.resume) out.push('a resume')
   return out
 }
 
-/** One plain sentence for a requirement card. `fmt` formats an ISO time as a date. */
+/**
+ * One plain line for a requirement that is not met, or null when it is met (nothing is shown for
+ * a met one). It never names the organization. `fmt` formats an ISO time as a date.
+ */
 export function requirementText(
   r: ProfileRequirement,
   profile: ProfileDto,
   fmt: (iso: string) => string
-): { tone: 'ok' | 'todo'; text: string } {
-  if (r.satisfied) {
-    return {
-      tone: 'ok',
-      text: r.dueBy ? `Up to date. Next refresh is due ${fmt(r.dueBy)}.` : 'Up to date.',
-    }
-  }
-  if (profile.complete) {
-    return {
-      tone: 'todo',
-      text: r.dueBy
-        ? `Time to refresh your profile: it is due ${fmt(r.dueBy)}.`
-        : 'Time to refresh your profile.',
-    }
-  }
-  return {
-    tone: 'todo',
-    text: r.dueBy ? `Finish by ${fmt(r.dueBy)}.` : 'Finish your profile.',
-  }
+): string | null {
+  if (r.satisfied) return null
+  if (profile.complete)
+    return r.dueBy
+      ? `Time to refresh your profile: it is due ${fmt(r.dueBy)}.`
+      : 'Time to refresh your profile.'
+  return 'Your course needs your profile: finish it.'
 }
 
 export const money = (n: number | null): string =>

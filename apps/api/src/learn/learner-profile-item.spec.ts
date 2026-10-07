@@ -27,6 +27,7 @@ const service = new LearnerService(
 const profile = (over: Record<string, unknown> = {}) => ({
   completedAt: monthsAgo(1),
   updatedAt: monthsAgo(1),
+  resumeKey: 'talent/resumes/u/cv.pdf',
   yearsExperience: 3,
   industries: ['Retail'],
   targetRoles: [],

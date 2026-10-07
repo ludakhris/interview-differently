@@ -215,6 +215,7 @@ describe('the profile requirement (#69)', () => {
           : {
               completedAt: monthsAgo(1),
               updatedAt: monthsAgo(1),
+              resumeKey: 'talent/resumes/u/cv.pdf',
               yearsExperience: 1,
               industries: ['x'],
               targetRoles: [],

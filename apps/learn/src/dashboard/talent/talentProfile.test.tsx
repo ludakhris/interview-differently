@@ -68,6 +68,7 @@ const dto = (over: Partial<ProfileDto> = {}): ProfileDto => ({
   updatedAt: null,
   ...over,
 })
+const cv = { name: 'cv.pdf', size: 2048, uploadedAt: '2026-10-01T00:00:00Z' }
 const orgs = (): LearnerProfileState['organizations'] => [
   {
     institutionId: 'i1',
@@ -118,11 +119,18 @@ describe('form logic', () => {
   })
   it('the checklist follows the server rule', () => {
     const v = toValues(state())
-    expect(checklist(v).every((c) => !c.done)).toBe(true)
+    expect(checklist(v, false).every((c) => !c.done)).toBe(true)
     v.yearsExperience = '0'
     v.targetRoles = ['Analyst']
     v.educations[0].level = 'bachelor'
-    expect(checklist(v).every((c) => c.done)).toBe(true)
+    // Three of four: the resume is the fourth item and comes from the live state.
+    expect(
+      checklist(v, false)
+        .filter((c) => !c.done)
+        .map((c) => c.label)
+    ).toEqual(['a resume'])
+    expect(checklist(v, true).every((c) => c.done)).toBe(true)
+    expect(checklist(v, true)).toHaveLength(4)
   })
   it('rejects a resume of the wrong type or size before upload', () => {
     expect(resumeProblem({ name: 'a.exe', size: 10 })).toMatch(/PDF/)
@@ -146,6 +154,9 @@ describe('the profile form', () => {
     expect(screen.getAllByRole('button', { name: 'Save' })).toHaveLength(1)
     expect(screen.queryByText('Lantern Hill Tech Academy')).toBeNull()
     expect(screen.getByText('Shared only with the organizations you choose below.')).toBeTruthy()
+    // The resume is needed for a complete profile, not optional.
+    const resumeHead = screen.getByRole('heading', { name: 'Resume' })
+    expect(resumeHead.parentElement!.textContent).toBe('ResumeNeeded')
   })
 
   it('adds and removes chips with Enter, comma and the x, and offers suggestions', async () => {
@@ -193,10 +204,9 @@ describe('the profile form', () => {
     render(<TalentProfileForm state={state()} />)
     const tech = screen.getByRole('checkbox', { name: 'Delaware Tech' }) as HTMLInputElement
     expect(tech.checked).toBe(false)
-    expect(screen.getByText(/Your program\./)).toBeTruthy()
     expect(
       screen.getByText(
-        /Delaware Tech asked for this as part of your course; you decide whether they can read it/
+        /Your program asked for this as part of your course; you decide whether they can read it/
       )
     ).toBeTruthy()
     expect(screen.queryByText(/asked for this/, { selector: '[id="tl-org-i2"]' })).toBeNull()
@@ -223,14 +233,20 @@ describe('the profile form', () => {
     const list = () => document.querySelector('.tl-checklist')!.textContent
     expect(screen.getByText('What counts as complete')).toBeTruthy()
     expect(list()).not.toMatch(/✓/)
+    expect(screen.getByTestId('profile-status').textContent).toMatch(/, a resume$/)
+    // Four items, each with a visually hidden Done / Still needed.
+    expect(document.querySelectorAll('.tl-check')).toHaveLength(4)
+    expect(list()).toMatch(/Still needed: A resume/)
     await user.type(screen.getByLabelText('Years of work experience'), '3')
-    expect(list()).toMatch(/✓.*Your years of experience/)
+    expect(list()).toMatch(/✓Done: Your years of experience/)
+    expect(list()).toMatch(/Still needed: An education entry/)
     cleanup()
     render(
       <TalentProfileForm
         state={state({
           profile: dto({
             complete: true,
+            resume: cv,
             yearsExperience: 1,
             industries: ['IT'],
             educations: [
@@ -241,9 +257,10 @@ describe('the profile form', () => {
       />
     )
     expect(screen.getByTestId('profile-status').textContent).toBe('Profile complete')
+    expect(document.querySelectorAll('.tl-check-on')).toHaveLength(4)
   })
 
-  it('draws a card per requirement', () => {
+  it('shows a line only for an unmet requirement, never the organization as a heading', () => {
     render(
       <TalentProfileForm
         state={state({
@@ -269,14 +286,89 @@ describe('the profile form', () => {
         })}
       />
     )
-    expect(screen.getByText(/Required by Delaware Tech/)).toBeTruthy()
     expect(screen.getByText(/Time to refresh your profile: it is due/)).toBeTruthy()
-    expect(screen.getByText('Up to date.')).toBeTruthy()
+    expect(screen.getByText('(Fall)')).toBeTruthy()
+    // The met one (Spring) shows nothing, and no provider name appears as a title.
+    expect(screen.queryByText(/Spring/)).toBeNull()
+    expect(document.querySelectorAll('.tl-req')).toHaveLength(1)
+    expect(screen.queryByText(/Required by/)).toBeNull()
+    expect(screen.queryByText(/Up to date/)).toBeNull()
+    expect(document.querySelector('.tl-status')!.textContent).not.toMatch(/Delaware Tech|Lantern/)
+  })
+
+  it('an incomplete profile with an unmet requirement says the course needs it', () => {
+    render(
+      <TalentProfileForm
+        state={state({
+          requirements: [
+            {
+              cohortId: 'c1',
+              cohortName: 'Fall',
+              providerName: 'Delaware Tech',
+              refreshMonths: null,
+              satisfied: false,
+              dueBy: null,
+            },
+          ],
+        })}
+      />
+    )
+    expect(document.querySelector('.tl-req')!.textContent).toMatch(
+      /^Your course needs your profile: finish it\./
+    )
+  })
+
+  it('the resume item turns done after an upload and open again after a removal, without a save', async () => {
+    const user = userEvent.setup()
+    const fresh = state({
+      requirements: [
+        {
+          cohortId: 'c1',
+          cohortName: 'Fall',
+          providerName: 'Delaware Tech',
+          refreshMonths: null,
+          satisfied: true,
+          dueBy: null,
+        },
+      ],
+    })
+    apiFetch.mockImplementation(async (path: string, init?: { method?: string }) => {
+      if (path === '/learn/me/profile/resume' && init?.method === 'POST')
+        return { json: async () => dto({ resume: cv }) }
+      return { json: async () => fresh }
+    })
+    send.mockResolvedValue(dto())
+    render(
+      <TalentProfileForm
+        state={state({
+          requirements: [{ ...fresh.requirements[0], satisfied: false }],
+        })}
+      />
+    )
+    const resumeItem = () =>
+      Array.from(document.querySelectorAll('.tl-check')).find((li) =>
+        /resume/i.test(li.textContent ?? '')
+      )!
+    expect(resumeItem().className).not.toMatch(/tl-check-on/)
+    expect(document.querySelectorAll('.tl-req')).toHaveLength(1)
+    await user.upload(
+      document.querySelector('input[type="file"]') as HTMLInputElement,
+      new File(['%PDF-'], 'cv.pdf', { type: 'application/pdf' })
+    )
+    await waitFor(() => expect(resumeItem().className).toMatch(/tl-check-on/))
+    expect(resumeItem().textContent).toMatch(/✓Done: A resume/)
+    expect(screen.queryByText(/Saved at/)).toBeNull() // no save was needed
+    // The requirement is re-read from the server, which has it met now.
+    await waitFor(() => expect(document.querySelectorAll('.tl-req')).toHaveLength(0))
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, remove it' }))
+    await waitFor(() => expect(resumeItem().className).not.toMatch(/tl-check-on/))
+    expect(send).toHaveBeenCalledWith('DELETE', '/learn/me/profile/resume')
   })
 
   it('says Ready to save once the live form has everything, before the save', async () => {
     const user = userEvent.setup()
-    render(<TalentProfileForm state={state()} />)
+    render(<TalentProfileForm state={state({ profile: dto({ resume: cv }) })} />)
     expect(screen.getByTestId('profile-status').textContent).toMatch(/^Almost there: add/)
     await user.type(screen.getByLabelText('Years of work experience'), '3')
     await user.type(screen.getByLabelText('Add to jobs you want'), 'Analyst{Enter}')
@@ -294,11 +386,12 @@ describe('the profile form', () => {
           educations: [
             { level: 'associate', fieldOfStudy: null, school: 'DTCC', graduationYear: 2019 },
           ],
+          resume: cv,
           complete: true,
         }),
       })
     )
-    render(<TalentProfileForm state={state()} />)
+    render(<TalentProfileForm state={state({ profile: dto({ resume: cv }) })} />)
     await user.type(screen.getByLabelText('Years of work experience'), '3')
     await user.type(screen.getByLabelText('Add to jobs you want'), 'Analyst{Enter}')
     await user.selectOptions(screen.getByLabelText('Level'), 'associate')
@@ -414,10 +507,10 @@ describe('the profile form', () => {
     expect((box as HTMLInputElement).value).toBe('')
   })
 
-  it('labels the three needed fields and every other field Optional', () => {
+  it('labels the needed fields and every other field Optional', () => {
     render(<TalentProfileForm state={state()} />)
     const needs = Array.from(document.querySelectorAll('.tl-need')).map((n) => n.textContent)
-    expect(needs).toHaveLength(4) // years, industries, jobs, education level 1
+    expect(needs).toHaveLength(5) // resume, years, industries, jobs, education level 1
     expect(needs).toContain('Needed')
     const described = (el: HTMLElement) =>
       el

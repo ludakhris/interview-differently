@@ -70,7 +70,7 @@ export interface TalentParticipantRow {
   cohorts: TalentParticipantCohort[]
   /** 'none' = the learner has no profile yet. */
   profileStatus: ProfileVisibility
-  /** Whether the profile meets the rule. Visible to staff even when not shared; null when 'none'. */
+  /** Whether the profile is complete (same rule as `ProfileDto.complete`, resume included). Visible to staff even when not shared; null when 'none'. */
   complete: boolean | null
   /** Within the refresh period of this provider's requiring cohorts; null when none applies. */
   fresh: boolean | null
@@ -207,8 +207,8 @@ export interface ProfileDto {
   targetCompensation: number | null
   resume: ResumeInfo | null
   /**
-   * COMPUTED, never sent: at least one education entry, years of experience, and at least one
-   * industry or target role.
+   * COMPUTED, never sent: at least one education entry (with a level), years of experience, at
+   * least one industry or target role, and an uploaded resume.
    */
   complete: boolean
   /** When the profile first became complete; kept after that. */

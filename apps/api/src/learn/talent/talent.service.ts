@@ -109,11 +109,13 @@ const educationOf = (e: EducationRow): EducationEntry => ({
 })
 
 const completeOf = (p: {
+  resumeKey: string | null
   yearsExperience: number | null
   industries: string[]
   targetRoles: string[]
   educations: unknown[]
-}): boolean => isProfileComplete({ ...p, educationCount: p.educations.length })
+}): boolean =>
+  isProfileComplete({ ...p, educationCount: p.educations.length, hasResume: !!p.resumeKey })
 
 const resumeOf = (p: ProfileRow) =>
   p.resumeKey && p.resumeName
@@ -330,6 +332,7 @@ export class TalentService {
       where: { userId },
       select: {
         completedAt: true,
+        resumeKey: true,
         yearsExperience: true,
         industries: true,
         targetRoles: true,
@@ -338,6 +341,7 @@ export class TalentService {
     })
     const d = patch.data
     const complete = isProfileComplete({
+      hasResume: !!existing?.resumeKey,
       educationCount: patch.educations?.length ?? existing?._count.educations ?? 0,
       yearsExperience:
         d.yearsExperience !== undefined ? d.yearsExperience : (existing?.yearsExperience ?? null),
@@ -413,7 +417,7 @@ export class TalentService {
       throw err
     }
     if (existing?.resumeKey && existing.resumeKey !== key) await this.dropObject(existing.resumeKey)
-    return toProfileDto(await this.profileOf(userId))
+    return this.settleResume(userId)
   }
 
   async myResumeLink(userId: string): Promise<ResumeLink> {
@@ -434,7 +438,24 @@ export class TalentService {
       data: { resumeKey: null, resumeName: null, resumeSize: null, resumeUploadedAt: null },
     })
     await this.dropObject(existing.resumeKey)
-    return toProfileDto(await this.profileOf(userId))
+    return this.settleResume(userId)
+  }
+
+  /**
+   * A resume is part of "complete", so adding or removing one can flip it: stamp `completedAt` the
+   * first time the profile is complete (as a save does) and run the same sync a save runs.
+   */
+  private async settleResume(userId: string): Promise<ProfileDto> {
+    let row = await this.profileOf(userId)
+    if (row && !row.completedAt && completeOf(row)) {
+      await this.prisma.talentProfile.update({
+        where: { userId },
+        data: { completedAt: new Date() },
+      })
+      row = await this.profileOf(userId)
+    }
+    await this.learner.syncProfileState(userId)
+    return toProfileDto(row)
   }
 
   /** The row no longer points at the object, so a failed delete only leaves an orphan: log it, never fail the learner. */
@@ -534,6 +555,7 @@ export class TalentService {
         where: { userId },
         select: {
           updatedAt: true,
+          resumeKey: true,
           yearsExperience: true,
           industries: true,
           targetRoles: true,
@@ -545,7 +567,11 @@ export class TalentService {
         shared: false,
         status: 'not_shared',
         userId,
-        complete: isProfileComplete({ educationCount: status._count.educations, ...status }),
+        complete: isProfileComplete({
+          educationCount: status._count.educations,
+          hasResume: !!status.resumeKey,
+          ...status,
+        }),
         fresh: months ? isFresh(status.updatedAt, months, now) : null,
       }
     }
@@ -798,6 +824,7 @@ export class TalentService {
         select: {
           userId: true,
           updatedAt: true,
+          resumeKey: true,
           yearsExperience: true,
           industries: true,
           targetRoles: true,
@@ -839,7 +866,11 @@ export class TalentService {
           ? 'shared'
           : 'not_shared'
       const complete = st
-        ? isProfileComplete({ educationCount: st._count.educations, ...st })
+        ? isProfileComplete({
+            educationCount: st._count.educations,
+            hasResume: !!st.resumeKey,
+            ...st,
+          })
         : null
       if (f.profileStatus && f.profileStatus !== profileStatus) continue
       if (f.completed && complete !== true) continue

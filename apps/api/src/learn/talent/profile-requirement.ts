@@ -6,14 +6,16 @@ export const PROFILE_ITEM_TITLE = 'Your profile'
 export const REFRESH_MIN_MONTHS = 1
 export const REFRESH_MAX_MONTHS = 60
 
-/** What the profile rule needs, from the fields alone. Nothing is ever "marked" complete. */
+/** What the profile rule needs, from the fields alone: education, years, a target and a resume. Nothing is ever "marked" complete. */
 export function isProfileComplete(p: {
   educationCount: number
   yearsExperience: number | null
   industries: string[]
   targetRoles: string[]
+  hasResume: boolean
 }): boolean {
   return (
+    p.hasResume &&
     p.educationCount > 0 &&
     p.yearsExperience !== null &&
     (p.industries.length > 0 || p.targetRoles.length > 0)
@@ -109,6 +111,7 @@ export async function loadProfileFacts(
     select: {
       completedAt: true,
       updatedAt: true,
+      resumeKey: true,
       yearsExperience: true,
       industries: true,
       targetRoles: true,
@@ -117,7 +120,11 @@ export async function loadProfileFacts(
   })
   if (!p) return null
   return {
-    complete: isProfileComplete({ educationCount: p._count.educations, ...p }),
+    complete: isProfileComplete({
+      educationCount: p._count.educations,
+      hasResume: !!p.resumeKey,
+      ...p,
+    }),
     completedAt: p.completedAt,
     updatedAt: p.updatedAt,
   }

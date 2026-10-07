@@ -1,6 +1,6 @@
 import type { LearnerProfileState, ProfileDto } from '@id/types'
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { useApiSend } from '../api'
+import { useApiFetch, useApiSend } from '../api'
 import { dateShort } from '../format'
 import { ChipInput } from './ChipInput'
 import { ResumeBox } from './ResumeBox'
@@ -116,24 +116,26 @@ const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
 export function ProfileStatus({
   state,
   values,
+  dirty,
 }: {
   state: LearnerProfileState
   values: FormValues
+  /** Edits not saved yet. */
+  dirty: boolean
 }) {
   const p = state.profile
-  const checks = checklist(values)
+  const checks = checklist(values, !!p.resume)
   const missing = checks.filter((c) => !c.done).map((c) => c.label)
+  const done = missing.length === 0 && p.complete && !dirty
   return (
     <section className="tl-status" aria-label="Profile status">
       <p
-        className={
-          p.complete && missing.length === 0 ? 'tl-status-line tl-status-ok' : 'tl-status-line'
-        }
+        className={done ? 'tl-status-line tl-status-ok' : 'tl-status-line'}
         data-testid="profile-status"
       >
         {missing.length > 0
           ? `Almost there: add ${missing.join(', ')}`
-          : p.complete
+          : done
             ? 'Profile complete'
             : 'Ready to save'}
       </p>
@@ -142,26 +144,22 @@ export function ProfileStatus({
         <ul className="tl-checklist">
           {checks.map((c) => (
             <li key={c.label} className={c.done ? 'tl-check tl-check-on' : 'tl-check'}>
-              <span aria-hidden="true">{c.done ? '✓' : '○'}</span>
-              <span className="dash-visually-hidden">
-                {c.done ? 'Done: ' : 'Still needed: '}
-              </span>{' '}
+              <span className="tl-mark" aria-hidden="true">
+                {c.done ? '✓' : ''}
+              </span>
+              <span className="dash-visually-hidden">{c.done ? 'Done: ' : 'Still needed: '}</span>
               {cap(c.label)}
             </li>
           ))}
         </ul>
       </div>
       {state.requirements.map((r) => {
-        const t = requirementText(r, p, dateShort)
+        const line = requirementText(r, p, dateShort)
+        if (!line) return null
         return (
-          <div
-            key={r.cohortId}
-            className={t.tone === 'ok' ? 'tl-req tl-req-ok' : 'tl-req tl-req-todo'}
-          >
-            <strong>{t.tone === 'ok' ? r.providerName : `Required by ${r.providerName}`}</strong>
-            <span className="dash-muted"> ({r.cohortName})</span>
-            <div>{t.text}</div>
-          </div>
+          <p key={r.cohortId} className="tl-req">
+            {line} <small className="dash-muted">({r.cohortName})</small>
+          </p>
         )
       })}
     </section>
@@ -180,6 +178,7 @@ export function TalentProfileForm(props: {
   children?: ReactNode
 }) {
   const send = useApiSend()
+  const apiFetch = useApiFetch()
   const formId = useId()
   const fid = (k: string) => `${formId}-${k}`
   const [state, setState] = useState<LearnerProfileState>(props.state)
@@ -278,7 +277,15 @@ export function TalentProfileForm(props: {
     key: k,
     text: `${problemLabel(k)}: ${m}`,
   }))
-  const resumeChanged = (p: ProfileDto) => setState((s) => ({ ...s, profile: p }))
+  // An upload or removal returns the fresh profile, which can flip "complete". The form's own
+  // fields and unsaved edits are left alone; only the status and the requirements are refreshed.
+  const resumeChanged = (p: ProfileDto) => {
+    setState((s) => ({ ...s, profile: p }))
+    void apiFetch('/learn/me/profile')
+      .then((res) => res.json() as Promise<LearnerProfileState>)
+      .then((fresh) => setState((s) => ({ ...s, requirements: fresh.requirements })))
+      .catch(() => undefined)
+  }
   const err = (k: string) => errors[k]
   const moneyLabel = {
     previousCompensation: 'What you earned before (per year)',
@@ -294,7 +301,7 @@ export function TalentProfileForm(props: {
         void save()
       }}
     >
-      <ProfileStatus state={state} values={v} />
+      <ProfileStatus state={state} values={v} dirty={dirty} />
 
       <div className="tl-main">
         {(problems.length > 0 || serverError) && (
@@ -331,7 +338,7 @@ export function TalentProfileForm(props: {
 
         <Section
           title="Resume"
-          tag="Optional"
+          tag="Needed"
           lede="Shared only with the organizations you choose below."
         >
           <ResumeBox resume={state.profile.resume} onChange={resumeChanged} />
@@ -578,9 +585,10 @@ export function TalentProfileForm(props: {
                       <span>{o.name}</span>
                     </label>
                     <p id={noteId} className="tl-orgnote">
-                      {o.why.charAt(0).toUpperCase() + o.why.slice(1)}.
-                      {o.required &&
-                        ` ${o.name} asked for this as part of your course; you decide whether they can read it.`}
+                      {o.why.charAt(0).toUpperCase() + o.why.slice(1)}
+                      {o.required
+                        ? ' asked for this as part of your course; you decide whether they can read it.'
+                        : '.'}
                     </p>
                     {c.shared && (
                       <label className="dash-check tl-suborg">

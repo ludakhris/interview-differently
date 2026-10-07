@@ -86,22 +86,38 @@
   color: var(--ink-soft);
   font-size: 15px;
 }
+.tl-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tl-mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--ink-soft);
+  border-radius: 50%;
+  font-size: 13px;
+  line-height: 1;
+}
 .tl-check-on {
   color: var(--ink);
   font-weight: 600;
 }
+.tl-check-on .tl-mark {
+  border-color: #176b2c;
+  background: #176b2c;
+  color: #fff;
+}
 .tl-req {
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-left-width: 5px;
-  border-radius: var(--dash-radius, 0);
+  margin: 0;
+  padding: 10px 14px;
+  border-left: 5px solid var(--orange-text, var(--orange));
   background: var(--surface);
-}
-.tl-req-todo {
-  border-left-color: var(--orange-text, var(--orange));
-}
-.tl-req-ok {
-  border-left-color: var(--blue);
 }
 .tl-section {
   display: grid;

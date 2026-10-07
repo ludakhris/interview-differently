@@ -297,6 +297,9 @@ beforeEach(() => {
     }),
     // L3: complete, stale (saved 400 days ago), NOT shared with anyone.
     base('L3', {
+      resumeKey: 'talent/resumes/L3/old-cv.pdf',
+      resumeName: 'old-cv.pdf',
+      resumeSize: 10,
       educations: [edu('master')],
       yearsExperience: 2,
       industries: ['Retail'],
@@ -305,7 +308,13 @@ beforeEach(() => {
       updatedAt: daysAgo(400),
     }),
     // L4 (withdrawn): shared with P1.
-    base('L4', { educations: [edu('bachelor')], yearsExperience: 1, targetRoles: ['Clerk'] }),
+    base('L4', {
+      resumeKey: 'talent/resumes/L4/cv.pdf',
+      resumeName: 'cv.pdf',
+      educations: [edu('bachelor')],
+      yearsExperience: 1,
+      targetRoles: ['Clerk'],
+    }),
     // L2 has a profile and shared it with P2 only.
     base('L2', {
       educations: [edu('doctorate')],
@@ -416,10 +425,22 @@ describe('learner side: PUT /me/profile', () => {
     const b = await service.saveProfile('L5', { targetRoles: ['Tech'] })
     expect(b.profile.complete).toBe(false) // still no education
     const c = await service.saveProfile('L5', { educations: [{ level: 'associate' }] })
-    expect(c.profile.complete).toBe(true)
-    expect(c.profile.completedAt).not.toBeNull()
+    expect(c.profile.complete).toBe(false) // all the fields, but no resume yet
+    expect(c.profile.completedAt).toBeNull()
+    await service.uploadResume('L5', PDF)
+    const d = (await service.myProfile('L5')).profile
+    expect(d.complete).toBe(true)
+    expect(d.completedAt).not.toBeNull()
+  })
+  it('a save with every field but no resume is not complete; with a resume it is', async () => {
+    const noResume = await service.saveProfile('L5', complete)
+    expect(noResume.profile.complete).toBe(false)
+    expect(noResume.requirements).toEqual([]) // L5's cohort does not require it
+    await service.uploadResume('L5', PDF)
+    expect((await service.saveProfile('L5', complete)).profile.complete).toBe(true)
   })
   it('keeps completedAt when a later edit makes it incomplete, and the profile reads incomplete', async () => {
+    await service.uploadResume('L5', PDF)
     const first = (await service.saveProfile('L5', complete)).profile
     expect(first.complete).toBe(true)
     const later = (await service.saveProfile('L5', { educations: [] })).profile
@@ -574,6 +595,45 @@ describe('resume upload', () => {
     expect(storage.delete).toHaveBeenCalledWith('talent/resumes/L1/abc-cv.pdf')
     await expect(service.myResumeLink('L1')).rejects.toThrow(NotFoundException)
   })
+  it('flips complete both ways with the resume, and settles the courses each time', async () => {
+    // L5 has every other field; the resume is the last piece.
+    state.profiles.push(
+      base('L5', { educations: [edu('master')], yearsExperience: 1, targetRoles: ['x'] })
+    )
+    expect((await service.myProfile('L5')).profile.complete).toBe(false)
+    const up = await service.uploadResume('L5', PDF)
+    expect(up.complete).toBe(true)
+    expect(up.completedAt).not.toBeNull()
+    expect(learner.syncProfileState).toHaveBeenCalledTimes(1)
+    expect(learner.syncProfileState).toHaveBeenLastCalledWith('L5')
+    const down = await service.deleteResume('L5')
+    expect(down.resume).toBeNull()
+    expect(down.complete).toBe(false)
+    expect(down.completedAt).toBe(up.completedAt) // first completion is kept
+    expect(learner.syncProfileState).toHaveBeenCalledTimes(2)
+  })
+  it('the requirement is not satisfied until a resume exists, then is', async () => {
+    state.profiles = [
+      base('L1', {
+        educations: [edu('master')],
+        yearsExperience: 1,
+        targetRoles: ['x'],
+        updatedAt: new Date(),
+      }),
+    ]
+    expect((await service.myProfile('L1')).requirements[0].satisfied).toBe(false)
+    await service.uploadResume('L1', PDF)
+    expect((await service.myProfile('L1')).requirements[0].satisfied).toBe(true)
+    await service.deleteResume('L1')
+    expect((await service.myProfile('L1')).requirements[0].satisfied).toBe(false)
+  })
+  it('staff see the same definition: no resume, not complete', async () => {
+    state.profiles.find((p) => p.userId === 'L3')!.resumeKey = null
+    expect(await service.staffProfile(staff, 'P1', 'L3')).toMatchObject({
+      status: 'not_shared',
+      complete: false,
+    })
+  })
   it('gives a 300 second signed link', async () => {
     const link = await service.myResumeLink('L1')
     expect(link.expiresInSeconds).toBe(300)
@@ -695,7 +755,13 @@ describe('sharing decides what staff of a provider see', () => {
   it('fresh is null when no requiring cohort of the provider sets a period', async () => {
     // L5 is only in C3, which does not require the profile.
     state.profiles.push(
-      base('L5', { educations: [edu('master')], yearsExperience: 1, targetRoles: ['x'] })
+      base('L5', {
+        resumeKey: 'talent/resumes/L5/cv.pdf',
+        resumeName: 'cv.pdf',
+        educations: [edu('master')],
+        yearsExperience: 1,
+        targetRoles: ['x'],
+      })
     )
     expect(await service.staffProfile(staff, 'P1', 'L5')).toMatchObject({
       status: 'not_shared',
@@ -846,7 +912,16 @@ describe('participants list and filters', () => {
     const calls = prisma.talentProfile.findMany.mock.calls.map((c) => c[0])
     const status = calls[0]
     expect(Object.keys(status.select).sort()).toEqual(
-      ['_count', 'industries', 'targetRoles', 'updatedAt', 'userId', 'yearsExperience'].sort()
+      // resumeKey is only reduced to "has a resume" for the complete flag; it is never output.
+      [
+        '_count',
+        'industries',
+        'resumeKey',
+        'targetRoles',
+        'updatedAt',
+        'userId',
+        'yearsExperience',
+      ].sort()
     )
     expect([...calls[1].where.userId.in].sort()).toEqual(['L1', 'L4'])
   })
@@ -874,7 +949,7 @@ describe('export: shared profiles only', () => {
     expect(csv).not.toMatch(/HYPERLINK|Retail|No Profile/)
     const ada = lines.find((l) => l.startsWith('Ada'))!
     expect(ada).toContain(',yes,yes') // has_resume, allow_employers
-    expect(lines.find((l) => l.startsWith('Withdrawn'))).toMatch(/,no,no,yes$/)
+    expect(lines.find((l) => l.startsWith('Withdrawn'))).toMatch(/,yes,no,yes$/)
   })
   it('profile filters still apply, and never bring an unshared person in', async () => {
     const csv = await service.exportCsv(staff, 'P1', { industry: 'retail' }, false)
