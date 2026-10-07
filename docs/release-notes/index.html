@@ -97,7 +97,7 @@
       }
       nav.timeline ol {
         list-style: none;
-        margin: 6px 0 0;
+        margin: 26px 0 0;
         padding: 0 0 0 24px;
         border-left: 2px solid var(--line);
       }
@@ -126,9 +126,13 @@
       }
       .tl-item {
         position: relative;
-        margin: 0 0 10px;
+        margin: 0 0 6px;
         font-size: 15px;
         line-height: 1.4;
+        display: grid;
+        grid-template-columns: 270px 92px minmax(0, 1fr);
+        align-items: baseline;
+        column-gap: 12px;
       }
       .tl-item::before {
         content: '';
@@ -152,13 +156,27 @@
         text-decoration: underline;
       }
       .tl-item .chip {
-        margin-left: 6px;
-        vertical-align: 1px;
+        justify-self: start;
+        margin: 0;
+        vertical-align: baseline;
       }
       .tl-item .tl-sum {
-        display: block;
         color: var(--soft);
         font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      @media (max-width: 860px) {
+        .tl-item {
+          grid-template-columns: minmax(0, 1fr) auto;
+          row-gap: 0;
+          margin-bottom: 10px;
+        }
+        .tl-item .tl-sum {
+          grid-column: 1 / -1;
+          white-space: normal;
+        }
       }
       .entry p,
       .entry .know,
@@ -226,48 +244,38 @@
         color: var(--soft);
       }
       .top {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 300px;
-        gap: 40px;
-        align-items: start;
+        display: block;
         margin-top: 18px;
       }
       .find {
-        position: sticky;
-        top: 16px;
-        order: 2;
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 16px 18px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 16px;
+        padding: 0;
+        border: 0;
+        background: none;
       }
       .find h2 {
-        margin: 0 0 10px;
-        font-size: 15px;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--soft);
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
       }
       .find .tools {
         margin: 0;
       }
       .find .search {
-        max-width: none;
+        width: 280px;
+        max-width: 100%;
+        margin: 0;
       }
       .counts {
-        margin: 12px 0 0;
+        margin: 0;
         font-size: 14px;
         color: var(--soft);
-      }
-      @media (max-width: 860px) {
-        .top {
-          grid-template-columns: 1fr;
-          gap: 18px;
-        }
-        .find {
-          position: static;
-          order: -1;
-        }
       }
       .shots a {
         cursor: zoom-in;
@@ -470,7 +478,6 @@
         screenshots. All data shown is fictional.
       </p>
       <div class="top">
-        <nav class="timeline" aria-label="Timeline"><ol id="toc"></ol></nav>
         <aside class="find" aria-label="Find updates">
           <h2>Find an update</h2>
           <div class="tools" role="group" aria-label="Filter entries">
@@ -487,6 +494,7 @@
           />
           <p class="counts" id="counts"></p>
         </aside>
+        <nav class="timeline" aria-label="Timeline"><ol id="toc"></ol></nav>
       </div>
     </header>
 
@@ -1320,6 +1328,7 @@
           var sum = document.createElement('span')
           sum.className = 'tl-sum'
           sum.textContent = e.dataset.summary || ''
+          sum.title = e.dataset.summary || ''
           li.appendChild(a)
           li.appendChild(chip)
           li.appendChild(sum)
