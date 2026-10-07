@@ -775,3 +775,8 @@ export interface OverallScore {
 }
 
 export * from './learn'
+export * from './outcomes'
+export * from './talent'
+export * from './attendance'
+export * from './activity'
+export * from './record'

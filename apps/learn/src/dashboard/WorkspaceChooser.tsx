@@ -85,6 +85,7 @@ const TYPES = [
 
 const KINDS: { key: KindFilter; label: string }[] = [
   { key: 'all', label: 'All' },
+  { key: 'featured', label: 'Featured' },
   { key: 'agency', label: 'Agencies' },
   { key: 'provider', label: 'Providers' },
   { key: 'organization', label: 'Organizations' },
@@ -124,7 +125,17 @@ function Card({ w }: { w: Workspace }) {
         <TypeIcon kind={w.kind} />
       </span>
       <span className="dash-ws-body">
-        <span className="dash-ws-type">{typeName(w.kind)}</span>
+        <span className="dash-ws-type">
+          {typeName(w.kind)}
+          {w.featuredDemo && (
+            <span
+              className="dash-ws-featured"
+              title="Full demo data: attendance, talent, activity, notes"
+            >
+              <span aria-hidden="true">⭐ </span>Full demo
+            </span>
+          )}
+        </span>
         <span className="dash-ws-name">{w.name}</span>
         {line && <span className="dash-ws-facts">{line}</span>}
       </span>
@@ -181,7 +192,10 @@ export function WorkspaceChooser() {
   // The cards show at once; the counts join them when they arrive.
   const list: Workspace[] = summaries ?? workspaces
   const rank = (w: Workspace) => CHILD_ORDER.indexOf(w.kind)
-  const byOrder = (a: Workspace, b: Workspace) => rank(a) - rank(b) || a.name.localeCompare(b.name)
+  const byOrder = (a: Workspace, b: Workspace) =>
+    rank(a) - rank(b) ||
+    Number(!!b.featuredDemo) - Number(!!a.featuredDemo) ||
+    a.name.localeCompare(b.name)
   const found = filterWorkspaces(list, query, kind)
   const searching = query.trim() !== '' || kind !== 'all'
   return (

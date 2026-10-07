@@ -27,6 +27,7 @@ export const LEARNER_TYPE_LABEL: Record<string, string> = {
   video: 'Video',
   external_link: 'External course',
   tool: 'Connected tool',
+  profile: 'Talent profile',
 }
 
 export const TYPE_LABEL: Record<string, string> = {
@@ -37,6 +38,7 @@ export const TYPE_LABEL: Record<string, string> = {
   video: 'Video',
   external_link: 'Link to an external course',
   tool: 'Connected tool',
+  profile: 'Talent profile form',
 }
 
 const emptyQuestion = (): KnowledgeCheckQuestion => ({
@@ -329,6 +331,13 @@ export function ItemEditor(props: {
         <p className="dash-muted">
           SCORM {String(item.config.version ?? '')} package, {String(item.config.files ?? 0)} files.
           To use a different package, delete this item and upload the new one.
+        </p>
+      )}
+
+      {item.type === 'profile' && (
+        <p className="dash-muted">
+          Learners fill in their own talent profile here: resume, education, experience and what
+          they are looking for. There is nothing to set up.
         </p>
       )}
 

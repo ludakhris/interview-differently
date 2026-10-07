@@ -677,6 +677,15 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+.dash-ws-featured {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #fff4d6;
+  color: #7a5200;
+  letter-spacing: 0.04em;
+  cursor: help;
+}
 .dash-ws-name {
   margin-top: 2px;
   font-weight: 700;
@@ -1303,10 +1312,11 @@
 .dash-learner-modules {
   margin-top: 16px;
 }
-.dash-learner-module {
-  margin: 0 0 10px;
+.ld .dash-learner-module {
+  /* .ld h3 resets margins at a higher specificity, so this must out-rank it. */
+  margin: 0 0 14px;
   color: var(--navy);
-  font: 700 17px/1.2 var(--display);
+  font: 700 17px/1.3 var(--display);
 }
 .dash-item-link {
   display: flex;
@@ -1574,6 +1584,12 @@
 .dash-catalog-search {
   max-width: 44em;
   margin-bottom: 24px;
+}
+.dash-cohort-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
 }
 .dash-btn-link {
   display: inline-block;

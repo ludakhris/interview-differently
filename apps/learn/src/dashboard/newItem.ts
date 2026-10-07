@@ -30,6 +30,7 @@ export const ADD_TYPES: AddKind[] = [
     title: 'Connected tool',
     start: { config: { toolId: 'id-interview' } },
   },
+  { type: 'profile', label: 'Talent profile form', title: 'Your talent profile' },
   {
     type: 'video',
     label: 'YouTube video',

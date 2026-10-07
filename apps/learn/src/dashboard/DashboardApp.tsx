@@ -1,6 +1,8 @@
 import { useAuth } from '@clerk/clerk-react'
 import { authConfigured } from '../auth'
 import type { AppContext } from '../brand'
+import { ActivityHeartbeat } from './activity/ActivityHeartbeat'
+import { ActivityPage } from './activity/ActivityPage'
 import { AdminPage, AdminUsersPage } from './AdminPages'
 import { AppProvider, useApp, WorkspacesProvider } from './app-context'
 import { CohortPage } from './CohortPage'
@@ -12,8 +14,15 @@ import { GradebookPage } from './GradebookPage'
 import { LearningCoursePage } from './LearningCoursePage'
 import { LearningItemPage } from './LearningItemPage'
 import { LearningPage } from './LearningPage'
+import { canSeeActivity, canSeeTalent } from './roleAccess'
+import { LearnerOutcomesPage } from './outcomes/LearnerOutcomesPage'
 import { OutcomesPage } from './OutcomesPage'
-import { errorNotice } from './shared'
+import { errorNotice, useRole } from './shared'
+import { LearnerRecordPage } from './learnerRecord/LearnerRecordPage'
+import { MyProfilePage } from './talent/MyProfilePage'
+import { TalentPage } from './talent/TalentPage'
+import { SupportQueuePage } from './talent/SupportQueuePage'
+import { TalentParticipantPage } from './talent/TalentParticipantPage'
 import { ToolsPage } from './ToolsPage'
 import { WorkspaceChooser } from './WorkspaceChooser'
 
@@ -62,13 +71,21 @@ function Gate({ pathname, search }: { pathname: string; search: string }) {
 /** Picks the page by the workspace's kind: agencies report, providers set up courses. */
 function Routes({ pathname }: { pathname: string }) {
   const { tenant, workspaces, workspacesError, current, href } = useApp()
+  const role = useRole()
   // Learner pages need no workspace: any signed-in LearnDifferently account can use them.
   const learnerItem = /^\/lms\/learning\/([^/]+)\/([^/]+)\/?$/.exec(pathname)
   const learnerCourse = /^\/lms\/learning\/([^/]+)\/?$/.exec(pathname)
+  const learnerOutcomes = /^\/lms\/learning\/outcomes\/?$/.test(pathname)
+  const learnerProfile = /^\/lms\/learning\/profile\/?$/.test(pathname)
   if (pathname === '/lms/learning' || pathname.startsWith('/lms/learning/')) {
     return (
       <DashboardShell>
-        {learnerItem ? (
+        <ActivityHeartbeat pathname={pathname} />
+        {learnerOutcomes ? (
+          <LearnerOutcomesPage />
+        ) : learnerProfile ? (
+          <MyProfilePage />
+        ) : learnerItem ? (
           <LearningItemPage
             cohortId={decodeURIComponent(learnerItem[1])}
             itemId={decodeURIComponent(learnerItem[2])}
@@ -125,11 +142,20 @@ function Routes({ pathname }: { pathname: string }) {
     )
   }
 
+  const notFound = (
+    <Notice title="Page not found">
+      This page is not available for your role in this workspace.
+    </Notice>
+  )
   const course = /^\/lms\/courses\/([^/]+)\/?$/.exec(pathname)
   const cohort = /^\/lms\/dashboard\/cohorts\/([^/]+)\/?$/.exec(pathname)
   const runCohort = /^\/lms\/cohorts\/([^/]+)\/?$/.exec(pathname)
+  const learnerRecord = /^\/lms\/cohorts\/([^/]+)\/learners\/([^/]+)\/?$/.exec(pathname)
   const onCourses = pathname === '/lms/courses' || pathname.startsWith('/lms/courses/')
   const onCohorts = pathname === '/lms/cohorts' || pathname.startsWith('/lms/cohorts/')
+  const talent = /^\/lms\/talent\/([^/]+)\/?$/.exec(pathname)
+  const onTalent = pathname === '/lms/talent' || pathname.startsWith('/lms/talent/')
+  const activity = /^\/lms\/activity(?:\/([^/]+))?\/?$/.exec(pathname)
 
   if (
     current.kind === 'provider' ||
@@ -145,6 +171,51 @@ function Routes({ pathname }: { pathname: string }) {
             <GradebookPage tenant={current.subdomain} cohortId={decodeURIComponent(cohort[1])} />
           ) : (
             <OutcomesPage tenant={current.subdomain} />
+          )}
+        </DashboardShell>
+      )
+    }
+    // Staff notes, support items and talent profiles belong to a provider, so only its workspace has them.
+    if (isProvider && onTalent && canSeeTalent(role)) {
+      return (
+        <DashboardShell>
+          {/^\/lms\/talent\/support\/?$/.test(pathname) ? (
+            <SupportQueuePage providerId={current.id} />
+          ) : talent ? (
+            <TalentParticipantPage providerId={current.id} userId={decodeURIComponent(talent[1])} />
+          ) : (
+            <TalentPage
+              providerId={current.id}
+              workspace={current.subdomain}
+              providerName={current.name}
+            />
+          )}
+        </DashboardShell>
+      )
+    }
+    if ((onTalent && isProvider) || (activity && !canSeeActivity(role))) {
+      return <DashboardShell>{notFound}</DashboardShell>
+    }
+    if (activity) {
+      return (
+        <DashboardShell>
+          <ActivityPage
+            workspace={current.subdomain}
+            cohortId={activity[1] ? decodeURIComponent(activity[1]) : undefined}
+          />
+        </DashboardShell>
+      )
+    }
+    if (learnerRecord) {
+      return (
+        <DashboardShell>
+          {canSeeActivity(role) ? (
+            <LearnerRecordPage
+              cohortId={decodeURIComponent(learnerRecord[1])}
+              userId={decodeURIComponent(learnerRecord[2])}
+            />
+          ) : (
+            notFound
           )}
         </DashboardShell>
       )
@@ -176,6 +247,7 @@ function Routes({ pathname }: { pathname: string }) {
   }
 
   if (current.kind === 'agency') {
+    if (onTalent || activity) return <DashboardShell>{notFound}</DashboardShell>
     if (onCourses) {
       return (
         <DashboardShell>

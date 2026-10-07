@@ -8,6 +8,7 @@ const w = (id: string, name: string, kind: string, parentId: string | null = nul
   subdomain: name.toLowerCase().replace(/\s+/g, ''),
   parentId,
   parentName: parentId === 'a1' ? 'Delaware Department of Labor' : null,
+  featuredDemo: id === 'p1',
 })
 const list = [
   w('a1', 'Delaware Department of Labor', 'agency'),
@@ -64,5 +65,13 @@ describe('workspace search', () => {
     expect(names(r)).toEqual({ trees: [['a1', []]], standalone: [] })
     expect(r.shown).toBe(1)
     expect(filterWorkspaces(list, 'zzz', 'all').shown).toBe(0)
+  })
+
+  it('finds featured demos with the Featured filter and by the words "full demo"', () => {
+    expect(names(filterWorkspaces(list, '', 'featured'))).toEqual({
+      trees: [['a1', ['p1']]],
+      standalone: [],
+    })
+    expect(names(filterWorkspaces(list, 'full demo', 'all')).trees).toEqual([['a1', ['p1']]])
   })
 })

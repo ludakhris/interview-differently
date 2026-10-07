@@ -96,6 +96,8 @@ export interface LearnWorkspace {
   kind: string
   subdomain: string
   parentId: string | null
+  /** Marked as a demo with full sample data (attendance, talent, activity, notes), to find it among many. */
+  featuredDemo: boolean
 }
 
 /** A workspace as shown on the chooser: who it reports to, and what is in it. */
@@ -123,6 +125,8 @@ export type CourseItemType =
   | 'video'
   | 'external_link'
   | 'tool'
+  /** #69: the learner fills in their talent profile (resume, education, experience, targets). */
+  | 'profile'
 export type CourseStatus = 'draft' | 'published'
 
 export interface KnowledgeCheckQuestion {
@@ -232,6 +236,9 @@ export interface CatalogEntry {
 
 export type CohortStatus = 'upcoming' | 'running' | 'completed'
 
+/** #69: how a cohort meets. Live and hybrid cohorts have sessions and attendance; online ones log activity. */
+export type CohortDelivery = 'online' | 'live' | 'hybrid'
+
 export interface CohortListItem {
   id: string
   name: string
@@ -251,6 +258,12 @@ export interface CohortListItem {
   joinContact: string | null
   /** Join requests still waiting for a decision. They hold no seat and are not in `enrolled`. */
   pendingRequests: number
+  /** How the cohort meets. */
+  delivery: CohortDelivery
+  /** #69: the learner's first course item is their profile, and it is required for completion. */
+  requiresProfile: boolean
+  /** Months before a saved profile counts as stale and must be refreshed (1-60). Null = never. */
+  profileRefreshMonths: number | null
 }
 
 /** A pending join request as staff see it. */
@@ -271,6 +284,11 @@ export interface CohortRosterRow {
   enrolledAt: string
   itemsDone: number
   itemsTotal: number
+  /**
+   * Counts of staff notes about the person and open follow-ups, for provider staff only (null
+   * for everyone else, and on a person's own row). Counts only, never content.
+   */
+  noteSummary: { notes: number; openFollowUps: number } | null
 }
 
 export interface CohortDetail extends CohortListItem {
@@ -343,6 +361,8 @@ export interface LearnerOutlineItem {
   status: ProgressStatus
   score: number | null
   attempts: number
+  /** Short wording for a state the status cannot say, e.g. a profile that needs a refresh. */
+  note?: string | null
 }
 
 /** What the learner's own record shows: the same measures the agency reports on. */
@@ -459,6 +479,8 @@ export interface LearnerItem {
   attemptsBeforeLog: number
   /** Set when the learner can still act on it. */
   locked: string | null
+  /** Short wording for a state the status cannot say, e.g. a profile that needs a refresh. */
+  note?: string | null
 }
 
 // ── Connected tools (#63) ───────────────────────────────────────────────────

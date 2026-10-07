@@ -162,13 +162,14 @@ describe('cohort details form', () => {
     loads['/learn/cohorts/c1/join-requests'] = []
     send.mockResolvedValue(cohort)
     render(<CohortPage cohortId="c1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Edit cohort configuration/ }))
     expect(screen.queryByLabelText(/Contact for learners/)).toBeNull()
     await userEvent.click(screen.getByLabelText(/Ask an admin to approve/))
     const contact = screen.getByLabelText(/Contact for learners/) as HTMLInputElement
     expect(contact.required).toBe(true)
     expect(screen.getByText(/Name and email or phone/)).toBeTruthy()
     await userEvent.type(contact, 'Pat, pat@x.edu')
-    await userEvent.click(screen.getByRole('button', { name: 'Save details' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() =>
       expect(send).toHaveBeenCalledWith(
         'PUT',

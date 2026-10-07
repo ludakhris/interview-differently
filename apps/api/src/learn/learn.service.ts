@@ -52,7 +52,14 @@ export class LearnService {
         role === LEARN_ROLES.agencyAdmin || role === LEARN_ROLES.systemAdmin
           ? { subdomain: { not: null }, OR: [{ kind: 'agency' }, { parent: { kind: 'agency' } }] }
           : { subdomain: { not: null }, memberships: { some: { userId, cohortId: null } } },
-      select: { id: true, name: true, kind: true, subdomain: true, parentId: true },
+      select: {
+        id: true,
+        name: true,
+        kind: true,
+        subdomain: true,
+        parentId: true,
+        featuredDemo: true,
+      },
       orderBy: [{ kind: 'asc' }, { name: 'asc' }],
     })
     return rows.map((r) => ({ ...r, subdomain: r.subdomain as string }))

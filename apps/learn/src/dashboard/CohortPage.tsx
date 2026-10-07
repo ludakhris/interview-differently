@@ -3,11 +3,14 @@ import { Fragment, useEffect, useState, type FormEvent } from 'react'
 import { useApiFetch, useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { AttemptsPanel } from './AttemptsPanel'
+import { AttendancePanel } from './attendance/AttendancePanel'
 import { Meter } from './charts'
-import { CohortStatusChip } from './CohortsPage'
+import { CohortConfigModal } from './CohortConfigModal'
+import { CohortAttendanceChip, CohortDeliveryChip, CohortStatusChip } from './CohortsPage'
 import { dateOnly, dateShort } from './format'
 import type { PendingJoinRequest } from './joinRequests'
 import { errorNotice } from './shared'
+import { NoteIndicators } from './talent/NoteIndicators'
 
 /** People who joined with the code on an approval cohort, waiting for Approve or Decline. */
 export function PendingRequests({
@@ -117,7 +120,7 @@ function Cohort({
   const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null)
   const [copied, setCopied] = useState(false)
   const [attemptsFor, setAttemptsFor] = useState<string | null>(null)
-  const [needsApproval, setNeedsApproval] = useState(!!cohort.requiresApproval)
+  const [configOpen, setConfigOpen] = useState(false)
 
   async function run(action: () => Promise<CohortDetail>, ok?: string): Promise<boolean> {
     setBusy(true)
@@ -146,20 +149,6 @@ function Cohort({
     ) {
       form.reset()
     }
-  }
-
-  async function saveDetails(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const f = new FormData(e.currentTarget)
-    const limit = String(f.get('maxLearners') ?? '').trim()
-    const body: Record<string, unknown> = {
-      name: f.get('name'),
-      maxLearners: limit ? Number(limit) : null,
-    }
-    if (f.get('startsAt')) body.startsAt = f.get('startsAt')
-    body.requiresApproval = needsApproval
-    body.joinContact = needsApproval ? String(f.get('joinContact') ?? '').trim() : null
-    await run(() => send<CohortDetail>('PUT', `/learn/cohorts/${cohort.id}`, body), 'Saved.')
   }
 
   /** Re-applies the completion rules to one learner, e.g. after the rules or the course changed. */
@@ -213,7 +202,10 @@ function Cohort({
     }
   }
 
-  const upcoming = cohort.status === 'upcoming'
+  // Note counts are for provider staff only: when the server sent none, there is no column.
+  const showNotes = cohort.roster.some((r) => r.noteSummary !== null)
+  const recordHref = (userId: string) =>
+    href(`/lms/cohorts/${encodeURIComponent(cohort.id)}/learners/${encodeURIComponent(userId)}`)
   return (
     <>
       <p className="dash-back">
@@ -227,7 +219,39 @@ function Cohort({
             {cohort.lengthWeeks ? ` (${cohort.lengthWeeks} weeks)` : ''}
           </p>
         </div>
-        <CohortStatusChip status={cohort.status} />
+        <div className="dash-cohort-actions">
+          <a
+            className="dash-btn-secondary dash-btn-link"
+            href={href(`/lms/activity/${encodeURIComponent(cohort.id)}`)}
+          >
+            Activity
+          </a>
+          <button
+            type="button"
+            className="dash-btn-secondary dash-btn-icon"
+            onClick={() => setConfigOpen(true)}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              aria-hidden="true"
+              focusable="false"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            Edit cohort configuration
+          </button>
+          <CohortDeliveryChip delivery={cohort.delivery} />
+          <CohortAttendanceChip delivery={cohort.delivery} />
+          <CohortStatusChip status={cohort.status} />
+        </div>
       </div>
 
       {message && (
@@ -253,6 +277,8 @@ function Cohort({
           </button>
         </div>
       </section>
+
+      {cohort.delivery !== 'online' && <AttendancePanel cohortId={cohort.id} />}
 
       <section className="dash-section" aria-labelledby="h-roster">
         <div className="dash-head">
@@ -299,6 +325,7 @@ function Cohort({
                   <th scope="col">Status</th>
                   <th scope="col">Course progress</th>
                   <th scope="col">Joined</th>
+                  {showNotes && <th scope="col">Notes</th>}
                   <th scope="col">
                     <span className="dash-visually-hidden">Actions</span>
                   </th>
@@ -308,7 +335,15 @@ function Cohort({
                 {cohort.roster.map((r) => (
                   <Fragment key={r.enrollmentId}>
                     <tr>
-                      <th scope="row">{r.name}</th>
+                      <th scope="row">
+                        <a
+                          href={href(
+                            `/lms/cohorts/${encodeURIComponent(cohort.id)}/learners/${encodeURIComponent(r.userId)}`
+                          )}
+                        >
+                          {r.name}
+                        </a>
+                      </th>
                       <td>{r.email ?? '—'}</td>
                       <td>{STATUS_LABEL[r.status]}</td>
                       <td>
@@ -318,6 +353,23 @@ function Cohort({
                         />
                       </td>
                       <td>{dateShort(r.enrolledAt)}</td>
+                      {showNotes && (
+                        <td>
+                          {r.noteSummary &&
+                          (r.noteSummary.notes > 0 || r.noteSummary.openFollowUps > 0) ? (
+                            <NoteIndicators
+                              notes={r.noteSummary.notes}
+                              openFollowUps={r.noteSummary.openFollowUps}
+                              notesHref={`${recordHref(r.userId)}#lr-notes`}
+                              followUpsHref={`${recordHref(r.userId)}#lr-support`}
+                            />
+                          ) : r.noteSummary ? (
+                            <span className="dash-muted" aria-label="No notes or follow-ups">
+                              —
+                            </span>
+                          ) : null}
+                        </td>
+                      )}
                       <td>
                         {r.status !== 'withdrawn' && (
                           <>
@@ -374,77 +426,17 @@ function Cohort({
         )}
       </section>
 
-      <section className="dash-card" aria-labelledby="h-details">
-        <h2 className="dash-card-title" id="h-details">
-          Cohort details
-        </h2>
-        <form className="dash-form" onSubmit={saveDetails} key={cohort.name + cohort.startsAt}>
-          <div className="dash-field-row">
-            <label className="dash-field">
-              <span>Name</span>
-              <input name="name" required maxLength={120} defaultValue={cohort.name} />
-            </label>
-            <label className="dash-field">
-              <span>Start date</span>
-              <input
-                name="startsAt"
-                type="date"
-                disabled={!upcoming}
-                defaultValue={cohort.startsAt?.slice(0, 10) ?? ''}
-              />
-              {!upcoming && (
-                <small className="dash-muted">
-                  The start date can only change before the cohort starts.
-                </small>
-              )}
-            </label>
-            <label className="dash-field">
-              <span>End date</span>
-              <input type="text" readOnly disabled value={dateOnly(cohort.endsAt)} />
-              <small className="dash-muted">Follows the start date and the course length.</small>
-            </label>
-            <label className="dash-field">
-              <span>Maximum learners</span>
-              <input
-                name="maxLearners"
-                type="number"
-                min={1}
-                max={5000}
-                defaultValue={cohort.maxLearners ?? ''}
-                placeholder="No limit"
-              />
-              <small className="dash-muted">Blank means no limit.</small>
-            </label>
-          </div>
-          <label className="dash-check">
-            <input
-              type="checkbox"
-              checked={needsApproval}
-              onChange={(e) => setNeedsApproval(e.target.checked)}
-            />{' '}
-            Ask an admin to approve people who join with the code
-          </label>
-          {needsApproval && (
-            <label className="dash-field">
-              <span>Contact for learners (shown while they wait)</span>
-              <input
-                name="joinContact"
-                required
-                maxLength={200}
-                defaultValue={cohort.joinContact ?? ''}
-              />
-              <small className="dash-muted">
-                Name and email or phone; learners see it next to their pending request.
-              </small>
-            </label>
-          )}
-          <div className="dash-form-actions">
-            <button type="submit" className="dash-btn" disabled={busy}>
-              Save details
-            </button>
-          </div>
-        </form>
-      </section>
+      {configOpen && (
+        <CohortConfigModal
+          cohort={cohort}
+          onClose={() => setConfigOpen(false)}
+          onSaved={(c) => {
+            onChange(c)
+            setConfigOpen(false)
+            setMessage({ kind: 'ok', text: 'Saved.' })
+          }}
+        />
+      )}
     </>
   )
 }

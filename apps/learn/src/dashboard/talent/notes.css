@@ -1,0 +1,307 @@
+/* Staff notes and support items (#69 B). Own styles only. Uses the dashboard colour tokens. */
+.nt-section {
+  margin: 0 0 32px;
+}
+.nt-form {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 8px;
+}
+.nt-row,
+.nt-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+.nt-filters {
+  margin: 0 0 12px;
+}
+.nt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.nt-status {
+  min-height: 1.5em;
+  margin: 4px 0 8px;
+  font-size: 14px;
+}
+.nt-list,
+.nt-items {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nt-note,
+.nt-item {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+.nt-meta {
+  margin: 0 0 6px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.nt-body {
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.nt-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-left: 4px solid var(--orange-text);
+  background: var(--sky);
+}
+.nt-chip {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border: 1px solid var(--ink-soft);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.nt-chip-open {
+  border-color: var(--navy);
+  color: var(--navy);
+}
+.nt-chip-in_progress {
+  border-color: var(--orange-text);
+  color: var(--orange-text);
+}
+.nt-chip-resolved {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: var(--on-dark);
+}
+.nt-due-overdue {
+  color: var(--orange-text);
+  font-weight: 700;
+}
+.nt-due-today,
+.nt-due-soon {
+  color: var(--ink);
+  font-weight: 700;
+}
+.nt-empty {
+  margin: 0;
+}
+.nt-error {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.nt-item :focus-visible,
+.nt-note :focus-visible {
+  outline: 3px solid var(--navy);
+  outline-offset: 2px;
+}
+
+.nt-stale {
+  opacity: 0.5;
+}
+.nt-section h2:focus {
+  outline: 3px solid var(--navy);
+  outline-offset: 2px;
+}
+/* Touch: every control is at least 44px tall and wide enough to hit. */
+@media (pointer: coarse) {
+  .nt-section .dash-btn-quiet,
+  .nt-confirm .dash-btn-quiet,
+  .nt-confirm .dash-btn,
+  .nt-actions .dash-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+.nt-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--ink-soft);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Support follow-ups: header row, cards, grouping. */
+.nt-section {
+  --sp-amber: #8a5300;
+  --sp-amber-bg: #fff3dc;
+  --sp-red: #a4260d;
+  --sp-red-bg: #fde8e4;
+  --sp-green: #1f6b3a;
+}
+.nt-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  margin: 0 0 8px;
+}
+.nt-head h2 {
+  margin: 0;
+}
+.nt-count {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--navy);
+  color: var(--on-dark);
+  font-size: 13px;
+  font-weight: 700;
+}
+.nt-add {
+  margin-left: auto;
+}
+.nt-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px 16px;
+  align-items: start;
+  border-left: 5px solid var(--ink-soft);
+  border-radius: 8px;
+}
+.nt-item-in_progress {
+  border-left-color: #d98a00;
+}
+.nt-item-resolved {
+  border-left-color: var(--sp-green);
+}
+.nt-item-open {
+  border-left-color: var(--navy);
+}
+.nt-item-done {
+  background: var(--surface-alt);
+  color: var(--ink-soft);
+}
+.nt-item-main {
+  min-width: 0;
+}
+.nt-item-title {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.nt-item-resolved .nt-icon {
+  color: var(--sp-green);
+}
+.nt-item-in_progress .nt-icon {
+  color: var(--sp-amber);
+}
+.nt-icon:empty {
+  display: none;
+}
+.nt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+.nt-pill {
+  display: inline-block;
+  padding: 1px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.nt-pill-muted {
+  color: var(--ink-soft);
+}
+.nt-pill-soon {
+  border-color: var(--sp-amber);
+  background: var(--sp-amber-bg);
+  color: var(--sp-amber);
+}
+.nt-pill-late {
+  border-color: var(--sp-red);
+  background: var(--sp-red-bg);
+  color: var(--sp-red);
+}
+.nt-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.nt-details {
+  margin-bottom: 4px;
+}
+.nt-more {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+.nt-by {
+  margin: 4px 0 0;
+}
+.nt-item-side {
+  display: grid;
+  gap: 10px;
+  justify-items: stretch;
+  min-width: 11em;
+}
+.nt-status-field {
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.nt-status-field select {
+  padding: 6px 8px;
+  border: 1px solid var(--ink-soft);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+.nt-item-actions {
+  display: flex;
+  gap: 8px;
+}
+.nt-item-actions .dash-btn-secondary {
+  flex: 1;
+}
+.nt-done {
+  margin-top: 16px;
+}
+.nt-done-toggle {
+  margin-bottom: 8px;
+}
+@media (max-width: 560px) {
+  .nt-item {
+    grid-template-columns: 1fr;
+  }
+  .nt-item-side {
+    min-width: 0;
+  }
+  .nt-add {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+@media (pointer: coarse) {
+  .nt-item-actions .dash-btn-secondary,
+  .nt-status-field select,
+  .nt-done-toggle,
+  .nt-more {
+    min-height: 44px;
+  }
+}

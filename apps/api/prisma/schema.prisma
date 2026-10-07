@@ -162,6 +162,12 @@ model User {
   memberships Membership[]
   enrollments Enrollment[]
   joinRequests JoinRequest[]
+  participantNotes   ParticipantNote[]
+  supportItems       SupportItem[]
+  talentProfile      TalentProfile?
+  profileShares      ProfileShare[]
+  attendanceMarks    AttendanceMark[]
+  activitySessions   ActivitySession[]
 
   @@unique([email, source])
   @@index([email])
@@ -187,6 +193,9 @@ model Institution {
   subdomain   String?      @unique            // {subdomain}.learndifferently.tech
   brand       Json?                            // { primary, accent, logoUrl, ... }
   parentId    String?
+  // Demo institutions seeded with full sample data (attendance, talent, activity, notes); shown
+  // with a star in the workspace chooser so they stand out among many.
+  featuredDemo Boolean     @default(false)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   parent      Institution?  @relation("InstitutionParent", fields: [parentId], references: [id], onDelete: SetNull)
@@ -198,6 +207,10 @@ model Institution {
   scenarios   Scenario[]
   courses     Course[]
   offers      CourseOffer[]
+  // Staff notes, support items and talent profiles belong to (provider, participant).
+  participantNotes ParticipantNote[]
+  supportItems     SupportItem[]
+  profileShares    ProfileShare[]
 
   @@index([emailDomain])
   @@index([parentId])
@@ -222,6 +235,8 @@ model Cohort {
   requiresApproval Boolean   @default(false)
   // Who learners should ask (plain text, e.g. 'Dana Reyes, dana@example.org'). Required when requiresApproval.
   joinContact   String?
+  // How the cohort meets: 'online' (async, activity is logged), 'live' (sessions with attendance) or 'hybrid' (both).
+  delivery      String       @default("online") // 'online' | 'live' | 'hybrid'
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   institution   Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
@@ -232,6 +247,12 @@ model Cohort {
   deliveries    AssessmentDelivery[]
   enrollments   Enrollment[]
   joinRequests  JoinRequest[]
+  sessions      CohortSession[]
+  participantNotes ParticipantNote[]
+  supportItems     SupportItem[]
+  // #69: the learner's first course item is their profile; refreshed every N months (null = never stale, 1..60).
+  requiresProfile     Boolean  @default(false)
+  profileRefreshMonths Int?
 
   @@index([institutionId])
   @@index([courseId])
@@ -476,6 +497,7 @@ model CourseItem {
   progress ItemProgress[]
   attempts ItemAttempt[]
   plan     PlanItem[]
+  activity ActivitySession[]
 
   @@index([moduleId])
 }
@@ -504,6 +526,7 @@ model Enrollment {
   progress    ItemProgress[]
   attempts    ItemAttempt[]
   plan        PlanItem[]
+  activity    ActivitySession[]
 
   @@unique([cohortId, userId])
   @@index([userId])
@@ -713,4 +736,183 @@ model LtiSingleUse {
 
   @@unique([scope, key])
   @@index([expiresAt])
+}
+
+// ── Talent management, attendance and activity (#69) ─────────────────────────
+// Staff notes, support items and the talent profile belong to (providerId, userId): the provider
+// is the course's provider (Course.providerId) of the cohort the person is in. They follow the
+// person across that provider's cohorts and never cross providers. Never returned to learners.
+
+model ParticipantNote {
+  id         String      @id @default(uuid())
+  providerId String
+  userId     String // the participant the note is about
+  // The cohort the staff member was looking at when writing it (context only); null once deleted.
+  cohortId   String?
+  authorId   String // staff user id (no FK: the note outlives the account)
+  authorName String
+  body       String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  provider   Institution @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cohort     Cohort?     @relation(fields: [cohortId], references: [id], onDelete: SetNull)
+
+  @@index([providerId, userId, createdAt])
+}
+
+model SupportItem {
+  id            String      @id @default(uuid())
+  providerId    String
+  userId        String
+  cohortId      String?
+  title         String
+  // Free text category, e.g. 'transportation', 'childcare', 'housing', 'technology', 'other'.
+  category      String      @default("other")
+  details       String?
+  status        String      @default("open") // 'open' | 'in_progress' | 'resolved' | 'cancelled'
+  dueDate       DateTime?
+  assigneeId    String? // staff user id (no FK)
+  assigneeName  String?
+  createdById   String
+  createdByName String
+  resolvedAt    DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  provider      Institution @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cohort        Cohort?     @relation(fields: [cohortId], references: [id], onDelete: SetNull)
+
+  @@index([providerId, userId])
+  @@index([providerId, status, dueDate])
+}
+
+// The learner's OWN data, one per person (not per provider). The resume is a private upload
+// (PRIVATE_MEDIA_STORAGE); only its key is stored. Who may see it is ProfileShare.
+model TalentProfile {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  resumeKey            String?
+  resumeName           String?
+  resumeSize           Int?
+  resumeUploadedAt     DateTime?
+  yearsExperience      Int?
+  industries           String[] @default([])
+  // Annual, whole dollars. Sensitive: staff of a provider the learner shared with only, never in agency rollups or logs.
+  previousCompensation Int?
+  targetCompensation   Int?
+  targetRoles          String[] @default([])
+  availableFrom        DateTime?
+  // Set when the profile first becomes complete (computed from its fields) and kept.
+  completedAt          DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  educations           ProfileEducation[]
+}
+
+// A person can have several. `position` keeps the order they entered them in.
+model ProfileEducation {
+  id             String        @id @default(uuid())
+  profileId      String
+  level          String // 'high_school' | 'some_college' | 'associate' | 'bachelor' | 'master' | 'doctorate' | 'other'
+  fieldOfStudy   String?
+  school         String?
+  graduationYear Int?
+  position       Int           @default(0)
+  profile        TalentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+// The learner lets one organization (a provider or a hosting organization of theirs) see the profile.
+// Having a row means "visible to staff of that institution"; allowEmployers is the further consent
+// for that institution to pass it to employers.
+model ProfileShare {
+  id             String      @id @default(uuid())
+  userId         String
+  institutionId  String
+  allowEmployers Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @default(now()) @updatedAt
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institution    Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, institutionId])
+  @@index([institutionId])
+}
+
+// Audit trail for staff access to notes, support items, compensation and resumes. Plain ids with
+// no foreign keys on purpose: the trail must outlive the people and providers it describes.
+// Never holds note text, compensation values or file contents.
+model DataAccessLog {
+  id            String   @id @default(uuid())
+  actorId       String
+  actorName     String
+  providerId    String
+  subjectUserId String? // null for a bulk read or export
+  resource      String // 'note' | 'support_item' | 'compensation' | 'resume' | 'talent_profile'
+  action        String // 'read' | 'list' | 'create' | 'update' | 'delete' | 'export' | 'download'
+  detail        String? // short, non-sensitive context, e.g. 'csv, 42 rows'
+  createdAt     DateTime @default(now())
+
+  @@index([providerId, createdAt])
+  @@index([providerId, subjectUserId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+// A meeting of a live or hybrid cohort.
+model CohortSession {
+  id        String           @id @default(uuid())
+  cohortId  String
+  title     String
+  startsAt  DateTime
+  endsAt    DateTime?
+  location  String?
+  createdBy String // staff user id (no FK)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  cohort    Cohort           @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  marks     AttendanceMark[]
+
+  @@index([cohortId, startsAt])
+}
+
+model AttendanceMark {
+  id        String        @id @default(uuid())
+  sessionId String
+  userId    String
+  status    String // 'present' | 'absent' | 'late' | 'excused'
+  note      String?
+  markedBy  String // staff user id (no FK)
+  markedAt  DateTime      @default(now())
+  session   CohortSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([userId])
+}
+
+// Time a learner spent in an online course. One row is a run of heartbeats on one item (or page)
+// within one UTC day; a heartbeat past midnight opens a new row, so `day` is always the day the
+// seconds belong to. Daily totals: SUM(seconds) GROUP BY enrollmentId, day (and itemId for per-item).
+model ActivitySession {
+  id           String      @id @default(uuid())
+  userId       String
+  enrollmentId String
+  itemId       String? // null for time on a page that is not an item (outline, dashboard)
+  kind         String // 'page' | 'tool'
+  day          DateTime    @db.Date // UTC date of startedAt
+  startedAt    DateTime
+  lastSeenAt   DateTime
+  seconds      Int         @default(0)
+  // true when measured from launch to score return rather than by heartbeat (connected tools).
+  estimated    Boolean     @default(false)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollment   Enrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  item         CourseItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([enrollmentId, day, itemId])
+  @@index([userId, day])
+  @@index([itemId])
 }

@@ -2,6 +2,7 @@ import { resetToDefaults, withFirstTool } from './tool-test-helpers'
 import { HttpException } from '@nestjs/common'
 import type { PrismaService } from '../../prisma/prisma.service'
 import type { LearnerService } from '../../learn/learner.service'
+import type { ActivityService } from '../../learn/activity/activity.service'
 import {
   AGS_SCOPE_SCORE,
   BRAND_CLAIM,
@@ -37,11 +38,12 @@ const nowS = () => Math.floor(Date.now() / 1000)
 let service: LtiPlatformService
 let store: MemoryLtiStore
 
-const makeService = (shared = store) =>
+const makeService = (shared = store, activity?: ActivityService) =>
   new LtiPlatformService(
     prisma as unknown as PrismaService,
     learner as unknown as LearnerService,
-    shared
+    shared,
+    activity
   )
 
 beforeEach(() => {
@@ -53,7 +55,7 @@ beforeEach(() => {
     endsAt: FUTURE,
     course: PROVIDER,
   })
-  prisma.enrollment.findUnique.mockResolvedValue({ status: 'enrolled' })
+  prisma.enrollment.findUnique.mockResolvedValue({ id: 'e1', status: 'enrolled' })
   prisma.courseItem.findUnique.mockResolvedValue({
     id: 'i1',
     type: 'tool',
@@ -190,6 +192,40 @@ describe('keys and secrets', () => {
     expect(JSON.parse(Buffer.from(idToken.split('.')[0], 'base64url').toString()).kid).toBe(
       current.kid
     )
+  })
+})
+
+describe('launch notes the tool time', () => {
+  const flush = () => new Promise((r) => setImmediate(r))
+  it('opens one launch row for the enrollment and item', async () => {
+    const openToolLaunch = jest.fn().mockResolvedValue(undefined)
+    const svc = makeService(store, { openToolLaunch } as unknown as ActivityService)
+    await svc.startLaunch('u1', 'k1', 'i1')
+    await flush()
+    expect(openToolLaunch).toHaveBeenCalledTimes(1)
+    expect(openToolLaunch).toHaveBeenCalledWith('e1', 'u1', 'i1')
+  })
+  it('a failing (throwing or rejecting) activity service never fails the launch', async () => {
+    for (const openToolLaunch of [
+      jest.fn(() => {
+        throw new Error('db down')
+      }),
+      jest.fn().mockRejectedValue(new Error('db down')),
+    ]) {
+      const svc = makeService(store, { openToolLaunch } as unknown as ActivityService)
+      await expect(svc.startLaunch('u1', 'k1', 'i1')).resolves.toBeDefined()
+      await flush()
+      expect(openToolLaunch).toHaveBeenCalled()
+    }
+  })
+  it('does nothing for an unavailable tool', async () => {
+    setStoredTools(withFirstTool({ enabled: true, workspaceIds: ['someone-else'] }))
+    const openToolLaunch = jest.fn()
+    const svc = makeService(store, { openToolLaunch } as unknown as ActivityService)
+    await expect(svc.startLaunch('u1', 'k1', 'i1')).rejects.toBeDefined()
+    await flush()
+    expect(openToolLaunch).not.toHaveBeenCalled()
+    resetToDefaults()
   })
 })
 

@@ -380,6 +380,9 @@ const COHORT_PLAN = [
   { label: 'C', startOffsetWeeks: 5, trend: 4 },
 ]
 
+/** Providers seeded with full sample data (attendance, talent, activity, notes): starred in the chooser. */
+const FEATURED_DEMOS = ['cedar-mill', 'lantern-hill']
+
 const AGENCY_ID = 'demo-inst-delaware-dol'
 const CHESAPEAKE_ID = 'demo-inst-chesapeake-workforce'
 const MEMBER_ID = 'demo-inst-wilmington-workforce'
@@ -510,6 +513,7 @@ async function load(prisma: PrismaClient) {
         kind: 'provider',
         parentId: p.agency === 'chesapeake' ? CHESAPEAKE_ID : AGENCY_ID,
         subdomain: p.subdomain,
+        featuredDemo: FEATURED_DEMOS.includes(p.key),
       },
     })
 
@@ -922,6 +926,56 @@ async function load(prisma: PrismaClient) {
       counts.progress += progress.length
     }
   }
+
+  // A few Cedar Mill people are in a second cohort (one of those enrollments is withdrawn), so the
+  // Talent page can show one person with several cohorts. The ids say "multi" so they never clash
+  // with the per-cohort enrollment ids above; a reseed deletes the learners, which removes these too.
+  const alsoIn = [
+    {
+      userId: 'demo-learner-cedar-mill-c-1',
+      cohortId: 'demo-cohort-cedar-mill-b',
+      status: 'enrolled',
+    },
+    {
+      userId: 'demo-learner-cedar-mill-c-11',
+      cohortId: 'demo-cohort-cedar-mill-a',
+      status: 'enrolled',
+    },
+    {
+      userId: 'demo-learner-cedar-mill-c-13',
+      cohortId: 'demo-cohort-cedar-mill-b',
+      status: 'withdrawn',
+    },
+  ]
+  const alsoCohorts = await prisma.cohort.findMany({
+    where: { id: { in: alsoIn.map((a) => a.cohortId) } },
+    select: { id: true, institutionId: true, startsAt: true },
+  })
+  const alsoRows = alsoIn.flatMap((a, i) => {
+    const c = alsoCohorts.find((x) => x.id === a.cohortId)
+    return c && c.startsAt
+      ? [{ ...a, n: i + 1, institutionId: c.institutionId, startsAt: c.startsAt }]
+      : []
+  })
+  await prisma.membership.createMany({
+    data: alsoRows.map((a) => ({
+      userId: a.userId,
+      institutionId: a.institutionId,
+      cohortId: a.cohortId,
+    })),
+    skipDuplicates: true,
+  })
+  await prisma.enrollment.createMany({
+    data: alsoRows.map((a) => ({
+      id: `demo-enr-multi-${a.n}`,
+      cohortId: a.cohortId,
+      userId: a.userId,
+      status: a.status,
+      enrolledAt: new Date(a.startsAt.getTime() + 3 * DAY),
+    })),
+    skipDuplicates: true,
+  })
+  counts.enrollments += alsoRows.length
 
   // A hidden "Practice labs" course for showing Interview Differently from LearnDifferently: a
   // decision simulation, a SQL simulation, a voice interview and a timed assessment, all launched

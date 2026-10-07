@@ -1,0 +1,184 @@
+/* Learner outcomes page (#69 A). Own styles only; shared ones live in ../dashboard.css.
+   Colours come from the dashboard tokens so the page follows whichever theme is active. */
+.lo {
+  display: grid;
+  gap: 8px;
+}
+.lo-h2 {
+  margin: 28px 0 4px;
+  color: var(--navy);
+  font: 700 20px/1.2 var(--display);
+}
+.lo-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin: 20px 0 0;
+}
+.lo-stat {
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--dash-radius, 0);
+  background: var(--surface);
+}
+.lo-stat dt {
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+.lo-stat dd {
+  margin: 4px 0 0;
+  color: var(--navy);
+  font: 700 26px/1.2 var(--display);
+}
+.lo-stat dd.lo-note {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+.lo-note {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.lo-cards,
+.lo-list,
+.lo-timeline {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lo-list {
+  gap: 8px;
+}
+.lo-card {
+  display: grid;
+  gap: 6px;
+}
+.lo-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.lo-card-title {
+  margin: 0;
+  color: var(--navy);
+  font: 700 18px/1.25 var(--display);
+}
+.lo-meta {
+  margin: 4px 0 0;
+}
+.lo-link {
+  font-weight: 700;
+}
+.lo-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 14px;
+}
+.lo-state {
+  margin: 0;
+}
+.lo-sub {
+  margin: 14px 0 6px;
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 700;
+}
+.lo-bar {
+  display: inline-block;
+  width: 140px;
+  flex: none;
+}
+.lo-bar-track {
+  position: relative;
+  display: block;
+  height: 8px;
+  background: var(--sky);
+}
+.lo-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--dash-post, var(--blue));
+}
+.lo-bar-goal {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--navy);
+}
+.lo-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 140px 5.5em minmax(0, 1.2fr);
+  align-items: center;
+  gap: 4px 12px;
+  font-size: 14px;
+}
+.lo-row-name {
+  overflow-wrap: anywhere;
+}
+.lo-row-val {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.lo-tag {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.lo-tag-needs_work {
+  color: var(--orange-text);
+  font-weight: 700;
+}
+.lo-tag-on_track {
+  color: var(--navy);
+  font-weight: 700;
+}
+.lo-timeline {
+  gap: 0;
+  border-left: 2px solid var(--border);
+}
+.lo-timeline li {
+  display: grid;
+  grid-template-columns: 7.5em 1fr;
+  gap: 12px;
+  padding: 8px 0 8px 14px;
+  font-size: 14px;
+}
+.lo-timeline time {
+  color: var(--ink-soft);
+}
+.lo-error {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+@media (max-width: 800px) {
+  .lo-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .lo-row {
+    grid-template-columns: 1fr auto;
+  }
+  .lo-row .lo-bar {
+    grid-column: 1 / -1;
+    width: 100%;
+    order: 3;
+  }
+  .lo-row .lo-tag {
+    grid-column: 1 / -1;
+    order: 4;
+  }
+  .lo-timeline li {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

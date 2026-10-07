@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
   forwardRef,
 } from '@nestjs/common'
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
@@ -13,6 +14,7 @@ import { LTI_STORE } from '../lti-store'
 import type { LtiStore } from '../lti-store'
 import { cohortStatus } from '../../learn/cohort-config'
 import { LearnerService } from '../../learn/learner.service'
+import { ActivityService } from '../../learn/activity/activity.service'
 import { sanitizeBrand } from '../lti-brand'
 import {
   AGS_SCOPE_SCORE,
@@ -90,7 +92,8 @@ export class LtiPlatformService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(forwardRef(() => LearnerService)) private readonly learner: LearnerService,
-    @Inject(LTI_STORE) private readonly store: LtiStore
+    @Inject(LTI_STORE) private readonly store: LtiStore,
+    @Optional() private readonly activity?: ActivityService
   ) {
     assertLtiProductionConfig()
     const { current, previous } = loadSigningKeys(
@@ -120,7 +123,7 @@ export class LtiPlatformService {
 
   /** Checks the learner may open this tool item and returns the form that starts the OIDC login. */
   async startLaunch(userId: string, cohortId: string, itemId: string, returnOrigin?: string) {
-    const { tool, config } = await this.toolItem(cohortId, itemId, userId)
+    const { tool, config, enrollmentId } = await this.toolItem(cohortId, itemId, userId)
     if (tool.kind === 'assessment') {
       const { maxAttempts } = assessmentLimits(config)
       const used = await this.attemptsUsed(userId, cohortId, itemId)
@@ -132,6 +135,11 @@ export class LtiPlatformService {
       ? new URL(returnOrigin!).origin
       : undefined
     const hint = this.signHint({ userId, cohortId, itemId, returnOrigin: origin })
+    // #69 E: note the launch for tool time. Not awaited and never throws: it cannot slow or fail a launch.
+    if (this.activity && enrollmentId)
+      void Promise.resolve()
+        .then(() => this.activity?.openToolLaunch(enrollmentId, userId, itemId))
+        .catch(() => undefined)
     return {
       action: tool.loginUrl,
       fields: {
@@ -171,11 +179,13 @@ export class LtiPlatformService {
       },
     })
     if (!cohort?.courseId) throw new NotFoundException('Item not found')
+    let enrollmentId: string | undefined
     if (userId) {
       const e = await this.prisma.enrollment.findUnique({
         where: { cohortId_userId: { cohortId, userId } },
-        select: { status: true },
+        select: { id: true, status: true },
       })
+      enrollmentId = e?.id
       if (!e || e.status === 'withdrawn') throw new NotFoundException('You are not in this cohort')
       if (cohortStatus(cohort.startsAt, cohort.endsAt) !== 'running')
         throw new ConflictException('This cohort is not open.')
@@ -195,7 +205,7 @@ export class LtiPlatformService {
       throw new ConflictException(
         'This tool is not available to this program. Tell your instructor.'
       )
-    return { tool, ref: config.ref, config: item.config }
+    return { tool, ref: config.ref, config: item.config, enrollmentId }
   }
 
   private signHint(claims: {

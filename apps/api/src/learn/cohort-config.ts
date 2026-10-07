@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common'
 import { randomInt } from 'node:crypto'
-import type { CohortStatus } from './learn-types'
+import type { CohortDelivery, CohortStatus } from './learn-types'
+import { REFRESH_MAX_MONTHS, REFRESH_MIN_MONTHS } from './talent/profile-requirement'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -28,6 +29,8 @@ export function cohortStatus(
   return 'running'
 }
 
+export const COHORT_DELIVERIES: CohortDelivery[] = ['online', 'live', 'hybrid']
+
 export interface CohortFields {
   courseId?: string
   name?: string
@@ -38,6 +41,12 @@ export interface CohortFields {
   requiresApproval?: boolean
   /** Who learners should ask while approval is on; null clears it. */
   joinContact?: string | null
+  /** #69: how the cohort meets. Live and hybrid cohorts get sessions and attendance. */
+  delivery?: CohortDelivery
+  /** #69: the learner's first item is their profile, required for completion. */
+  requiresProfile?: boolean
+  /** Months until a saved profile is stale (1-60); null = never. Only with requiresProfile. */
+  profileRefreshMonths?: number | null
 }
 
 /** Approval needs someone for learners to ask. `current` is what is stored, `fields` what is being set. */
@@ -50,6 +59,22 @@ export function assertApprovalContact(
   if (on && !contact) {
     throw new BadRequestException('Add a contact (who learners should ask) to require approval')
   }
+}
+
+/** A refresh period only makes sense while the profile is required. `current` is what is stored. */
+export function assertProfileRefresh(
+  current: { requiresProfile: boolean; profileRefreshMonths: number | null },
+  fields: CohortFields
+): void {
+  const on = fields.requiresProfile ?? current.requiresProfile
+  const months =
+    fields.profileRefreshMonths !== undefined
+      ? fields.profileRefreshMonths
+      : fields.requiresProfile === false
+        ? null
+        : current.profileRefreshMonths
+  if (!on && months != null)
+    throw new BadRequestException('Require the profile to set how often it is refreshed')
 }
 
 /** Cohort fields from a request body; a start date is YYYY-MM-DD. `partial` allows leaving fields out. */
@@ -106,6 +131,30 @@ export function validateCohortFields(input: unknown, partial: boolean): CohortFi
       if (contact.length > 200) throw new BadRequestException('Contact is too long (max 200)')
       out.joinContact = contact || null
     }
+  }
+  if (body.delivery !== undefined) {
+    if (typeof body.delivery !== 'string' || !COHORT_DELIVERIES.includes(body.delivery as never))
+      throw new BadRequestException(`Delivery must be one of ${COHORT_DELIVERIES.join(', ')}`)
+    out.delivery = body.delivery as CohortDelivery
+  }
+  if (body.requiresProfile !== undefined) {
+    if (typeof body.requiresProfile !== 'boolean')
+      throw new BadRequestException('requiresProfile must be true or false')
+    out.requiresProfile = body.requiresProfile
+  }
+  if (body.profileRefreshMonths !== undefined) {
+    const m = body.profileRefreshMonths
+    if (m === null || m === '') out.profileRefreshMonths = null
+    else if (
+      typeof m !== 'number' ||
+      !Number.isInteger(m) ||
+      m < REFRESH_MIN_MONTHS ||
+      m > REFRESH_MAX_MONTHS
+    )
+      throw new BadRequestException(
+        `Profile refresh must be a whole number of months from ${REFRESH_MIN_MONTHS} to ${REFRESH_MAX_MONTHS}`
+      )
+    else out.profileRefreshMonths = m
   }
   return out
 }

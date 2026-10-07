@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common'
 import type {
+  CohortDelivery,
   CohortDetail,
   CohortJoinRequestRow,
   CohortListItem,
@@ -17,6 +18,7 @@ import type {
 import { PrismaService } from '../prisma/prisma.service'
 import {
   assertApprovalContact,
+  assertProfileRefresh,
   cohortStatus,
   endsAtFor,
   newJoinKey,
@@ -25,6 +27,7 @@ import {
 } from './cohort-config'
 import { LearnerService } from './learner.service'
 import { LEARN_ROLES, LearnService } from './learn.service'
+import { ParticipantNotesService } from './talent/participant-notes.service'
 
 const MANAGERS = [LEARN_ROLES.agencyAdmin, LEARN_ROLES.providerAdmin]
 
@@ -34,7 +37,8 @@ export class LearnCohortsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly learn: LearnService,
-    private readonly learner: LearnerService
+    private readonly learner: LearnerService,
+    private readonly notes: ParticipantNotesService
   ) {}
 
   // ── access ────────────────────────────────────────────────────────────────
@@ -61,6 +65,7 @@ export class LearnCohortsService {
           select: {
             id: true,
             title: true,
+            providerId: true,
             lengthWeeks: true,
             modules: { select: { _count: { select: { items: true } } } },
           },
@@ -131,6 +136,9 @@ export class LearnCohortsService {
       requiresApproval: c.requiresApproval,
       joinContact: c.joinContact,
       pendingRequests: c._count.joinRequests,
+      delivery: c.delivery as CohortDelivery,
+      requiresProfile: c.requiresProfile,
+      profileRefreshMonths: c.profileRefreshMonths,
     }))
   }
 
@@ -164,6 +172,7 @@ export class LearnCohortsService {
       joinKey = newJoinKey()
     }
     assertApprovalContact({ requiresApproval: false, joinContact: null }, fields)
+    assertProfileRefresh({ requiresProfile: false, profileRefreshMonths: null }, fields)
     const startsAt = fields.startsAt as Date
     const cohort = await this.prisma.cohort.create({
       data: {
@@ -176,6 +185,9 @@ export class LearnCohortsService {
         maxLearners: fields.maxLearners ?? null,
         requiresApproval: fields.requiresApproval ?? false,
         joinContact: fields.joinContact ?? null,
+        delivery: fields.delivery ?? 'online',
+        requiresProfile: fields.requiresProfile ?? false,
+        profileRefreshMonths: fields.profileRefreshMonths ?? null,
       },
     })
     return this.detail(userId, role, cohort.id)
@@ -195,6 +207,13 @@ export class LearnCohortsService {
       },
       orderBy: { enrolledAt: 'asc' },
     })
+    const summaries = await this.notes.rosterNoteSummaries(
+      userId,
+      role,
+      c.course.providerId,
+      cohortId,
+      enrollments.map((e) => e.userId)
+    )
     const roster: CohortRosterRow[] = enrollments
       .map((e) => ({
         enrollmentId: e.id,
@@ -205,6 +224,7 @@ export class LearnCohortsService {
         enrolledAt: e.enrolledAt.toISOString(),
         itemsDone: e.progress.length,
         itemsTotal,
+        noteSummary: summaries?.get(e.userId) ?? null,
       }))
       .sort((a, b) => a.name.localeCompare(b.name))
     return {
@@ -221,6 +241,9 @@ export class LearnCohortsService {
       requiresApproval: c.requiresApproval,
       joinContact: c.joinContact,
       pendingRequests,
+      delivery: c.delivery as CohortDelivery,
+      requiresProfile: c.requiresProfile,
+      profileRefreshMonths: c.profileRefreshMonths,
       host: {
         id: c.institution.id,
         name: c.institution.name,
@@ -247,11 +270,24 @@ export class LearnCohortsService {
       maxLearners?: number | null
       requiresApproval?: boolean
       joinContact?: string | null
+      delivery?: CohortDelivery
+      requiresProfile?: boolean
+      profileRefreshMonths?: number | null
     } = {}
     if (fields.name) data.name = fields.name
     assertApprovalContact(c, fields)
     if (fields.requiresApproval !== undefined) data.requiresApproval = fields.requiresApproval
     if (fields.joinContact !== undefined) data.joinContact = fields.joinContact
+    if (fields.delivery !== undefined) data.delivery = fields.delivery
+    assertProfileRefresh(c, fields)
+    if (fields.requiresProfile !== undefined) {
+      data.requiresProfile = fields.requiresProfile
+      // Turning the requirement off drops its refresh period unless one is set in the same request.
+      if (!fields.requiresProfile && fields.profileRefreshMonths === undefined)
+        data.profileRefreshMonths = null
+    }
+    if (fields.profileRefreshMonths !== undefined)
+      data.profileRefreshMonths = fields.profileRefreshMonths
     if (fields.maxLearners !== undefined) {
       if (fields.maxLearners !== null) {
         const active = await this.activeCount(cohortId)
