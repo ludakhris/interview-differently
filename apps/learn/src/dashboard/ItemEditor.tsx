@@ -79,6 +79,9 @@ export function ItemEditor(props: {
   const [countsAsInterview, setCountsAsInterview] = useState(item.config.countsAsInterview === true)
   const [problem, setProblem] = useState<string | null>(null)
   const [attempts, setAttempts] = useState(String(item.config.maxAttempts ?? 1))
+  const [passScore, setPassScore] = useState(
+    item.config.passScore ? String(item.config.passScore) : ''
+  )
   const [timeLimit, setTimeLimit] = useState(
     item.config.timeLimitMinutes ? String(item.config.timeLimitMinutes) : ''
   )
@@ -113,6 +116,7 @@ export function ItemEditor(props: {
                     skill,
                     attempts,
                     timeLimit,
+                    passScore,
                     countsAsInterview,
                   })
                 : {
@@ -377,6 +381,23 @@ export function ItemEditor(props: {
                 </small>
               </label>
             </>
+          )}
+          {!(toolLabelable(toolId) && label === 'pre') && (
+            <label className="dash-field">
+              <span>Pass mark (%, optional)</span>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={passScore}
+                placeholder="Any score counts"
+                onChange={(e) => setPassScore(e.target.value)}
+              />
+              <small className="dash-muted">
+                The score a learner must reach for this to count as done. Below it the item stays to
+                do and they try again. Leave it blank and any scored attempt completes it.
+              </small>
+            </label>
           )}
           <label className="dash-field">
             <span>Reference</span>

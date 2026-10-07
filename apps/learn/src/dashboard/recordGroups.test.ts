@@ -15,13 +15,13 @@ const record: ReadinessRecord = {
 }
 
 describe('recordGroups', () => {
-  it('orders Course, then Skills, then Interview readiness', () => {
+  it('orders Course, then Skills, then one Interview readiness line', () => {
     const g = recordGroups(record)
-    expect(g.map((x) => x.heading)).toEqual([null, 'Skills', 'Interview readiness'])
+    expect(g.map((x) => x.heading)).toEqual([null, 'Skills', null])
     expect(g.map((x) => x.rows.map((r) => r.label))).toEqual([
       ['Course'],
-      ['Pre-assessment', 'Post-assessment', 'Change', 'Course target', 'Target score'],
-      ['Practice interview (best)', 'Interview readiness'],
+      ['Pre-assessment', 'Post-assessment', 'Change', 'Post-assessment goal (75%)'],
+      ['Interview readiness (goal 70%)'],
     ])
   })
 
@@ -30,8 +30,34 @@ describe('recordGroups', () => {
     const v = (l: string) => rows.find((r) => r.label === l)
     expect(v('Course')).toMatchObject({ value: 'In progress', yes: false })
     expect(v('Change')?.value).toBe('+30 % points')
-    expect(v('Target score')).toMatchObject({ value: 'Reached', yes: true })
-    expect(v('Interview readiness')).toMatchObject({ value: 'Keep practicing', yes: false })
+    expect(v('Post-assessment goal (75%)')).toMatchObject({ value: 'Reached', yes: true })
+    expect(v('Interview readiness (goal 70%)')).toMatchObject({
+      value: 'Keep practicing (60%)',
+      yes: false,
+    })
+    const ready = recordGroups({ ...record, interviewBest: 82, interviewReady: true })
+    expect(ready.flatMap((x) => x.rows).at(-1)).toMatchObject({
+      value: 'Ready to interview (82%)',
+      yes: true,
+    })
+    const none = recordGroups({ ...record, interviewBest: null, interviewReady: false })
+    expect(none.flatMap((x) => x.rows).at(-1)?.value).toBe('Not yet scored')
+  })
+
+  it('leaves out the assessments the course does not have', () => {
+    const rows = (hasPre: boolean, hasPost: boolean) =>
+      recordGroups(record, { hasPre, hasPost })
+        .flatMap((x) => x.rows)
+        .map((r) => r.label)
+    expect(rows(true, false)).toEqual([
+      'Course',
+      'Pre-assessment',
+      'Interview readiness (goal 70%)',
+    ])
+    expect(recordGroups(record, { hasPre: false, hasPost: false }).map((x) => x.heading)).toEqual([
+      null,
+      null,
+    ])
   })
 
   it('has no practice list', () => {

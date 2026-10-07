@@ -12,7 +12,12 @@ let db: PGlite
 let n = 0
 async function record(
   score: number,
-  opts: { reportedAt?: string; dimensions?: object; cap?: number | null } = {}
+  opts: {
+    reportedAt?: string
+    dimensions?: object
+    cap?: number | null
+    pass?: number | null
+  } = {}
 ) {
   const data = {
     lastScore: score,
@@ -28,6 +33,7 @@ async function record(
     JSON.stringify(data),
     opts.reportedAt ?? null,
     opts.cap ?? null,
+    opts.pass ?? null,
   ])
   return res.rows
 }
@@ -121,6 +127,32 @@ suite('RECORD_TOOL_RESULT_SQL', () => {
     expect(await record(90, { reportedAt: 'b', cap: 1 })).toEqual([])
     expect(await row()).toMatchObject({ score: 50, attempts: 1 })
     expect(await record(90, { reportedAt: 'b', cap: 2 })).toEqual([{ attempts: 2 }])
+  })
+
+  it('leaves the item in progress below the pass mark, and completes it on a passing attempt', async () => {
+    await record(40, { reportedAt: 'a', pass: 60 })
+    expect(await row()).toMatchObject({ score: 40, attempts: 1, status: 'in_progress' })
+    expect((await db.query('SELECT "completedAt" FROM "ItemProgress"')).rows[0]).toEqual({
+      completedAt: null,
+    })
+    await record(75, { reportedAt: 'b', pass: 60 })
+    expect(await row()).toMatchObject({ score: 75, attempts: 2, status: 'completed' })
+  })
+
+  it('stays completed once passed, even if a later attempt falls short', async () => {
+    await record(80, { reportedAt: 'a', pass: 60 })
+    const done = (await db.query<{ c: Date }>('SELECT "completedAt" AS c FROM "ItemProgress"'))
+      .rows[0]
+    await record(20, { reportedAt: 'b', pass: 60 })
+    expect(await row()).toMatchObject({ score: 80, attempts: 2, status: 'completed' })
+    expect(
+      (await db.query<{ c: Date }>('SELECT "completedAt" AS c FROM "ItemProgress"')).rows[0]
+    ).toEqual(done)
+  })
+
+  it('counts any score as done when there is no pass mark', async () => {
+    await record(0, { reportedAt: 'a' })
+    expect(await row()).toMatchObject({ score: 0, status: 'completed' })
   })
 
   it('keeps only the 10 most recent reportedAt values, in order', async () => {

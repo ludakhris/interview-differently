@@ -22,14 +22,25 @@ export interface ReadyCopy {
 
 /** Learner-facing wording before a tool item opens: an assessment has limited attempts, a lab can be retried. */
 export function readyCopy(
-  tool: { name: string; attemptsAllowed: number | null; timeLimitMinutes: number | null },
+  tool: {
+    name: string
+    attemptsAllowed: number | null
+    timeLimitMinutes: number | null
+    passScore?: number | null
+  },
   attemptsUsed: number
 ): ReadyCopy {
-  const comeBack = {
-    icon: '🏁',
-    title: 'Your score comes back here',
-    body: 'When you finish, we bring you back to this course with your result.',
-  }
+  const comeBack = tool.passScore
+    ? {
+        icon: '🏁',
+        title: `Score ${tool.passScore}% to pass`,
+        body: 'We bring you back here with your result. Reach that score to complete this item.',
+      }
+    : {
+        icon: '🏁',
+        title: 'Your score comes back here',
+        body: 'When you finish, we bring you back to this course with your result.',
+      }
   if (tool.attemptsAllowed === null) {
     return {
       heading: 'Ready to try it?',
@@ -99,6 +110,13 @@ export function parseAttempts(text: string): number {
   return Number.isInteger(n) && n >= 1 && n <= 5 ? n : 1
 }
 
+/** Parses the editor's optional pass mark: a whole percent 1-100, blank or invalid means none. */
+export function parsePassScore(text: string): number | undefined {
+  if (!text.trim()) return undefined
+  const n = Number(text)
+  return Number.isInteger(n) && n >= 1 && n <= 100 ? n : undefined
+}
+
 /** Parses the editor's optional time limit: whole minutes 5-240, blank or invalid means none. */
 export function parseTimeLimit(text: string): number | undefined {
   if (!text.trim()) return undefined
@@ -136,13 +154,16 @@ export function toolConfig(f: {
   skill: string
   attempts: string
   timeLimit: string
+  passScore: string
   countsAsInterview: boolean
 }): Record<string, unknown> {
   const limit = parseTimeLimit(f.timeLimit)
+  const pass = parsePassScore(f.passScore)
   return {
     toolId: f.toolId,
     ref: f.ref.trim(),
     ...(f.skill ? { skill: f.skill } : {}),
+    ...(pass ? { passScore: pass } : {}),
     ...(toolLabelable(f.toolId)
       ? { maxAttempts: parseAttempts(f.attempts), ...(limit ? { timeLimitMinutes: limit } : {}) }
       : f.countsAsInterview

@@ -89,6 +89,17 @@ export const isInterviewLike = (i: {
     !i.label &&
     (i.config as { countsAsInterview?: unknown } | null | undefined)?.countsAsInterview === true)
 
+/**
+ * The score (1-100) a tool item must reach to count as done, or null when any scored attempt does.
+ * A pre-assessment is a baseline, so it never has one.
+ */
+export function passScoreOf(config: unknown, label: string | null): number | null {
+  const v = (config as { passScore?: unknown } | null | undefined)?.passScore
+  return label !== 'pre' && typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 100
+    ? v
+    : null
+}
+
 /** Attempt rules for an assessment-kind tool item, read from its stored config (defaults: one attempt, no time limit). */
 export function assessmentLimits(config: unknown): {
   maxAttempts: number

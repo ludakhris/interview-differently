@@ -27,6 +27,7 @@ import { parseExternalLink } from './external-link'
 import {
   assessmentLimits,
   isInterviewLike,
+  passScoreOf,
   isPracticeItem,
   toolById,
 } from '../lti/platform/lti-platform-config'
@@ -53,7 +54,9 @@ export function alreadyReported(data: unknown, reportedAt: string): boolean {
 /**
  * Records one tool score in a single statement, so concurrent reports cannot lose each other.
  * $1 new row id, $2 enrollment, $3 item, $4 score, $5 data (json: lastScore, at, reportedAt?,
- * dimensions?), $6 reportedAt (text or null), $7 attempt cap (int or null for none).
+ * dimensions?), $6 reportedAt (text or null), $7 attempt cap (int or null for none),
+ * $8 pass mark (int or null: any score passes). A score below it leaves the item in progress; once
+ * an attempt has passed, the item stays completed.
  * The ON CONFLICT branch runs on the row's latest committed version (row-locked), and its WHERE
  * skips the update, returning no row, when the report is a repeat (same reportedAt) or the cap
  * is reached. Score is the best seen; dimensions stay those of the best attempt.
@@ -62,16 +65,24 @@ export const RECORD_TOOL_RESULT_SQL = `
 INSERT INTO "ItemProgress" AS ip
   ("id", "enrollmentId", "itemId", "status", "score", "attempts", "completedAt", "data", "updatedAt")
 VALUES (
-  $1, $2, $3, 'completed', $4::int, 1, now() AT TIME ZONE 'UTC',
+  $1, $2, $3,
+  CASE WHEN $4::int >= COALESCE($8::int, 0) THEN 'completed' ELSE 'in_progress' END,
+  $4::int, 1,
+  CASE WHEN $4::int >= COALESCE($8::int, 0) THEN now() AT TIME ZONE 'UTC' END,
   CASE WHEN $6::text IS NULL THEN $5::jsonb
        ELSE $5::jsonb || jsonb_build_object('recentReportedAt', jsonb_build_array($6::text)) END,
   now() AT TIME ZONE 'UTC'
 )
 ON CONFLICT ("enrollmentId", "itemId") DO UPDATE SET
-  "status" = 'completed',
+  "status" = CASE WHEN ip."status" = 'completed' OR EXCLUDED."score" >= COALESCE($8::int, 0)
+                  THEN 'completed' ELSE 'in_progress' END,
   "score" = GREATEST(ip."score", EXCLUDED."score"),
   "attempts" = ip."attempts" + 1,
-  "completedAt" = now() AT TIME ZONE 'UTC',
+  "completedAt" = CASE WHEN ip."status" = 'completed' AND EXCLUDED."score" < COALESCE($8::int, 0)
+                       THEN ip."completedAt"
+                       WHEN EXCLUDED."score" >= COALESCE($8::int, 0)
+                       THEN now() AT TIME ZONE 'UTC'
+                       ELSE ip."completedAt" END,
   "updatedAt" = now() AT TIME ZONE 'UTC',
   "data" = (
     CASE WHEN EXCLUDED."score" > COALESCE(ip."score", -1)
@@ -464,6 +475,7 @@ export class LearnerService {
             retries: limits ? (progress?.attempts ?? 0) < limits.maxAttempts : true,
             attemptsAllowed: limits ? limits.maxAttempts : null,
             timeLimitMinutes: limits ? limits.timeLimitMinutes : null,
+            passScore: passScoreOf(config, item.label),
           }
         : null
     return {
@@ -739,7 +751,8 @@ export class LearnerService {
       score,
       JSON.stringify(data),
       reportedAt,
-      cap
+      cap,
+      passScoreOf(item.config, item.label)
     )
     if (rows.length === 0) {
       // Another request got there first: it was this very report, or it used the last attempt.
@@ -928,7 +941,8 @@ export function buildRecord(
   ) => {
     const ids = new Set(items.filter(pick).map((i) => i.id))
     const scores = progress
-      .filter((p) => ids.has(p.itemId) && p.status === 'completed' && p.score !== null)
+      // Any scored attempt counts, including one still below the item's pass mark.
+      .filter((p) => ids.has(p.itemId) && p.score !== null)
       .map((p) => p.score as number)
     return scores.length ? Math.max(...scores) : null
   }

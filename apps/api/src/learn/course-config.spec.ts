@@ -355,6 +355,23 @@ describe('tool items', () => {
     }
   })
 
+  describe('passScore', () => {
+    it('keeps a whole pass mark on a tool item, drops it on a pre-assessment, and refuses nonsense', () => {
+      expect(
+        validateItemInput({ ...base, config: { ...base.config, passScore: 60 } }).config
+      ).toMatchObject({ passScore: 60 })
+      expect(validateItemInput({ ...base, config: { ...base.config } }).config).not.toHaveProperty(
+        'passScore'
+      )
+      expect(() =>
+        validateItemInput({ ...base, config: { ...base.config, passScore: 150 } })
+      ).toThrow(/Pass mark/)
+      expect(() =>
+        validateItemInput({ ...base, config: { ...base.config, passScore: '60' } })
+      ).toThrow(/Pass mark/)
+    })
+  })
+
   describe('countsAsInterview', () => {
     it('is kept as true for an unlabelled interview tool and defaults to absent', () => {
       expect(

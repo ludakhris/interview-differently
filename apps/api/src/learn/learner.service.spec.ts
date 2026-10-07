@@ -1096,6 +1096,7 @@ describe('recordToolResult', () => {
       retries: true,
       attemptsAllowed: null,
       timeLimitMinutes: null,
+      passScore: null,
     })
     expect(prisma.courseModule.findMany).toHaveBeenCalled() // plan and completion checks ran
   })
@@ -1301,6 +1302,7 @@ describe('recordToolResult', () => {
       retries: true,
       attemptsAllowed: null,
       timeLimitMinutes: null,
+      passScore: null,
     })
   })
 
@@ -1333,6 +1335,7 @@ describe('recordToolResult', () => {
         retries: true,
         attemptsAllowed: 1,
         timeLimitMinutes: null,
+        passScore: null,
       })
       prisma.itemProgress.findUnique.mockResolvedValue({
         status: 'completed',

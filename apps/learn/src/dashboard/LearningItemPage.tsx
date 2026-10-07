@@ -563,6 +563,15 @@ function ToolItem(props: {
         </div>
       ) : (
         <div className="dash-ready-card">
+          {item.score !== null && tool.passScore !== null && (
+            <p className="dash-ready-miss" role="status">
+              Your best result so far is {score(item.score)}. You need {tool.passScore}% to complete
+              this
+              {tool.retries
+                ? ': give it another go.'
+                : '. You have used all your attempts, so ask your instructor.'}
+            </p>
+          )}
           <h2 className="dash-ready-title">{copy.heading}</h2>
           <p className="dash-ready-intro">{copy.intro}</p>
           <ul className="dash-ready-points">
@@ -604,7 +613,7 @@ function ToolItem(props: {
             onClick={open}
             disabled={busy || !!item.locked || !tool.retries}
           >
-            {busy ? 'Opening…' : copy.start}
+            {busy ? 'Opening…' : item.attempts > 0 ? 'Try again' : copy.start}
           </button>
         )}
       </Actions>

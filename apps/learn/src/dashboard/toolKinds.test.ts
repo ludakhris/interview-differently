@@ -41,6 +41,14 @@ describe('toolKinds', () => {
     ).toBe('No time limit')
   })
 
+  it('names the pass mark when the item has one', () => {
+    const c = readyCopy(
+      { name: 'X', attemptsAllowed: null, timeLimitMinutes: null, passScore: 70 },
+      0
+    )
+    expect(c.points.at(-1)?.title).toBe('Score 70% to pass')
+  })
+
   it('words a lab as a retryable simulation', () => {
     const c = readyCopy(
       { name: 'Interview Differently', attemptsAllowed: null, timeLimitMinutes: null },
@@ -111,6 +119,7 @@ describe('toolConfig', () => {
     skill: '',
     attempts: '3',
     timeLimit: '30',
+    passScore: '',
     countsAsInterview: false,
   }
   it('keeps the interview flag only when ticked on a non-assessment tool', () => {
@@ -120,6 +129,16 @@ describe('toolConfig', () => {
       ref: 'voice',
       countsAsInterview: true,
     })
+  })
+  it('keeps a valid pass mark on any tool and drops a blank or invalid one', () => {
+    expect(toolConfig({ ...f, passScore: '65' })).toEqual({
+      toolId: 'id-interview',
+      ref: 'voice',
+      passScore: 65,
+    })
+    for (const bad of ['', ' ', '0', '101', '6.5', 'abc']) {
+      expect(toolConfig({ ...f, passScore: bad })).not.toHaveProperty('passScore')
+    }
   })
   it('keeps attempt rules, not the interview flag, for an assessment tool', () => {
     expect(

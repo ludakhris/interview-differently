@@ -396,6 +396,8 @@ export interface LearnerItem {
     attemptsAllowed: number | null
     /** Minutes an assessment attempt may take; null means no limit. */
     timeLimitMinutes: number | null
+    /** Score the learner must reach for the item to count as done; null means any scored attempt. */
+    passScore: number | null
   } | null
   status: ProgressStatus
   score: number | null

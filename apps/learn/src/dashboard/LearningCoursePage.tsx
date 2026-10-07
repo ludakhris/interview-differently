@@ -6,7 +6,7 @@ import { Meter } from './charts'
 import { CohortStatusChip } from './CohortsPage'
 import { dateOnly, score } from './format'
 import { LEARNER_TYPE_LABEL } from './ItemEditor'
-import { recordGroups } from './recordGroups'
+import { recordGroups, type RecordShape } from './recordGroups'
 import { errorNotice } from './shared'
 
 const STATUS_WORD = { not_started: 'To do', in_progress: 'Started', completed: 'Done' } as const
@@ -113,7 +113,13 @@ export function LearningCoursePage({ cohortId }: { cohortId: string }) {
         </section>
 
         <aside>
-          <RecordCard record={data.record} />
+          <RecordCard
+            record={data.record}
+            shape={{
+              hasPre: data.modules.some((m) => m.items.some((i) => i.label === 'pre')),
+              hasPost: data.modules.some((m) => m.items.some((i) => i.label === 'post')),
+            }}
+          />
         </aside>
       </div>
     </>
@@ -158,12 +164,12 @@ function AddedList({ items, cohortId }: { items: LearnerAddedItem[]; cohortId: s
 }
 
 /** The learner's own readiness record: the same measures their agency reports on. */
-export function RecordCard({ record }: { record: ReadinessRecord }) {
+export function RecordCard({ record, shape }: { record: ReadinessRecord; shape?: RecordShape }) {
   return (
     <div className="dash-card dash-record">
       <h2 className="dash-card-title">Your readiness record</h2>
-      {recordGroups(record).map((g) => (
-        <Fragment key={g.heading ?? 'course'}>
+      {recordGroups(record, shape).map((g, n) => (
+        <Fragment key={g.heading ?? `rows-${n}`}>
           {g.heading && <h3 className="dash-record-sub">{g.heading}</h3>}
           <dl className="dash-record-rows">
             {g.rows.map((r) => (
@@ -176,7 +182,7 @@ export function RecordCard({ record }: { record: ReadinessRecord }) {
         </Fragment>
       ))}
       <p className="dash-muted dash-record-note">
-        Your instructor and training provider see this record. Sample content only.
+        Your instructor and training provider see this record.
       </p>
     </div>
   )

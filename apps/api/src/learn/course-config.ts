@@ -303,6 +303,9 @@ function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | '
         const limit = whole(config.timeLimitMinutes, 'Time limit', 5, 240)
         if (limit !== undefined) rules.timeLimitMinutes = limit
       }
+      // The score that counts as done; none by default, and never on a pre-assessment baseline.
+      const pass = given === 'pre' ? undefined : whole(config.passScore, 'Pass mark', 1, 100)
+      if (pass !== undefined) rules.passScore = pass
       // Whether the item feeds interview readiness. Only an unlabelled interview-kind tool can; for
       // anything else the flag is dropped.
       const flag = config.countsAsInterview

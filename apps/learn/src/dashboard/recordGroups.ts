@@ -14,8 +14,38 @@ export interface RecordGroup {
   rows: RecordRow[]
 }
 
-/** The learner's readiness record in reading order: Course, then Skills, then Interview readiness. */
-export function recordGroups(record: ReadinessRecord): RecordGroup[] {
+/** Which assessments the course has, so the record does not list ones that cannot happen. */
+export interface RecordShape {
+  hasPre: boolean
+  hasPost: boolean
+}
+
+/** The learner's readiness record in reading order: Course, then Skills, then Interview readiness (one line). */
+export function recordGroups(
+  record: ReadinessRecord,
+  shape: RecordShape = { hasPre: true, hasPost: true }
+): RecordGroup[] {
+  const skills: RecordRow[] = [
+    ...(shape.hasPre ? [{ label: 'Pre-assessment', value: score(record.pre) }] : []),
+    ...(shape.hasPost
+      ? [
+          { label: 'Post-assessment', value: score(record.post) },
+          {
+            label: 'Change',
+            value: record.gain === null ? '—' : `${points(record.gain)} % points`,
+          },
+          {
+            label: `Post-assessment goal (${record.targetScore}%)`,
+            value: record.reachedTarget
+              ? 'Reached'
+              : record.post === null
+                ? 'Not yet taken'
+                : 'Not reached',
+            yes: record.reachedTarget,
+          },
+        ]
+      : []),
+  ]
   return [
     {
       heading: null,
@@ -27,38 +57,16 @@ export function recordGroups(record: ReadinessRecord): RecordGroup[] {
         },
       ],
     },
+    ...(skills.length ? [{ heading: 'Skills', rows: skills }] : []),
     {
-      heading: 'Skills',
+      heading: null,
       rows: [
-        { label: 'Pre-assessment', value: score(record.pre) },
-        { label: 'Post-assessment', value: score(record.post) },
         {
-          label: 'Change',
-          value: record.gain === null ? '—' : `${points(record.gain)} % points`,
-        },
-        { label: 'Course target', value: `${record.targetScore}%` },
-        {
-          label: 'Target score',
-          value: record.reachedTarget
-            ? 'Reached'
-            : record.post === null
-              ? 'Not yet taken'
-              : 'Not reached',
-          yes: record.reachedTarget,
-        },
-      ],
-    },
-    {
-      heading: 'Interview readiness',
-      rows: [
-        { label: 'Practice interview (best)', value: score(record.interviewBest) },
-        {
-          label: 'Interview readiness',
-          value: record.interviewReady
-            ? 'Ready to interview'
-            : record.interviewBest === null
+          label: `Interview readiness (goal ${record.readinessThreshold}%)`,
+          value:
+            record.interviewBest === null
               ? 'Not yet scored'
-              : 'Keep practicing',
+              : `${record.interviewReady ? 'Ready to interview' : 'Keep practicing'} (${score(record.interviewBest)})`,
           yes: record.interviewReady,
         },
       ],

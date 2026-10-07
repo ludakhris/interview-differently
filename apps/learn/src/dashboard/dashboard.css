@@ -1767,6 +1767,13 @@
 .dash-h2 + .dash-lesson {
   margin-top: 16px;
 }
+.dash-ready-miss {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-left: 4px solid var(--orange-text);
+  background: var(--surface-alt, var(--surface));
+  font-weight: 600;
+}
 .dash-ready-note {
   margin-top: 10px;
   font-size: 13px;
