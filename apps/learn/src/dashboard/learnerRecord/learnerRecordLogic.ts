@@ -98,6 +98,6 @@ export const PROFILE_LABEL = {
 } as const
 
 export const SKIPPED_LABEL = {
-  not_taken: 'Register not taken',
+  not_taken: 'Not taken yet',
   before_join: 'Before they joined',
 } as const

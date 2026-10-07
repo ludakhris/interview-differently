@@ -1,0 +1,90 @@
+/* Cohort configuration dialog: labelled groups, label / field / help aligned the same everywhere. */
+.dash-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.cfg {
+  display: grid;
+  gap: 20px;
+  padding: 8px 0 16px;
+}
+.cfg-group {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.35));
+  border-radius: var(--dash-radius, 0);
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.cfg-group > legend {
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--navy, inherit);
+}
+.cfg-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+.cfg-field {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+.cfg-field > span {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.cfg-field small {
+  font-size: 13px;
+}
+.cfg-field input,
+.cfg-field select {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--ink-soft);
+  border-radius: var(--dash-radius, 0);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.cfg-field input:disabled {
+  background: var(--surface-alt, #f2f2f2);
+  color: var(--ink-soft);
+}
+.cfg-field input[aria-invalid='true'] {
+  border-color: #a32020;
+  border-width: 2px;
+}
+.cfg-check {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  align-items: start;
+  font-weight: 600;
+}
+.cfg-check input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+}
+.cfg-check small {
+  display: block;
+  margin-top: 2px;
+  font-weight: 400;
+  font-size: 13px;
+}
+@media (min-width: 640px) {
+  .cfg-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

@@ -52,6 +52,7 @@ describe('cohort details: profile requirement', () => {
     loads['/learn/cohorts/c1/join-requests'] = []
     send.mockResolvedValue(cohort)
     render(<CohortPage cohortId="c1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Edit cohort configuration/ }))
     expect(screen.queryByLabelText('Ask learners to refresh it')).toBeNull()
     await userEvent.click(screen.getByLabelText(/Learners must complete their profile first/))
     expect(
@@ -61,7 +62,7 @@ describe('cohort details: profile requirement', () => {
     expect([...select.options].map((o) => o.value)).toEqual(['', '3', '6', '12'])
     expect(select.options[0].textContent).toBe('Never')
     await userEvent.selectOptions(select, '6')
-    await userEvent.click(screen.getByRole('button', { name: 'Save details' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() =>
       expect(send).toHaveBeenCalledWith(
         'PUT',
@@ -75,11 +76,12 @@ describe('cohort details: profile requirement', () => {
     loads['/learn/cohorts/c1/join-requests'] = []
     send.mockResolvedValue(cohort)
     render(<CohortPage cohortId="c1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Edit cohort configuration/ }))
     expect((screen.getByLabelText('Ask learners to refresh it') as HTMLSelectElement).value).toBe(
       '12'
     )
     await userEvent.click(screen.getByLabelText(/Learners must complete their profile first/))
-    await userEvent.click(screen.getByRole('button', { name: 'Save details' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() =>
       expect(send).toHaveBeenCalledWith(
         'PUT',

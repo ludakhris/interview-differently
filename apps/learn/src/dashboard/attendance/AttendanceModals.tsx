@@ -2,7 +2,7 @@ import type { AttendanceSheet as Sheet, CohortSessionDto } from '@id/types'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useApiSend, useLoad } from '../api'
 import { AttendanceSheet } from './AttendanceSheet'
-import { Modal, UNSAVED_PROMPT } from './Modal'
+import { Modal, UNSAVED_PROMPT } from '../Modal'
 import {
   STATUS_LABEL,
   STATUS_LETTER,
@@ -57,6 +57,8 @@ export function RecordModal({
       title={`${taken ? 'Edit attendance' : 'Record attendance'}: ${session.title}`}
       onClose={onClose}
       dirty={dirty}
+      className="at"
+      wide
     >
       <p className="dash-muted at-modal-sub">{sub(session)}</p>
       <SheetState sheet={sheet}>
@@ -94,6 +96,7 @@ export function ViewModal({
     <Modal
       title={`Attendance: ${session.title}`}
       onClose={onClose}
+      className="at"
       footer={
         <>
           <button type="button" className="dash-btn" onClick={onRecord}>
@@ -207,7 +210,12 @@ export function SessionModal({
   }
 
   return (
-    <Modal title={session ? 'Edit session' : 'Add session'} onClose={onClose} dirty={dirty}>
+    <Modal
+      title={session ? 'Edit session' : 'Add session'}
+      onClose={onClose}
+      dirty={dirty}
+      className="at"
+    >
       <form className="at-form at-form-modal" onSubmit={submit} noValidate>
         <label>
           Title

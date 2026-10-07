@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { downloadFile, useApiFetch, useApiSend, useLoad } from '../api'
 import { useApp } from '../app-context'
 import { RecordModal, SessionModal, ViewModal } from './AttendanceModals'
-import { AttendanceSummaryView } from './AttendanceSummaryView'
+import { AttendanceLegend, AttendanceSummaryView } from './AttendanceSummaryView'
 import {
   LOW_RATE_PCT,
   attendanceStats,
@@ -16,9 +16,6 @@ import {
 
 type ModalState = { kind: 'add' } | { kind: 'edit' | 'record' | 'view'; id: string } | null
 
-/** Grids with more sessions than this start collapsed. */
-const GRID_OPEN_MAX_SESSIONS = 12
-
 const slug = (t: string) =>
   t
     .toLowerCase()
@@ -28,7 +25,7 @@ const slug = (t: string) =>
 /**
  * Attendance for a live or hybrid cohort: a status strip, the sessions as a roster-style table with
  * an action row per session (record, view, download, edit, delete in dialogs), and the
- * learner-by-session grid folded underneath. CohortPage mounts it after the Roster.
+ * learner-by-session grid folded underneath (closed until opened). CohortPage mounts it after the Roster.
  */
 export function AttendancePanel({ cohortId }: { cohortId: string }) {
   const send = useApiSend()
@@ -48,7 +45,7 @@ export function AttendancePanel({ cohortId }: { cohortId: string }) {
     () => attendanceStats(list ?? [], summary.data, Date.now()),
     [list, summary.data]
   )
-  const open = gridOpen ?? stats.held <= GRID_OPEN_MAX_SESSIONS
+  const open = gridOpen ?? false
   const current =
     modal && modal.kind !== 'add' ? (list?.find((s) => s.id === modal.id) ?? null) : null
 
@@ -280,8 +277,10 @@ export function AttendancePanel({ cohortId }: { cohortId: string }) {
                 Download CSV
               </button>
             </div>
+            {!open && <AttendanceLegend />}
             {open && (
               <div id="at-grid-body">
+                <AttendanceLegend />
                 {summary.error ? (
                   <div className="at-error">
                     <p className="dash-error" role="alert">

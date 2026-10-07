@@ -182,7 +182,7 @@ export function AttendanceSheet({
                   <span className="at-name">{r.name}</span>
                   {r.email && <span className="dash-muted at-email">{r.email}</span>}
                 </div>
-                <div className="at-seg" role="radiogroup" aria-label={`Status for ${r.name}`}>
+                <div className="at-pills" role="radiogroup" aria-label={`Status for ${r.name}`}>
                   {STATUS_ORDER.map((s, k) => (
                     <button
                       key={s}
@@ -193,15 +193,15 @@ export function AttendanceSheet({
                       }}
                       // Roving tabindex: the chosen status (or the first, if none) is the one stop.
                       tabIndex={(d.status ?? STATUS_ORDER[0]) === s ? 0 : -1}
-                      className={`at-seg-btn at-s-${s}`}
+                      className={`at-pill at-s-${s}`}
                       aria-checked={d.status === s}
                       onClick={() => set(r.userId, s)}
                       onKeyDown={(e) => onRadioKey(e, r.userId, k)}
                     >
+                      <span className="at-seg-word">{STATUS_LABEL[s]}</span>
                       <span aria-hidden="true" className="at-letter">
                         {STATUS_LETTER[s]}
                       </span>
-                      <span className="at-seg-word">{STATUS_LABEL[s]}</span>
                     </button>
                   ))}
                 </div>

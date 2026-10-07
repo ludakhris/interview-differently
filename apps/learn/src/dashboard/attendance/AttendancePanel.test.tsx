@@ -114,6 +114,8 @@ const setup = (sessions = [taken, untaken, upcoming]) => {
   loads['/learn/cohorts/c1/sessions/s2/marks'] = sheetOf(untaken, [])
   return render(<AttendancePanel cohortId="c1" />)
 }
+const openGrid = () =>
+  userEvent.click(screen.getByRole('button', { name: /Attendance by learner/ }))
 const rowOf = (title: string) =>
   within(screen.getByRole('table', { name: 'Sessions' })).getByRole('row', {
     name: new RegExp(title),
@@ -137,6 +139,7 @@ describe('status strip', () => {
 
   it('clicking the below-threshold count filters the grid to those learners, and clears', async () => {
     setup()
+    await openGrid()
     const grid = () => screen.getByRole('region', { name: 'Attendance by learner' })
     expect(within(grid()).getAllByRole('link')).toHaveLength(3)
     await userEvent.click(screen.getByRole('button', { name: '1 learner' }))
@@ -355,6 +358,30 @@ describe('recording attendance with notes', () => {
     expect(radio('Bo Baker', 'Present').getAttribute('aria-checked')).toBe('false')
   })
 
+  it('status is four separate pill radios with one tab stop, a word label and a hidden letter hint', async () => {
+    setup()
+    await userEvent.click(
+      within(rowOf('Session 2')).getByRole('button', { name: /Record attendance/ })
+    )
+    const group = screen.getByRole('radiogroup', { name: 'Status for Ann Able' })
+    const radios = within(group).getAllByRole('radio')
+    expect(radios.map((r) => r.textContent)).toEqual(['PresentP', 'AbsentA', 'LateL', 'ExcusedE'])
+    expect(radios.every((r) => r.className.includes('at-pill'))).toBe(true)
+    expect(radios.map((r) => r.tabIndex)).toEqual([0, -1, -1, -1])
+    expect(radios.map((r) => r.querySelector('.at-letter')!.getAttribute('aria-hidden'))).toEqual([
+      'true',
+      'true',
+      'true',
+      'true',
+    ])
+    radios[0].focus()
+    await userEvent.keyboard('{ArrowRight}')
+    expect(radio('Ann Able', 'Absent').getAttribute('aria-checked')).toBe('true')
+    expect(document.activeElement).toBe(radio('Ann Able', 'Absent'))
+    // The record dialog is the wide one.
+    expect(screen.getByRole('dialog').className).toContain('dash-modal-wide')
+  })
+
   it('p/a/l/e set the status of a focused row', async () => {
     setup()
     await userEvent.click(
@@ -410,8 +437,9 @@ describe('recording attendance with notes', () => {
 })
 
 describe('attendance by learner grid', () => {
-  it('uses the roster table, links each learner to their record, and shows notes as tooltips', () => {
+  it('uses the roster table, links each learner to their record, and shows notes as tooltips', async () => {
     setup()
+    await openGrid()
     const grid = screen.getByRole('region', { name: 'Attendance by learner' })
     const table = within(grid).getByRole('table')
     expect(table.className).toContain('dash-table')
@@ -429,18 +457,29 @@ describe('attendance by learner grid', () => {
     expect(within(grid).getByText('L')).toBeTruthy()
   })
 
-  it('is open with 12 sessions or fewer, folded with more, and the fold toggles', async () => {
+  it('is folded by default whatever the session count, and the fold toggles', async () => {
     setup()
     const fold = screen.getByRole('button', { name: /Attendance by learner/ })
-    expect(fold.getAttribute('aria-expanded')).toBe('true')
-    cleanup()
-    const many = Array.from({ length: 13 }, (_, i) => mk(`m${i}`, `S ${i}`, iso(-30 + i)))
-    setup(many)
-    const folded = screen.getByRole('button', { name: /Attendance by learner/ })
-    expect(folded.getAttribute('aria-expanded')).toBe('false')
+    expect(fold.getAttribute('aria-expanded')).toBe('false')
     expect(screen.queryByRole('region', { name: 'Attendance by learner' })).toBeNull()
-    await userEvent.click(folded)
+    await userEvent.click(fold)
+    expect(fold.getAttribute('aria-expanded')).toBe('true')
     expect(screen.getByRole('region', { name: 'Attendance by learner' })).toBeTruthy()
+    await userEvent.click(fold)
+    expect(screen.queryByRole('region', { name: 'Attendance by learner' })).toBeNull()
+  })
+
+  it('shows the coloured legend, with words as well as colour, both folded and open', async () => {
+    setup()
+    const legend = () => screen.getByRole('list', { name: 'Legend' })
+    for (const w of ['Present', 'Absent', 'Late', 'Excused', 'Note', 'Not taken yet'])
+      expect(within(legend()).getByText(w)).toBeTruthy()
+    expect(legend().querySelector('.at-s-present')).toBeTruthy()
+    expect(legend().querySelector('.at-s-absent')).toBeTruthy()
+    await openGrid()
+    expect(screen.getAllByRole('list', { name: 'Legend' })).toHaveLength(1)
+    const region = screen.getByRole('region', { name: 'Attendance by learner' })
+    expect(legend().compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('has one Download CSV for the whole cohort', async () => {

@@ -1,3 +1,4 @@
+import './modal.css'
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -16,12 +17,17 @@ export function Modal({
   onClose,
   dirty = false,
   footer,
+  className = '',
+  wide = false,
   children,
 }: {
   title: string
   onClose: () => void
   dirty?: boolean
   footer?: ReactNode
+  /** Extra classes on the dialog (a feature's own style tokens). */
+  className?: string
+  wide?: boolean
   children: ReactNode
 }) {
   const titleId = useId()
@@ -93,14 +99,14 @@ export function Modal({
     )
   return createPortal(
     <div
-      className="at-backdrop"
-      data-testid="at-backdrop"
+      className="dash-backdrop"
+      data-testid="dash-backdrop"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) requestClose()
       }}
     >
       <div
-        className="at at-modal"
+        className={`dash-modal${wide ? ' dash-modal-wide' : ''} ${className}`.trim()}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -108,16 +114,16 @@ export function Modal({
         ref={dialog}
         onKeyDown={onKeyDown}
       >
-        <header className="at-modal-head">
-          <h2 className="at-modal-title" id={titleId}>
+        <header className="dash-modal-head">
+          <h2 className="dash-modal-title" id={titleId}>
             {title}
           </h2>
           <button type="button" className="dash-btn-quiet" onClick={requestClose}>
             Close
           </button>
         </header>
-        <div className="at-modal-body">{children}</div>
-        {footer && <footer className="at-modal-foot">{footer}</footer>}
+        <div className="dash-modal-body">{children}</div>
+        {footer && <footer className="dash-modal-foot">{footer}</footer>}
       </div>
     </div>,
     host

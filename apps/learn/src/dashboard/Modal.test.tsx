@@ -68,7 +68,7 @@ describe('Modal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Open it' }))
     fireEvent.mouseDown(screen.getByRole('dialog'))
     expect(screen.getByRole('dialog')).toBeTruthy()
-    fireEvent.mouseDown(screen.getByTestId('at-backdrop'))
+    fireEvent.mouseDown(screen.getByTestId('dash-backdrop'))
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
@@ -77,7 +77,7 @@ describe('Modal', () => {
     render(<Harness dirty />)
     await userEvent.click(screen.getByRole('button', { name: 'Open it' }))
     await userEvent.keyboard('{Escape}')
-    fireEvent.mouseDown(screen.getByTestId('at-backdrop'))
+    fireEvent.mouseDown(screen.getByTestId('dash-backdrop'))
     await userEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(confirm).toHaveBeenCalledTimes(3)
     expect(screen.getByRole('dialog')).toBeTruthy()

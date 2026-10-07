@@ -5,6 +5,7 @@ import { useApp } from './app-context'
 import { AttemptsPanel } from './AttemptsPanel'
 import { AttendancePanel } from './attendance/AttendancePanel'
 import { Meter } from './charts'
+import { CohortConfigModal } from './CohortConfigModal'
 import { CohortStatusChip } from './CohortsPage'
 import { dateOnly, dateShort } from './format'
 import type { PendingJoinRequest } from './joinRequests'
@@ -118,8 +119,7 @@ function Cohort({
   const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null)
   const [copied, setCopied] = useState(false)
   const [attemptsFor, setAttemptsFor] = useState<string | null>(null)
-  const [needsApproval, setNeedsApproval] = useState(!!cohort.requiresApproval)
-  const [needsProfile, setNeedsProfile] = useState(!!cohort.requiresProfile)
+  const [configOpen, setConfigOpen] = useState(false)
 
   async function run(action: () => Promise<CohortDetail>, ok?: string): Promise<boolean> {
     setBusy(true)
@@ -148,24 +148,6 @@ function Cohort({
     ) {
       form.reset()
     }
-  }
-
-  async function saveDetails(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const f = new FormData(e.currentTarget)
-    const limit = String(f.get('maxLearners') ?? '').trim()
-    const body: Record<string, unknown> = {
-      name: f.get('name'),
-      maxLearners: limit ? Number(limit) : null,
-    }
-    if (f.get('startsAt')) body.startsAt = f.get('startsAt')
-    body.delivery = f.get('delivery')
-    body.requiresApproval = needsApproval
-    body.joinContact = needsApproval ? String(f.get('joinContact') ?? '').trim() : null
-    body.requiresProfile = needsProfile
-    const months = Number(f.get('profileRefreshMonths'))
-    body.profileRefreshMonths = needsProfile && months ? months : null
-    await run(() => send<CohortDetail>('PUT', `/learn/cohorts/${cohort.id}`, body), 'Saved.')
   }
 
   /** Re-applies the completion rules to one learner, e.g. after the rules or the course changed. */
@@ -219,7 +201,6 @@ function Cohort({
     }
   }
 
-  const upcoming = cohort.status === 'upcoming'
   return (
     <>
       <p className="dash-back">
@@ -240,6 +221,23 @@ function Cohort({
           >
             Activity
           </a>
+          <button
+            type="button"
+            className="dash-btn-secondary dash-btn-icon"
+            onClick={() => setConfigOpen(true)}
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+              <path
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm7.4-2.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V19a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H5a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H11a1.7 1.7 0 0 0 1-1.5V5a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V11a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"
+              />
+            </svg>
+            Edit cohort configuration
+          </button>
           <CohortStatusChip status={cohort.status} />
         </div>
       </div>
@@ -267,6 +265,8 @@ function Cohort({
           </button>
         </div>
       </section>
+
+      {cohort.delivery !== 'online' && <AttendancePanel cohortId={cohort.id} />}
 
       <section className="dash-section" aria-labelledby="h-roster">
         <div className="dash-head">
@@ -396,121 +396,17 @@ function Cohort({
         )}
       </section>
 
-      {cohort.delivery !== 'online' && <AttendancePanel cohortId={cohort.id} />}
-
-      <section className="dash-card" aria-labelledby="h-details">
-        <h2 className="dash-card-title" id="h-details">
-          Cohort details
-        </h2>
-        <form className="dash-form" onSubmit={saveDetails} key={cohort.name + cohort.startsAt}>
-          <div className="dash-field-row">
-            <label className="dash-field">
-              <span>Name</span>
-              <input name="name" required maxLength={120} defaultValue={cohort.name} />
-            </label>
-            <label className="dash-field">
-              <span>Start date</span>
-              <input
-                name="startsAt"
-                type="date"
-                disabled={!upcoming}
-                defaultValue={cohort.startsAt?.slice(0, 10) ?? ''}
-              />
-              {!upcoming && (
-                <small className="dash-muted">
-                  The start date can only change before the cohort starts.
-                </small>
-              )}
-            </label>
-            <label className="dash-field">
-              <span>End date</span>
-              <input type="text" readOnly disabled value={dateOnly(cohort.endsAt)} />
-              <small className="dash-muted">Follows the start date and the course length.</small>
-            </label>
-            <label className="dash-field">
-              <span>How it meets</span>
-              <select name="delivery" defaultValue={cohort.delivery}>
-                <option value="online">Online (self-paced)</option>
-                <option value="live">Live (sessions)</option>
-                <option value="hybrid">Hybrid (both)</option>
-              </select>
-              <small className="dash-muted">Live and hybrid cohorts get attendance.</small>
-            </label>
-            <label className="dash-field">
-              <span>Maximum learners</span>
-              <input
-                name="maxLearners"
-                type="number"
-                min={1}
-                max={5000}
-                defaultValue={cohort.maxLearners ?? ''}
-                placeholder="No limit"
-              />
-              <small className="dash-muted">Blank means no limit.</small>
-            </label>
-          </div>
-          <label className="dash-check">
-            <input
-              type="checkbox"
-              checked={needsApproval}
-              onChange={(e) => setNeedsApproval(e.target.checked)}
-            />{' '}
-            Ask an admin to approve people who join with the code
-          </label>
-          {needsApproval && (
-            <label className="dash-field">
-              <span>Contact for learners (shown while they wait)</span>
-              <input
-                name="joinContact"
-                required
-                maxLength={200}
-                defaultValue={cohort.joinContact ?? ''}
-              />
-              <small className="dash-muted">
-                Name and email or phone; learners see it next to their pending request.
-              </small>
-            </label>
-          )}
-          <label className="dash-check">
-            <input
-              type="checkbox"
-              checked={needsProfile}
-              onChange={(e) => setNeedsProfile(e.target.checked)}
-            />{' '}
-            Learners must complete their profile first
-            <small className="dash-muted">
-              Learners choose whether your organization can read their profile.
-            </small>
-          </label>
-          {needsProfile && (
-            <label className="dash-field">
-              <span>Ask learners to refresh it</span>
-              <select
-                name="profileRefreshMonths"
-                defaultValue={String(cohort.profileRefreshMonths ?? '')}
-              >
-                <option value="">Never</option>
-                {[3, 6, 12].map((m) => (
-                  <option key={m} value={m}>
-                    Every {m} months
-                  </option>
-                ))}
-                {cohort.profileRefreshMonths &&
-                  ![3, 6, 12].includes(cohort.profileRefreshMonths) && (
-                    <option value={cohort.profileRefreshMonths}>
-                      Every {cohort.profileRefreshMonths} months
-                    </option>
-                  )}
-              </select>
-            </label>
-          )}
-          <div className="dash-form-actions">
-            <button type="submit" className="dash-btn" disabled={busy}>
-              Save details
-            </button>
-          </div>
-        </form>
-      </section>
+      {configOpen && (
+        <CohortConfigModal
+          cohort={cohort}
+          onClose={() => setConfigOpen(false)}
+          onSaved={(c) => {
+            onChange(c)
+            setConfigOpen(false)
+            setMessage({ kind: 'ok', text: 'Saved.' })
+          }}
+        />
+      )}
     </>
   )
 }

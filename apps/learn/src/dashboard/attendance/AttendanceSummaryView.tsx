@@ -1,8 +1,34 @@
 import type { AttendanceSummary } from '@id/types'
-import { STATUS_LABEL, STATUS_LETTER, rateLabel } from './attendanceLogic'
+import { STATUS_LABEL, STATUS_LETTER, STATUS_ORDER, rateLabel } from './attendanceLogic'
 
 const day = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+/** Colour key for the grid: letter plus word plus colour, never colour alone. */
+export function AttendanceLegend() {
+  return (
+    <ul className="at-key" aria-label="Legend">
+      {STATUS_ORDER.map((st) => (
+        <li key={st} className={`at-key-item at-s-${st}`}>
+          <span className="at-key-chip" aria-hidden="true">
+            {STATUS_LETTER[st]}
+          </span>
+          {STATUS_LABEL[st]}
+        </li>
+      ))}
+      <li className="at-key-item">
+        <span className="at-key-chip at-has-note" aria-hidden="true" />
+        Note
+      </li>
+      <li className="at-key-item at-s-none">
+        <span className="at-key-chip at-s-none" aria-hidden="true">
+          ·
+        </span>
+        Not taken yet
+      </li>
+    </ul>
+  )
+}
 
 /**
  * Learners down, held sessions across, in the Roster table's style: a letter and a colour per mark,
@@ -25,8 +51,8 @@ export function AttendanceSummaryView({
   return (
     <div>
       <p className="dash-muted at-legend">
-        P present, A absent (also no mark in a session that was taken), L late, E excused, · not
-        counted. A corner flag means a note: hover the cell to read it.
+        Absent also covers a learner with no mark in a session that was taken. A corner flag means a
+        note: hover the cell to read it.
       </p>
       <p className="dash-muted at-scroll-hint">Scroll sideways to see every session.</p>
       {rows.length === 0 ? (
