@@ -88,6 +88,7 @@
 }
 .tl-check {
   display: flex;
+  margin-left: 20px;
   align-items: center;
   gap: 8px;
 }
@@ -536,4 +537,37 @@
     height: 44px;
     margin: 0;
   }
+}
+
+.tl-use {
+  margin: 0;
+}
+.tl-callout {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  box-sizing: border-box;
+  max-width: 40em;
+  padding: 14px 16px;
+  border-left: 4px solid var(--navy);
+  border-radius: 8px;
+  background: var(--sky);
+  font-size: 15px;
+}
+.tl-callout-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  color: var(--navy);
+}
+.tl-callout-lead {
+  display: block;
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 700;
+}
+.tl-callout-body {
+  margin: 2px 0 0;
+  color: var(--ink);
 }

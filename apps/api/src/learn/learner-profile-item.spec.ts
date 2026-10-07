@@ -30,7 +30,7 @@ const profile = (over: Record<string, unknown> = {}) => ({
   resumeKey: 'talent/resumes/u/cv.pdf',
   yearsExperience: 3,
   industries: ['Retail'],
-  targetRoles: [],
+  targetRoles: ['Clerk'],
   _count: { educations: 1 },
   ...over,
 })

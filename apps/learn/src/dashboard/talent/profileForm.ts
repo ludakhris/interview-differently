@@ -225,10 +225,8 @@ export function checklist(v: FormValues, hasResume: boolean): Check[] {
   return [
     { label: 'an education entry', done: v.educations.some((e) => !!e.level) },
     { label: 'your years of experience', done: whole(v.yearsExperience) !== null },
-    {
-      label: 'at least one industry or job you want',
-      done: v.industries.length > 0 || v.targetRoles.length > 0,
-    },
+    { label: 'at least one industry', done: v.industries.length > 0 },
+    { label: 'at least one job you want', done: v.targetRoles.length > 0 },
     { label: 'a resume', done: hasResume },
   ]
 }
@@ -238,8 +236,8 @@ export function missingFromSaved(p: ProfileDto): string[] {
   const out: string[] = []
   if (p.educations.length === 0) out.push('an education entry')
   if (p.yearsExperience === null) out.push('your years of experience')
-  if (p.industries.length === 0 && p.targetRoles.length === 0)
-    out.push('an industry or a job you want')
+  if (p.industries.length === 0) out.push('an industry')
+  if (p.targetRoles.length === 0) out.push('a job you want')
   if (!p.resume) out.push('a resume')
   return out
 }

@@ -218,7 +218,7 @@ describe('the profile requirement (#69)', () => {
               resumeKey: 'talent/resumes/u/cv.pdf',
               yearsExperience: 1,
               industries: ['x'],
-              targetRoles: [],
+              targetRoles: ['y'],
               _count: { educations: 1 },
               ...opts.profile,
             }

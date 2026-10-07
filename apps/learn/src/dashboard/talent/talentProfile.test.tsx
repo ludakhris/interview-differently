@@ -123,14 +123,28 @@ describe('form logic', () => {
     v.yearsExperience = '0'
     v.targetRoles = ['Analyst']
     v.educations[0].level = 'bachelor'
-    // Three of four: the resume is the fourth item and comes from the live state.
+    // A job alone is not enough: the industry is its own item.
+    expect(
+      checklist(v, true)
+        .filter((c) => !c.done)
+        .map((c) => c.label)
+    ).toEqual(['at least one industry'])
+    v.industries = ['IT']
+    // Four of five: the resume is the fifth item and comes from the live state.
     expect(
       checklist(v, false)
         .filter((c) => !c.done)
         .map((c) => c.label)
     ).toEqual(['a resume'])
     expect(checklist(v, true).every((c) => c.done)).toBe(true)
-    expect(checklist(v, true)).toHaveLength(4)
+    expect(checklist(v, true)).toHaveLength(5)
+    expect(checklist(v, true).map((c) => c.label)).toEqual([
+      'an education entry',
+      'your years of experience',
+      'at least one industry',
+      'at least one job you want',
+      'a resume',
+    ])
   })
   it('rejects a resume of the wrong type or size before upload', () => {
     expect(resumeProblem({ name: 'a.exe', size: 10 })).toMatch(/PDF/)
@@ -140,14 +154,14 @@ describe('form logic', () => {
 })
 
 describe('the profile form', () => {
-  it('orders the sections: resume first, then work, education, pay, sharing; no provider header, no mark-complete', () => {
+  it('orders the sections: resume, education, work experience, salary targets, sharing; no provider header, no mark-complete', () => {
     render(<TalentProfileForm state={state()} />)
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
     expect(headings).toEqual([
       'Resume',
-      'Your work',
       'Education',
-      'Pay',
+      'Work experience',
+      'Salary targets',
       'Who can see this profile',
     ])
     expect(screen.queryByRole('button', { name: /complete/i })).toBeNull()
@@ -157,6 +171,47 @@ describe('the profile form', () => {
     // The resume is needed for a complete profile, not optional.
     const resumeHead = screen.getByRole('heading', { name: 'Resume' })
     expect(resumeHead.parentElement!.textContent).toBe('ResumeNeeded')
+  })
+
+  it('has the salary and sharing wording, and the work-experience fields together', () => {
+    render(<TalentProfileForm state={state()} />)
+    const section = (name: string) =>
+      screen.getByRole('heading', { name }).closest('section') as HTMLElement
+    const work = section('Work experience')
+    for (const l of [
+      'Years of work experience',
+      'Add to industries you have worked in',
+      'Add to jobs you want',
+      'Earliest date available for new position',
+    ])
+      expect(work.contains(screen.getByLabelText(l))).toBe(true)
+    expect(screen.queryByLabelText('Available from')).toBeNull()
+    const pay = section('Salary targets')
+    expect(pay.textContent).toContain(
+      'Why we ask: your salary goals help us match you with job openings that fit what you need, so we do not send you roles that pay far less.'
+    )
+    expect(pay.textContent).toContain('it never appears in program reports')
+    expect(pay.contains(screen.getByLabelText('What you earned upon sign up (per year)'))).toBe(
+      true
+    )
+    expect(pay.contains(screen.getByLabelText('What you hope to earn (per year)'))).toBe(true)
+    expect(screen.queryByText(/^Pay$/)).toBeNull()
+    const share = section('Who can see this profile')
+    expect(share.textContent).toContain(
+      'Choose which organizations can view your profile. Organizations you select will also see your name and email from your account. Your profile stays private until you grant an organization access.'
+    )
+    expect(share.textContent).not.toMatch(/including your pay|tick a box/)
+    expect(share.textContent).toContain(
+      'Organizations use your profile to find job openings and employer opportunities that fit your education, experience and goals.'
+    )
+    expect(screen.getByText('Your choices stay in your control')).toBeTruthy()
+    const callout = screen.getByRole('note')
+    expect(callout.textContent).toContain(
+      'You can review or change which organizations have access to your profile at any time. Update your selections below and save to apply your changes.'
+    )
+    expect(callout.querySelector('svg')!.getAttribute('aria-hidden')).toBe('true')
+    // Directly under the lede, above the organization list.
+    expect(share.contains(callout)).toBe(true)
   })
 
   it('adds and removes chips with Enter, comma and the x, and offers suggestions', async () => {
@@ -231,11 +286,19 @@ describe('the profile form', () => {
       /^Almost there: add an education entry, your years of experience/
     )
     const list = () => document.querySelector('.tl-checklist')!.textContent
-    expect(screen.getByText('What counts as complete')).toBeTruthy()
+    const heading = screen.getByText('What counts as complete:')
+    expect(heading.tagName).toBe('P')
+    // The checklist sits under the label, in a list named by it, and is indented.
+    const ul = document.querySelector('.tl-checklist')!
+    expect(ul.getAttribute('aria-labelledby')).toBe(heading.id)
+    expect(heading.nextElementSibling).toBe(ul)
+    expect(ul.querySelectorAll(':scope > li')).toHaveLength(5)
     expect(list()).not.toMatch(/✓/)
     expect(screen.getByTestId('profile-status').textContent).toMatch(/, a resume$/)
-    // Four items, each with a visually hidden Done / Still needed.
-    expect(document.querySelectorAll('.tl-check')).toHaveLength(4)
+    // Five items, each with a visually hidden Done / Still needed.
+    expect(document.querySelectorAll('.tl-check')).toHaveLength(5)
+    expect(list()).toMatch(/Still needed: At least one industry/)
+    expect(list()).toMatch(/Still needed: At least one job you want/)
     expect(list()).toMatch(/Still needed: A resume/)
     await user.type(screen.getByLabelText('Years of work experience'), '3')
     expect(list()).toMatch(/✓Done: Your years of experience/)
@@ -249,6 +312,7 @@ describe('the profile form', () => {
             resume: cv,
             yearsExperience: 1,
             industries: ['IT'],
+            targetRoles: ['Analyst'],
             educations: [
               { level: 'bachelor', fieldOfStudy: null, school: null, graduationYear: null },
             ],
@@ -257,7 +321,7 @@ describe('the profile form', () => {
       />
     )
     expect(screen.getByTestId('profile-status').textContent).toBe('Profile complete')
-    expect(document.querySelectorAll('.tl-check-on')).toHaveLength(4)
+    expect(document.querySelectorAll('.tl-check-on')).toHaveLength(5)
   })
 
   it('shows a line only for an unmet requirement, never the organization as a heading', () => {
@@ -373,6 +437,11 @@ describe('the profile form', () => {
     await user.type(screen.getByLabelText('Years of work experience'), '3')
     await user.type(screen.getByLabelText('Add to jobs you want'), 'Analyst{Enter}')
     await user.selectOptions(screen.getByLabelText('Level'), 'associate')
+    // Industries are required too: a job alone is not enough.
+    expect(screen.getByTestId('profile-status').textContent).toBe(
+      'Almost there: add at least one industry'
+    )
+    await user.type(screen.getByLabelText('Add to industries you have worked in'), 'IT{Enter}')
     expect(screen.getByTestId('profile-status').textContent).toBe('Ready to save')
   })
 
@@ -382,6 +451,7 @@ describe('the profile form', () => {
       state({
         profile: dto({
           yearsExperience: 3,
+          industries: ['IT'],
           targetRoles: ['Analyst'],
           educations: [
             { level: 'associate', fieldOfStudy: null, school: 'DTCC', graduationYear: 2019 },
@@ -393,11 +463,12 @@ describe('the profile form', () => {
     )
     render(<TalentProfileForm state={state({ profile: dto({ resume: cv }) })} />)
     await user.type(screen.getByLabelText('Years of work experience'), '3')
+    await user.type(screen.getByLabelText('Add to industries you have worked in'), 'IT{Enter}')
     await user.type(screen.getByLabelText('Add to jobs you want'), 'Analyst{Enter}')
     await user.selectOptions(screen.getByLabelText('Level'), 'associate')
     await user.type(screen.getByLabelText('School'), 'DTCC')
     await user.type(screen.getByLabelText('Graduation year'), '2019')
-    await user.type(screen.getByLabelText('What you earned before (per year)'), '52000')
+    await user.type(screen.getByLabelText('What you earned upon sign up (per year)'), '52000')
     await user.click(screen.getByRole('checkbox', { name: 'Lantern Hill' }))
     await user.click(screen.getByRole('button', { name: 'Save' }))
     expect(send).toHaveBeenCalledTimes(1)
@@ -406,7 +477,7 @@ describe('the profile form', () => {
     expect(path).toBe('/learn/me/profile')
     expect(body).toEqual({
       yearsExperience: 3,
-      industries: [],
+      industries: ['IT'],
       targetRoles: ['Analyst'],
       availableFrom: null,
       previousCompensation: 52000,
@@ -519,8 +590,15 @@ describe('the profile form', () => {
         .map((i) => document.getElementById(i)?.textContent)
         .join(' ')
     expect(described(screen.getByLabelText('Years of work experience'))).toMatch(/Needed/)
+    expect(described(screen.getByLabelText('Add to industries you have worked in'))).toMatch(
+      /^Needed/
+    )
+    expect(described(screen.getByLabelText('Add to jobs you want'))).toMatch(/^Needed/)
+    expect(document.body.textContent).not.toMatch(/this or jobs|this or industries/)
     expect(described(screen.getByLabelText('Level'))).toMatch(/Needed/)
-    expect(described(screen.getByLabelText('Available from'))).toMatch(/Optional/)
+    expect(described(screen.getByLabelText('Earliest date available for new position'))).toMatch(
+      /Optional/
+    )
     expect(described(screen.getByLabelText('School'))).toMatch(/Optional/)
     expect(described(screen.getByLabelText('What you hope to earn (per year)'))).toMatch(/Optional/)
   })
@@ -529,7 +607,7 @@ describe('the profile form', () => {
     const user = userEvent.setup()
     send.mockResolvedValue(state())
     render(<TalentProfileForm state={state()} />)
-    const pay = screen.getByLabelText('What you earned before (per year)') as HTMLInputElement
+    const pay = screen.getByLabelText('What you earned upon sign up (per year)') as HTMLInputElement
     expect(pay.type).toBe('text')
     expect(pay.inputMode).toBe('numeric')
     await user.type(pay, '$85000')

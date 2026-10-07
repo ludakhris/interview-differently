@@ -303,6 +303,7 @@ beforeEach(() => {
       educations: [edu('master')],
       yearsExperience: 2,
       industries: ['Retail'],
+      targetRoles: ['Clerk'],
       previousCompensation: 4242,
       completedAt: daysAgo(400),
       updatedAt: daysAgo(400),
@@ -313,6 +314,7 @@ beforeEach(() => {
       resumeName: 'cv.pdf',
       educations: [edu('bachelor')],
       yearsExperience: 1,
+      industries: ['Logistics'],
       targetRoles: ['Clerk'],
     }),
     // L2 has a profile and shared it with P2 only.
@@ -406,6 +408,7 @@ describe('learner side: GET /me/profile', () => {
 describe('learner side: PUT /me/profile', () => {
   const complete = {
     yearsExperience: 0,
+    industries: ['IT'],
     targetRoles: ['Tech'],
     educations: [{ level: 'associate' }],
   }
@@ -424,7 +427,10 @@ describe('learner side: PUT /me/profile', () => {
     expect(a.profile.completedAt).toBeNull()
     const b = await service.saveProfile('L5', { targetRoles: ['Tech'] })
     expect(b.profile.complete).toBe(false) // still no education
-    const c = await service.saveProfile('L5', { educations: [{ level: 'associate' }] })
+    const b2 = await service.saveProfile('L5', { educations: [{ level: 'associate' }] })
+    expect(b2.profile.complete).toBe(false) // a job alone is not enough: no industry yet
+    expect(b2.profile.completedAt).toBeNull()
+    const c = await service.saveProfile('L5', { industries: ['IT'] })
     expect(c.profile.complete).toBe(false) // all the fields, but no resume yet
     expect(c.profile.completedAt).toBeNull()
     await service.uploadResume('L5', PDF)
@@ -598,7 +604,12 @@ describe('resume upload', () => {
   it('flips complete both ways with the resume, and settles the courses each time', async () => {
     // L5 has every other field; the resume is the last piece.
     state.profiles.push(
-      base('L5', { educations: [edu('master')], yearsExperience: 1, targetRoles: ['x'] })
+      base('L5', {
+        educations: [edu('master')],
+        yearsExperience: 1,
+        industries: ['x'],
+        targetRoles: ['x'],
+      })
     )
     expect((await service.myProfile('L5')).profile.complete).toBe(false)
     const up = await service.uploadResume('L5', PDF)
@@ -617,6 +628,7 @@ describe('resume upload', () => {
       base('L1', {
         educations: [edu('master')],
         yearsExperience: 1,
+        industries: ['x'],
         targetRoles: ['x'],
         updatedAt: new Date(),
       }),
@@ -760,6 +772,7 @@ describe('sharing decides what staff of a provider see', () => {
         resumeName: 'cv.pdf',
         educations: [edu('master')],
         yearsExperience: 1,
+        industries: ['x'],
         targetRoles: ['x'],
       })
     )

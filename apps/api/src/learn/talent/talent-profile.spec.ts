@@ -111,18 +111,19 @@ describe('isProfileComplete', () => {
     educationCount: 1,
     yearsExperience: 0,
     industries: ['IT'],
-    targetRoles: [],
+    targetRoles: ['Analyst'],
     hasResume: true,
   }
   it('is true when enough; zero years counts', () => expect(isProfileComplete(ok)).toBe(true))
   it('needs a resume, even when everything else is filled in', () => {
     expect(isProfileComplete({ ...ok, hasResume: false })).toBe(false)
   })
-  it('needs an education entry, years of experience, and an industry or a target role', () => {
+  it('needs an education entry, years of experience, an industry AND a target role', () => {
     expect(isProfileComplete({ ...ok, educationCount: 0 })).toBe(false)
     expect(isProfileComplete({ ...ok, yearsExperience: null })).toBe(false)
     expect(isProfileComplete({ ...ok, industries: [] })).toBe(false)
-    expect(isProfileComplete({ ...ok, industries: [], targetRoles: ['Analyst'] })).toBe(true)
+    expect(isProfileComplete({ ...ok, targetRoles: [] })).toBe(false)
+    expect(isProfileComplete({ ...ok, industries: [], targetRoles: ['Analyst'] })).toBe(false)
   })
   it('counts several education entries as one requirement, not one each', () => {
     expect(isProfileComplete({ ...ok, educationCount: 3 })).toBe(true)

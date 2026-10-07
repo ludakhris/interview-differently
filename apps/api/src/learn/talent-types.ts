@@ -208,7 +208,7 @@ export interface ProfileDto {
   resume: ResumeInfo | null
   /**
    * COMPUTED, never sent: at least one education entry (with a level), years of experience, at
-   * least one industry or target role, and an uploaded resume.
+   * least one industry, at least one target role, and an uploaded resume.
    */
   complete: boolean
   /** When the profile first became complete; kept after that. */

@@ -95,9 +95,9 @@ const FIELD_NAMES: Record<string, string> = {
   yearsExperience: 'Years of experience',
   industries: 'Industries',
   targetRoles: 'Jobs you want',
-  availableFrom: 'Available from',
-  previousCompensation: 'Pay you earned before',
-  targetCompensation: 'Pay you hope to earn',
+  availableFrom: 'Earliest date available',
+  previousCompensation: 'What you earned upon sign up',
+  targetCompensation: 'What you hope to earn',
   education: 'Education',
 }
 /** "education.1.level" -> "Education 2". */
@@ -140,8 +140,10 @@ export function ProfileStatus({
             : 'Ready to save'}
       </p>
       <div className="tl-checks">
-        <p className="tl-checks-h">What counts as complete</p>
-        <ul className="tl-checklist">
+        <p className="tl-checks-h" id="tl-checks-h">
+          What counts as complete:
+        </p>
+        <ul className="tl-checklist" aria-labelledby="tl-checks-h">
           {checks.map((c) => (
             <li key={c.label} className={c.done ? 'tl-check tl-check-on' : 'tl-check'}>
               <span className="tl-mark" aria-hidden="true">
@@ -288,7 +290,7 @@ export function TalentProfileForm(props: {
   }
   const err = (k: string) => errors[k]
   const moneyLabel = {
-    previousCompensation: 'What you earned before (per year)',
+    previousCompensation: 'What you earned upon sign up (per year)',
     targetCompensation: 'What you hope to earn (per year)',
   }
 
@@ -342,68 +344,6 @@ export function TalentProfileForm(props: {
           lede="Shared only with the organizations you choose below."
         >
           <ResumeBox resume={state.profile.resume} onChange={resumeChanged} />
-        </Section>
-
-        <Section title="Your work">
-          <Field
-            label="Years of work experience"
-            tag="Needed"
-            hint="Use 0 if you are just starting out."
-            error={err('yearsExperience')}
-            fieldId={fid('yearsExperience')}
-          >
-            {(a) => (
-              <input
-                id={a.id}
-                type="number"
-                min={0}
-                max={60}
-                step={1}
-                inputMode="numeric"
-                className="tl-narrow"
-                value={v.yearsExperience}
-                aria-describedby={a.describedBy}
-                aria-invalid={a.invalid}
-                onChange={(e) => set('yearsExperience', e.target.value)}
-              />
-            )}
-          </Field>
-          <ChipInput
-            label="Industries you have worked in"
-            tag="Needed (this or jobs you want)"
-            error={err('industries')}
-            value={v.industries}
-            onChange={(x) => set('industries', x)}
-            suggestions={INDUSTRY_SUGGESTIONS}
-            inputId={fid('industries')}
-          />
-          <ChipInput
-            label="Jobs you want"
-            tag="Needed (this or industries)"
-            error={err('targetRoles')}
-            value={v.targetRoles}
-            onChange={(x) => set('targetRoles', x)}
-            suggestions={ROLE_SUGGESTIONS}
-            inputId={fid('targetRoles')}
-          />
-          <Field
-            label="Available from"
-            tag="Optional"
-            error={err('availableFrom')}
-            fieldId={fid('availableFrom')}
-          >
-            {(a) => (
-              <input
-                id={a.id}
-                type="date"
-                className="tl-narrow"
-                value={v.availableFrom}
-                aria-describedby={a.describedBy}
-                aria-invalid={a.invalid}
-                onChange={(e) => set('availableFrom', e.target.value)}
-              />
-            )}
-          </Field>
         </Section>
 
         <Section
@@ -521,9 +461,71 @@ export function TalentProfileForm(props: {
           </div>
         </Section>
 
+        <Section title="Work experience">
+          <Field
+            label="Years of work experience"
+            tag="Needed"
+            hint="Use 0 if you are just starting out."
+            error={err('yearsExperience')}
+            fieldId={fid('yearsExperience')}
+          >
+            {(a) => (
+              <input
+                id={a.id}
+                type="number"
+                min={0}
+                max={60}
+                step={1}
+                inputMode="numeric"
+                className="tl-narrow"
+                value={v.yearsExperience}
+                aria-describedby={a.describedBy}
+                aria-invalid={a.invalid}
+                onChange={(e) => set('yearsExperience', e.target.value)}
+              />
+            )}
+          </Field>
+          <ChipInput
+            label="Industries you have worked in"
+            tag="Needed"
+            error={err('industries')}
+            value={v.industries}
+            onChange={(x) => set('industries', x)}
+            suggestions={INDUSTRY_SUGGESTIONS}
+            inputId={fid('industries')}
+          />
+          <ChipInput
+            label="Jobs you want"
+            tag="Needed"
+            error={err('targetRoles')}
+            value={v.targetRoles}
+            onChange={(x) => set('targetRoles', x)}
+            suggestions={ROLE_SUGGESTIONS}
+            inputId={fid('targetRoles')}
+          />
+          <Field
+            label="Earliest date available for new position"
+            tag="Optional"
+            error={err('availableFrom')}
+            fieldId={fid('availableFrom')}
+          >
+            {(a) => (
+              <input
+                id={a.id}
+                type="date"
+                className="tl-narrow"
+                value={v.availableFrom}
+                aria-describedby={a.describedBy}
+                aria-invalid={a.invalid}
+                onChange={(e) => set('availableFrom', e.target.value)}
+              />
+            )}
+          </Field>
+        </Section>
+
         <Section
-          title="Pay"
-          lede="Optional. Whole dollars per year. Only organizations you share with can see this."
+          title="Salary targets"
+          lede="Why we ask: your salary goals help us match you with job openings that fit what you need, so we do not send you roles that pay far less. This is optional. Only the organizations you choose below can see it, and it never appears in program reports. Enter whole dollars per year."
         >
           <div className="tl-moneyrow">
             {(['previousCompensation', 'targetCompensation'] as const).map((k) => (
@@ -557,8 +559,31 @@ export function TalentProfileForm(props: {
 
         <Section
           title="Who can see this profile"
-          lede="Choose who can see everything on this page, including your pay and resume. They will also see your name and email from your account. Nothing is shared until you tick a box."
+          lede="Choose which organizations can view your profile. Organizations you select will also see your name and email from your account. Your profile stays private until you grant an organization access."
         >
+          <div className="tl-callout" role="note">
+            <svg className="tl-callout-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="10" rx="2" fill="currentColor" />
+              <path
+                d="M8 11V8a4 4 0 0 1 8 0v3"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            <div>
+              <strong className="tl-callout-lead">Your choices stay in your control</strong>
+              <p className="tl-callout-body">
+                You can review or change which organizations have access to your profile at any
+                time. Update your selections below and save to apply your changes.
+              </p>
+            </div>
+          </div>
+          <p className="tl-section-lede tl-use">
+            Organizations use your profile to find job openings and employer opportunities that fit
+            your education, experience and goals.
+          </p>
           {state.organizations.length === 0 ? (
             <p className="dash-muted">
               Once you join a program, the organizations behind it will be listed here.
