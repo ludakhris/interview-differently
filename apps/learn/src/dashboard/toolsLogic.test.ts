@@ -3,6 +3,8 @@ import {
   accessSummary,
   actionPhrase,
   changeLines,
+  dayLabel,
+  filterHistory,
   filterGroups,
   formatValue,
   groupWorkspaces,
@@ -144,5 +146,54 @@ describe('history wording', () => {
       lookup
     )
     expect(del[0].to).toBeNull()
+  })
+})
+
+describe('history search', () => {
+  const change = (
+    id: string,
+    subject: 'tool' | 'connection',
+    name: string,
+    user: string,
+    changes: Record<string, { from: unknown; to: unknown }>
+  ) => ({
+    id,
+    subject,
+    subjectId: id,
+    subjectName: name,
+    action: 'updated' as const,
+    userName: user,
+    changes,
+    createdAt: '2026-10-07T00:30:00Z',
+  })
+  const rows = [
+    change('1', 'tool', 'Interview Differently', 'Ann Lee', { enabled: { from: true, to: false } }),
+    change('2', 'connection', 'Canvas', 'Bo Chan', {
+      launchUrl: { from: 'https://a', to: 'https://b' },
+    }),
+  ]
+
+  it('finds a change by who made it, what it touched, or a value', () => {
+    expect(filterHistory(rows, lookup, 'ann', 'all').map((r) => r.id)).toEqual(['1'])
+    expect(filterHistory(rows, lookup, 'canvas', 'all').map((r) => r.id)).toEqual(['2'])
+    expect(filterHistory(rows, lookup, 'status off', 'all').map((r) => r.id)).toEqual(['1'])
+  })
+
+  it('needs every word to match, and an empty search keeps everything', () => {
+    expect(filterHistory(rows, lookup, 'ann canvas', 'all')).toEqual([])
+    expect(filterHistory(rows, lookup, '  ', 'all')).toHaveLength(2)
+  })
+
+  it('narrows to tools or connections', () => {
+    expect(filterHistory(rows, lookup, '', 'connection').map((r) => r.id)).toEqual(['2'])
+  })
+})
+
+describe('dayLabel', () => {
+  const now = new Date(2026, 9, 7, 15, 0)
+  it('names today and yesterday, dates the rest', () => {
+    expect(dayLabel(new Date(2026, 9, 7, 1, 0).toISOString(), now)).toBe('Today')
+    expect(dayLabel(new Date(2026, 9, 6, 23, 0).toISOString(), now)).toBe('Yesterday')
+    expect(dayLabel(new Date(2026, 9, 1, 12, 0).toISOString(), now)).toBe('October 1, 2026')
   })
 })

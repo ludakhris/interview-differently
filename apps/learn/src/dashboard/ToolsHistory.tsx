@@ -1,26 +1,31 @@
-import type { LearnConnection, LearnRegistryChange, LearnTool } from '@id/types'
+import type { LearnConnection, LearnRegistryChange } from '@id/types'
 import { useEffect, useRef, useState } from 'react'
 import { useLoad } from './api'
-import { actionPhrase, changeLines, truncate, whenOf, type HistoryLookup } from './toolsLogic'
+import {
+  changeLines,
+  dayLabel,
+  filterHistory,
+  timeOf,
+  truncate,
+  type HistoryKind,
+  type HistoryLookup,
+} from './toolsLogic'
 
 /** Who changed what in the registry, newest first. Loads only once it is opened. */
 export function ToolsHistory({
-  tools,
   connections,
   workspaces,
   refreshKey,
 }: {
-  tools: LearnTool[]
   connections: LearnConnection[]
   workspaces: { id: string; name: string }[]
   /** Changes whenever the registry changes, so the list reloads. */
   refreshKey: number
 }) {
   const [open, setOpen] = useState(false)
-  const [subject, setSubject] = useState('')
-  const path = open
-    ? `/learn/tools/history${subject ? `?subjectId=${encodeURIComponent(subject)}` : ''}`
-    : null
+  const [query, setQuery] = useState('')
+  const [kind, setKind] = useState<HistoryKind>('all')
+  const path = open ? '/learn/tools/history' : null
   const { data, error, loading, reload } = useLoad<LearnRegistryChange[]>(path)
   const kept = useRef<LearnRegistryChange[] | null>(null)
   if (data) kept.current = data
@@ -36,6 +41,15 @@ export function ToolsHistory({
   const lookup: HistoryLookup = {
     workspaceName: (id) => workspaces.find((w) => w.id === id)?.name ?? null,
     connectionName: (id) => connections.find((c) => c.id === id)?.name ?? null,
+  }
+
+  const shown = entries ? filterHistory(entries, lookup, query, kind) : []
+  const days: [string, LearnRegistryChange[]][] = []
+  for (const c of shown) {
+    const day = dayLabel(c.createdAt)
+    const last = days[days.length - 1]
+    if (last && last[0] === day) last[1].push(c)
+    else days.push([day, [c]])
   }
 
   return (
@@ -59,26 +73,29 @@ export function ToolsHistory({
       </p>
       {open && (
         <div id="tools-history-body">
-          <label className="dash-field dash-tl-filter">
-            <span>Show changes to</span>
-            <select value={subject} onChange={(e) => setSubject(e.target.value)}>
-              <option value="">Everything</option>
-              <optgroup label="Tools">
-                {tools.map((t) => (
-                  <option key={`t-${t.toolId}`} value={t.toolId}>
-                    {t.name}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Connections">
-                {connections.map((c) => (
-                  <option key={`c-${c.id}`} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          </label>
+          <div className="dash-hx-tools" role="search">
+            <input
+              className="dash-chooser-search"
+              type="search"
+              placeholder="Search by person, tool, connection or field"
+              aria-label="Search the history"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <div className="dash-chooser-kinds">
+              {KINDS.map((k) => (
+                <button
+                  key={k.key}
+                  type="button"
+                  className={`dash-chip dash-chip-btn${kind === k.key ? ' dash-chip-on' : ''}`}
+                  aria-pressed={kind === k.key}
+                  onClick={() => setKind(k.key)}
+                >
+                  {k.label}
+                </button>
+              ))}
+            </div>
+          </div>
           {error && !entries && (
             <p className="dash-error" role="alert">
               Could not load the history. Try again in a moment.
@@ -88,36 +105,89 @@ export function ToolsHistory({
           {entries && entries.length === 0 && (
             <p className="dash-muted dash-tl-empty">No changes recorded yet.</p>
           )}
-          {entries && entries.length > 0 && (
-            <ol className="dash-tl-history" aria-busy={loading}>
-              {entries.map((c) => (
-                <li key={c.id}>
-                  <p className="dash-tl-event">
-                    <strong>{c.userName}</strong> {actionPhrase(c)}
-                    <time className="dash-muted" dateTime={c.createdAt}>
-                      {whenOf(c.createdAt)}
-                    </time>
-                  </p>
-                  <ul className="dash-tl-changes">
-                    {changeLines(c, lookup).map((l) => (
-                      <li key={l.label}>
-                        <span className="dash-tl-field">{l.label}:</span>{' '}
-                        {l.from !== null && (
-                          <>
-                            <Value text={l.from} /> {l.to !== null && '→'}{' '}
-                          </>
-                        )}
-                        {l.to !== null && <Value text={l.to} />}
-                      </li>
+          {entries && entries.length > 0 && shown.length === 0 && (
+            <p className="dash-muted dash-tl-empty">No changes match your search.</p>
+          )}
+          {shown.length > 0 && (
+            <div aria-busy={loading}>
+              {days.map(([day, rows]) => (
+                <section key={day} className="dash-hx-day" aria-label={day}>
+                  <h3 className="dash-hx-dayhead">{day}</h3>
+                  <ol className="dash-hx-list">
+                    {rows.map((c) => (
+                      <Entry key={c.id} change={c} lookup={lookup} />
                     ))}
-                  </ul>
-                </li>
+                  </ol>
+                </section>
               ))}
-            </ol>
+              {entries && entries.length >= 200 && (
+                <p className="dash-muted dash-hx-note">Showing the latest 200 changes.</p>
+              )}
+            </div>
           )}
         </div>
       )}
     </section>
+  )
+}
+
+const KINDS: { key: HistoryKind; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'tool', label: 'Tools' },
+  { key: 'connection', label: 'Connections' },
+]
+const ACTION = {
+  created: { label: 'Added', cls: 'dash-hx-added' },
+  updated: { label: 'Changed', cls: 'dash-hx-changed' },
+  removed: { label: 'Removed', cls: 'dash-hx-removed' },
+} as const
+
+/** One change: what happened and to what, who and when, and the fields (folded away when there are many). */
+function Entry({ change: c, lookup }: { change: LearnRegistryChange; lookup: HistoryLookup }) {
+  const lines = changeLines(c, lookup)
+  const inline = c.action === 'updated' && lines.length <= 3
+  const action = ACTION[c.action]
+  const detail = (
+    <ul className="dash-hx-lines">
+      {lines.map((l) => (
+        <li key={l.label}>
+          <span className="dash-hx-field">{l.label}</span>
+          <span>
+            {l.from !== null && (
+              <>
+                <Value text={l.from} /> {l.to !== null && <span aria-label="to">→</span>}{' '}
+              </>
+            )}
+            {l.to !== null && <Value text={l.to} />}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+  return (
+    <li className="dash-hx-item">
+      <div className="dash-hx-top">
+        <span className={`dash-hx-action ${action.cls}`}>{action.label}</span>
+        <span className="dash-hx-subject">
+          <span className="dash-hx-type">{c.subject === 'tool' ? 'Tool' : 'Connection'}</span>{' '}
+          <strong>{c.subjectName}</strong>
+        </span>
+        <span className="dash-hx-meta dash-muted">
+          {c.userName} · <time dateTime={c.createdAt}>{timeOf(c.createdAt)}</time>
+        </span>
+      </div>
+      {inline ? (
+        detail
+      ) : (
+        <details className="dash-hx-more">
+          <summary>
+            {lines.length} {lines.length === 1 ? 'field' : 'fields'}
+            <span className="dash-muted"> · {lines.map((l) => l.label).join(', ')}</span>
+          </summary>
+          {detail}
+        </details>
+      )}
+    </li>
   )
 }
 

@@ -349,12 +349,7 @@ export function ToolsPage() {
         )
       })}
 
-      <ToolsHistory
-        tools={tools}
-        connections={connections}
-        workspaces={workspaces ?? []}
-        refreshKey={changes}
-      />
+      <ToolsHistory connections={connections} workspaces={workspaces ?? []} refreshKey={changes} />
     </>
   )
 }

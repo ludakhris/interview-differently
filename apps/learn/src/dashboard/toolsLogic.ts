@@ -176,12 +176,41 @@ export function actionPhrase(c: HistoryChange): string {
   return `${verb} ${c.subject} ${c.subjectName}`
 }
 
-export function whenOf(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
+export type HistoryKind = 'all' | 'tool' | 'connection'
+
+/** Everything a person could search a change by, lowercased: who, what, and every changed field and value. */
+function searchText(c: HistoryChange & { userName: string }, lookup: HistoryLookup): string {
+  const lines = changeLines(c, lookup).flatMap((l) => [l.label, l.from ?? '', l.to ?? ''])
+  return [c.userName, actionPhrase(c), ...lines].join(' ').toLowerCase()
+}
+
+/** Keeps the changes of the chosen type that contain every word typed in the search box. */
+export function filterHistory<T extends HistoryChange & { userName: string }>(
+  entries: T[],
+  lookup: HistoryLookup,
+  query: string,
+  kind: HistoryKind
+): T[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+  return entries.filter((c) => {
+    if (kind !== 'all' && c.subject !== kind) return false
+    if (words.length === 0) return true
+    const text = searchText(c, lookup)
+    return words.every((w) => text.includes(w))
   })
+}
+
+/** "Today", "Yesterday", or the date, for a heading over a day's changes. */
+export function dayLabel(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso)
+  const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+  const diff = Math.round((day(now) - day(d)) / 86_400_000)
+  if (diff === 0) return 'Today'
+  if (diff === 1) return 'Yesterday'
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
+/** Time of day only, for a row under a day heading. */
+export function timeOf(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }

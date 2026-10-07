@@ -2497,43 +2497,107 @@ a.dash-tool:focus-visible {
 }
 
 /* History */
-.dash-tl-filter {
-  max-width: 24em;
-  margin: 12px 0 8px;
-}
-.dash-tl-history {
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.dash-tl-history > li {
-  padding: 14px 0;
-  border-top: 1px solid var(--border);
-}
-.dash-tl-event {
+.dash-hx-tools {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 6px;
-  margin: 0 0 6px;
-  overflow-wrap: anywhere;
+  align-items: center;
+  gap: 12px 16px;
+  margin: 16px 0 8px;
 }
-.dash-tl-event time {
-  flex-basis: 100%;
-  font-size: 13px;
+.dash-hx-dayhead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 18px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--surface-alt);
+  color: var(--ink-soft);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
-.dash-tl-changes {
+.dash-hx-list {
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 14px;
+}
+.dash-hx-item {
+  padding: 12px 12px 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.dash-hx-item:last-child {
+  border-bottom: 0;
+}
+.dash-hx-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.dash-hx-action {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.dash-hx-added {
+  background: #d9f2ec;
+  color: #0b6b5c;
+}
+.dash-hx-changed {
+  background: #fff1c2;
+  color: #8a5a00;
+}
+.dash-hx-removed {
+  background: #ffe0d6;
+  color: #b4380f;
+}
+.dash-hx-subject {
+  flex: 1 1 14em;
+  min-width: 0;
   overflow-wrap: anywhere;
 }
-.dash-tl-changes li {
-  padding: 2px 0;
+.dash-hx-type {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
-.dash-tl-field {
+.dash-hx-meta {
+  margin-left: auto;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.dash-hx-lines {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+.dash-hx-lines li {
+  display: grid;
+  grid-template-columns: minmax(9em, 14em) minmax(0, 1fr);
+  gap: 2px 12px;
+  padding: 3px 0;
+  overflow-wrap: anywhere;
+}
+.dash-hx-field {
   color: var(--ink-soft);
   font-weight: 600;
+}
+.dash-hx-more {
+  margin-top: 6px;
+  font-size: 14px;
+}
+.dash-hx-more summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.dash-hx-note {
+  margin: 14px 0 0;
+  font-size: 13px;
 }
 .dash-tl-value {
   word-break: break-word;
