@@ -223,22 +223,22 @@
 .at-seg-btn:last-child {
   border-right: 0;
 }
-.at-seg-btn[aria-pressed='true'].at-s-present {
+.at-seg-btn[aria-checked='true'].at-s-present {
   background: var(--at-present-bg);
   color: var(--at-present);
   box-shadow: inset 0 -4px 0 var(--at-present);
 }
-.at-seg-btn[aria-pressed='true'].at-s-absent {
+.at-seg-btn[aria-checked='true'].at-s-absent {
   background: var(--at-absent-bg);
   color: var(--at-absent);
   box-shadow: inset 0 -4px 0 var(--at-absent);
 }
-.at-seg-btn[aria-pressed='true'].at-s-late {
+.at-seg-btn[aria-checked='true'].at-s-late {
   background: var(--at-late-bg);
   color: var(--at-late);
   box-shadow: inset 0 -4px 0 var(--at-late);
 }
-.at-seg-btn[aria-pressed='true'].at-s-excused {
+.at-seg-btn[aria-checked='true'].at-s-excused {
   background: var(--at-excused-bg);
   color: var(--at-excused);
   box-shadow: inset 0 -4px 0 var(--at-excused);

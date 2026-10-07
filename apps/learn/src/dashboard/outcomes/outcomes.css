@@ -34,7 +34,10 @@
 .lo-stat dd.lo-note {
   margin: 4px 0 0;
   color: var(--ink-soft);
-  font: 400 13px/1.4 inherit;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 .lo-note {
   margin: 4px 0 0;
