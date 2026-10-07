@@ -11,8 +11,10 @@ import {
   ROLE_SUGGESTIONS,
   blankEducation,
   checklist,
-  missingFromSaved,
+  educationBlank,
+  formatMoney,
   requirementText,
+  timeShort,
   toInput,
   toValues,
   validate,
@@ -22,21 +24,42 @@ import {
 } from './profileForm'
 import './talent.css'
 
+function Tag({ id, tag }: { id: string; tag?: string }) {
+  if (!tag) return null
+  return (
+    <span id={id} className={tag === 'Optional' ? 'tl-opt' : 'tl-need'}>
+      {tag}
+    </span>
+  )
+}
+
 function Field(props: {
   label: string
+  /** "Needed" or "Optional": shown beside the label and read as part of the field's description. */
+  tag?: string
   hint?: string
   error?: string
+  /** Fixed id, so the error summary can link to the field. */
+  fieldId?: string
+  className?: string
   children: (a: { id: string; describedBy: string | undefined; invalid: boolean }) => ReactNode
 }) {
-  const id = useId()
+  const generated = useId()
+  const id = props.fieldId ?? generated
+  const tagId = `${id}-tag`
   const hintId = `${id}-hint`
   const errId = `${id}-err`
-  const describedBy = [props.hint ? hintId : '', props.error ? errId : ''].filter(Boolean).join(' ')
+  const describedBy = [props.tag ? tagId : '', props.hint ? hintId : '', props.error ? errId : '']
+    .filter(Boolean)
+    .join(' ')
   return (
-    <div className="dash-field">
-      <label htmlFor={id}>
-        <span>{props.label}</span>
-      </label>
+    <div className={props.className ? `dash-field ${props.className}` : 'dash-field'}>
+      <div className="tl-labelrow">
+        <label htmlFor={id} className="tl-label">
+          {props.label}
+        </label>
+        <Tag id={tagId} tag={props.tag} />
+      </div>
       {props.children({ id, describedBy: describedBy || undefined, invalid: !!props.error })}
       {props.hint && (
         <small id={hintId} className="dash-hint">
@@ -52,13 +75,16 @@ function Field(props: {
   )
 }
 
-function Section(props: { title: string; lede?: string; children: ReactNode }) {
+function Section(props: { title: string; lede?: string; tag?: string; children: ReactNode }) {
   const id = useId()
   return (
     <section className="tl-section" aria-labelledby={id}>
-      <h2 id={id} className="tl-section-h">
-        {props.title}
-      </h2>
+      <div className="tl-section-head">
+        <h2 id={id} className="tl-section-h">
+          {props.title}
+        </h2>
+        <Tag id={`${id}-tag`} tag={props.tag} />
+      </div>
       {props.lede && <p className="tl-section-lede">{props.lede}</p>}
       {props.children}
     </section>
@@ -70,8 +96,8 @@ const FIELD_NAMES: Record<string, string> = {
   industries: 'Industries',
   targetRoles: 'Jobs you want',
   availableFrom: 'Available from',
-  previousCompensation: 'Last pay',
-  targetCompensation: 'Target pay',
+  previousCompensation: 'Pay you earned before',
+  targetCompensation: 'Pay you hope to earn',
   education: 'Education',
 }
 /** "education.1.level" -> "Education 2". */
@@ -80,7 +106,13 @@ function problemLabel(key: string): string {
   return m ? `Education ${Number(m[1]) + 1}` : (FIELD_NAMES[key] ?? 'Profile')
 }
 
-/** Where the person stands: complete or not, and one plain card for each cohort that asks for it. */
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
+
+/**
+ * Where the person stands: one status line, the short list of what counts as complete (shown once),
+ * and one plain card for each cohort that asks for it. Not a live region: it changes as the person
+ * types, and only a save is announced.
+ */
 export function ProfileStatus({
   state,
   values,
@@ -89,32 +121,36 @@ export function ProfileStatus({
   values: FormValues
 }) {
   const p = state.profile
-  const missing = missingFromSaved(p)
   const checks = checklist(values)
+  const missing = checks.filter((c) => !c.done).map((c) => c.label)
   return (
     <section className="tl-status" aria-label="Profile status">
       <p
-        className={p.complete ? 'tl-status-line tl-status-ok' : 'tl-status-line'}
-        role="status"
+        className={
+          p.complete && missing.length === 0 ? 'tl-status-line tl-status-ok' : 'tl-status-line'
+        }
         data-testid="profile-status"
       >
-        {p.complete
-          ? 'Profile complete'
-          : `Almost there: add ${missing.length ? missing.join(', ') : 'the missing details'}`}
+        {missing.length > 0
+          ? `Almost there: add ${missing.join(', ')}`
+          : p.complete
+            ? 'Profile complete'
+            : 'Ready to save'}
       </p>
-      <p className="tl-checks">
-        Your profile counts as complete when you have:{' '}
-        {checks.map((c, i) => (
-          <span key={c.label} className={c.done ? 'tl-check tl-check-on' : 'tl-check'}>
-            <span aria-hidden="true">{c.done ? '✓' : '○'}</span>
-            <span className="dash-visually-hidden">
-              {c.done ? 'Done: ' : 'Still needed: '}
-            </span>{' '}
-            {c.label}
-            {i < checks.length - 1 ? '; ' : '.'}
-          </span>
-        ))}
-      </p>
+      <div className="tl-checks">
+        <p className="tl-checks-h">What counts as complete</p>
+        <ul className="tl-checklist">
+          {checks.map((c) => (
+            <li key={c.label} className={c.done ? 'tl-check tl-check-on' : 'tl-check'}>
+              <span aria-hidden="true">{c.done ? '✓' : '○'}</span>
+              <span className="dash-visually-hidden">
+                {c.done ? 'Done: ' : 'Still needed: '}
+              </span>{' '}
+              {cap(c.label)}
+            </li>
+          ))}
+        </ul>
+      </div>
       {state.requirements.map((r) => {
         const t = requirementText(r, p, dateShort)
         return (
@@ -144,19 +180,33 @@ export function TalentProfileForm(props: {
   children?: ReactNode
 }) {
   const send = useApiSend()
+  const formId = useId()
+  const fid = (k: string) => `${formId}-${k}`
   const [state, setState] = useState<LearnerProfileState>(props.state)
   const [v, setV] = useState<FormValues>(() => toValues(props.state))
   const [errors, setErrors] = useState<FieldErrors>({})
   const [busy, setBusy] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [savedAt, setSavedAt] = useState<string | null>(null)
+  const [dirty, setDirty] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
   const summary = useRef<HTMLDivElement>(null)
   const addEdu = useRef<HTMLButtonElement>(null)
   const [failedTries, setFailedTries] = useState(0)
-  // After a failed save, move to the list of problems so keyboard and screen reader users land on it.
+  // After a failed save, bring the list of problems fully into view and move focus to it.
   useEffect(() => {
-    if (failedTries > 0) summary.current?.focus()
+    if (failedTries > 0) {
+      summary.current?.focus({ preventScroll: true })
+      summary.current?.scrollIntoView?.({ block: 'start' })
+    }
   }, [failedTries])
+
+  /** Error key -> the field to land on. The "too many educations" error has no field of its own. */
+  const focusField = (key: string) => {
+    const el = document.getElementById(fid(key === 'education' ? 'education.0.level' : key))
+    if (!el) return
+    el.focus({ preventScroll: true })
+    el.scrollIntoView?.({ block: 'center' })
+  }
 
   const clearError = (...keys: string[]) =>
     setErrors((cur) => {
@@ -166,7 +216,7 @@ export function TalentProfileForm(props: {
       return rest
     })
   const edited = () => {
-    setSaved(false)
+    setDirty(true)
     setServerError(null)
   }
   const set = <K extends keyof FormValues>(k: K, value: FormValues[K]) => {
@@ -182,8 +232,13 @@ export function TalentProfileForm(props: {
     edited()
     clearError(...Object.keys(patch).map((f) => `education.${i}.${f}`), 'education')
   }
+  /** Removing the only entry clears it: one (empty) entry always stays. */
   const removeEdu = (i: number) => {
-    setV((cur) => ({ ...cur, educations: cur.educations.filter((_, j) => j !== i) }))
+    setV((cur) => ({
+      ...cur,
+      educations:
+        cur.educations.length > 1 ? cur.educations.filter((_, j) => j !== i) : [blankEducation()],
+    }))
     edited()
     setErrors((cur) =>
       Object.fromEntries(Object.entries(cur).filter(([k]) => !/^education/.test(k)))
@@ -200,7 +255,6 @@ export function TalentProfileForm(props: {
     setErrors(found)
     setServerError(null)
     if (Object.keys(found).length > 0) {
-      setSaved(false)
       setFailedTries((n) => n + 1)
       return
     }
@@ -209,10 +263,10 @@ export function TalentProfileForm(props: {
       const next = await send<LearnerProfileState>('PUT', '/learn/me/profile', toInput(v))
       setState(next)
       setV(toValues(next))
-      setSaved(true)
+      setDirty(false)
+      setSavedAt(timeShort(new Date()))
       props.onSaved?.(next)
     } catch (err) {
-      setSaved(false)
       setServerError((err as Error).message)
       setFailedTries((n) => n + 1)
     } finally {
@@ -220,9 +274,16 @@ export function TalentProfileForm(props: {
     }
   }
 
-  const problems = Object.entries(errors).map(([k, m]) => `${problemLabel(k)}: ${m}`)
+  const problems = Object.entries(errors).map(([k, m]) => ({
+    key: k,
+    text: `${problemLabel(k)}: ${m}`,
+  }))
   const resumeChanged = (p: ProfileDto) => setState((s) => ({ ...s, profile: p }))
   const err = (k: string) => errors[k]
+  const moneyLabel = {
+    previousCompensation: 'What you earned before (per year)',
+    targetCompensation: 'What you hope to earn (per year)',
+  }
 
   return (
     <form
@@ -235,270 +296,325 @@ export function TalentProfileForm(props: {
     >
       <ProfileStatus state={state} values={v} />
 
-      {(problems.length > 0 || serverError) && (
-        <div ref={summary} tabIndex={-1} className="dash-banner dash-banner-error" role="alert">
-          {serverError ? (
-            serverError
-          ) : (
-            <>
-              Please fix {problems.length === 1 ? 'this' : 'these'} before saving:
-              <ul>
-                {problems.map((p) => (
-                  <li key={p}>{p}</li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-      )}
-
-      <Section title="Resume" lede="Optional but helpful.">
-        <ResumeBox resume={state.profile.resume} onChange={resumeChanged} />
-      </Section>
-
-      <Section title="Your work">
-        <Field
-          label="Years of work experience"
-          hint="Use 0 if you are just starting out."
-          error={err('yearsExperience')}
-        >
-          {(a) => (
-            <input
-              id={a.id}
-              type="number"
-              min={0}
-              max={60}
-              step={1}
-              inputMode="numeric"
-              className="tl-narrow"
-              value={v.yearsExperience}
-              aria-describedby={a.describedBy}
-              aria-invalid={a.invalid}
-              onChange={(e) => set('yearsExperience', e.target.value)}
-            />
-          )}
-        </Field>
-        <ChipInput
-          label="Industries you have worked in"
-          hint="Pick from the list or type your own, then press Enter."
-          error={err('industries')}
-          value={v.industries}
-          onChange={(x) => set('industries', x)}
-          suggestions={INDUSTRY_SUGGESTIONS}
-        />
-        <ChipInput
-          label="Jobs you want"
-          hint="Pick from the list or type your own, then press Enter."
-          error={err('targetRoles')}
-          value={v.targetRoles}
-          onChange={(x) => set('targetRoles', x)}
-          suggestions={ROLE_SUGGESTIONS}
-        />
-        <Field label="Available from" error={err('availableFrom')}>
-          {(a) => (
-            <input
-              id={a.id}
-              type="date"
-              className="tl-narrow"
-              value={v.availableFrom}
-              aria-describedby={a.describedBy}
-              aria-invalid={a.invalid}
-              onChange={(e) => set('availableFrom', e.target.value)}
-            />
-          )}
-        </Field>
-      </Section>
-
-      <Section title="Education" lede="Add each school or program you want to list.">
-        {err('education') && <p className="dash-error">{err('education')}</p>}
-        {v.educations.map((ed, i) => (
-          <fieldset key={ed.key} className="tl-edu">
-            <legend>Education {i + 1}</legend>
-            <Field label="Level" error={err(`education.${i}.level`)}>
-              {(a) => (
-                <select
-                  id={a.id}
-                  value={ed.level}
-                  aria-describedby={a.describedBy}
-                  aria-invalid={a.invalid}
-                  onChange={(e) => setEdu(i, { level: e.target.value })}
-                >
-                  <option value="">Choose one</option>
-                  {EDUCATION_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Field>
-            <Field label="Field of study" error={err(`education.${i}.fieldOfStudy`)}>
-              {(a) => (
-                <input
-                  id={a.id}
-                  value={ed.fieldOfStudy}
-                  aria-describedby={a.describedBy}
-                  aria-invalid={a.invalid}
-                  onChange={(e) => setEdu(i, { fieldOfStudy: e.target.value })}
-                />
-              )}
-            </Field>
-            <Field label="School" error={err(`education.${i}.school`)}>
-              {(a) => (
-                <input
-                  id={a.id}
-                  value={ed.school}
-                  aria-describedby={a.describedBy}
-                  aria-invalid={a.invalid}
-                  onChange={(e) => setEdu(i, { school: e.target.value })}
-                />
-              )}
-            </Field>
-            <Field label="Graduation year" error={err(`education.${i}.graduationYear`)}>
-              {(a) => (
-                <input
-                  id={a.id}
-                  type="number"
-                  inputMode="numeric"
-                  className="tl-narrow"
-                  value={ed.graduationYear}
-                  aria-describedby={a.describedBy}
-                  aria-invalid={a.invalid}
-                  onChange={(e) => setEdu(i, { graduationYear: e.target.value })}
-                />
-              )}
-            </Field>
-            {v.educations.length > 1 && (
-              <div>
-                <button
-                  type="button"
-                  className="dash-btn-quiet"
-                  aria-label={`Remove education ${i + 1}`}
-                  onClick={() => removeEdu(i)}
-                >
-                  Remove
-                </button>
-              </div>
-            )}
-          </fieldset>
-        ))}
-        <div>
-          <button
-            ref={addEdu}
-            type="button"
-            className="dash-btn-secondary"
-            disabled={v.educations.length >= MAX_EDUCATIONS}
-            onClick={() => {
-              setV((cur) => ({ ...cur, educations: [...cur.educations, blankEducation()] }))
-              edited()
-            }}
+      <div className="tl-main">
+        {(problems.length > 0 || serverError) && (
+          <div
+            ref={summary}
+            tabIndex={-1}
+            className="dash-banner dash-banner-error tl-errors"
+            role="alert"
           >
-            Add another
-          </button>
-        </div>
-      </Section>
+            {serverError ? (
+              serverError
+            ) : (
+              <>
+                Please fix {problems.length === 1 ? 'this' : 'these'} before saving:
+                <ul>
+                  {problems.map((p) => (
+                    <li key={p.key}>
+                      <a
+                        href={`#${fid(p.key === 'education' ? 'education.0.level' : p.key)}`}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          focusField(p.key)
+                        }}
+                      >
+                        {p.text}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        )}
 
-      <Section
-        title="Pay"
-        lede="Optional. Only organizations you share with can see this. Whole dollars per year."
-      >
-        <div className="tl-moneyrow">
-          {(['previousCompensation', 'targetCompensation'] as const).map((k) => (
-            <Field
-              key={k}
-              label={
-                k === 'previousCompensation' ? 'What you earned before' : 'What you hope to earn'
-              }
-              error={err(k)}
-            >
-              {(a) => (
-                <span className="tl-money">
-                  <span className="tl-prefix" aria-hidden="true">
-                    $
-                  </span>
-                  <input
-                    id={a.id}
-                    type="number"
-                    min={0}
-                    step={1}
-                    inputMode="numeric"
-                    autoComplete="off"
-                    value={v[k]}
-                    aria-describedby={a.describedBy}
-                    aria-invalid={a.invalid}
-                    onChange={(e) => set(k, e.target.value)}
-                  />
-                </span>
-              )}
-            </Field>
-          ))}
-        </div>
-      </Section>
+        <Section
+          title="Resume"
+          tag="Optional"
+          lede="Shared only with the organizations you choose below."
+        >
+          <ResumeBox resume={state.profile.resume} onChange={resumeChanged} />
+        </Section>
 
-      <Section
-        title="Who can see this profile"
-        lede="Nothing is shared until you tick a box. You can change this any time."
-      >
-        {state.organizations.length === 0 ? (
-          <p className="dash-muted">
-            Once you join a program, the organizations behind it will be listed here.
-          </p>
-        ) : (
-          <ul className="tl-orgs">
-            {state.organizations.map((o) => {
-              const c = v.shares[o.institutionId] ?? { shared: false, allowEmployers: false }
-              const noteId = `tl-org-${o.institutionId}`
-              return (
-                <li key={o.institutionId} className="tl-org">
-                  <label className="dash-check tl-orgcheck">
+        <Section title="Your work">
+          <Field
+            label="Years of work experience"
+            tag="Needed"
+            hint="Use 0 if you are just starting out."
+            error={err('yearsExperience')}
+            fieldId={fid('yearsExperience')}
+          >
+            {(a) => (
+              <input
+                id={a.id}
+                type="number"
+                min={0}
+                max={60}
+                step={1}
+                inputMode="numeric"
+                className="tl-narrow"
+                value={v.yearsExperience}
+                aria-describedby={a.describedBy}
+                aria-invalid={a.invalid}
+                onChange={(e) => set('yearsExperience', e.target.value)}
+              />
+            )}
+          </Field>
+          <ChipInput
+            label="Industries you have worked in"
+            tag="Needed (this or jobs you want)"
+            error={err('industries')}
+            value={v.industries}
+            onChange={(x) => set('industries', x)}
+            suggestions={INDUSTRY_SUGGESTIONS}
+            inputId={fid('industries')}
+          />
+          <ChipInput
+            label="Jobs you want"
+            tag="Needed (this or industries)"
+            error={err('targetRoles')}
+            value={v.targetRoles}
+            onChange={(x) => set('targetRoles', x)}
+            suggestions={ROLE_SUGGESTIONS}
+            inputId={fid('targetRoles')}
+          />
+          <Field
+            label="Available from"
+            tag="Optional"
+            error={err('availableFrom')}
+            fieldId={fid('availableFrom')}
+          >
+            {(a) => (
+              <input
+                id={a.id}
+                type="date"
+                className="tl-narrow"
+                value={v.availableFrom}
+                aria-describedby={a.describedBy}
+                aria-invalid={a.invalid}
+                onChange={(e) => set('availableFrom', e.target.value)}
+              />
+            )}
+          </Field>
+        </Section>
+
+        <Section
+          title="Education"
+          lede="List each school or program. One entry with a level is needed; leave it blank only if you have none."
+        >
+          {err('education') && <p className="dash-error">{err('education')}</p>}
+          {v.educations.map((ed, i) => (
+            <fieldset key={ed.key} className="tl-edu">
+              <legend>Education {i + 1}</legend>
+              <div className="tl-edu-grid">
+                <Field
+                  label="Level"
+                  tag={i === 0 ? 'Needed' : 'Needed for this entry'}
+                  error={err(`education.${i}.level`)}
+                  fieldId={fid(`education.${i}.level`)}
+                  className="tl-edu-level"
+                >
+                  {(a) => (
+                    <select
+                      id={a.id}
+                      value={ed.level}
+                      aria-describedby={a.describedBy}
+                      aria-invalid={a.invalid}
+                      onChange={(e) => setEdu(i, { level: e.target.value })}
+                    >
+                      <option value="">Choose one</option>
+                      {EDUCATION_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </Field>
+                <Field
+                  label="Graduation year"
+                  tag="Optional"
+                  error={err(`education.${i}.graduationYear`)}
+                  fieldId={fid(`education.${i}.graduationYear`)}
+                  className="tl-edu-year"
+                >
+                  {(a) => (
                     <input
-                      type="checkbox"
-                      checked={c.shared}
-                      aria-describedby={noteId}
-                      onChange={(e) =>
-                        setShare(o.institutionId, {
-                          shared: e.target.checked,
-                          allowEmployers: e.target.checked ? c.allowEmployers : false,
-                        })
-                      }
+                      id={a.id}
+                      type="number"
+                      inputMode="numeric"
+                      value={ed.graduationYear}
+                      aria-describedby={a.describedBy}
+                      aria-invalid={a.invalid}
+                      onChange={(e) => setEdu(i, { graduationYear: e.target.value })}
                     />
-                    <span>{o.name}</span>
-                  </label>
-                  <p id={noteId} className="tl-orgnote">
-                    {o.why.charAt(0).toUpperCase() + o.why.slice(1)}.
-                    {o.required &&
-                      ` ${o.name} asked for this as part of your course; you decide whether they can read it.`}
-                  </p>
-                  {c.shared && (
-                    <label className="dash-check tl-suborg">
+                  )}
+                </Field>
+                <Field
+                  label="Field of study"
+                  tag="Optional"
+                  error={err(`education.${i}.fieldOfStudy`)}
+                  fieldId={fid(`education.${i}.fieldOfStudy`)}
+                >
+                  {(a) => (
+                    <input
+                      id={a.id}
+                      value={ed.fieldOfStudy}
+                      aria-describedby={a.describedBy}
+                      aria-invalid={a.invalid}
+                      onChange={(e) => setEdu(i, { fieldOfStudy: e.target.value })}
+                    />
+                  )}
+                </Field>
+                <Field
+                  label="School"
+                  tag="Optional"
+                  error={err(`education.${i}.school`)}
+                  fieldId={fid(`education.${i}.school`)}
+                >
+                  {(a) => (
+                    <input
+                      id={a.id}
+                      value={ed.school}
+                      aria-describedby={a.describedBy}
+                      aria-invalid={a.invalid}
+                      onChange={(e) => setEdu(i, { school: e.target.value })}
+                    />
+                  )}
+                </Field>
+              </div>
+              {(v.educations.length > 1 || !educationBlank(ed)) && (
+                <div>
+                  <button
+                    type="button"
+                    className="dash-btn-quiet tl-dangerbtn"
+                    aria-label={`Remove education ${i + 1}`}
+                    onClick={() => removeEdu(i)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+            </fieldset>
+          ))}
+          <div>
+            <button
+              ref={addEdu}
+              type="button"
+              className="dash-btn-secondary"
+              disabled={v.educations.length >= MAX_EDUCATIONS}
+              onClick={() => {
+                setV((cur) => ({ ...cur, educations: [...cur.educations, blankEducation()] }))
+                edited()
+              }}
+            >
+              Add another school or program
+            </button>
+          </div>
+        </Section>
+
+        <Section
+          title="Pay"
+          lede="Optional. Whole dollars per year. Only organizations you share with can see this."
+        >
+          <div className="tl-moneyrow">
+            {(['previousCompensation', 'targetCompensation'] as const).map((k) => (
+              <Field key={k} label={moneyLabel[k]} tag="Optional" error={err(k)} fieldId={fid(k)}>
+                {(a) => (
+                  <span className="tl-money">
+                    <span className="tl-prefix" aria-hidden="true">
+                      $
+                    </span>
+                    <input
+                      id={a.id}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      enterKeyHint="done"
+                      value={v[k]}
+                      aria-describedby={a.describedBy}
+                      aria-invalid={a.invalid}
+                      onChange={(e) => set(k, e.target.value)}
+                      onBlur={() => {
+                        const f = formatMoney(v[k])
+                        if (f !== v[k]) setV((cur) => ({ ...cur, [k]: f }))
+                      }}
+                    />
+                  </span>
+                )}
+              </Field>
+            ))}
+          </div>
+        </Section>
+
+        <Section
+          title="Who can see this profile"
+          lede="Choose who can see everything on this page, including your pay and resume. They will also see your name and email from your account. Nothing is shared until you tick a box."
+        >
+          {state.organizations.length === 0 ? (
+            <p className="dash-muted">
+              Once you join a program, the organizations behind it will be listed here.
+            </p>
+          ) : (
+            <ul className="tl-orgs">
+              {state.organizations.map((o) => {
+                const c = v.shares[o.institutionId] ?? { shared: false, allowEmployers: false }
+                const noteId = `tl-org-${o.institutionId}`
+                return (
+                  <li key={o.institutionId} className="tl-org">
+                    <label className="dash-check tl-orgcheck">
                       <input
                         type="checkbox"
-                        checked={c.allowEmployers}
+                        checked={c.shared}
+                        aria-describedby={noteId}
                         onChange={(e) =>
-                          setShare(o.institutionId, { allowEmployers: e.target.checked })
+                          setShare(o.institutionId, {
+                            shared: e.target.checked,
+                            allowEmployers: e.target.checked ? c.allowEmployers : false,
+                          })
                         }
                       />
-                      <span>
-                        They may share it with employers who partner with them
-                        <span className="dash-visually-hidden"> ({o.name})</span>
-                      </span>
+                      <span>{o.name}</span>
                     </label>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </Section>
+                    <p id={noteId} className="tl-orgnote">
+                      {o.why.charAt(0).toUpperCase() + o.why.slice(1)}.
+                      {o.required &&
+                        ` ${o.name} asked for this as part of your course; you decide whether they can read it.`}
+                    </p>
+                    {c.shared && (
+                      <label className="dash-check tl-suborg">
+                        <input
+                          type="checkbox"
+                          checked={c.allowEmployers}
+                          onChange={(e) =>
+                            setShare(o.institutionId, { allowEmployers: e.target.checked })
+                          }
+                        />
+                        <span>
+                          Also let {o.name} show my profile to employers it works with (for example
+                          a hiring manager at a partner company)
+                        </span>
+                      </label>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </Section>
 
-      <div className="tl-savebar">
-        <button type="submit" className="dash-btn" disabled={busy}>
-          {busy ? 'Saving…' : 'Save'}
-        </button>
-        <span className="dash-muted" role="status">
-          {saved ? 'Saved just now' : ''}
-        </span>
-        {props.children}
+        <div className="tl-savebar">
+          <button type="submit" className="dash-btn" disabled={busy}>
+            {busy ? 'Saving…' : 'Save'}
+          </button>
+          {/* The only live region: it speaks when a save lands, never while the person types. */}
+          <span className="dash-muted" role="status">
+            {savedAt && !dirty ? `Saved at ${savedAt}` : ''}
+          </span>
+          <span className="dash-muted">{dirty ? 'Unsaved changes' : ''}</span>
+          {props.children}
+        </div>
       </div>
     </form>
   )

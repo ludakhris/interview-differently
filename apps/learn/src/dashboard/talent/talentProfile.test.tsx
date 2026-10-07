@@ -31,6 +31,7 @@ vi.mock('../app-context', () => ({ useApp: () => ({ href: (p: string) => p }) })
 import {
   addItems,
   checklist,
+  formatMoney,
   parseMoney,
   resumeProblem,
   toInput,
@@ -144,7 +145,7 @@ describe('the profile form', () => {
     expect(screen.queryByRole('button', { name: /complete/i })).toBeNull()
     expect(screen.getAllByRole('button', { name: 'Save' })).toHaveLength(1)
     expect(screen.queryByText('Lantern Hill Tech Academy')).toBeNull()
-    expect(screen.getByText('Optional but helpful.')).toBeTruthy()
+    expect(screen.getByText('Shared only with the organizations you choose below.')).toBeTruthy()
   })
 
   it('adds and removes chips with Enter, comma and the x, and offers suggestions', async () => {
@@ -171,7 +172,7 @@ describe('the profile form', () => {
     render(<TalentProfileForm state={state()} />)
     expect(screen.getAllByRole('group', { name: /^Education \d/ })).toHaveLength(1)
     expect(screen.queryByRole('button', { name: /Remove education/ })).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Add another' }))
+    await user.click(screen.getByRole('button', { name: 'Add another school or program' }))
     const groups = screen.getAllByRole('group', { name: /^Education \d/ })
     expect(groups).toHaveLength(2)
     // Level is the first field of each entry.
@@ -183,7 +184,8 @@ describe('the profile form', () => {
     const left = screen.getAllByRole('group', { name: /^Education \d/ })
     expect(left).toHaveLength(1)
     expect((within(left[0]).getByLabelText('Level') as HTMLSelectElement).value).toBe('master')
-    expect(screen.queryByRole('button', { name: /Remove education/ })).toBeNull()
+    // It has content now, so it can be removed (which clears it).
+    expect(screen.getByRole('button', { name: 'Remove education 1' })).toBeTruthy()
   })
 
   it('share list: nothing ticked by default, employer option appears when ticked, reason and requirement shown', async () => {
@@ -198,9 +200,13 @@ describe('the profile form', () => {
       )
     ).toBeTruthy()
     expect(screen.queryByText(/asked for this/, { selector: '[id="tl-org-i2"]' })).toBeNull()
-    expect(screen.queryByLabelText(/partner with them/)).toBeNull()
+    expect(
+      screen.queryByLabelText(/Also let Delaware Tech show my profile to employers/)
+    ).toBeNull()
     await user.click(tech)
-    const sub = screen.getByLabelText(/They may share it with employers who partner with them/)
+    const sub = screen.getByLabelText(
+      'Also let Delaware Tech show my profile to employers it works with (for example a hiring manager at a partner company)'
+    )
     await user.click(sub)
     send.mockResolvedValue(state())
     await user.click(screen.getByRole('button', { name: 'Save' }))
@@ -214,10 +220,11 @@ describe('the profile form', () => {
     expect(screen.getByTestId('profile-status').textContent).toMatch(
       /^Almost there: add an education entry, your years of experience/
     )
-    const line = () => screen.getByText(/counts as complete when you have/).textContent
-    expect(line()).not.toMatch(/✓/)
+    const list = () => document.querySelector('.tl-checklist')!.textContent
+    expect(screen.getByText('What counts as complete')).toBeTruthy()
+    expect(list()).not.toMatch(/✓/)
     await user.type(screen.getByLabelText('Years of work experience'), '3')
-    expect(line()).toMatch(/✓.*your years of experience/)
+    expect(list()).toMatch(/✓.*Your years of experience/)
     cleanup()
     render(
       <TalentProfileForm
@@ -267,16 +274,37 @@ describe('the profile form', () => {
     expect(screen.getByText('Up to date.')).toBeTruthy()
   })
 
+  it('says Ready to save once the live form has everything, before the save', async () => {
+    const user = userEvent.setup()
+    render(<TalentProfileForm state={state()} />)
+    expect(screen.getByTestId('profile-status').textContent).toMatch(/^Almost there: add/)
+    await user.type(screen.getByLabelText('Years of work experience'), '3')
+    await user.type(screen.getByLabelText('Add to jobs you want'), 'Analyst{Enter}')
+    await user.selectOptions(screen.getByLabelText('Level'), 'associate')
+    expect(screen.getByTestId('profile-status').textContent).toBe('Ready to save')
+  })
+
   it('saves the full-replacement payload with numbers, lists, educations and shares', async () => {
     const user = userEvent.setup()
-    send.mockResolvedValue(state({ profile: dto({ yearsExperience: 3, complete: true }) }))
+    send.mockResolvedValue(
+      state({
+        profile: dto({
+          yearsExperience: 3,
+          targetRoles: ['Analyst'],
+          educations: [
+            { level: 'associate', fieldOfStudy: null, school: 'DTCC', graduationYear: 2019 },
+          ],
+          complete: true,
+        }),
+      })
+    )
     render(<TalentProfileForm state={state()} />)
     await user.type(screen.getByLabelText('Years of work experience'), '3')
     await user.type(screen.getByLabelText('Add to jobs you want'), 'Analyst{Enter}')
     await user.selectOptions(screen.getByLabelText('Level'), 'associate')
     await user.type(screen.getByLabelText('School'), 'DTCC')
     await user.type(screen.getByLabelText('Graduation year'), '2019')
-    await user.type(screen.getByLabelText('What you earned before'), '52000')
+    await user.type(screen.getByLabelText('What you earned before (per year)'), '52000')
     await user.click(screen.getByRole('checkbox', { name: 'Lantern Hill' }))
     await user.click(screen.getByRole('button', { name: 'Save' }))
     expect(send).toHaveBeenCalledTimes(1)
@@ -296,7 +324,7 @@ describe('the profile form', () => {
       shares: [{ institutionId: 'i2', allowEmployers: false }],
     })
     expect('complete' in body).toBe(false)
-    expect(await screen.findByText('Saved just now')).toBeTruthy()
+    expect(await screen.findByText(/^Saved at \d{1,2}:\d{2} (am|pm)$/)).toBeTruthy()
     expect(screen.getByTestId('profile-status').textContent).toBe('Profile complete')
   })
 
@@ -322,6 +350,133 @@ describe('the profile form', () => {
     render(<TalentProfileForm state={state()} />)
     await user.click(screen.getByRole('button', { name: 'Save' }))
     expect((await screen.findByRole('alert')).textContent).toMatch(/Join a cohort first/)
+  })
+
+  it('lists each problem as a link that focuses its field', async () => {
+    const user = userEvent.setup()
+    render(<TalentProfileForm state={state()} />)
+    await user.type(screen.getByLabelText('Years of work experience'), '99')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    const alert = screen.getByRole('alert')
+    const link = within(alert).getByRole('link', { name: /Years of experience: .*0 to 60/ })
+    await user.click(link)
+    expect(document.activeElement).toBe(screen.getByLabelText('Years of work experience'))
+    // The inline error stays beside the field too.
+    expect(screen.getAllByText(/0 to 60/).length).toBeGreaterThan(1)
+  })
+
+  it('links an education problem to that entry', async () => {
+    const user = userEvent.setup()
+    render(<TalentProfileForm state={state()} />)
+    await user.type(screen.getByLabelText('School'), 'DTCC')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(within(screen.getByRole('alert')).getByRole('link', { name: /Education 1/ }))
+    expect(document.activeElement).toBe(screen.getByLabelText('Level'))
+  })
+
+  it('suggestions are one tab stop, arrow keys move, Enter adds, the hint is read', async () => {
+    const user = userEvent.setup()
+    render(<TalentProfileForm state={state()} />)
+    const group = screen.getByRole('group', { name: 'Suggested: Industries you have worked in' })
+    const btns = within(group).getAllByRole('button')
+    expect(btns.filter((b) => b.tabIndex === 0)).toHaveLength(1)
+    expect(btns.filter((b) => b.tabIndex === -1)).toHaveLength(btns.length - 1)
+    // Tab from the Add button reaches the group once, then leaves it for the next field.
+    await user.click(screen.getByLabelText('Add to industries you have worked in'))
+    await user.tab() // Add button
+    await user.tab() // the suggestion group
+    expect(document.activeElement).toBe(btns[0])
+    await user.keyboard('{ArrowRight}')
+    expect(document.activeElement).toBe(btns[1])
+    await user.keyboard('{End}')
+    expect(document.activeElement).toBe(btns[btns.length - 1])
+    await user.keyboard('{Home}{Enter}')
+    expect(screen.getByRole('button', { name: 'Remove Healthcare' })).toBeTruthy()
+    // Focus stays in the group, on the next suggestion.
+    expect(document.activeElement?.textContent).toBe('+ Information technology')
+    await user.tab()
+    expect(document.activeElement).toBe(screen.getByLabelText('Add to jobs you want'))
+    expect(group.getAttribute('aria-describedby')).toBeTruthy()
+    expect(document.getElementById(group.getAttribute('aria-describedby')!)?.textContent).toMatch(
+      /arrow keys/
+    )
+    expect(screen.getAllByText('Tap a suggestion or type your own')).toHaveLength(2)
+  })
+
+  it('has an Add button for typed items, and the Enter key hint is done', async () => {
+    const user = userEvent.setup()
+    render(<TalentProfileForm state={state()} />)
+    const box = screen.getByLabelText('Add to jobs you want')
+    expect(box.getAttribute('enterkeyhint')).toBe('done')
+    await user.type(box, 'Welder')
+    await user.click(screen.getByRole('button', { name: 'Add typed item to jobs you want' }))
+    expect(screen.getByRole('button', { name: 'Remove Welder' })).toBeTruthy()
+    expect((box as HTMLInputElement).value).toBe('')
+  })
+
+  it('labels the three needed fields and every other field Optional', () => {
+    render(<TalentProfileForm state={state()} />)
+    const needs = Array.from(document.querySelectorAll('.tl-need')).map((n) => n.textContent)
+    expect(needs).toHaveLength(4) // years, industries, jobs, education level 1
+    expect(needs).toContain('Needed')
+    const described = (el: HTMLElement) =>
+      el
+        .getAttribute('aria-describedby')!
+        .split(' ')
+        .map((i) => document.getElementById(i)?.textContent)
+        .join(' ')
+    expect(described(screen.getByLabelText('Years of work experience'))).toMatch(/Needed/)
+    expect(described(screen.getByLabelText('Level'))).toMatch(/Needed/)
+    expect(described(screen.getByLabelText('Available from'))).toMatch(/Optional/)
+    expect(described(screen.getByLabelText('School'))).toMatch(/Optional/)
+    expect(described(screen.getByLabelText('What you hope to earn (per year)'))).toMatch(/Optional/)
+  })
+
+  it('formats pay with thousands separators on blur and sends whole dollars', async () => {
+    const user = userEvent.setup()
+    send.mockResolvedValue(state())
+    render(<TalentProfileForm state={state()} />)
+    const pay = screen.getByLabelText('What you earned before (per year)') as HTMLInputElement
+    expect(pay.type).toBe('text')
+    expect(pay.inputMode).toBe('numeric')
+    await user.type(pay, '$85000')
+    await user.tab()
+    expect(pay.value).toBe('85,000')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(send.mock.calls[0][2].previousCompensation).toBe(85000)
+    expect(formatMoney('1.5')).toBe('1.5')
+    expect(parseMoney('85,000.00')).toBe(85000)
+  })
+
+  it('announces only a save, never typing: one live region, and the status is not live', async () => {
+    const user = userEvent.setup()
+    send.mockResolvedValue(state())
+    render(<TalentProfileForm state={state()} />)
+    // The save bar holds the only live region the form changes by itself (the resume box has its own).
+    const live = within(document.querySelector('.tl-savebar') as HTMLElement).getAllByRole('status')
+    expect(live).toHaveLength(1)
+    expect(document.querySelector('.tl-main')!.contains(live[0])).toBe(true)
+    expect(live[0].textContent).toBe('')
+    expect(screen.getByTestId('profile-status').getAttribute('role')).toBeNull()
+    await user.type(screen.getByLabelText('Years of work experience'), '3')
+    expect(live[0].textContent).toBe('')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(live[0].textContent).toMatch(/^Saved at \d{1,2}:\d{2} (am|pm)$/))
+    await user.type(screen.getByLabelText('Years of work experience'), '4')
+    expect(live[0].textContent).toBe('')
+  })
+
+  it('the first education entry can be removed once it has content, and stays as an empty one', async () => {
+    const user = userEvent.setup()
+    render(<TalentProfileForm state={state()} />)
+    expect(screen.queryByRole('button', { name: 'Remove education 1' })).toBeNull()
+    await user.selectOptions(screen.getByLabelText('Level'), 'master')
+    await user.type(screen.getByLabelText('School'), 'DSU')
+    await user.click(screen.getByRole('button', { name: 'Remove education 1' }))
+    expect((screen.getByLabelText('Level') as HTMLSelectElement).value).toBe('')
+    expect((screen.getByLabelText('School') as HTMLInputElement).value).toBe('')
+    expect(screen.getAllByRole('group', { name: /^Education \d/ })).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: 'Remove education 1' })).toBeNull()
   })
 
   it('toInput leaves out the blank starting education row', () => {

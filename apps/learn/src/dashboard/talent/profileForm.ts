@@ -93,8 +93,8 @@ export function toValues(state: LearnerProfileState): FormValues {
     industries: [...p.industries],
     targetRoles: [...p.targetRoles],
     availableFrom: p.availableFrom ?? '',
-    previousCompensation: text(p.previousCompensation),
-    targetCompensation: text(p.targetCompensation),
+    previousCompensation: formatMoney(text(p.previousCompensation)),
+    targetCompensation: formatMoney(text(p.targetCompensation)),
     educations: p.educations.length
       ? p.educations.map((e) => ({
           key: `edu-${++counter}`,
@@ -127,12 +127,25 @@ export function addItems(list: string[], raw: string[]): string[] {
   return out
 }
 
-/** "$85,000" -> 85000. Null when empty, NaN when it is not a whole number of dollars. */
+/** "$85,000" or "85,000.00" -> 85000. Null when empty, NaN when it is not a whole number of dollars. */
 export function parseMoney(value: string): number | null {
-  const t = value.replace(/[\s$,]/g, '')
+  const t = value.replace(/[\s$,]/g, '').replace(/\.0*$/, '')
   if (t === '') return null
   return /^\d+$/.test(t) ? Number(t) : Number.NaN
 }
+
+/** "85000" -> "85,000". Anything that is not whole dollars is left as typed so the error can show. */
+export function formatMoney(value: string): string {
+  const n = parseMoney(value)
+  return n === null || Number.isNaN(n) ? value : n.toLocaleString('en-US')
+}
+
+/** "2:14 pm", for the save bar. */
+export const timeShort = (d: Date): string =>
+  d
+    .toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    .replace(/\s/g, ' ')
+    .toLowerCase()
 
 const whole = (value: string): number | null => {
   const t = value.trim()
@@ -143,7 +156,7 @@ const whole = (value: string): number | null => {
 /** Errors by field key (for example `yearsExperience` or `education.1.level`), in plain words. */
 export type FieldErrors = Record<string, string>
 
-const educationBlank = (e: EducationValues) =>
+export const educationBlank = (e: EducationValues) =>
   !e.level && !e.fieldOfStudy.trim() && !e.school.trim() && !e.graduationYear.trim()
 
 /** Entries the person actually filled in; a blank row is just the empty starting row. */

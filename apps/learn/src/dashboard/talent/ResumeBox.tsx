@@ -90,7 +90,9 @@ export function ResumeBox(props: { resume: ResumeInfo | null; onChange: (p: Prof
       <div className="tl-actions">
         <label
           className={
-            busy ? 'dash-btn-quiet dash-file dash-file-disabled' : 'dash-btn-quiet dash-file'
+            busy
+              ? 'dash-btn-secondary dash-file dash-file-disabled'
+              : 'dash-btn-secondary dash-file'
           }
         >
           {props.resume ? 'Replace resume' : 'Upload resume'}
@@ -105,14 +107,14 @@ export function ResumeBox(props: { resume: ResumeInfo | null; onChange: (p: Prof
         </label>
         {props.resume && (
           <>
-            <button type="button" className="dash-btn-quiet" onClick={open} disabled={busy}>
+            <button type="button" className="tl-linkbtn" onClick={open} disabled={busy}>
               Download resume
             </button>
             {!confirming && (
               <button
                 ref={removeBtn}
                 type="button"
-                className="dash-btn-quiet"
+                className="tl-dangerbtn"
                 onClick={() => setConfirming(true)}
                 disabled={busy}
               >
