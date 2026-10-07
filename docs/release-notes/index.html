@@ -499,6 +499,64 @@
 
       <article
         class="entry"
+        id="learner-record"
+        data-status="review"
+        data-short="Learner record"
+        data-summary="One page per learner in a cohort: attendance, activity, notes and support follow-ups."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Learner record: everything about one person in a cohort</h2>
+        <p>
+          Every learner's name on the roster, the attendance grid and the activity report now opens
+          one page for that person. It shows their attendance with the notes right in each row,
+          their activity (average per active day and a day-by-day log in your timezone), a single
+          notes feed, and their support follow-ups. A note written on this page is saved to the
+          cohort you are in, and notes follow the person across all of the provider's cohorts.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              Notes and support follow-ups are private to provider staff and marked with a lock.
+              Other cohort staff see attendance and activity, and a short note that these are
+              restricted.
+            </li>
+            <li>
+              Notes show the cohort they are about. Attendance notes appear in the same feed, tagged
+              with the session.
+            </li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/learner-record/01-top-and-attendance.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/learner-record/01-top-and-attendance.jpg"
+                alt="Learner record header with progress, an in-page nav and the attendance table"
+            /></a>
+            <figcaption>The header, progress and attendance.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/learner-record/02-notes-and-support.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/learner-record/02-notes-and-support.jpg"
+                alt="Notes with a staff-only lock notice and a support follow-ups form"
+            /></a>
+            <figcaption>Notes and support follow-ups, staff only.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/pull/70">PR #70</a
+          ><a href="https://github.com/ludakhris/interview-differently/issues/69">Issue #69</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
         id="talent-profile"
         data-status="review"
         data-short="My profile"
@@ -697,17 +755,25 @@
         id="attendance"
         data-status="review"
         data-short="Attendance"
-        data-summary="One-tap attendance for live and hybrid cohorts, with a summary grid and export."
+        data-summary="Sessions list with record, view and export buttons; roster-style grid; notes entered with attendance."
       >
         <div class="meta">
           <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
         </div>
         <h2>Attendance for live and hybrid cohorts</h2>
         <p>
-          Cohorts now say how they meet: online, live, or hybrid. For live and hybrid cohorts, an
-          instructor adds a session in one tap, presses "Mark everyone present", and flips only the
-          exceptions (absent, late, excused), with keyboard shortcuts for speed. A summary grid
-          shows every learner across every session, and it exports to a spreadsheet.
+          Cohorts now say how they meet: online, live, or hybrid. For live and hybrid cohorts, the
+          cohort page has an Attendance section above the roster. A status strip shows sessions
+          held, the overall rate, the last session, and how many learners are below 75%. Each
+          session is a row with its own buttons: Record attendance (or Edit), View, Download CSV,
+          Edit session and Delete. Recording opens a roomy popup where "Mark everyone present" fills
+          the sheet and you flip only the exceptions with four clear Present, Absent, Late and
+          Excused buttons or the P, A, L and E keys. Every learner row has a visible note field, so
+          notes are entered with the attendance itself.
+        </p>
+        <p>
+          "Attendance by learner" is a button that opens a grid styled like the roster, with a
+          colored legend. Each learner's name opens their record.
         </p>
         <div class="know">
           <strong>Good to know</strong>
@@ -716,27 +782,32 @@
               The rate counts only sessions that were actually taken and that the learner was
               enrolled for; excused sessions are left out.
             </li>
-            <li>Learners see their own attendance line on the course page, never staff notes.</li>
+            <li>
+              Learners see their own attendance line on the course page, never staff notes. Phones
+              get stacked session cards and a full-height recording sheet.
+            </li>
           </ul>
         </div>
         <div class="shots">
           <figure>
-            <a href="../screenshots/attendance/01-take-attendance.jpg"
+            <a href="../screenshots/attendance/05-sessions-and-status.jpg"
               ><img
                 loading="lazy"
-                src="../screenshots/attendance/01-take-attendance.jpg"
-                alt="Roster sheet for taking attendance with a status control per learner"
+                src="../screenshots/attendance/05-sessions-and-status.jpg"
+                alt="Attendance section with a status strip, a sessions table with action buttons, and the attendance by learner button"
             /></a>
-            <figcaption>Take attendance for a whole class.</figcaption>
+            <figcaption>
+              Status strip, sessions with their own actions, and the grid button.
+            </figcaption>
           </figure>
           <figure>
-            <a href="../screenshots/attendance/04-summary.jpg"
+            <a href="../screenshots/attendance/06-record-modal.jpg"
               ><img
                 loading="lazy"
-                src="../screenshots/attendance/04-summary.jpg"
-                alt="Attendance summary grid by learner and session"
+                src="../screenshots/attendance/06-record-modal.jpg"
+                alt="Record attendance popup with four status buttons and a note field for each learner"
             /></a>
-            <figcaption>Summary across sessions.</figcaption>
+            <figcaption>Recording attendance with a note on every row.</figcaption>
           </figure>
         </div>
         <div class="links">
@@ -750,38 +821,45 @@
         id="activity-logs"
         data-status="review"
         data-short="Activity logs"
-        data-summary="Active time per learner per day, with a report and CSV for grant reporting."
+        data-summary="Session start and duration per learner, averages, your timezone, one-click daily log per learner."
       >
         <div class="meta">
           <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
         </div>
-        <h2>Activity logs: active time per learner per day, for grant reporting</h2>
+        <h2>Activity logs: active time per learner per day</h2>
         <p>
-          For online courses, the learner pages now record how long each person is actively working,
-          per item and per day. Staff get a cohort report with a daily chart, a learner table, a
-          day-by-day log for one learner, and a CSV download. Time spent inside a connected tool is
-          estimated from launch to score return and reported separately from measured time. Learners
-          are told on the course page that their time is recorded.
+          For online courses, the learner pages record how long each person is actively working: a
+          session has a start and a duration. Staff open Activity from the cohort header. The report
+          shows the average per learner, the average per active day, how many learners were active,
+          a daily chart, and a learner table. A "Daily log" button on each row, or the learner's
+          name, opens that person's day-by-day sessions. Download CSV exports one row per session.
         </p>
         <div class="know">
           <strong>Good to know</strong>
           <ul>
             <li>
-              It counts active time only (page open, visible, with recent input). Idle time is not
-              counted.
+              Times are stored in UTC and shown in the viewer's own timezone, and days are counted
+              in that timezone.
             </li>
-            <li>Days are UTC days.</li>
+            <li>
+              It counts active time only (page open, visible, with recent input). Learners are told
+              on the course page that their time is recorded.
+            </li>
+            <li>
+              Time inside a connected tool is launch to return, because the tool runs in another
+              window.
+            </li>
           </ul>
         </div>
         <div class="shots">
           <figure>
-            <a href="../screenshots/activity-logs/04-totals-chart.jpg"
+            <a href="../screenshots/activity-logs/06-averages-and-daily.jpg"
               ><img
                 loading="lazy"
-                src="../screenshots/activity-logs/04-totals-chart.jpg"
-                alt="Activity report with totals, measured and estimated time, and a daily chart"
+                src="../screenshots/activity-logs/06-averages-and-daily.jpg"
+                alt="Activity report with average time cards, a daily chart and a learner table"
             /></a>
-            <figcaption>Totals and daily chart.</figcaption>
+            <figcaption>Averages, daily chart and learner table.</figcaption>
           </figure>
           <figure>
             <a href="../screenshots/activity-logs/01-learner-notice.jpg"
