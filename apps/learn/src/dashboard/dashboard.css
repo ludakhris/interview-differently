@@ -1719,3 +1719,8 @@
   margin-top: 10px;
   font-size: 13px;
 }
+
+/* Signed-in pages: the nav sits beside the logo, with the account menu alone on the right. */
+.dash-brand-learn .ld-header > nav {
+  margin-right: auto;
+}
