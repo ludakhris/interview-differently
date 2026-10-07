@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest'
 import type { AttendanceSheetRow } from '@id/types'
 import {
   changedMarks,
+  clock,
   defaultSessionTitle,
   draftsFrom,
   fromLocalInput,
   isDirty,
   learnerAttendanceLine,
   markEveryonePresent,
+  mergeAfterSave,
   pickInitialSession,
   tally,
   toLocalInput,
@@ -76,18 +78,46 @@ describe('attendance logic', () => {
     expect(fromLocalInput(toLocalInput(iso))).toBe(iso)
     expect(fromLocalInput('')).toBeNull()
   })
-  it('words the learner line, hiding it with nothing held', () => {
-    const c = (p: number, l: number, a: number, e: number, u: number) => ({
-      present: p,
-      late: l,
-      absent: a,
-      excused: e,
-      unmarked: u,
-    })
-    expect(learnerAttendanceLine({ counts: c(7, 1, 2, 0, 0), ratePct: 80 })).toBe(
+  it('words the learner line, with quiet notes for sessions that do not count', () => {
+    const sess = (...k: (null | 'not_taken' | 'before_join')[]) => k.map((skipped) => ({ skipped }))
+    const base = { counts: { present: 7, late: 1 }, sessionsCounted: 10, ratePct: 80 }
+    expect(learnerAttendanceLine({ ...base, sessions: sess(null) })).toBe(
       'Attendance: 8 of 10 sessions (80%)'
     )
-    expect(learnerAttendanceLine({ counts: c(0, 0, 0, 0, 0), ratePct: null })).toBeNull()
-    expect(learnerAttendanceLine({ counts: c(0, 0, 0, 2, 0), ratePct: null })).toBeNull()
+    expect(
+      learnerAttendanceLine({
+        ...base,
+        sessions: sess(null, 'not_taken', 'before_join', 'before_join'),
+      })
+    ).toBe('Attendance: 8 of 10 sessions (80%). Not counted: 1 not taken yet, 2 before you joined')
+    const none = { counts: { present: 0, late: 0 }, sessionsCounted: 0, ratePct: null }
+    expect(learnerAttendanceLine({ ...none, sessions: [] })).toBeNull()
+    expect(learnerAttendanceLine({ ...none, sessions: sess('not_taken') })).toBe(
+      'Attendance: no sessions counted yet (1 not taken yet)'
+    )
+  })
+  it('after a save, keeps edits made in flight and edits to learners not in the save', () => {
+    const prev = [row('a'), row('b'), row('c', 'present')]
+    const sent = draftsFrom(prev)
+    sent.a = { status: 'present', note: '' }
+    // While the save ran: the user flipped a to late, and edited b (not in the save).
+    const current = {
+      ...sent,
+      a: { status: 'late' as const, note: '' },
+      b: { status: 'absent' as const, note: '' },
+    }
+    // The fresh sheet: a saved as present, c changed by someone else.
+    const next = [row('a', 'present'), row('b'), row('c', 'excused')]
+    const merged = mergeAfterSave(prev, sent, new Set(['a']), current, next)
+    expect(merged.a.status).toBe('late') // in-flight edit survives
+    expect(merged.b.status).toBe('absent') // unsaved edit survives
+    expect(merged.c.status).toBe('excused') // someone else's save comes through
+    // Untouched: the saved row takes the fresh value.
+    const calm = mergeAfterSave(prev, sent, new Set(['a']), sent, next)
+    expect(calm.a.status).toBe('present')
+    expect(isDirty(next, calm)).toBe(false)
+  })
+  it('formats a clock time as HH:MM', () => {
+    expect(clock(new Date(2026, 9, 7, 9, 5))).toBe('09:05')
   })
 })

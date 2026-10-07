@@ -7,6 +7,7 @@ import '../pages/home.css'
 import './dashboard.css'
 import { SYSTEM_ADMIN } from './AdminPages'
 import { useApp } from './app-context'
+import { canSeeActivity, canSeeTalent } from './roleAccess'
 import { useRole } from './shared'
 import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 
@@ -24,6 +25,7 @@ function useNav(): MenuLink[] {
 
 function useWorkspaceNav(): MenuLink[] {
   const { href, tenant, current } = useApp()
+  const role = useRole()
   if (window.location.pathname.startsWith('/lms/catalog')) {
     return [
       { label: 'Training catalog', href: href('/lms/catalog') },
@@ -41,16 +43,20 @@ function useWorkspaceNav(): MenuLink[] {
     return [
       { label: 'Courses', href: href('/lms/courses') },
       { label: 'Cohorts', href: href('/lms/cohorts') },
-      { label: 'Talent', href: href('/lms/talent') },
-      { label: 'Support', href: href('/lms/talent/support') },
-      { label: 'Activity', href: href('/lms/activity') },
+      ...(canSeeTalent(role)
+        ? [
+            { label: 'Talent', href: href('/lms/talent') },
+            { label: 'Support', href: href('/lms/talent/support') },
+          ]
+        : []),
+      ...(canSeeActivity(role) ? [{ label: 'Activity', href: href('/lms/activity') }] : []),
       { label: 'Outcomes', href: href('/lms/dashboard') },
     ]
   }
   if (current?.kind === 'organization' || current?.kind === 'academic') {
     return [
       { label: 'Cohorts', href: href('/lms/cohorts') },
-      { label: 'Activity', href: href('/lms/activity') },
+      ...(canSeeActivity(role) ? [{ label: 'Activity', href: href('/lms/activity') }] : []),
       { label: 'Outcomes', href: href('/lms/dashboard') },
     ]
   }

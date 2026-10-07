@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { waitFor } from '@testing-library/react'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type {
@@ -44,6 +45,7 @@ import {
 import { TalentProfileForm } from './TalentProfileForm'
 import { ParticipantTable, TalentPage, filterQuery, noFilters } from './TalentPage'
 import { StaffProfileView } from './StaffProfileView'
+import { ResumeBox } from './ResumeBox'
 
 afterEach(() => {
   cleanup()
@@ -218,6 +220,18 @@ describe('the learner form', () => {
       true
     )
   })
+  it('clears a field message as it is edited, focuses the problem list, and marks the education select', async () => {
+    const user = userEvent.setup()
+    render(<TalentProfileForm entry={entry()} mode="item" />)
+    await user.click(screen.getByRole('button', { name: 'Save and finish' }))
+    expect(document.activeElement).toBe(screen.getByRole('alert'))
+    const edu = screen.getByLabelText('Highest level of education')
+    expect(edu.getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getByText('Choose your highest level of education.')).toBeTruthy()
+    await user.selectOptions(edu, 'associate')
+    expect(edu.getAttribute('aria-invalid')).toBe('false')
+    expect(screen.queryByText('Choose your highest level of education.')).toBeNull()
+  })
   it('shows the server message when the save fails', async () => {
     const user = userEvent.setup()
     send.mockRejectedValue(new Error('You are not enrolled with this provider'))
@@ -284,6 +298,29 @@ describe('the compensation reveal', () => {
     expect(screen.queryByRole('button', { name: 'Show compensation' })).toBeNull()
     rerender(<StaffProfileView profile={null} compensationPath={PAY} onOpenResume={vi.fn()} />)
     expect(container.textContent).toMatch(/has not started a profile/)
+  })
+  it('puts focus back on Show compensation after Hide', async () => {
+    const user = userEvent.setup()
+    apiFetch.mockResolvedValue(payResponse())
+    render(<StaffProfileView profile={staffView()} compensationPath={PAY} onOpenResume={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Show compensation' }))
+    await user.click(await screen.findByRole('button', { name: 'Hide compensation' }))
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Show compensation' }))
+  })
+  it('shows a real link when the browser blocked the new tab', () => {
+    render(
+      <StaffProfileView
+        compensationPath={PAY}
+        profile={staffView({
+          resume: { name: 'cv.pdf', size: 2048, uploadedAt: '2026-10-01T00:00:00Z' },
+        })}
+        onOpenResume={vi.fn()}
+        resumeFallbackUrl="https://signed.test/cv"
+      />
+    )
+    expect(screen.getByRole('link', { name: /Download cv.pdf/ }).getAttribute('href')).toBe(
+      'https://signed.test/cv'
+    )
   })
   it('downloads the resume on request', async () => {
     const user = userEvent.setup()
@@ -378,5 +415,69 @@ describe('the staff list', () => {
     expect(download.mock.calls[1][1]).toBe(
       '/learn/providers/P1/talent-export.csv?includeCompensation=true'
     )
+  })
+})
+
+describe('the learner resume box', () => {
+  const resume = { name: 'cv.pdf', size: 2048, uploadedAt: '2026-10-01T00:00:00Z' }
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('opens the tab inside the click, before the link arrives, then sends it there', async () => {
+    const user = userEvent.setup()
+    const tab = { opener: 'x', location: { href: '' }, close: vi.fn() }
+    const open = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window)
+    let release: (v: unknown) => void = () => {}
+    apiFetch.mockReturnValue(new Promise((r) => (release = r)))
+    render(<ResumeBox providerId="P1" resume={resume} onChange={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Download resume' }))
+    expect(open).toHaveBeenCalledWith('', '_blank')
+    expect(tab.location.href).toBe('')
+    release({ json: async () => ({ url: 'https://signed.test/cv' }) })
+    await waitFor(() => expect(tab.location.href).toBe('https://signed.test/cv'))
+    expect(tab.opener).toBeNull()
+    expect(await screen.findByText(/is downloading/)).toBeTruthy()
+  })
+  it('never says it opened when the browser blocked the tab, and offers the link', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'open').mockReturnValue(null)
+    apiFetch.mockResolvedValue({ json: async () => ({ url: 'https://signed.test/cv' }) })
+    const { container } = render(<ResumeBox providerId="P1" resume={resume} onChange={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Download resume' }))
+    expect(await screen.findByText(/blocked the new tab/)).toBeTruthy()
+    expect(container.textContent).not.toMatch(/Opened|is downloading/)
+    expect(screen.getByRole('link', { name: /Download cv.pdf/ }).getAttribute('href')).toBe(
+      'https://signed.test/cv'
+    )
+  })
+  it('closes the blank tab when the link cannot be fetched', async () => {
+    const user = userEvent.setup()
+    const tab = { opener: 'x', location: { href: '' }, close: vi.fn() }
+    vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window)
+    apiFetch.mockRejectedValue(new Error('Resume storage is not set up yet'))
+    render(<ResumeBox providerId="P1" resume={resume} onChange={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Download resume' }))
+    expect((await screen.findByRole('alert')).textContent).toMatch(/not set up/)
+    expect(tab.close).toHaveBeenCalled()
+  })
+  it('asks before removing, in a group (not a dialog), and keeps focus sensible', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    send.mockResolvedValue(dto())
+    render(<ResumeBox providerId="P1" resume={resume} onChange={onChange} />)
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+    expect(send).not.toHaveBeenCalled()
+    const group = screen.getByRole('group', { name: 'Remove your resume?' })
+    expect(group.getAttribute('aria-describedby')).toBeTruthy()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Keep it' }))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Remove' }))
+    )
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, remove it' }))
+    expect(send).toHaveBeenCalledWith('DELETE', '/learn/me/talent-profiles/P1/resume')
+    await waitFor(() => expect(onChange).toHaveBeenCalled())
   })
 })

@@ -63,6 +63,10 @@ export function LearningCoursePage({ cohortId }: { cohortId: string }) {
               {data.added.length > 0 ? `, including ${data.added.length} added to your plan` : ''}
             </p>
             <LearnerAttendanceLine cohortId={cohortId} />
+            <p className="dash-muted" data-testid="activity-notice">
+              We record how long you spend active in this course, to report to our funders. We do
+              not record what you type.
+            </p>
           </div>
           <ol className="dash-modules dash-learner-modules">
             {data.modules.map((m) => (

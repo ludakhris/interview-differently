@@ -10,7 +10,7 @@ import { LearnService, LEARN_ROLES } from '../learn.service'
 import { ProviderAccessService } from '../provider-access.service'
 import type { DataAccessLogService } from '../data-access-log.service'
 import { AttendanceService } from './attendance.service'
-import { attendanceRate, csvCell } from './attendance-rules'
+import { attendanceRate, csvCell, standing } from './attendance-rules'
 
 const HOUR = 3600_000
 const past = (h: number) => new Date(Date.now() - h * HOUR)
@@ -54,7 +54,7 @@ function build(delivery: 'online' | 'live' | 'hybrid' = 'live') {
     { id: 'e3', cohortId: 'c1', userId: 'u3', status: 'completed' },
     { id: 'e4', cohortId: 'c1', userId: 'u4', status: 'withdrawn' },
     { id: 'e9', cohortId: 'c2', userId: 'outsider', status: 'enrolled' },
-  ].map((e) => ({ ...e, user: users[e.userId] }))
+  ].map((e) => ({ ...e, enrolledAt: past(1000), user: users[e.userId] }))
   let seq = 0
   const workspaces: Record<string, string[]> = {
     'prov-staff': ['host'],
@@ -188,7 +188,7 @@ function build(delivery: 'online' | 'live' | 'hybrid' = 'live') {
     db.sessions.push(s)
     return s
   }
-  return { svc, db, addSession, prisma }
+  return { svc, db, addSession, prisma, enrollments }
 }
 
 const A = LEARN_ROLES.agencyAdmin
@@ -409,23 +409,26 @@ describe('the sheet and saving marks', () => {
 })
 
 describe('summary, rate and csv', () => {
-  it('rate excludes excused and future sessions; unmarked held sessions count against', async () => {
+  const markIn = (db: { marks: Mark[] }) => (sessionId: string, userId: string, status: string) =>
+    db.marks.push({ sessionId, userId, status, note: null, markedBy: 'x', markedAt: new Date() })
+
+  it('rate: excused leaves the denominator, future sessions and untaken sessions do not count, unmarked in a taken session is absent', async () => {
     const { svc, addSession, db } = build()
     const s1 = addSession({ startsAt: past(72) })
     const s2 = addSession({ startsAt: past(48) })
     const s3 = addSession({ startsAt: past(24) })
     const s4 = addSession({ startsAt: past(1) })
     const sf = addSession({ startsAt: future(24) })
-    const mark = (sessionId: string, userId: string, status: string) =>
-      db.marks.push({ sessionId, userId, status, note: null, markedBy: 'x', markedAt: new Date() })
+    addSession({ startsAt: past(2) }) // started, nobody marked: not taken yet
+    const mark = markIn(db)
     mark(s1.id, 'u1', 'present')
     mark(s2.id, 'u1', 'late')
     mark(s3.id, 'u1', 'excused')
     mark(s4.id, 'u1', 'absent')
     mark(sf.id, 'u1', 'present') // a mark on a future session must not count
     const sum = await svc.summary('prov-staff', P, 'c1')
-    expect(sum.sessions).toBe(4)
-    expect(sum.sessionList).toHaveLength(4)
+    expect(sum.sessions).toBe(5)
+    expect(sum.sessionList.filter((s) => s.taken)).toHaveLength(4)
     const u1 = sum.rows.find((r) => r.userId === 'u1')!
     expect(u1).toMatchObject({
       present: 1,
@@ -433,30 +436,74 @@ describe('summary, rate and csv', () => {
       excused: 1,
       absent: 1,
       sessions: 3,
+      sessionsHeld: 5,
       ratePct: 67,
     })
     expect(Object.keys(u1.marks)).not.toContain(sf.id)
+    expect(Object.values(u1.skipped)).toEqual(['not_taken'])
+    // u2 has no marks in 4 taken sessions: absent in each.
     const u2 = sum.rows.find((r) => r.userId === 'u2')!
-    expect(u2).toMatchObject({ sessions: 4, ratePct: 0 })
+    expect(u2).toMatchObject({ absent: 4, sessions: 4, ratePct: 0 })
+    expect(Object.values(u2.marks)).toEqual(['absent', 'absent', 'absent', 'absent'])
     expect(sum.rows.map((r) => r.userId)).not.toContain('u4')
   })
-  it('rate is null with no counted session', () => {
-    expect(attendanceRate(0, 0, 0, 0).ratePct).toBeNull()
-    expect(attendanceRate(0, 0, 2, 2).ratePct).toBeNull()
-    expect(attendanceRate(3, 1, 0, 5).ratePct).toBe(80)
+
+  it('a session before the learner enrolled does not count for them', async () => {
+    const { svc, addSession, db, enrollments } = build()
+    const s1 = addSession({ startsAt: past(72) })
+    const s2 = addSession({ startsAt: past(24) })
+    enrollments.find((e) => e.userId === 'u2')!.enrolledAt = past(48)
+    const mark = markIn(db)
+    mark(s1.id, 'u1', 'present')
+    mark(s2.id, 'u1', 'present')
+    mark(s2.id, 'u2', 'present')
+    const sum = await svc.summary('prov-staff', P, 'c1')
+    const u2 = sum.rows.find((r) => r.userId === 'u2')!
+    expect(u2).toMatchObject({ sessions: 1, sessionsHeld: 2, ratePct: 100 })
+    expect(u2.skipped).toEqual({ [s1.id]: 'before_join' })
+    const mine = await svc.mine('u2', 'c1')
+    expect(mine.sessions.map((s) => s.skipped)).toEqual(['before_join', null])
+    expect(mine.sessionsCounted).toBe(1)
+    expect(mine.ratePct).toBe(100)
   })
-  it('csv neutralizes formulas and escapes quotes, commas and newlines', async () => {
-    const { svc, addSession } = build()
-    addSession()
+
+  it('standing: nothing counts before the register is taken', () => {
+    const s = [{ id: 'a', startsAt: past(5) }]
+    const none = standing(s, new Set(), past(100), new Map(), Date.now())
+    expect(none).toMatchObject({ counted: 0, held: 1, ratePct: null })
+    expect(none.skipped).toEqual({ a: 'not_taken' })
+    // Enrolled exactly at the start is not "before": the session does not count.
+    const at = standing(s, new Set(['a']), s[0].startsAt, new Map(), Date.now())
+    expect(at.skipped).toEqual({ a: 'before_join' })
+  })
+  it('rate is null with no counted session', () => {
+    expect(attendanceRate(0, 0, 0)).toBeNull()
+    expect(attendanceRate(3, 1, 5)).toBe(80)
+  })
+  it('csv has a BOM, numeric rate_percent, sessions_counted and sessions_held, and neutralizes formulas', async () => {
+    const { svc, addSession, db } = build()
+    const s1 = addSession()
+    markIn(db)(s1.id, 'u1', 'present')
     const csv = await svc.csv('prov-staff', P, 'c1')
-    const lines = csv.trimEnd().split('\r\n')
-    expect(lines[0]).toBe('name,email,present,absent,late,excused,sessions,rate')
+    expect(csv.startsWith('\uFEFF')).toBe(true)
+    const lines = csv.slice(1).trimEnd().split('\r\n')
+    expect(lines[0]).toBe(
+      'name,email,present,absent,late,excused,sessions_counted,sessions_held,rate_percent'
+    )
+    expect(lines).toContain('Ann Able,ann@x.org,1,0,0,0,1,1,100')
+    expect(lines).toContain('Bo Baker,bo@x.org,0,1,0,0,1,1,0')
     expect(lines.some((l) => l.startsWith("'=cmd|calc,'+evil@x.org,"))).toBe(true)
     expect(csvCell('a,"b"\nc')).toBe('"a,""b""\nc"')
     for (const c of ['=1+1', '+1', '-1', '@SUM(A1)', '\tx', '\rx'])
       expect(csvCell(c).replace(/^"/, '')).toMatch(/^'/)
     expect(csvCell(-5)).toBe('-5')
     expect(csvCell(null)).toBe('')
+  })
+  it('csv rate_percent is empty when nothing counts', async () => {
+    const { svc, addSession } = build()
+    addSession() // held, not taken
+    const lines = (await svc.csv('prov-staff', P, 'c1')).slice(1).trimEnd().split('\r\n')
+    expect(lines).toContain('Ann Able,ann@x.org,0,0,0,0,0,1,')
   })
 })
 
@@ -486,9 +533,12 @@ describe('the learner view', () => {
     )
     const mine = await svc.mine('u1', 'c1')
     expect(JSON.stringify(mine)).not.toMatch(/SECRET|other learner|note/)
+    // s1 was taken (u2 has a mark): u1 present. s2 has no marks at all: not taken yet.
     expect(mine.sessions.map((s) => s.status)).toEqual(['present', null, null])
-    expect(mine.counts).toEqual({ present: 1, absent: 0, late: 0, excused: 0, unmarked: 1 })
-    expect(mine.ratePct).toBe(50)
+    expect(mine.sessions.map((s) => s.skipped)).toEqual([null, 'not_taken', null])
+    expect(mine.counts).toEqual({ present: 1, absent: 0, late: 0, excused: 0, unmarked: 0 })
+    expect(mine.sessionsCounted).toBe(1)
+    expect(mine.ratePct).toBe(100)
     expect(s2.id).toBeDefined()
     await expect(svc.mine('outsider', 'c1')).rejects.toBeInstanceOf(NotFoundException)
   })

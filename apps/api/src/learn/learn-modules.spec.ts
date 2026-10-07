@@ -6,6 +6,8 @@ import { ActivityModule } from './activity/activity.module'
 import { ActivityService } from './activity/activity.service'
 import { AttendanceModule } from './attendance/attendance.module'
 import { AttendanceService } from './attendance/attendance.service'
+import { LearnModule } from './learn.module'
+import { LearnerService } from './learner.service'
 import { DataAccessLogService } from './data-access-log.service'
 import { OutcomesModule } from './outcomes/outcomes.module'
 import { OutcomesService } from './outcomes/outcomes.service'
@@ -32,5 +34,17 @@ describe('feature modules (#69)', () => {
       expect(s.access).toBeInstanceOf(ProviderAccessService)
       expect(s.audit).toBeInstanceOf(DataAccessLogService)
     }
+  })
+
+  // LearnerService takes ActivityService as @Optional, so a missing ActivityModule would otherwise
+  // silently turn the activity hook off. TalentModule imports LearnModule back (forwardRef).
+  it('wires ActivityService into LearnerService and resolves the Talent forwardRef cycle', async () => {
+    const mod = await Test.createTestingModule({ imports: [FakeAuthModule, LearnModule] })
+      .overrideProvider(PrismaService)
+      .useValue({})
+      .compile()
+    const learner = mod.get(LearnerService) as unknown as { activity: unknown }
+    expect(learner.activity).toBeInstanceOf(ActivityService)
+    expect(mod.get(TalentService, { strict: false })).toBeInstanceOf(TalentService)
   })
 })

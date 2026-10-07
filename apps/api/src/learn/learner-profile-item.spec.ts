@@ -10,6 +10,7 @@ const prisma = {
   enrollment: { findMany: jest.fn(), update: jest.fn() },
   courseItem: { findMany: jest.fn() },
   itemProgress: { findMany: jest.fn(), upsert: jest.fn() },
+  talentProfile: { findUnique: jest.fn() },
 }
 const service = new LearnerService(
   prisma as unknown as PrismaService,
@@ -35,7 +36,7 @@ beforeEach(() => {
 describe('completeProfileItems', () => {
   it('marks the provider profile items done in the learner open cohorts', async () => {
     prisma.enrollment.findMany.mockResolvedValue([enr('e1')])
-    prisma.courseItem.findMany.mockResolvedValue([{ id: 'i1' }])
+    prisma.courseItem.findMany.mockResolvedValue([{ id: 'i1', module: { courseId: 'course-e1' } }])
     expect(await service.completeProfileItems('u1', 'P1')).toBe(1)
     expect(prisma.enrollment.findMany.mock.calls[0][0].where).toEqual({
       userId: 'u1',
@@ -44,7 +45,7 @@ describe('completeProfileItems', () => {
     })
     expect(prisma.courseItem.findMany.mock.calls[0][0].where).toEqual({
       type: 'profile',
-      module: { courseId: 'course-e1' },
+      module: { courseId: { in: ['course-e1'] } },
     })
     expect(prisma.itemProgress.upsert.mock.calls[0][0]).toMatchObject({
       where: { enrollmentId_itemId: { enrollmentId: 'e1', itemId: 'i1' } },
@@ -52,17 +53,42 @@ describe('completeProfileItems', () => {
     })
     expect(completeIfDone).toHaveBeenCalledWith('e1', 'enrolled', 'course-e1')
   })
-  it('skips items already done, cohorts not open, and courses without a profile item', async () => {
+  it('skips items already done, cohorts not open, and courses without a profile item, in two queries', async () => {
     prisma.enrollment.findMany.mockResolvedValue([
       enr('e1'),
       enr('e2', FUTURE, FUTURE),
       enr('e3', PAST, PAST),
       enr('e4'),
     ])
-    prisma.courseItem.findMany.mockResolvedValueOnce([{ id: 'i1' }]).mockResolvedValueOnce([])
-    prisma.itemProgress.findMany.mockResolvedValueOnce([{ itemId: 'i1' }])
+    prisma.courseItem.findMany.mockResolvedValue([{ id: 'i1', module: { courseId: 'course-e1' } }])
+    prisma.itemProgress.findMany.mockResolvedValueOnce([{ enrollmentId: 'e1', itemId: 'i1' }])
     expect(await service.completeProfileItems('u1', 'P1')).toBe(0)
     expect(prisma.itemProgress.upsert).not.toHaveBeenCalled()
-    expect(prisma.courseItem.findMany).toHaveBeenCalledTimes(2)
+    expect(prisma.courseItem.findMany).toHaveBeenCalledTimes(1)
+    expect(prisma.itemProgress.findMany).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('catching up a profile completed earlier', () => {
+  const catchUp = (providerId: string) =>
+    (
+      service as unknown as { catchUpProfile: (u: string, p: string) => Promise<boolean> }
+    ).catchUpProfile('u1', providerId)
+  beforeEach(() => {
+    prisma.enrollment.findMany.mockResolvedValue([enr('e1')])
+    prisma.courseItem.findMany.mockResolvedValue([{ id: 'i1', module: { courseId: 'course-e1' } }])
+  })
+  it('marks the item when the profile is already completed', async () => {
+    prisma.talentProfile.findUnique.mockResolvedValue({ completedAt: new Date() })
+    expect(await catchUp('P1')).toBe(true)
+    expect(prisma.itemProgress.upsert).toHaveBeenCalledTimes(1)
+  })
+  it('does nothing without a completed profile, and is idempotent once marked', async () => {
+    prisma.talentProfile.findUnique.mockResolvedValue({ completedAt: null })
+    expect(await catchUp('P1')).toBe(false)
+    prisma.talentProfile.findUnique.mockResolvedValue({ completedAt: new Date() })
+    prisma.itemProgress.findMany.mockResolvedValue([{ enrollmentId: 'e1', itemId: 'i1' }])
+    expect(await catchUp('P1')).toBe(false)
+    expect(prisma.itemProgress.upsert).not.toHaveBeenCalled()
   })
 })

@@ -2,7 +2,9 @@ import type { ResumeInfo, ResumeLink, TalentProfileDto } from '@id/types'
 import { useRef, useState } from 'react'
 import { useApiFetch, useApiSend } from '../api'
 import { dateShort } from '../format'
+import { openLinkInNewTab } from './openTab'
 import { fileSize, resumeProblem } from './profileForm'
+import './notes.css'
 import './talent.css'
 
 /** The learner's resume: upload, replace, open and remove. The file is private to the learner and their provider's staff. */
@@ -15,12 +17,16 @@ export function ResumeBox(props: {
   const send = useApiSend()
   const input = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [blockedUrl, setBlockedUrl] = useState<string | null>(null)
+  const removeBtn = useRef<HTMLButtonElement>(null)
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
   const base = `/learn/me/talent-profiles/${props.providerId}/resume`
 
   async function run(task: () => Promise<string>) {
     setBusy(true)
     setMessage(null)
+    setBlockedUrl(null)
     try {
       setMessage({ kind: 'ok', text: await task() })
     } catch (err) {
@@ -47,18 +53,31 @@ export function ResumeBox(props: {
     if (input.current) input.current.value = ''
   }
 
+  // The tab is opened inside the click (before the fetch) so popup blockers allow it.
   const open = () =>
     run(async () => {
-      const link = (await (await apiFetch(base)).json()) as ResumeLink
-      window.open(link.url, '_blank', 'noopener')
-      return 'Opened in a new tab. The link works for 5 minutes.'
+      const { url, opened } = await openLinkInNewTab(
+        async () => ((await (await apiFetch(base)).json()) as ResumeLink).url
+      )
+      if (opened) return 'Your resume is downloading. The link works for 5 minutes.'
+      setBlockedUrl(url)
+      return 'Your browser blocked the new tab. Use the link below.'
     })
 
   const remove = () =>
     run(async () => {
       props.onChange(await send<TalentProfileDto>('DELETE', base))
+      setConfirming(false)
+      // The Remove button is gone now; the upload control is the next sensible place.
+      setTimeout(() => input.current?.focus(), 0)
       return 'Resume removed.'
     })
+
+  function keepResume() {
+    setConfirming(false)
+    // The Remove button is back after the next render; put focus on it.
+    setTimeout(() => removeBtn.current?.focus(), 0)
+  }
 
   return (
     <div className="tl-resume">
@@ -91,14 +110,45 @@ export function ResumeBox(props: {
         {props.resume && (
           <>
             <button type="button" className="dash-btn-quiet" onClick={open} disabled={busy}>
-              Open resume
+              Download resume
             </button>
-            <button type="button" className="dash-btn-quiet" onClick={remove} disabled={busy}>
-              Remove
-            </button>
+            {!confirming && (
+              <button
+                ref={removeBtn}
+                type="button"
+                className="dash-btn-quiet"
+                onClick={() => setConfirming(true)}
+                disabled={busy}
+              >
+                Remove
+              </button>
+            )}
           </>
         )}
       </div>
+      {confirming && (
+        <div
+          className="nt-confirm"
+          role="group"
+          aria-label="Remove your resume?"
+          aria-describedby="tl-remove-desc"
+        >
+          <span id="tl-remove-desc">Remove your resume? This cannot be undone.</span>
+          <button type="button" className="dash-btn" disabled={busy} onClick={remove}>
+            Yes, remove it
+          </button>
+          <button type="button" className="dash-btn-quiet" onClick={keepResume} autoFocus>
+            Keep it
+          </button>
+        </div>
+      )}
+      {blockedUrl && (
+        <p>
+          <a href={blockedUrl} target="_blank" rel="noopener noreferrer">
+            Download {props.resume?.name ?? 'your resume'}
+          </a>
+        </p>
+      )}
       <p className="dash-hint">PDF, DOC or DOCX, up to 5 MB.</p>
       <p
         className={message?.kind === 'error' ? 'dash-error' : 'dash-muted'}

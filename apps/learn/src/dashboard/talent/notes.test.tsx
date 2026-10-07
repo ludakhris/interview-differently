@@ -5,17 +5,19 @@ import userEvent from '@testing-library/user-event'
 
 const send = vi.fn()
 const reload = vi.fn()
-let loads: Record<string, { data?: unknown; error?: Error }> = {}
+let loads: Record<string, { data?: unknown; error?: Error; loading?: boolean }> = {}
 const loadedPaths: string[] = []
 vi.mock('../api', () => ({
   useApiSend: () => send,
-  useLoad: (path: string) => {
-    loadedPaths.push(path)
-    const hit = Object.entries(loads).find(([k]) => path === k || path.startsWith(k))
+  useLoad: (path: string | null) => {
+    if (path) loadedPaths.push(path)
+    const hit = path
+      ? Object.entries(loads).find(([k]) => path === k || path.startsWith(k))
+      : undefined
     return {
       data: hit?.[1].data ?? null,
       error: hit?.[1].error ?? null,
-      loading: false,
+      loading: hit?.[1].loading ?? false,
       reload,
     }
   },
@@ -140,6 +142,39 @@ describe('NotesSection', () => {
     expect(screen.getByRole('status').textContent).toBe('Note deleted.')
   })
 
+  it('gives focus back to the control that opened edit or delete, and to the heading after a delete', async () => {
+    loads[`${P}/notes`] = { data: [note({ body: 'keep me' })] }
+    send.mockResolvedValue({ deleted: true })
+    render(<NotesSection providerId="P1" userId="U1" />)
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Edit' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    const group = screen.getByRole('group', { name: 'Delete this note?' })
+    expect(group.getAttribute('aria-describedby')).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: 'Keep it' }))
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Delete' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Yes, delete it' }))
+    await waitFor(() => expect(screen.queryByText('keep me')).toBeNull())
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Notes' }))
+  })
+
+  it('does not fetch the participant header when the page already has the cohorts', () => {
+    loads[`${P}/notes`] = { data: [] }
+    render(
+      <NotesSection
+        providerId="P1"
+        userId="U1"
+        cohorts={[
+          { cohortId: 'C1', cohortName: 'Fall', courseTitle: 'Data', enrollmentStatus: 'enrolled' },
+        ]}
+      />
+    )
+    expect(loadedPaths).not.toContain(P)
+    expect(screen.getByRole('option', { name: 'Fall' })).toBeTruthy()
+  })
+
   it('shows the error with a retry button, and the server message on a failed save', async () => {
     loads[`${P}/notes`] = { error: new Error('Boom') }
     render(<NotesSection providerId="P1" userId="U1" />)
@@ -227,7 +262,7 @@ describe('SupportSection', () => {
     render(<SupportSection providerId="P1" userId="U1" />)
     await userEvent.click(screen.getByRole('button', { name: /Delete/ }))
     expect(send).not.toHaveBeenCalled()
-    const dlg = screen.getByRole('alertdialog')
+    const dlg = screen.getByRole('group', { name: /Delete Bus pass/ })
     await userEvent.click(within(dlg).getByRole('button', { name: 'Yes, delete it' }))
     expect(send).toHaveBeenCalledWith('DELETE', `${items}/i1`)
     await waitFor(() => expect(screen.queryByText('Bus pass')).toBeNull())
@@ -270,6 +305,15 @@ describe('SupportQueuePage', () => {
     expect(loadedPaths).toContain(
       `${base}?status=resolved&assigneeId=unassigned&dueBefore=2026-11-01`
     )
+  })
+
+  it('says Updating while a new filter loads, and surfaces a staff list failure', () => {
+    loads[base] = { data: [row()], loading: true }
+    loads['/learn/providers/P1/staff-members'] = { error: new Error('No staff for you') }
+    render(<SupportQueuePage providerId="P1" />)
+    expect(screen.getByRole('status').textContent).toBe('Updating…')
+    expect(screen.queryByText('1 item')).toBeNull()
+    expect(screen.getByText(/No staff for you/)).toBeTruthy()
   })
 
   it('shows error and retry', async () => {

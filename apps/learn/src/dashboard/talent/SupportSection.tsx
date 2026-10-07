@@ -1,5 +1,5 @@
 import type { SupportCategory, SupportItemDto, SupportItemInput, SupportStatus } from '@id/types'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { useApiSend, useLoad } from '../api'
 import { dateOnly } from '../format'
 import { StaffOnlyReminder } from './StaffOnlyReminder'
@@ -45,6 +45,16 @@ function ItemRow({
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const finished = item.status === 'resolved' || item.status === 'cancelled'
+  const deleteBtn = useRef<HTMLButtonElement>(null)
+  const keepFocus = useRef(false)
+  const confirmId = useId()
+  // Cancelling the confirm brings Delete back: focus it rather than letting focus fall to the body.
+  useEffect(() => {
+    if (!confirming && keepFocus.current) {
+      keepFocus.current = false
+      deleteBtn.current?.focus()
+    }
+  }, [confirming])
 
   async function setStatus(status: SupportStatus) {
     setBusy(true)
@@ -90,15 +100,23 @@ function ItemRow({
         </p>
         {item.details && <p className="nt-body">{item.details}</p>}
         {confirming && (
-          <div className="nt-confirm" role="alertdialog" aria-label={`Delete ${item.title}?`}>
-            <span>Delete this item? This cannot be undone.</span>
+          <div
+            className="nt-confirm"
+            role="group"
+            aria-label={`Delete ${item.title}?`}
+            aria-describedby={confirmId}
+          >
+            <span id={confirmId}>Delete this item? This cannot be undone.</span>
             <button type="button" className="dash-btn" disabled={busy} onClick={remove}>
               Yes, delete it
             </button>
             <button
               type="button"
               className="dash-btn-quiet"
-              onClick={() => setConfirming(false)}
+              onClick={() => {
+                keepFocus.current = true
+                setConfirming(false)
+              }}
               autoFocus
             >
               Keep it
@@ -122,7 +140,12 @@ function ItemRow({
           </select>
         </label>
         {!confirming && (
-          <button type="button" className="dash-btn-quiet" onClick={() => setConfirming(true)}>
+          <button
+            ref={deleteBtn}
+            type="button"
+            className="dash-btn-quiet"
+            onClick={() => setConfirming(true)}
+          >
             Delete
             <span className="dash-visually-hidden"> {item.title}</span>
           </button>
@@ -141,6 +164,7 @@ export function SupportSection({ providerId, userId }: { providerId: string; use
     `/learn/providers/${providerId}/staff-members`
   )
 
+  const heading = useRef<HTMLHeadingElement>(null)
   const [added, setAdded] = useState<SupportItemDto[]>([])
   const [edits, setEdits] = useState<Record<string, SupportItemDto>>({})
   const [gone, setGone] = useState<string[]>([])
@@ -188,7 +212,7 @@ export function SupportSection({ providerId, userId }: { providerId: string; use
 
   return (
     <section className="nt-section" aria-labelledby="nt-support-h">
-      <h2 id="nt-support-h" className="dash-card-title">
+      <h2 id="nt-support-h" ref={heading} tabIndex={-1} className="dash-card-title">
         Ways to support
       </h2>
       <StaffOnlyReminder />
@@ -272,7 +296,11 @@ export function SupportSection({ providerId, userId }: { providerId: string; use
               key={i.id}
               item={i}
               onChanged={(saved) => setEdits((e) => ({ ...e, [saved.id]: saved }))}
-              onDeleted={(id) => setGone((g) => [...g, id])}
+              onDeleted={(id) => {
+                setGone((g) => [...g, id])
+                // The deleted item had focus; the heading is the nearest stable place.
+                heading.current?.focus()
+              }}
               announce={setMessage}
             />
           ))}

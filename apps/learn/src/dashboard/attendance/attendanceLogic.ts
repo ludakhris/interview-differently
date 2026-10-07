@@ -1,4 +1,12 @@
-import type { AttendanceSheetRow, AttendanceStatus, CohortSessionDto, MarkInput } from '@id/types'
+import type {
+  AttendanceSheetRow,
+  AttendanceStatus,
+  CohortSessionDto,
+  MarkInput,
+  SessionSkip,
+} from '@id/types'
+
+const pad = (n: number) => String(n).padStart(2, '0')
 
 export const STATUS_ORDER: AttendanceStatus[] = ['present', 'absent', 'late', 'excused']
 export const STATUS_LABEL: Record<AttendanceStatus, string> = {
@@ -20,6 +28,8 @@ export const KEY_STATUS: Record<string, AttendanceStatus> = {
   l: 'late',
   e: 'excused',
 }
+/** Keyboard shortcut that opens and focuses the note of the focused learner row. */
+export const NOTE_KEY = 'n'
 
 export interface Draft {
   status: AttendanceStatus | null
@@ -39,6 +49,37 @@ export function markEveryonePresent(drafts: Drafts, onlyUnmarked = true): Drafts
   }
   return out
 }
+
+const same = (a: Draft | undefined, b: Draft | undefined) =>
+  !!a && !!b && a.status === b.status && a.note.trim() === b.note.trim()
+
+/**
+ * The drafts after a save returned the fresh sheet. A learner's draft is replaced by the fresh row
+ * unless the user changed it since the baseline: for a learner in the save the baseline is what was
+ * sent, for any other the previous sheet row. So an edit made while the save was in flight, or an
+ * unsaved edit to a learner who was not in the save, is never overwritten, while marks other staff
+ * saved in the meantime come through.
+ */
+export function mergeAfterSave(
+  prevRows: AttendanceSheetRow[],
+  sent: Drafts,
+  savedIds: Set<string>,
+  current: Drafts,
+  nextRows: AttendanceSheetRow[]
+): Drafts {
+  const prev = draftsFrom(prevRows)
+  const fresh = draftsFrom(nextRows)
+  const out: Drafts = {}
+  for (const [id, f] of Object.entries(fresh)) {
+    const baseline = savedIds.has(id) ? sent[id] : prev[id]
+    const cur = current[id]
+    out[id] = cur && baseline && !same(cur, baseline) ? cur : f
+  }
+  return out
+}
+
+/** HH:MM in local time. */
+export const clock = (d: Date): string => `${pad(d.getHours())}:${pad(d.getMinutes())}`
 
 /** Rows whose draft differs from what is saved, as the save payload. A cleared status cannot be saved. */
 export function changedMarks(rows: AttendanceSheetRow[], drafts: Drafts): MarkInput['marks'] {
@@ -78,8 +119,6 @@ export function pickInitialSession(
   return (started.length ? started[started.length - 1] : sessions[0]).id
 }
 
-const pad = (n: number) => String(n).padStart(2, '0')
-
 /** ISO -> the value a datetime-local input wants (local time). */
 export function toLocalInput(iso: string): string {
   const d = new Date(iso)
@@ -93,14 +132,26 @@ export function fromLocalInput(v: string): string | null {
 
 export const rateLabel = (pct: number | null): string => (pct === null ? '—' : `${pct}%`)
 
-/** "Attendance: 8 of 10 sessions (80%)", or null when there is nothing held yet. */
+/**
+ * "Attendance: 8 of 10 sessions (80%)", with a quiet note for sessions that do not count yet (the
+ * register was not taken, or they were before the learner joined). Null when there is nothing to say.
+ */
 export function learnerAttendanceLine(a: {
-  counts: { present: number; late: number; excused: number; absent: number; unmarked: number }
+  counts: { present: number; late: number }
+  sessionsCounted: number
   ratePct: number | null
+  sessions: { skipped: SessionSkip | null }[]
 }): string | null {
-  const held =
-    a.counts.present + a.counts.late + a.counts.absent + a.counts.excused + a.counts.unmarked
-  const counted = held - a.counts.excused
-  if (held === 0 || counted === 0 || a.ratePct === null) return null
-  return `Attendance: ${a.counts.present + a.counts.late} of ${counted} sessions (${a.ratePct}%)`
+  const notTaken = a.sessions.filter((s) => s.skipped === 'not_taken').length
+  const before = a.sessions.filter((s) => s.skipped === 'before_join').length
+  const notes = [
+    notTaken > 0 ? `${notTaken} not taken yet` : null,
+    before > 0 ? `${before} before you joined` : null,
+  ].filter(Boolean)
+  const quiet = notes.join(', ')
+  if (a.sessionsCounted > 0 && a.ratePct !== null) {
+    const line = `Attendance: ${a.counts.present + a.counts.late} of ${a.sessionsCounted} sessions (${a.ratePct}%)`
+    return quiet ? `${line}. Not counted: ${quiet}` : line
+  }
+  return quiet ? `Attendance: no sessions counted yet (${quiet})` : null
 }

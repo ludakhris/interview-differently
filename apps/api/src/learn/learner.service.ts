@@ -376,7 +376,7 @@ export class LearnerService {
   async outline(userId: string, cohortId: string): Promise<LearnerOutline> {
     const e = await this.enrollmentFor(userId, cohortId)
     const course = e.cohort.course
-    const [modules, progress, plan] = await Promise.all([
+    const [modules, firstProgress, plan] = await Promise.all([
       this.courseItems(course.id),
       this.prisma.itemProgress.findMany({ where: { enrollmentId: e.id } }),
       this.prisma.planItem.findMany({
@@ -384,8 +384,20 @@ export class LearnerService {
         orderBy: { createdAt: 'asc' },
       }),
     ])
-    const byItem = new Map(progress.map((p) => [p.itemId, p]))
+    let progress = firstProgress
     const allItems = modules.flatMap((m) => m.items)
+    // A learner who finished the talent profile before this cohort began gets its profile item done now.
+    const pendingProfile = allItems.some(
+      (i) =>
+        i.type === 'profile' && !progress.some((p) => p.itemId === i.id && p.status === 'completed')
+    )
+    if (
+      pendingProfile &&
+      !this.lockReason(e.cohort.startsAt, e.cohort.endsAt) &&
+      (await this.catchUpProfile(userId, course.providerId))
+    )
+      progress = await this.prisma.itemProgress.findMany({ where: { enrollmentId: e.id } })
+    const byItem = new Map(progress.map((p) => [p.itemId, p]))
     // Remediation items are in the outline only for learners whose plan includes them.
     const items = allItems.filter((i) => !remediationOf(i.config))
     const addedItems = plan.flatMap((p): LearnerAddedItem[] => {
@@ -541,7 +553,18 @@ export class LearnerService {
     itemId: string,
     planAdded: PlanAddition[] = []
   ): Promise<LearnerItem> {
-    const { e, item, progress, plan } = await this.itemOf(userId, cohortId, itemId)
+    const found = await this.itemOf(userId, cohortId, itemId)
+    const { e, item, plan } = found
+    let progress = found.progress
+    if (
+      item.type === 'profile' &&
+      progress?.status !== 'completed' &&
+      !this.lockReason(e.cohort.startsAt, e.cohort.endsAt) &&
+      (await this.catchUpProfile(userId, e.cohort.course.providerId))
+    )
+      progress = await this.prisma.itemProgress.findUnique({
+        where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
+      })
     const config = (item.config ?? {}) as Record<string, unknown>
     let interview: LearnerItem['interview'] = null
     if (item.type === 'interview') {
@@ -673,22 +696,35 @@ export class LearnerService {
         cohort: { select: { startsAt: true, endsAt: true, courseId: true } },
       },
     })
+    const open = enrollments.filter(
+      (e) => e.cohort.courseId && !this.lockReason(e.cohort.startsAt, e.cohort.endsAt)
+    )
+    if (open.length === 0) return 0
+    // One query each for the items and the finished ones, not one per cohort.
+    const items = await this.prisma.courseItem.findMany({
+      where: {
+        type: 'profile',
+        module: { courseId: { in: [...new Set(open.map((e) => e.cohort.courseId as string))] } },
+      },
+      select: { id: true, module: { select: { courseId: true } } },
+    })
+    if (items.length === 0) return 0
+    const done = await this.prisma.itemProgress.findMany({
+      where: {
+        enrollmentId: { in: open.map((e) => e.id) },
+        itemId: { in: items.map((i) => i.id) },
+        status: 'completed',
+      },
+      select: { enrollmentId: true, itemId: true },
+    })
+    const doneKeys = new Set(done.map((d) => `${d.enrollmentId}:${d.itemId}`))
     let marked = 0
-    for (const e of enrollments) {
-      const courseId = e.cohort.courseId
-      if (!courseId || this.lockReason(e.cohort.startsAt, e.cohort.endsAt)) continue
-      const items = await this.prisma.courseItem.findMany({
-        where: { type: 'profile', module: { courseId } },
-        select: { id: true },
-      })
-      if (items.length === 0) continue
-      const done = await this.prisma.itemProgress.findMany({
-        where: { enrollmentId: e.id, itemId: { in: items.map((i) => i.id) }, status: 'completed' },
-        select: { itemId: true },
-      })
-      const doneIds = new Set(done.map((d) => d.itemId))
-      for (const item of items) {
-        if (doneIds.has(item.id)) continue
+    for (const e of open) {
+      const courseId = e.cohort.courseId as string
+      const mine = items.filter((i) => i.module.courseId === courseId)
+      if (mine.length === 0) continue
+      for (const item of mine) {
+        if (doneKeys.has(`${e.id}:${item.id}`)) continue
         await this.prisma.itemProgress.upsert({
           where: { enrollmentId_itemId: { enrollmentId: e.id, itemId: item.id } },
           create: {
@@ -705,6 +741,16 @@ export class LearnerService {
       await this.completeIfDone(e.id, e.status, courseId)
     }
     return marked
+  }
+
+  /** Marks the profile items done for a learner whose talent profile was already completed. Idempotent. */
+  private async catchUpProfile(userId: string, providerId: string): Promise<boolean> {
+    const p = await this.prisma.talentProfile.findUnique({
+      where: { providerId_userId: { providerId, userId } },
+      select: { completedAt: true },
+    })
+    if (!p?.completedAt) return false
+    return (await this.completeProfileItems(userId, providerId)) > 0
   }
 
   /**

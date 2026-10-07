@@ -1,9 +1,16 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  PayloadTooLargeException,
+  ServiceUnavailableException,
+} from '@nestjs/common'
 import type { PrismaService } from '../../prisma/prisma.service'
 import { DataAccessLogService } from '../data-access-log.service'
 import { LearnService } from '../learn.service'
 import type { LearnerService } from '../learner.service'
 import { ProviderAccessService } from '../provider-access.service'
+import { LocalDiskPrivateStorage } from '../../storage/local-disk-storage'
 import { TalentService, toProfileDto } from './talent.service'
 
 const PREV = 7770001
@@ -255,6 +262,35 @@ describe('resume upload', () => {
     await expect(service.uploadResume('L1', 'P1', undefined)).rejects.toThrow(BadRequestException)
     expect(storage.upload).not.toHaveBeenCalled()
   })
+  it('fails closed in production when storage is the unauthenticated local disk', async () => {
+    const prev = process.env.NODE_ENV
+    process.env.NODE_ENV = 'production'
+    const local = new TalentService(
+      db,
+      access,
+      audit,
+      new LocalDiskPrivateStorage() as never,
+      learner as unknown as LearnerService
+    )
+    try {
+      await expect(local.uploadResume('L1', 'P1', PDF)).rejects.toThrow(ServiceUnavailableException)
+      await expect(local.myResumeLink('L1', 'P1')).rejects.toThrow(ServiceUnavailableException)
+      await expect(local.staffResumeLink(staff, 'P1', 'L1')).rejects.toThrow(
+        ServiceUnavailableException
+      )
+      expect(state.logs).toHaveLength(0)
+      // Real private storage is fine in production.
+      await expect(service.myResumeLink('L1', 'P1')).resolves.toBeTruthy()
+    } finally {
+      process.env.NODE_ENV = prev
+    }
+  })
+  it('asks storage for a forced download of the resume', async () => {
+    await service.myResumeLink('L1', 'P1')
+    expect(storage.getSignedUrl).toHaveBeenCalledWith(expect.any(String), 300, {
+      downloadName: 'cv.pdf',
+    })
+  })
   it('stores under the private key, replaces the old object, and never returns the key', async () => {
     const dto = await service.uploadResume('L1', 'P1', PDF)
     const [key, , type] = storage.upload.mock.calls[0] as unknown as [string, Buffer, string]
@@ -285,7 +321,9 @@ describe('resume upload', () => {
   it('gives a 300 second signed link', async () => {
     const link = await service.myResumeLink('L1', 'P1')
     expect(link.expiresInSeconds).toBe(300)
-    expect(storage.getSignedUrl).toHaveBeenCalledWith('talent/resumes/P1/L1/abc-cv.pdf', 300)
+    expect(storage.getSignedUrl).toHaveBeenCalledWith('talent/resumes/P1/L1/abc-cv.pdf', 300, {
+      downloadName: 'cv.pdf',
+    })
   })
 })
 
@@ -449,7 +487,7 @@ describe('compensation never leaks outside the reveal endpoint and the opted-in 
   })
   it('the default export has no compensation columns', async () => {
     const csv = await service.exportCsv(staff, 'P1', {}, false)
-    expect(csv.split('\r\n')[0]).toBe(
+    expect(csv.replace('\uFEFF', '').split('\r\n')[0]).toBe(
       'name,email,cohorts,education_level,field_of_study,school,graduation_year,years_experience,industries,target_roles,available_from,has_resume,share,completed'
     )
   })
@@ -458,6 +496,41 @@ describe('compensation never leaks outside the reveal endpoint and the opted-in 
     expect(csv).toContain(`"'=HYPERLINK(""http://evil"")"`)
     expect(csv).toContain(`'=cmd|x`)
     expect(csv).not.toMatch(/(^|\r\n|,)=/)
+  })
+  it('starts with a UTF-8 byte order mark', async () => {
+    const csv = await service.exportCsv(staff, 'P1', {}, false)
+    expect(csv.charCodeAt(0)).toBe(0xfeff)
+  })
+  it('refuses an export over the row cap instead of truncating, and logs nothing', async () => {
+    const many = Array.from({ length: 2001 }, (_, i) => ({
+      userId: `X${i}`,
+      providerId: 'P1',
+      cohortId: 'C1',
+    }))
+    const saved = state.enrolled
+    state.enrolled = many
+    for (const m of many)
+      state.users[m.userId] = { displayName: m.userId, email: `${m.userId}@x.org` }
+    try {
+      await expect(service.exportCsv(staff, 'P1', {}, false)).rejects.toThrow(
+        PayloadTooLargeException
+      )
+      expect(state.logs).toHaveLength(0)
+    } finally {
+      state.enrolled = saved
+      for (const m of many) delete state.users[m.userId]
+    }
+  })
+  it('a staff member cannot read compensation about themselves', async () => {
+    state.enrolled.push({ userId: 'staff-p1', providerId: 'P1', cohortId: 'C1' })
+    try {
+      await expect(service.staffCompensation(staff, 'P1', 'staff-p1')).rejects.toThrow(
+        ForbiddenException
+      )
+      expect(state.logs).toHaveLength(0)
+    } finally {
+      state.enrolled.pop()
+    }
   })
   it('only the learner own dto carries compensation', () => {
     expect(toProfileDto(state.profiles[0] as never).previousCompensation).toBe(PREV)

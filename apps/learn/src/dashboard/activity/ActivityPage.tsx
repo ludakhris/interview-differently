@@ -4,7 +4,7 @@ import type {
   CohortListItem,
   LearnerActivityReport,
 } from '@id/types'
-import { useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { downloadFile, useApiFetch, useLoad } from '../api'
 import { useApp } from '../app-context'
 import { StatTile } from '../charts'
@@ -62,21 +62,31 @@ function CohortPicker({ workspace }: { workspace: string }) {
 
 export function Explainer() {
   return (
-    <p className="ac-caption">
-      <strong>Measured</strong> time is time the learner had a course page open in front of them and
-      was active (clicking, typing or scrolling), counted by the server about every 30 seconds.{' '}
-      <strong>Estimated</strong> time is for connected tools: the time from launch to the score
-      coming back, at most 4 hours per launch. It is reported separately and can be above or below
-      the real time. Days are UTC dates. Time before activity logging was switched on is not
-      recorded.
-    </p>
+    <details className="ac-caption ac-explainer">
+      <summary>How is time counted?</summary>
+      <p>
+        <strong>Measured</strong> time is active time: the learner had a course page open in front
+        of them and was clicking, typing or scrolling, counted by the server about every 30 seconds.
+        Idle time is not counted. <strong>Estimated</strong> time is for connected tools: a guess
+        from the moment the tool was launched to the moment its score came back, at most 4 hours per
+        launch, so it can be above or below the real time. The two are always shown apart, and they
+        can overlap: a learner may have a course page open while a tool runs, so adding them can
+        count some minutes twice. Days are UTC dates. Time before activity logging was switched on
+        is not recorded.
+      </p>
+    </details>
   )
 }
 
 function useRange() {
-  const [preset, setPreset] = useState<RangePreset>('last30')
+  const [preset, setPresetState] = useState<RangePreset>('last30')
   const [custom, setCustom] = useState({ from: '', to: '' })
-  const base = useMemo(() => new Date(), [])
+  // "Last 7/30 days" counts back from the moment of the click, not from when the page opened.
+  const [base, setBase] = useState(() => new Date())
+  const setPreset = (p: RangePreset) => {
+    setBase(new Date())
+    setPresetState(p)
+  }
   const problem = preset === 'custom' ? rangeProblem(custom.from, custom.to) : null
   const range = preset === 'custom' ? custom : presetRange(preset, base)
   const query = problem ? null : `from=${range.from}&to=${range.to}`
@@ -90,6 +100,9 @@ function CohortActivity({ cohortId }: { cohortId: string }) {
   const [learner, setLearner] = useState<{ id: string; name: string } | null>(null)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState(false)
+  const [downloaded, setDownloaded] = useState<string | null>(null)
+  const headRef = useRef<HTMLHeadingElement>(null)
+  const hadLearner = useRef(false)
   const base = `/learn/cohorts/${encodeURIComponent(cohortId)}/activity`
   const { data: cohort } = useLoad<CohortDetail>(`/learn/cohorts/${encodeURIComponent(cohortId)}`)
   const report = useLoad<CohortActivityReport>(r.query ? `${base}?${r.query}` : null)
@@ -97,16 +110,21 @@ function CohortActivity({ cohortId }: { cohortId: string }) {
     learner && r.query ? `${base}/learners/${encodeURIComponent(learner.id)}?${r.query}` : null
   )
 
+  // Going back from a learner's log: move focus to the cohort heading, not to a removed button.
+  useEffect(() => {
+    if (!learner && hadLearner.current) headRef.current?.focus()
+    hadLearner.current = !!learner
+  }, [learner])
+
   async function exportCsv() {
     if (!r.query) return
     setExporting(true)
     setExportError(false)
+    setDownloaded(null)
+    const file = `activity-${r.range.from}-to-${r.range.to}.csv`
     try {
-      await downloadFile(
-        apiFetch,
-        `${base}.csv?${r.query}`,
-        `activity-${r.range.from}-to-${r.range.to}.csv`
-      )
+      await downloadFile(apiFetch, `${base}.csv?${r.query}`, file)
+      setDownloaded(file)
     } catch {
       setExportError(true)
     } finally {
@@ -125,9 +143,13 @@ function CohortActivity({ cohortId }: { cohortId: string }) {
       </p>
       <div className="dash-head">
         <div>
-          <h1 className="dash-h2">Activity{cohort ? `: ${cohort.name}` : ''}</h1>
+          <h1 className="dash-h2" tabIndex={-1} ref={headRef}>
+            Activity{cohort ? `: ${cohort.name}` : ''}
+          </h1>
           <p className="dash-sub">
-            {r.problem ? 'Choose a date range.' : `${r.range.from} to ${r.range.to}`}
+            {r.problem
+              ? 'Choose a date range.'
+              : `${dayLabel(r.range.from)} to ${dayLabel(r.range.to)} (UTC)`}
           </p>
         </div>
         <div className="ac-export">
@@ -144,6 +166,9 @@ function CohortActivity({ cohortId }: { cohortId: string }) {
               The download did not work. Try again.
             </p>
           )}
+          <p role="status" className="dash-muted ac-downloaded">
+            {downloaded ? `Downloaded ${downloaded}` : ''}
+          </p>
         </div>
       </div>
 
@@ -235,7 +260,6 @@ export function CohortView({
   report: CohortActivityReport
   onPick: (userId: string, name: string) => void
 }) {
-  const estimated = report.learners.reduce((n, l) => n + l.estimatedSeconds, 0)
   const active = report.learners.filter((l) => l.totalSeconds > 0).length
   if (report.totalSeconds === 0) {
     return (
@@ -247,13 +271,21 @@ export function CohortView({
   return (
     <>
       <section aria-label="Totals" className="dash-tiles">
-        <StatTile label="Total time" value={formatDuration(report.totalSeconds)} />
+        <StatTile
+          label="Total time"
+          value={formatDuration(report.totalSeconds)}
+          note="Measured plus estimated; they can overlap"
+        />
         <StatTile
           label="Measured"
-          value={formatDuration(report.totalSeconds - estimated)}
-          note="Page open and active"
+          value={formatDuration(report.measuredSeconds)}
+          note="Active on a course page"
         />
-        <StatTile label="Estimated" value={formatDuration(estimated)} note="Connected tools" />
+        <StatTile
+          label="Estimated"
+          value={formatDuration(report.estimatedSeconds)}
+          note="Connected tools, a guess"
+        />
         <StatTile label="Learners with time" value={`${active} of ${report.learners.length}`} />
       </section>
 
@@ -270,7 +302,7 @@ export function CohortView({
         </h2>
         <div className="dash-tablewrap">
           <table className="dash-table ac-table">
-            <caption className="ac-sr">
+            <caption className="dash-visually-hidden">
               Time spent per learner. Select a learner to see their day-by-day log.
             </caption>
             <thead>
@@ -304,7 +336,7 @@ export function CohortView({
                     </button>
                   </th>
                   <td className="num">{formatDuration(l.totalSeconds)}</td>
-                  <td className="num">{formatDuration(l.totalSeconds - l.estimatedSeconds)}</td>
+                  <td className="num">{formatDuration(l.measuredSeconds)}</td>
                   <td className="num">
                     {l.estimatedSeconds > 0 ? formatDuration(l.estimatedSeconds) : '—'}
                   </td>
@@ -328,7 +360,10 @@ export function CohortView({
                 <tr>
                   <th scope="col">Item</th>
                   <th scope="col" className="num">
-                    Time
+                    Measured
+                  </th>
+                  <th scope="col" className="num">
+                    Estimated
                   </th>
                   <th scope="col" className="num">
                     Learners
@@ -339,7 +374,10 @@ export function CohortView({
                 {report.items.map((i) => (
                   <tr key={i.itemId ?? 'none'}>
                     <th scope="row">{i.title}</th>
-                    <td className="num">{formatDuration(i.seconds)}</td>
+                    <td className="num">{formatDuration(i.measuredSeconds)}</td>
+                    <td className="num">
+                      {i.estimatedSeconds > 0 ? formatDuration(i.estimatedSeconds) : '—'}
+                    </td>
                     <td className="num">{i.learners}</td>
                   </tr>
                 ))}
@@ -352,11 +390,20 @@ export function CohortView({
   )
 }
 
-/** Bars for each day (each week for a long range), with the same figures as a table underneath. */
+/**
+ * Bars for each day (each week for a long range), stacked measured (solid) over estimated
+ * (striped), with the same figures as a table underneath.
+ */
 export function DailyBars({
   days,
 }: {
-  days: { day: string; seconds: number; learners: number }[]
+  days: {
+    day: string
+    seconds: number
+    measuredSeconds: number
+    estimatedSeconds: number
+    learners: number
+  }[]
 }) {
   const bars = chartBars(days)
   const max = Math.max(1, ...bars.map((b) => b.seconds))
@@ -369,11 +416,18 @@ export function DailyBars({
       <div
         className="ac-chart"
         role="img"
-        aria-label={`Time per ${weekly ? 'week' : 'day'}. Most: ${formatDuration(peak.seconds)}, ${label(peak)}.`}
+        aria-label={`Time per ${weekly ? 'week' : 'day'}, measured and estimated apart. Most: ${formatDuration(peak.seconds)}, ${label(peak)}.`}
       >
         {bars.map((b) => (
-          <div key={b.start} className="ac-col" title={`${label(b)}: ${formatDuration(b.seconds)}`}>
-            <div className="ac-bar" style={{ height: `${(b.seconds / max) * 100}%` }} />
+          <div
+            key={b.start}
+            className="ac-col"
+            title={`${label(b)}: ${formatDuration(b.measuredSeconds)} measured, ${formatDuration(b.estimatedSeconds)} estimated`}
+          >
+            <div className="ac-stack" style={{ height: `${(b.seconds / max) * 100}%` }}>
+              <div className="ac-bar-est" style={{ flexGrow: b.estimatedSeconds }} />
+              <div className="ac-bar" style={{ flexGrow: b.measuredSeconds }} />
+            </div>
           </div>
         ))}
       </div>
@@ -381,6 +435,10 @@ export function DailyBars({
         <span>{dayLabel(bars[0].start)}</span>
         <span>{dayLabel(bars[bars.length - 1].end)}</span>
       </div>
+      <p className="dash-muted ac-legend">
+        <span className="ac-key ac-key-m" aria-hidden="true" /> Measured (active on a course page){' '}
+        <span className="ac-key ac-key-e" aria-hidden="true" /> Estimated (connected tools)
+      </p>
       <details className="ac-details">
         <summary>Show the {weekly ? 'weekly' : 'daily'} figures as a table</summary>
         <div className="dash-tablewrap">
@@ -389,7 +447,10 @@ export function DailyBars({
               <tr>
                 <th scope="col">{weekly ? 'Week' : 'Day'}</th>
                 <th scope="col" className="num">
-                  Time
+                  Measured
+                </th>
+                <th scope="col" className="num">
+                  Estimated
                 </th>
               </tr>
             </thead>
@@ -397,7 +458,10 @@ export function DailyBars({
               {bars.map((b) => (
                 <tr key={b.start}>
                   <th scope="row">{label(b)}</th>
-                  <td className="num">{formatDuration(b.seconds)}</td>
+                  <td className="num">{formatDuration(b.measuredSeconds)}</td>
+                  <td className="num">
+                    {b.estimatedSeconds > 0 ? formatDuration(b.estimatedSeconds) : '—'}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -410,14 +474,19 @@ export function DailyBars({
 
 /** One learner's day-by-day log: when they were seen and minutes per item, estimates marked. */
 export function LearnerLog({ report }: { report: LearnerActivityReport }) {
+  const head = useRef<HTMLHeadingElement>(null)
+  // Arriving from the cohort list: put focus on this learner's heading.
+  useEffect(() => head.current?.focus(), [])
   return (
     <section aria-labelledby="ac-h-log">
-      <h2 className="dash-h2" id="ac-h-log">
+      <h2 className="dash-h2" id="ac-h-log" tabIndex={-1} ref={head}>
         {report.name}
       </h2>
       <p className="dash-sub">
         {formatDuration(report.totalSeconds)} on {report.activeDays}{' '}
-        {report.activeDays === 1 ? 'day' : 'days'}, {report.from} to {report.to}.
+        {report.activeDays === 1 ? 'day' : 'days'} ({formatDuration(report.measuredSeconds)}{' '}
+        measured, {formatDuration(report.estimatedSeconds)} estimated), {dayLabel(report.from)} to{' '}
+        {dayLabel(report.to)}.
       </p>
       {report.days.length === 0 ? (
         <p className="dash-muted ac-empty">
@@ -432,7 +501,10 @@ export function LearnerLog({ report }: { report: LearnerActivityReport }) {
                 <th scope="col">First seen</th>
                 <th scope="col">Last seen</th>
                 <th scope="col" className="num">
-                  Time
+                  Measured
+                </th>
+                <th scope="col" className="num">
+                  Estimated
                 </th>
                 <th scope="col">By item</th>
               </tr>
@@ -443,13 +515,15 @@ export function LearnerLog({ report }: { report: LearnerActivityReport }) {
                   <th scope="row">{dayLabel(d.day)}</th>
                   <td>{timeUtc(d.firstSeenAt)}</td>
                   <td>{timeUtc(d.lastSeenAt)}</td>
-                  <td className="num">{formatDuration(d.seconds)}</td>
+                  <td className="num">{formatDuration(d.measuredSeconds)}</td>
+                  <td className="num">
+                    {d.estimatedSeconds > 0 ? formatDuration(d.estimatedSeconds) : '—'}
+                  </td>
                   <td>
                     <ul className="ac-items">
                       {d.items.map((i) => (
-                        <li key={`${i.itemId}-${i.estimated}`}>
-                          {i.title}: {formatDuration(i.seconds)}
-                          {i.estimated && <span className="ac-tag"> (estimated)</span>}
+                        <li key={i.itemId ?? 'none'}>
+                          {i.title}: {itemTime(i)}
                         </li>
                       ))}
                     </ul>
@@ -462,4 +536,13 @@ export function LearnerLog({ report }: { report: LearnerActivityReport }) {
       )}
     </section>
   )
+}
+
+/** "40 min", "20 min (estimated)" or "40 min + 20 min (estimated)": the two kinds stay apart. */
+function itemTime(i: { measuredSeconds: number; estimatedSeconds: number }): string {
+  const parts: string[] = []
+  if (i.measuredSeconds > 0 || i.estimatedSeconds === 0)
+    parts.push(formatDuration(i.measuredSeconds))
+  if (i.estimatedSeconds > 0) parts.push(`${formatDuration(i.estimatedSeconds)} (estimated)`)
+  return parts.join(' + ')
 }

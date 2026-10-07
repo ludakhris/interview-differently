@@ -34,6 +34,7 @@ const cohort = (over: Partial<LearnerOutcomeCohort> = {}): LearnerOutcomeCohort 
     interviewReady: false,
     completed: false,
   },
+  hasInterview: true,
   skills: [],
   items: [],
   ...over,
@@ -57,11 +58,13 @@ const item = (id: string, score: number | null, completedAt: string | null) => (
   score,
   attempts: 1,
   completedAt,
+  review: false,
+  preCheck: false,
 })
 
 describe('outcomes text', () => {
-  it('says Not yet, never 0%, without a score', () => {
-    expect(scoreText(null)).toBe('Not yet')
+  it('says No score yet, never 0%, without a score', () => {
+    expect(scoreText(null)).toBe('No score yet')
     expect(scoreText(0)).toBe('0%')
     expect(scoreText(81.6)).toBe('82%')
   })
@@ -75,18 +78,37 @@ describe('outcomes text', () => {
     expect(averageScore(data([cohort()]))).toBeNull()
   })
 
+  it('leaves out review duplicates and the pre-check, so each item counts once', () => {
+    const d = data([
+      cohort({
+        items: [
+          item('quiz', 80, 'x'),
+          { ...item('quiz2', 20, 'x'), title: 'Review: quiz', review: true },
+          { ...item('pre', 10, 'x'), preCheck: true },
+        ],
+      }),
+    ])
+    expect(averageScore(d)).toBe(80)
+  })
+
   it('summarises readiness without claiming it', () => {
-    expect(readinessSummary(data([]))).toBe('Not yet')
+    expect(readinessSummary(data([]))).toBe('No interviews')
+    expect(readinessSummary(data([cohort({ hasInterview: false })]))).toBe('No interviews')
     const ready = cohort({
       readiness: { ...cohort().readiness, interviewBest: 80, interviewReady: true },
     })
     expect(readinessSummary(data([ready, cohort()]))).toBe('1 of 2')
+    // A course with no interview is not counted against the learner.
+    expect(readinessSummary(data([ready, cohort({ hasInterview: false })]))).toBe('1 of 1')
+    expect(readinessText(cohort({ hasInterview: false }))).toBe(
+      'This course has no practice interview'
+    )
     expect(readinessText(cohort())).toBe('Not yet (goal 70%)')
   })
 
   it('holds completion until readiness is reached', () => {
     expect(completionText(cohort({ itemsDone: 0 }))).toBe('Not started')
-    expect(completionText(cohort())).toBe('In progress')
+    expect(completionText(cohort())).toBe('In progress: 1 item left')
     expect(completionText(cohort({ itemsDone: 2 }))).toMatch(/reach 70%/)
     expect(completionText(cohort({ enrollmentStatus: 'completed' }))).toBe('Completed')
   })
@@ -104,5 +126,19 @@ describe('outcomes text', () => {
     ])
     expect(recentResults(d).map((r) => r.itemId)).toEqual(['new', 'old'])
     expect(recentResults(d, 1)).toHaveLength(1)
+  })
+
+  it('never asks for a practice interview in a course without one', () => {
+    const noInterview = cohort({ itemsDone: 2, hasInterview: false })
+    expect(completionText(noInterview)).toBe('All items done. Ready to be marked complete.')
+    expect(completionText(noInterview)).not.toMatch(/interview/)
+    expect(completionText(cohort({ hasInterview: false, itemsTotal: 4, itemsDone: 1 }))).toBe(
+      'In progress: 3 items left'
+    )
+    const ready = cohort({
+      itemsDone: 2,
+      readiness: { ...cohort().readiness, interviewBest: 80, interviewReady: true },
+    })
+    expect(completionText(ready)).toBe('All items done. Ready to be marked complete.')
   })
 })

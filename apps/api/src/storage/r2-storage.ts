@@ -115,11 +115,27 @@ export class R2PrivateStorage implements PrivateMediaStorage {
     await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }))
   }
 
-  async getSignedUrl(key: string, expiresInSeconds: number): Promise<string> {
+  async getSignedUrl(
+    key: string,
+    expiresInSeconds: number,
+    options?: { downloadName?: string }
+  ): Promise<string> {
     if (!this.s3) throw new Error('R2PrivateStorage instantiated without R2_RESPONSES_BUCKET set')
-    return getSignedUrl(this.s3, new GetObjectCommand({ Bucket: this.bucket, Key: key }), {
-      expiresIn: expiresInSeconds,
-    })
+    return getSignedUrl(
+      this.s3,
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ...(options?.downloadName
+          ? {
+              ResponseContentDisposition: `attachment; filename="${options.downloadName.replace(/["\\\r\n]/g, '_')}"`,
+            }
+          : {}),
+      }),
+      {
+        expiresIn: expiresInSeconds,
+      }
+    )
   }
 }
 

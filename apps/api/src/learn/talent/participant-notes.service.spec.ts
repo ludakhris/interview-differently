@@ -244,6 +244,42 @@ describe('notes', () => {
     expect(notes).toHaveLength(1)
   })
 
+  it('only the author or a system admin may edit or delete a note', async () => {
+    const other = { userId: 'staff-p1b', role: 'provider-admin' }
+    const a = await service.createNote(staff, 'P1', 'learner-1', { body: 'mine' })
+    await expect(
+      service.updateNote(other, 'P1', 'learner-1', a.id, { body: 'x' })
+    ).rejects.toBeInstanceOf(ForbiddenException)
+    await expect(service.deleteNote(other, 'P1', 'learner-1', a.id)).rejects.toBeInstanceOf(
+      ForbiddenException
+    )
+    expect(notes[0].body).toBe('mine')
+    const root = { userId: 'root', role: 'system-admin' }
+    await service.updateNote(root, 'P1', 'learner-1', a.id, { body: 'admin edit' })
+    expect(notes[0].body).toBe('admin edit')
+    await service.deleteNote(root, 'P1', 'learner-1', a.id)
+    expect(notes).toHaveLength(0)
+  })
+
+  it('a provider admin who is also a participant cannot read or write records about themselves', async () => {
+    const self = { userId: 'learner-1', role: 'provider-admin' }
+    memberships.push({ userId: 'learner-1', institutionId: 'P1', cohortId: null, kind: 'provider' })
+    try {
+      await expect(service.listNotes(self, 'P1', 'learner-1')).rejects.toBeInstanceOf(
+        ForbiddenException
+      )
+      await expect(
+        service.createNote(self, 'P1', 'learner-1', { body: 'x' })
+      ).rejects.toBeInstanceOf(ForbiddenException)
+      await expect(service.listItems(self, 'P1', 'learner-1')).rejects.toBeInstanceOf(
+        ForbiddenException
+      )
+      expect(audit).toHaveLength(0)
+    } finally {
+      memberships.pop()
+    }
+  })
+
   it('rejects empty, over-long and foreign-cohort input', async () => {
     await expect(
       service.createNote(staff, 'P1', 'learner-1', { body: '   ' })

@@ -1,5 +1,5 @@
 import type { LearnerTalentProfileEntry, TalentProfileDto } from '@id/types'
-import { useId, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useApiSend } from '../api'
 import { ResumeBox } from './ResumeBox'
 import {
@@ -10,6 +10,14 @@ import {
   type FieldErrors,
   type FormValues,
 } from './profileForm'
+
+/** Fields the "To finish" note is about: editing one of them retires the note. */
+const FINISH_FIELDS: (keyof FormValues)[] = [
+  'educationLevel',
+  'yearsExperience',
+  'industries',
+  'targetRoles',
+]
 import './talent.css'
 
 function Field(props: {
@@ -60,9 +68,23 @@ export function TalentProfileForm(props: {
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState<string | null>(null)
   const [serverError, setServerError] = useState<string | null>(null)
+  const summary = useRef<HTMLDivElement>(null)
+  const [failedTries, setFailedTries] = useState(0)
+  // After a failed check, move to the list of problems so keyboard and screen reader users land on it.
+  useEffect(() => {
+    if (failedTries > 0) summary.current?.focus()
+  }, [failedTries])
   const set = <K extends keyof FormValues>(k: K, value: FormValues[K]) => {
     setV((cur) => ({ ...cur, [k]: value }))
     setSaved(null)
+    // A field's message goes away as soon as the person edits it (and the finish note if it was about this field).
+    setErrors((cur) => {
+      if (!cur[k] && !(cur.finish && FINISH_FIELDS.includes(k))) return cur
+      const rest = { ...cur }
+      delete rest[k]
+      if (FINISH_FIELDS.includes(k)) delete rest.finish
+      return rest
+    })
   }
 
   async function save(complete: boolean) {
@@ -71,6 +93,7 @@ export function TalentProfileForm(props: {
     setServerError(null)
     if (Object.keys(found).length > 0) {
       setSaved(null)
+      setFailedTries((n) => n + 1)
       return
     }
     setBusy(true)
@@ -91,7 +114,10 @@ export function TalentProfileForm(props: {
     }
   }
 
-  const problems = Object.values(errors).filter(Boolean)
+  // The education field shows its own message; the finish note already names it.
+  const problems = Object.entries(errors)
+    .filter(([k, m]) => m && k !== 'educationLevel')
+    .map(([, m]) => m as string)
   const completed = !!profile?.completedAt
 
   return (
@@ -104,7 +130,7 @@ export function TalentProfileForm(props: {
       }}
     >
       {problems.length > 0 && (
-        <div className="dash-banner dash-banner-error" role="alert">
+        <div ref={summary} tabIndex={-1} className="dash-banner dash-banner-error" role="alert">
           Please fix {problems.length === 1 ? 'this' : 'these'} before saving:
           <ul>
             {problems.map((p) => (
@@ -187,11 +213,13 @@ export function TalentProfileForm(props: {
 
       <fieldset className="tl-group">
         <legend>Education</legend>
-        <Field label="Highest level of education">
+        <Field label="Highest level of education" error={errors.educationLevel}>
           {(a) => (
             <select
               id={a.id}
               value={v.educationLevel}
+              aria-describedby={a.describedBy}
+              aria-invalid={a.invalid}
               onChange={(e) => set('educationLevel', e.target.value)}
             >
               <option value="">Choose one</option>

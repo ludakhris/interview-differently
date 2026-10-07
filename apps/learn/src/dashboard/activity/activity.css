@@ -85,14 +85,6 @@
   padding: 4px 0;
   text-align: left;
 }
-.ac-sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
 .ac-chart {
   display: flex;
   align-items: flex-end;
@@ -108,10 +100,43 @@
   display: flex;
   align-items: flex-end;
 }
-.ac-bar {
+.ac-stack {
   width: 100%;
   min-height: 2px;
+  display: flex;
+  flex-direction: column;
+}
+.ac-bar {
   background: var(--blue);
+}
+.ac-bar-est,
+.ac-key-e {
+  background: repeating-linear-gradient(45deg, var(--blue) 0 3px, transparent 3px 6px);
+  box-shadow: inset 0 0 0 1px var(--blue);
+}
+.ac-legend {
+  font-size: 13px;
+}
+.ac-key {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin: 0 4px 0 8px;
+  vertical-align: -2px;
+}
+.ac-key-m {
+  background: var(--blue);
+}
+.ac-explainer summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.ac-explainer p {
+  margin: 8px 0 0;
+}
+.ac-downloaded {
+  margin: 0;
+  font-size: 13px;
 }
 .ac-axis {
   display: flex;
@@ -132,10 +157,6 @@
   margin: 0;
   padding: 0;
   list-style: none;
-}
-.ac-tag {
-  font-weight: 600;
-  font-style: italic;
 }
 @media (max-width: 640px) {
   .ac-export,

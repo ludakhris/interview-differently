@@ -14,9 +14,10 @@ import { GradebookPage } from './GradebookPage'
 import { LearningCoursePage } from './LearningCoursePage'
 import { LearningItemPage } from './LearningItemPage'
 import { LearningPage } from './LearningPage'
+import { canSeeActivity, canSeeTalent } from './roleAccess'
 import { LearnerOutcomesPage } from './outcomes/LearnerOutcomesPage'
 import { OutcomesPage } from './OutcomesPage'
-import { errorNotice } from './shared'
+import { errorNotice, useRole } from './shared'
 import { MyProfilePage } from './talent/MyProfilePage'
 import { TalentPage } from './talent/TalentPage'
 import { SupportQueuePage } from './talent/SupportQueuePage'
@@ -69,6 +70,7 @@ function Gate({ pathname, search }: { pathname: string; search: string }) {
 /** Picks the page by the workspace's kind: agencies report, providers set up courses. */
 function Routes({ pathname }: { pathname: string }) {
   const { tenant, workspaces, workspacesError, current, href } = useApp()
+  const role = useRole()
   // Learner pages need no workspace: any signed-in LearnDifferently account can use them.
   const learnerItem = /^\/lms\/learning\/([^/]+)\/([^/]+)\/?$/.exec(pathname)
   const learnerCourse = /^\/lms\/learning\/([^/]+)\/?$/.exec(pathname)
@@ -139,6 +141,11 @@ function Routes({ pathname }: { pathname: string }) {
     )
   }
 
+  const notFound = (
+    <Notice title="Page not found">
+      This page is not available for your role in this workspace.
+    </Notice>
+  )
   const course = /^\/lms\/courses\/([^/]+)\/?$/.exec(pathname)
   const cohort = /^\/lms\/dashboard\/cohorts\/([^/]+)\/?$/.exec(pathname)
   const runCohort = /^\/lms\/cohorts\/([^/]+)\/?$/.exec(pathname)
@@ -167,7 +174,7 @@ function Routes({ pathname }: { pathname: string }) {
       )
     }
     // Staff notes, support items and talent profiles belong to a provider, so only its workspace has them.
-    if (isProvider && onTalent) {
+    if (isProvider && onTalent && canSeeTalent(role)) {
       return (
         <DashboardShell>
           {/^\/lms\/talent\/support\/?$/.test(pathname) ? (
@@ -179,6 +186,9 @@ function Routes({ pathname }: { pathname: string }) {
           )}
         </DashboardShell>
       )
+    }
+    if ((onTalent && isProvider) || (activity && !canSeeActivity(role))) {
+      return <DashboardShell>{notFound}</DashboardShell>
     }
     if (activity) {
       return (
@@ -217,6 +227,7 @@ function Routes({ pathname }: { pathname: string }) {
   }
 
   if (current.kind === 'agency') {
+    if (onTalent || activity) return <DashboardShell>{notFound}</DashboardShell>
     if (onCourses) {
       return (
         <DashboardShell>

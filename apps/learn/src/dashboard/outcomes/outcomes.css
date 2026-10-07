@@ -11,7 +11,7 @@
 }
 .lo-summary {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 12px;
   margin: 20px 0 0;
 }
@@ -30,6 +30,11 @@
   margin: 4px 0 0;
   color: var(--navy);
   font: 700 26px/1.2 var(--display);
+}
+.lo-stat dd.lo-note {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font: 400 13px/1.4 inherit;
 }
 .lo-note {
   margin: 4px 0 0;

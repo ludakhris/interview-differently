@@ -49,20 +49,39 @@ export interface Bar {
   /** Last day included in the bar. */
   end: string
   seconds: number
+  measuredSeconds: number
+  estimatedSeconds: number
 }
 
 /**
  * Bars for the chart: one per day, or one per week (Monday to Sunday, clipped to the range) when
- * there are more than `maxBars` days.
+ * there are more than `maxBars` days. Measured and estimated seconds stay apart.
  */
-export function chartBars(days: { day: string; seconds: number }[], maxBars = 45): Bar[] {
+export function chartBars(
+  days: { day: string; seconds: number; measuredSeconds: number; estimatedSeconds: number }[],
+  maxBars = 45
+): Bar[] {
   if (days.length <= maxBars)
-    return days.map((d) => ({ start: d.day, end: d.day, seconds: d.seconds }))
+    return days.map((d) => ({
+      start: d.day,
+      end: d.day,
+      seconds: d.seconds,
+      measuredSeconds: d.measuredSeconds,
+      estimatedSeconds: d.estimatedSeconds,
+    }))
   const weeks = new Map<string, Bar>()
   for (const d of days) {
     const key = weekStart(d.day)
-    const w = weeks.get(key) ?? { start: d.day, end: d.day, seconds: 0 }
+    const w = weeks.get(key) ?? {
+      start: d.day,
+      end: d.day,
+      seconds: 0,
+      measuredSeconds: 0,
+      estimatedSeconds: 0,
+    }
     w.seconds += d.seconds
+    w.measuredSeconds += d.measuredSeconds
+    w.estimatedSeconds += d.estimatedSeconds
     if (d.day < w.start) w.start = d.day
     if (d.day > w.end) w.end = d.day
     weeks.set(key, w)

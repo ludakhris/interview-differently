@@ -17,10 +17,10 @@ import {
 } from './outcomesText'
 import './outcomes.css'
 
-/** A horizontal bar for a 0-100 value; the number is always written beside it. */
-function Bar({ value, goal, label }: { value: number | null; goal?: number; label: string }) {
+/** A horizontal bar for a 0-100 value. Decoration only: the number is always written beside it. */
+function Bar({ value, goal }: { value: number | null; goal?: number }) {
   return (
-    <span className="lo-bar" role="img" aria-label={`${label}: ${scoreText(value)}`}>
+    <span className="lo-bar" aria-hidden="true">
       <span className="lo-bar-track">
         {value !== null && <span className="lo-bar-fill" style={{ width: `${value}%` }} />}
         {goal !== undefined && <span className="lo-bar-goal" style={{ left: `${goal}%` }} />}
@@ -34,7 +34,7 @@ function Stat({ label, value, note }: { label: string; value: string; note?: str
     <div className="lo-stat">
       <dt>{label}</dt>
       <dd>{value}</dd>
-      {note && <p className="lo-note">{note}</p>}
+      {note && <dd className="lo-note">{note}</dd>}
     </div>
   )
 }
@@ -55,12 +55,12 @@ function CohortCard({ c }: { c: LearnerOutcomeCohort }) {
           </p>
         </div>
         <a className="lo-link" href={href(`/lms/learning/${c.cohortId}`)}>
-          Open course
+          Open course <span className="dash-visually-hidden">{c.courseTitle}</span>
         </a>
       </div>
 
       <div className="lo-progress">
-        <Bar value={c.percent} label="Progress" />
+        <Bar value={c.percent} />
         <span>
           {c.itemsDone} of {c.itemsTotal} items done ({c.percent}%)
         </span>
@@ -92,7 +92,7 @@ function CohortCard({ c }: { c: LearnerOutcomeCohort }) {
               return (
                 <li key={s.id} className="lo-row">
                   <span className="lo-row-name">{s.label}</span>
-                  <Bar value={s.pct} goal={s.targetPct} label={s.label} />
+                  <Bar value={s.pct} goal={s.targetPct} />
                   <span className="lo-row-val">
                     {scoreText(s.pct)} <span className="lo-note">(goal {s.targetPct}%)</span>
                   </span>
@@ -115,7 +115,7 @@ function CohortCard({ c }: { c: LearnerOutcomeCohort }) {
                 <span className="lo-row-name">
                   <a href={href(`/lms/learning/${c.cohortId}/${i.itemId}`)}>{i.title}</a>
                 </span>
-                <Bar value={i.score} label={i.title} />
+                <Bar value={i.score} />
                 <span className="lo-row-val">{scoreText(i.score)}</span>
                 <span className="lo-tag">
                   {attemptsText(i.attempts)} · {itemStatusLabel(i.status)}
@@ -156,15 +156,18 @@ function Content({ data }: { data: LearnerOutcomes }) {
           <Stat
             label="Average score"
             value={scoreText(avg)}
-            note={avg === null ? 'Nothing scored yet' : 'Across your best scores'}
-          />
-          <Stat
-            label="Interview ready"
-            value={readinessSummary(data)}
             note={
-              data.totals.attempts > 0 ? attemptsText(data.totals.attempts) + ' in all' : undefined
+              avg === null
+                ? 'Nothing scored yet'
+                : 'Average of your best score on each scored item. Pre-checks and reviews are not counted.'
             }
           />
+          <Stat
+            label="Attempts"
+            value={String(data.totals.attempts)}
+            note="Attempts on scored items"
+          />
+          <Stat label="Interview ready" value={readinessSummary(data)} />
         </dl>
       </section>
 
@@ -212,7 +215,9 @@ export function LearnerOutcomesPage() {
       <p className="dash-sub">Your progress, scores and skills across all of your courses.</p>
       {error ? (
         <div role="alert" className="lo-error">
-          <p className="dash-error">Your outcomes could not be loaded: {error.message}</p>
+          <p className="dash-error">
+            Your outcomes could not be loaded. Check your connection and try again in a moment.
+          </p>
           <button type="button" className="dash-btn" onClick={reload}>
             Try again
           </button>

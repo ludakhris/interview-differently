@@ -1,5 +1,5 @@
 import type { ParticipantNoteDto, TalentParticipantHeader } from '@id/types'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { useApiSend, useLoad } from '../api'
 import { dateShort } from '../format'
 import { StaffOnlyReminder } from './StaffOnlyReminder'
@@ -26,6 +26,16 @@ function NoteItem({
   const [mode, setMode] = useState<'view' | 'edit' | 'confirm'>('view')
   const [draft, setDraft] = useState(note.body)
   const [busy, setBusy] = useState(false)
+  const editBtn = useRef<HTMLButtonElement>(null)
+  const deleteBtn = useRef<HTMLButtonElement>(null)
+  const returnTo = useRef<'edit' | 'delete' | null>(null)
+  const confirmId = useId()
+  // Leaving edit or confirm hides the control that had focus: send it back to the one that opened it.
+  useEffect(() => {
+    if (mode !== 'view' || !returnTo.current) return
+    ;(returnTo.current === 'edit' ? editBtn : deleteBtn).current?.focus()
+    returnTo.current = null
+  }, [mode])
 
   async function save(e: FormEvent) {
     e.preventDefault()
@@ -34,6 +44,7 @@ function NoteItem({
     try {
       const saved = await send<ParticipantNoteDto>('PUT', base, { body: draft })
       onSaved(saved)
+      returnTo.current = 'edit'
       setMode('view')
       announce({ kind: 'ok', text: 'Note saved.' })
     } catch (err) {
@@ -83,6 +94,7 @@ function NoteItem({
               className="dash-btn-quiet"
               onClick={() => {
                 setDraft(note.body)
+                returnTo.current = 'edit'
                 setMode('view')
               }}
             >
@@ -95,24 +107,42 @@ function NoteItem({
       )}
       {mode === 'view' && (
         <div className="nt-actions">
-          <button type="button" className="dash-btn-quiet" onClick={() => setMode('edit')}>
+          <button
+            ref={editBtn}
+            type="button"
+            className="dash-btn-quiet"
+            onClick={() => setMode('edit')}
+          >
             Edit
           </button>
-          <button type="button" className="dash-btn-quiet" onClick={() => setMode('confirm')}>
+          <button
+            ref={deleteBtn}
+            type="button"
+            className="dash-btn-quiet"
+            onClick={() => setMode('confirm')}
+          >
             Delete
           </button>
         </div>
       )}
       {mode === 'confirm' && (
-        <div className="nt-confirm" role="alertdialog" aria-label="Delete this note?">
-          <span>Delete this note? This cannot be undone.</span>
+        <div
+          className="nt-confirm"
+          role="group"
+          aria-label="Delete this note?"
+          aria-describedby={confirmId}
+        >
+          <span id={confirmId}>Delete this note? This cannot be undone.</span>
           <button type="button" className="dash-btn" disabled={busy} onClick={remove}>
             Yes, delete it
           </button>
           <button
             type="button"
             className="dash-btn-quiet"
-            onClick={() => setMode('view')}
+            onClick={() => {
+              returnTo.current = 'delete'
+              setMode('view')
+            }}
             autoFocus
           >
             Keep it
@@ -124,13 +154,23 @@ function NoteItem({
 }
 
 /** #69 B, staff only: a participant's private notes, across all of the provider's cohorts. */
-export function NotesSection({ providerId, userId }: { providerId: string; userId: string }) {
+export function NotesSection({
+  providerId,
+  userId,
+  cohorts: given,
+}: {
+  providerId: string
+  userId: string
+  /** The participant's cohorts when the page already loaded them; otherwise they are fetched here. */
+  cohorts?: TalentParticipantHeader['cohorts']
+}) {
   const send = useApiSend()
   const prefix = `/learn/providers/${providerId}/participants/${userId}`
   const notes = useLoad<ParticipantNoteDto[]>(`${prefix}/notes`)
-  // Only used to name cohorts; the notes work without it.
-  const header = useLoad<TalentParticipantHeader>(prefix)
-  const cohorts = header.data?.cohorts ?? []
+  // Only used to name cohorts; the notes work without it. Not fetched when the page passed them in.
+  const header = useLoad<TalentParticipantHeader>(given ? null : prefix)
+  const cohorts = given ?? header.data?.cohorts ?? []
+  const heading = useRef<HTMLHeadingElement>(null)
   const cohortName = (id: string | null) =>
     id ? (cohorts.find((c) => c.cohortId === id)?.cohortName ?? null) : null
 
@@ -168,7 +208,7 @@ export function NotesSection({ providerId, userId }: { providerId: string; userI
 
   return (
     <section className="nt-section" aria-labelledby="nt-notes-h">
-      <h2 id="nt-notes-h" className="dash-card-title">
+      <h2 id="nt-notes-h" ref={heading} tabIndex={-1} className="dash-card-title">
         Notes
       </h2>
       <StaffOnlyReminder />
@@ -227,7 +267,11 @@ export function NotesSection({ providerId, userId }: { providerId: string; userI
               note={n}
               cohortName={cohortName(n.cohortId)}
               onSaved={(saved) => setEdits((e) => ({ ...e, [saved.id]: saved }))}
-              onDeleted={(id) => setGone((g) => [...g, id])}
+              onDeleted={(id) => {
+                setGone((g) => [...g, id])
+                // The deleted note had focus; the heading is the nearest stable place.
+                heading.current?.focus()
+              }}
               announce={setMessage}
             />
           ))}

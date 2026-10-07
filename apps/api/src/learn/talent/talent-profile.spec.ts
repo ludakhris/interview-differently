@@ -98,7 +98,13 @@ describe('csv', () => {
 
 describe('resume checks', () => {
   const pdf = Buffer.from('%PDF-1.7 rest')
-  const docx = Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('xx')])
+  const zipEntry = (name: string) => {
+    const head = Buffer.alloc(30)
+    head.writeUInt32LE(0x04034b50, 0)
+    head.writeUInt16LE(name.length, 26)
+    return Buffer.concat([head, Buffer.from(name), Buffer.from('rest')])
+  }
+  const docx = zipEntry('[Content_Types].xml')
   const doc = Buffer.concat([
     Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]),
     Buffer.from('x'),
@@ -126,6 +132,12 @@ describe('resume checks', () => {
     ).toBeNull()
     expect(checkResume({ originalname: 'a.pdf', mimetype: 'text/html', buffer: pdf })).toBeNull()
     expect(checkResume({ originalname: 'a.docx', mimetype: DOCX, buffer: pdf })).toBeNull()
+    // Any other zip is not a Word file.
+    const other = zipEntry('payload.exe')
+    expect(checkResume({ originalname: 'a.docx', mimetype: DOCX, buffer: other })).toBeNull()
+    expect(
+      checkResume({ originalname: 'a.docx', mimetype: DOCX, buffer: zipEntry('word/document.xml') })
+    ).not.toBeNull()
     expect(
       checkResume({ originalname: 'a.pdf', mimetype: 'application/pdf', buffer: Buffer.from('%P') })
     ).toBeNull()

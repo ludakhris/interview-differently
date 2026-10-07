@@ -15,7 +15,7 @@ import type {
   CohortSessionDto,
   LearnerAttendance,
 } from '../attendance-types'
-import { attendanceRate, csvLine, emptyCounts, isStatus } from './attendance-rules'
+import { CSV_BOM, csvLine, emptyCounts, isStatus, standing } from './attendance-rules'
 
 interface SessionRow {
   id: string
@@ -224,7 +224,17 @@ export class AttendanceService {
     })
     const emailOf = new Map(emails.map((u) => [u.id, u.email]))
     const lines = [
-      csvLine(['name', 'email', 'present', 'absent', 'late', 'excused', 'sessions', 'rate']),
+      csvLine([
+        'name',
+        'email',
+        'present',
+        'absent',
+        'late',
+        'excused',
+        'sessions_counted',
+        'sessions_held',
+        'rate_percent',
+      ]),
       ...s.rows.map((r) =>
         csvLine([
           r.name,
@@ -234,11 +244,12 @@ export class AttendanceService {
           r.late,
           r.excused,
           r.sessions,
-          r.ratePct === null ? '' : `${r.ratePct}%`,
+          r.sessionsHeld,
+          r.ratePct,
         ])
       ),
     ]
-    return lines.join('\r\n') + '\r\n'
+    return CSV_BOM + lines.join('\r\n') + '\r\n'
   }
 
   // ── The learner's own view ────────────────────────────────────────────────
@@ -246,23 +257,35 @@ export class AttendanceService {
   async mine(userId: string, cohortId: string): Promise<LearnerAttendance> {
     await this.access.assertLearnerOfCohort(userId, cohortId)
     const sessions = await this.sessionsOf(cohortId)
-    // Own marks only, and never the staff note (it is not selected).
-    const marks = await this.prisma.attendanceMark.findMany({
-      where: { userId, session: { cohortId } },
-      select: { sessionId: true, status: true },
-    })
-    const statusOf = new Map(marks.map((m) => [m.sessionId, m.status as AttendanceStatus]))
-    const now = Date.now()
-    const counts = emptyCounts()
-    let held = 0
-    for (const s of sessions) {
-      if (s.startsAt.getTime() > now) continue
-      held++
-      const st = statusOf.get(s.id)
-      if (st) counts[st]++
-      else counts.unmarked++
-    }
-    const { ratePct } = attendanceRate(counts.present, counts.late, counts.excused, held)
+    const [enrollment, own, any] = await Promise.all([
+      this.prisma.enrollment.findUnique({
+        where: { cohortId_userId: { cohortId, userId } },
+        select: { enrolledAt: true },
+      }),
+      // Own marks only, and never the staff note (it is not selected).
+      this.prisma.attendanceMark.findMany({
+        where: { userId, session: { cohortId } },
+        select: { sessionId: true, status: true },
+      }),
+      // Only which sessions have any mark at all (the register was taken); nobody else's status.
+      sessions.length
+        ? this.prisma.attendanceMark.findMany({
+            where: { sessionId: { in: sessions.map((s) => s.id) } },
+            select: { sessionId: true },
+            distinct: ['sessionId'],
+          })
+        : Promise.resolve([] as { sessionId: string }[]),
+    ])
+    const marks = new Map(
+      own.filter((m) => isStatus(m.status)).map((m) => [m.sessionId, m.status as AttendanceStatus])
+    )
+    const st = standing(
+      sessions,
+      new Set(any.map((m) => m.sessionId)),
+      enrollment?.enrolledAt ?? new Date(0),
+      marks,
+      Date.now()
+    )
     return {
       cohortId,
       sessions: sessions.map((s) => ({
@@ -270,10 +293,18 @@ export class AttendanceService {
         title: s.title,
         startsAt: s.startsAt.toISOString(),
         location: s.location,
-        status: statusOf.get(s.id) ?? null,
+        status: st.statuses[s.id] ?? null,
+        skipped: st.skipped[s.id] ?? null,
       })),
-      counts,
-      ratePct,
+      counts: {
+        present: st.present,
+        absent: st.absent,
+        late: st.late,
+        excused: st.excused,
+        unmarked: 0,
+      },
+      sessionsCounted: st.counted,
+      ratePct: st.ratePct,
     }
   }
 
@@ -401,6 +432,7 @@ export class AttendanceService {
         select: {
           userId: true,
           status: true,
+          enrolledAt: true,
           user: { select: { displayName: true, email: true } },
         },
       }),
@@ -411,26 +443,30 @@ export class AttendanceService {
           })
         : Promise.resolve([]),
     ])
-    const byUser = new Map<string, Record<string, AttendanceStatus>>()
+    // A session was "taken" once anyone has a mark for it.
+    const taken = new Set(marks.map((m) => m.sessionId))
+    const byUser = new Map<string, Map<string, AttendanceStatus>>()
     for (const m of marks) {
       if (!isStatus(m.status)) continue
-      if (!byUser.has(m.userId)) byUser.set(m.userId, {})
-      byUser.get(m.userId)![m.sessionId] = m.status
+      if (!byUser.has(m.userId)) byUser.set(m.userId, new Map())
+      byUser.get(m.userId)!.set(m.sessionId, m.status)
     }
     const rows = enrollments
       .filter((e) => e.status !== 'withdrawn' || byUser.has(e.userId))
       .map((e) => {
-        const mine = byUser.get(e.userId) ?? {}
-        const n = { present: 0, absent: 0, late: 0, excused: 0 }
-        for (const st of Object.values(mine)) n[st]++
-        const { counted, ratePct } = attendanceRate(n.present, n.late, n.excused, held.length)
+        const st = standing(held, taken, e.enrolledAt, byUser.get(e.userId) ?? new Map(), now)
         return {
           userId: e.userId,
           name: e.user.displayName ?? e.user.email ?? 'Learner',
-          ...n,
-          sessions: counted,
-          ratePct,
-          marks: mine,
+          present: st.present,
+          absent: st.absent,
+          late: st.late,
+          excused: st.excused,
+          sessions: st.counted,
+          sessionsHeld: st.held,
+          ratePct: st.ratePct,
+          marks: st.statuses,
+          skipped: st.skipped,
         }
       })
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -441,6 +477,7 @@ export class AttendanceService {
         id: s.id,
         title: s.title,
         startsAt: s.startsAt.toISOString(),
+        taken: taken.has(s.id),
       })),
       rows,
     }

@@ -1,9 +1,12 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
   NotFoundException,
+  PayloadTooLargeException,
+  ServiceUnavailableException,
   forwardRef,
 } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
@@ -11,6 +14,7 @@ import {
   PRIVATE_MEDIA_STORAGE,
   type PrivateMediaStorage,
 } from '../../storage/media-storage.interface'
+import { LocalDiskPrivateStorage } from '../../storage/local-disk-storage'
 import { DataAccessLogService } from '../data-access-log.service'
 import { LearnerService } from '../learner.service'
 import { ProviderAccessService } from '../provider-access.service'
@@ -145,6 +149,17 @@ export class TalentService {
     @Inject(forwardRef(() => LearnerService)) private readonly learner: LearnerService
   ) {}
 
+  /**
+   * The local-disk storage serves files with no authentication, so in production a resume must
+   * never go through it. Fail closed until real private storage (R2) is configured.
+   */
+  private assertResumeStorage(): void {
+    if (process.env.NODE_ENV === 'production' && this.storage instanceof LocalDiskPrivateStorage)
+      throw new ServiceUnavailableException(
+        'Resume storage is not set up yet, so resumes cannot be uploaded or opened right now.'
+      )
+  }
+
   // ── the learner's own profile ─────────────────────────────────────────────
 
   /** One entry per provider the learner has a cohort with, newest cohort first. */
@@ -231,6 +246,7 @@ export class TalentService {
     providerId: string,
     file: UploadedResume | undefined
   ): Promise<TalentProfileDto> {
+    this.assertResumeStorage()
     await this.access.assertLearnerOfProvider(userId, providerId)
     if (!file?.buffer?.length) throw new BadRequestException('Choose a resume to upload')
     if (file.buffer.length > MAX_RESUME_BYTES)
@@ -267,6 +283,7 @@ export class TalentService {
   }
 
   async myResumeLink(userId: string, providerId: string): Promise<ResumeLink> {
+    this.assertResumeStorage()
     await this.access.assertLearnerOfProvider(userId, providerId)
     const p = await this.prisma.talentProfile.findUnique({
       where: { providerId_userId: { providerId, userId } },
@@ -302,8 +319,11 @@ export class TalentService {
     p: { resumeKey: string | null; resumeName: string | null } | null
   ): Promise<ResumeLink> {
     if (!p?.resumeKey) throw new NotFoundException('No resume uploaded')
-    const url = await this.storage.getSignedUrl(p.resumeKey, RESUME_LINK_SECONDS)
-    return { url, name: p.resumeName ?? 'resume', expiresInSeconds: RESUME_LINK_SECONDS }
+    const name = p.resumeName ?? 'resume'
+    const url = await this.storage.getSignedUrl(p.resumeKey, RESUME_LINK_SECONDS, {
+      downloadName: name,
+    })
+    return { url, name, expiresInSeconds: RESUME_LINK_SECONDS }
   }
 
   // ── staff ─────────────────────────────────────────────────────────────────
@@ -367,6 +387,8 @@ export class TalentService {
     userId: string
   ): Promise<TalentCompensation> {
     await this.staffOf(actor, providerId, userId)
+    if (actor.userId === userId)
+      throw new ForbiddenException('You cannot view compensation about yourself.')
     await this.audit.record({
       actorId: actor.userId,
       providerId,
@@ -386,6 +408,7 @@ export class TalentService {
   }
 
   async staffResumeLink(actor: Actor, providerId: string, userId: string): Promise<ResumeLink> {
+    this.assertResumeStorage()
     await this.staffOf(actor, providerId, userId)
     const p = await this.prisma.talentProfile.findUnique({
       where: { providerId_userId: { providerId, userId } },
@@ -412,7 +435,12 @@ export class TalentService {
     const found = await this.participants(providerId, {
       filters,
       compensation: includeCompensation,
+      noCap: true,
     })
+    if (found.length > ROW_LIMIT)
+      throw new PayloadTooLargeException(
+        `This export has more than ${ROW_LIMIT} people. Narrow the filters (for example pick a cohort) and try again.`
+      )
     const header = [
       'name',
       'email',
@@ -470,7 +498,7 @@ export class TalentService {
         action: 'export',
         detail,
       })
-    return lines.join('\r\n') + '\r\n'
+    return '\uFEFF' + lines.join('\r\n') + '\r\n'
   }
 
   /**
@@ -479,7 +507,13 @@ export class TalentService {
    */
   private async participants(
     providerId: string,
-    opts: { filters?: ParticipantFilters; userIds?: string[]; compensation?: boolean }
+    opts: {
+      filters?: ParticipantFilters
+      userIds?: string[]
+      compensation?: boolean
+      /** The export must see every match so it can refuse an oversized one rather than truncate. */
+      noCap?: boolean
+    }
   ): Promise<{ row: TalentParticipantRow; profile: ProfileRow | null }[]> {
     const f = opts.filters ?? {}
     const q = f.q?.trim()
@@ -586,6 +620,6 @@ export class TalentService {
       })
     }
     out.sort((a, b) => a.row.name.localeCompare(b.row.name))
-    return out.slice(0, ROW_LIMIT)
+    return opts.noCap ? out : out.slice(0, ROW_LIMIT)
   }
 }

@@ -2,7 +2,7 @@ import type { LearnerOutcomeCohort, LearnerOutcomeItem, LearnerOutcomes } from '
 
 /** A score with its unit, or plain words when there is none yet (never a made-up 0%). */
 export const scoreText = (n: number | null): string =>
-  n === null ? 'Not yet' : `${Math.round(n)}%`
+  n === null ? 'No score yet' : `${Math.round(n)}%`
 
 export const attemptsText = (n: number): string =>
   n === 0 ? 'No attempts yet' : n === 1 ? '1 attempt' : `${n} attempts`
@@ -10,35 +10,47 @@ export const attemptsText = (n: number): string =>
 const mean = (xs: number[]): number | null =>
   xs.length === 0 ? null : Math.round(xs.reduce((a, b) => a + b, 0) / xs.length)
 
-/** Average of the best score on every scored item, across all courses; null until any is scored. */
+/**
+ * Average of the best score on each scored item, across all courses; null until any is scored.
+ * Counts each item once: the duplicate "Review: ..." rows and the pre-check (a starting point, not
+ * a result) are left out.
+ */
 export function averageScore(data: LearnerOutcomes): number | null {
   return mean(
-    data.cohorts.flatMap((c) => c.items.flatMap((i) => (i.score === null ? [] : [i.score])))
+    data.cohorts.flatMap((c) =>
+      c.items.flatMap((i) => (i.score === null || i.review || i.preCheck ? [] : [i.score]))
+    )
   )
 }
 
-/** How many of the learner's courses show interview readiness, in words. */
+/** How many of the courses that have a practice interview show interview readiness, in words. */
 export function readinessSummary(data: LearnerOutcomes): string {
-  const n = data.cohorts.length
-  if (n === 0) return 'Not yet'
-  const ready = data.cohorts.filter((c) => c.readiness.interviewReady).length
+  const withInterview = data.cohorts.filter((c) => c.hasInterview)
+  if (withInterview.length === 0) return 'No interviews'
+  const ready = withInterview.filter((c) => c.readiness.interviewReady).length
   if (ready === 0) return 'Not yet'
-  return `${ready} of ${n}`
+  return `${ready} of ${withInterview.length}`
 }
 
-/** Where a course stands. Completion needs every item done and interview readiness reached. */
+/**
+ * Where a course stands. Completion needs every item done and, only when the course has an
+ * interview, interview readiness reached.
+ */
 export function completionText(c: LearnerOutcomeCohort): string {
   if (c.enrollmentStatus === 'completed') return 'Completed'
-  const allDone = c.itemsTotal > 0 && c.itemsDone >= c.itemsTotal
-  if (allDone && !c.readiness.interviewReady) {
-    return `All items done. To complete, reach ${c.readiness.readinessThreshold}% on a practice interview.`
+  const left = c.itemsTotal - c.itemsDone
+  if (c.itemsTotal > 0 && left <= 0) {
+    return c.hasInterview && !c.readiness.interviewReady
+      ? `All items done. To complete, reach ${c.readiness.readinessThreshold}% on a practice interview.`
+      : 'All items done. Ready to be marked complete.'
   }
   if (c.itemsDone === 0) return 'Not started'
-  return 'In progress'
+  return `In progress: ${left} ${left === 1 ? 'item' : 'items'} left`
 }
 
 export function readinessText(c: LearnerOutcomeCohort): string {
   const r = c.readiness
+  if (!c.hasInterview) return 'This course has no practice interview'
   if (r.interviewBest === null) return `Not yet (goal ${r.readinessThreshold}%)`
   return r.interviewReady
     ? `Ready: best interview ${scoreText(r.interviewBest)}`

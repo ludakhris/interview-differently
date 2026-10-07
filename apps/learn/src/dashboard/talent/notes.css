@@ -159,3 +159,37 @@
     justify-items: start;
   }
 }
+
+.nt-stale {
+  opacity: 0.5;
+}
+.nt-section h2:focus {
+  outline: 3px solid var(--navy);
+  outline-offset: 2px;
+}
+/* Touch: every control is at least 44px tall and wide enough to hit. */
+@media (pointer: coarse) {
+  .nt-section .dash-btn-quiet,
+  .nt-confirm .dash-btn-quiet,
+  .nt-confirm .dash-btn,
+  .nt-actions .dash-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .nt-item {
+    grid-template-columns: 44px 1fr auto;
+  }
+  .nt-check {
+    width: 44px;
+    height: 44px;
+    margin: 0;
+  }
+  .nt-item-side select {
+    min-height: 44px;
+  }
+}
+@media (pointer: coarse) and (max-width: 560px) {
+  .nt-item {
+    grid-template-columns: 44px 1fr;
+  }
+}

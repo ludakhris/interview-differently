@@ -13,6 +13,7 @@ export function AttendanceSummaryView({ cohortId }: { cohortId: string }) {
   )
   const apiFetch = useApiFetch()
   const [exportError, setExportError] = useState(false)
+  const [downloaded, setDownloaded] = useState<string | null>(null)
 
   if (error)
     return (
@@ -32,28 +33,36 @@ export function AttendanceSummaryView({ cohortId }: { cohortId: string }) {
       <div className="at-summary-head">
         <p className="dash-muted">
           {data.sessions} session{data.sessions === 1 ? '' : 's'} held so far. The rate is present
-          and late over sessions held, leaving out excused ones.
+          and late over the sessions that count for each learner: ones where attendance was taken
+          and the learner had joined, leaving out excused ones. Someone with no mark in a session
+          that was taken is absent.
         </p>
         <button
           type="button"
           className="dash-btn-secondary"
           onClick={() => {
             setExportError(false)
-            downloadFile(
-              apiFetch,
-              `/learn/cohorts/${cohortId}/attendance.csv`,
-              'attendance.csv'
-            ).catch(() => setExportError(true))
+            setDownloaded(null)
+            downloadFile(apiFetch, `/learn/cohorts/${cohortId}/attendance.csv`, 'attendance.csv')
+              .then(() => setDownloaded('attendance.csv'))
+              .catch(() => setExportError(true))
           }}
         >
           Export CSV
         </button>
       </div>
+      <p role="status" className="dash-muted at-downloaded">
+        {downloaded ? `Downloaded ${downloaded}` : ''}
+      </p>
       {exportError && (
         <p className="dash-error" role="alert">
           Could not export the CSV. Try again.
         </p>
       )}
+      <p className="dash-muted at-legend">
+        P present, A absent (including no mark in a session that was taken), L late, E excused (left
+        out of the rate), · does not count: attendance not taken yet, or before the learner joined.
+      </p>
       {data.rows.length === 0 ? (
         <p className="dash-muted">No learners yet.</p>
       ) : (
@@ -67,8 +76,21 @@ export function AttendanceSummaryView({ cohortId }: { cohortId: string }) {
                 <th scope="col">Rate</th>
                 {data.sessionList.map((s) => (
                   <th scope="col" key={s.id} title={s.title}>
-                    <span className="at-g-title">{s.title}</span>
-                    <span className="dash-muted at-g-date">{day(s.startsAt)}</span>
+                    <span className="dash-visually-hidden">
+                      {s.title}, {day(s.startsAt)}
+                      {s.taken ? '' : ', attendance not taken yet'}
+                    </span>
+                    <span className="at-g-title" aria-hidden="true">
+                      {s.title}
+                    </span>
+                    <span className="dash-muted at-g-date" aria-hidden="true">
+                      {day(s.startsAt)}
+                    </span>
+                    {!s.taken && (
+                      <span className="dash-muted at-g-date" aria-hidden="true">
+                        not taken yet
+                      </span>
+                    )}
                   </th>
                 ))}
               </tr>
@@ -82,13 +104,19 @@ export function AttendanceSummaryView({ cohortId }: { cohortId: string }) {
                   <td className="at-g-rate">{rateLabel(r.ratePct)}</td>
                   {data.sessionList.map((s) => {
                     const st = r.marks[s.id]
+                    const skip = r.skipped[s.id]
+                    const word = st
+                      ? STATUS_LABEL[st]
+                      : skip === 'before_join'
+                        ? 'before enrolled, not counted'
+                        : 'attendance not taken yet'
                     return (
                       <td
                         key={s.id}
                         className={`at-cell ${st ? `at-s-${st}` : 'at-s-none'}`}
-                        aria-label={`${r.name}, ${s.title}: ${st ? STATUS_LABEL[st] : 'not marked'}`}
+                        aria-label={`${r.name}, ${s.title}: ${word}`}
                       >
-                        <span aria-hidden="true">{st ? STATUS_LETTER[st] : '–'}</span>
+                        <span aria-hidden="true">{st ? STATUS_LETTER[st] : '·'}</span>
                       </td>
                     )
                   })}
@@ -98,7 +126,6 @@ export function AttendanceSummaryView({ cohortId }: { cohortId: string }) {
           </table>
         </div>
       )}
-      <p className="dash-muted at-legend">P present, A absent, L late, E excused, – not marked.</p>
     </div>
   )
 }

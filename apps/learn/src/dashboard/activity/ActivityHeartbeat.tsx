@@ -19,10 +19,25 @@ export function ActivityHeartbeat({ pathname }: { pathname: string }) {
   const beat = useRef<Heartbeat | null>(null)
 
   useEffect(() => {
-    if (!isSignedIn) return
+    if (!isSignedIn) {
+      // Signed out: never reuse the last learner's token for a closing page.
+      token.current = null
+      return
+    }
+    // A closing page cannot wait for a token, so keep one fresh: refresh whenever the page is
+    // shown or hidden (Clerk tokens live about a minute), on top of every beat.
+    const refresh = () => {
+      getTokenRef
+        .current()
+        .then((t) => {
+          if (t) token.current = t
+        })
+        .catch(() => {})
+    }
+    document.addEventListener('visibilitychange', refresh)
     const hb = startHeartbeat({
       async send(target: LearningTarget, keepalive: boolean) {
-        // A closing page cannot wait for a fresh token: it reuses the last one it saw.
+        // A closing page cannot wait for a fresh token: it reuses the one cached above.
         const t = keepalive ? token.current : await getTokenRef.current()
         if (!t) throw new Error('no token')
         token.current = t
@@ -39,6 +54,8 @@ export function ActivityHeartbeat({ pathname }: { pathname: string }) {
     return () => {
       hb.stop()
       beat.current = null
+      document.removeEventListener('visibilitychange', refresh)
+      token.current = null
     }
   }, [isSignedIn])
 

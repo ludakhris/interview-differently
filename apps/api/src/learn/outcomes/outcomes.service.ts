@@ -10,6 +10,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 import { cohortStatus } from '../cohort-config'
 import { isSupportedItemType } from '../course-config'
 import { buildRecord } from '../learner.service'
+import { isInterviewLike } from '../../lti/platform/lti-platform-config'
 import { doneSince, parseSkills, remediationOf, skillResults } from '../skills'
 import { DataAccessLogService } from '../data-access-log.service'
 import { ProviderAccessService } from '../provider-access.service'
@@ -72,9 +73,10 @@ export class OutcomesService {
       })
 
       const row = (
-        i: { id: string; title: string; type: string },
+        i: { id: string; title: string; type: string; label: string | null },
         status: LearnerOutcomeItem['status'],
-        title = i.title
+        title = i.title,
+        review = false
       ): LearnerOutcomeItem => {
         const p = byItem.get(i.id)
         return {
@@ -85,6 +87,8 @@ export class OutcomesService {
           score: p?.score ?? null,
           attempts: p?.attempts ?? 0,
           completedAt: p?.completedAt?.toISOString() ?? null,
+          review,
+          preCheck: i.label === 'pre',
         }
       }
       const plain = (id: string): LearnerOutcomeItem['status'] =>
@@ -96,7 +100,8 @@ export class OutcomesService {
             a.item,
             // Done for the plan only if completed since it was added: a review means doing it again.
             doneSince(byItem.get(a.item.id), a.since) ? 'completed' : 'not_started',
-            a.review ? `Review: ${a.item.title}` : a.item.title
+            a.review ? `Review: ${a.item.title}` : a.item.title,
+            a.review
           )
         ),
       ]
@@ -129,6 +134,7 @@ export class OutcomesService {
           itemsDone,
           itemsTotal,
           percent: itemsTotal === 0 ? 0 : Math.round((itemsDone / itemsTotal) * 100),
+          hasInterview: all.some((i) => isInterviewLike(i)),
           readiness: buildRecord(ordinary, e.progress, course, e.status === 'completed'),
           skills,
           items,

@@ -115,7 +115,10 @@ export function validate(v: FormValues, complete: boolean): FieldErrors {
     e.availableFrom = 'Choose a real date.'
   if (complete) {
     const missing: string[] = []
-    if (!v.educationLevel) missing.push('your education level')
+    if (!v.educationLevel) {
+      missing.push('your education level')
+      e.educationLevel = 'Choose your highest level of education.'
+    }
     if (v.yearsExperience.trim() === '') missing.push('your years of experience')
     if (splitList(v.industries).length === 0 && splitList(v.targetRoles).length === 0)
       missing.push('at least one industry or target role')

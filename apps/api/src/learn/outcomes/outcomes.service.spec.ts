@@ -177,4 +177,22 @@ describe('OutcomesService.mine', () => {
     expect(out.cohorts[0].percent).toBe(0)
     expect(JSON.stringify(out)).not.toMatch(/ompensation|note|support/)
   })
+
+  it('marks review rows, pre-checks and whether the course has an interview', async () => {
+    const withReview: Row = {
+      ...mine,
+      plan: [{ itemId: 'q1', createdAt: new Date('2026-09-30T00:00:00Z') }] as Row['plan'],
+    }
+    const out = await build([withReview, mine2]).mine('me')
+    const [c1, c2] = out.cohorts
+    expect(c1.hasInterview).toBe(true)
+    expect(c2.hasInterview).toBe(false)
+    expect(c1.items.find((i) => i.itemId === 'pre1')).toMatchObject({
+      preCheck: true,
+      review: false,
+    })
+    const rev = c1.items.find((i) => i.title === 'Review: Quiz')
+    expect(rev).toMatchObject({ review: true, preCheck: false })
+    expect(c1.items.filter((i) => i.itemId === 'q1')).toHaveLength(2)
+  })
 })

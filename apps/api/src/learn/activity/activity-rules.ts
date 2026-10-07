@@ -20,25 +20,29 @@ const dayStart = (day: string): number => Date.parse(`${day}T00:00:00.000Z`)
 
 export type BeatDecision =
   | { action: 'ignore' }
-  | { action: 'new' }
+  /** Open a row for this item. `seconds` is credited to it at once (a switch within the window). */
+  | { action: 'new'; seconds: number }
   | { action: 'add'; seconds: number }
 
 /**
  * What a heartbeat does, from the learner's latest row for today (any item). The gap is measured
- * against the latest row across all items, so alternating items cannot earn time in parallel.
- * Time is only ever added to the row of the same item; a different item opens a new row, so the
- * interval is credited to nobody (conservative). The client's own clock and duration are never read.
+ * against the latest beat across all items, so alternating items (two tabs) cannot earn more than
+ * the wall-clock time between beats. A beat for the same item adds the gap to its row. A beat for a
+ * different item inside the window opens a row for the new item and credits it min(gap, 60 s), so
+ * switching items does not lose the time. A gap over the window credits nothing. The client's own
+ * clock and duration are never read.
  */
 export function decideBeat(
   last: { lastSeenAt: Date; itemId: string | null } | null,
   itemId: string | null,
   now: Date
 ): BeatDecision {
-  if (!last) return { action: 'new' }
+  if (!last) return { action: 'new', seconds: 0 }
   const gap = (now.getTime() - last.lastSeenAt.getTime()) / 1000
   if (gap < MIN_BEAT_GAP_S) return { action: 'ignore' }
-  if (gap > JOIN_WINDOW_S || last.itemId !== itemId) return { action: 'new' }
-  return { action: 'add', seconds: Math.min(Math.floor(gap), MAX_BEAT_S) }
+  if (gap > JOIN_WINDOW_S) return { action: 'new', seconds: 0 }
+  const seconds = Math.min(Math.floor(gap), MAX_BEAT_S)
+  return last.itemId !== itemId ? { action: 'new', seconds } : { action: 'add', seconds }
 }
 
 /**
@@ -108,9 +112,16 @@ export function parseRange(
   return { range: { from: start, to: end } }
 }
 
+/** A CSV opens in Excel as UTF-8 only with this byte order mark (names with accents). */
+export const CSV_BOM = '\uFEFF'
+/** More rows than this are refused: narrow the date range. */
+export const MAX_CSV_ROWS = 100_000
+
 /**
  * One CSV cell. A cell a spreadsheet would read as a formula (starts with = + - @, tab or CR) gets
  * a leading apostrophe, so names and titles cannot run anything when opened in Excel or Sheets.
+ * Email cells use the same rule: a real address does not start with + or -, so nothing changes in
+ * practice, and one that does is safer shown with the apostrophe.
  */
 export function csvCell(v: string | number | boolean | null | undefined): string {
   if (v === null || v === undefined) return ''
@@ -128,8 +139,8 @@ export const CSV_COLUMNS = [
   'date',
   'item',
   'kind',
-  'minutes',
-  'estimated',
+  'measured_minutes',
+  'estimated_minutes',
 ] as const
 
 export interface CsvRow {
@@ -138,15 +149,24 @@ export interface CsvRow {
   day: string
   item: string
   kind: string
-  seconds: number
-  estimated: boolean
+  measuredSeconds: number
+  estimatedSeconds: number
 }
 
+/** Measured and estimated minutes sit in separate columns; the empty one is left blank. */
 export function activityCsv(rows: CsvRow[]): string {
   const lines = rows.map((r) =>
-    [r.name, r.email, r.day, r.item, r.kind, minutes1(r.seconds), r.estimated ? 'yes' : 'no']
+    [
+      r.name,
+      r.email,
+      r.day,
+      r.item,
+      r.kind,
+      r.measuredSeconds > 0 ? minutes1(r.measuredSeconds) : '',
+      r.estimatedSeconds > 0 ? minutes1(r.estimatedSeconds) : '',
+    ]
       .map(csvCell)
       .join(',')
   )
-  return [CSV_COLUMNS.join(','), ...lines].join('\r\n') + '\r\n'
+  return CSV_BOM + [CSV_COLUMNS.join(','), ...lines].join('\r\n') + '\r\n'
 }

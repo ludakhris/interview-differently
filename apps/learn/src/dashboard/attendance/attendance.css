@@ -1,4 +1,4 @@
-/* Attendance panel on the cohort page (#69 D). Own styles only; status colours work on light and dark. */
+/* Attendance panel on the cohort page (#69 D). Own styles only. The app has no dark theme, so the status colours are dark enough for the light page. */
 .at {
   --at-present: #12663a;
   --at-absent: #a32020;
@@ -8,14 +8,6 @@
   --at-absent-bg: rgba(200, 40, 40, 0.14);
   --at-late-bg: rgba(220, 150, 0, 0.18);
   --at-excused-bg: rgba(60, 100, 200, 0.14);
-}
-@media (prefers-color-scheme: dark) {
-  .at {
-    --at-present: #7fdca4;
-    --at-absent: #ff9d9d;
-    --at-late: #ffd27a;
-    --at-excused: #a9c0ff;
-  }
 }
 .at-head {
   display: flex;
@@ -352,6 +344,19 @@
 }
 .at-legend {
   font-size: 13px;
+}
+.at-field-error {
+  font-size: 13px;
+  font-weight: 600;
+}
+.at-notice,
+.at-downloaded {
+  min-height: 1.2em;
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+.at-cell.at-s-none {
+  color: var(--ink-soft, inherit);
 }
 .at-error {
   display: flex;

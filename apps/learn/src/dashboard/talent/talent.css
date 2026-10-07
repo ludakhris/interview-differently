@@ -148,3 +148,24 @@
     padding: 12px;
   }
 }
+
+/* Touch: every control is at least 44px tall and wide enough to hit. */
+@media (pointer: coarse) {
+  .tl-resume .dash-btn-quiet,
+  .tl-resume .dash-file,
+  .tl-pay-box .dash-btn-quiet,
+  .tl-pay-box .dash-btn-secondary,
+  .tl-row .dash-btn-quiet,
+  .tl-chips .dash-chip-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .tl-consent {
+    min-height: 44px;
+  }
+  .tl-consent input[type='checkbox'] {
+    width: 44px;
+    height: 44px;
+    margin: 0;
+  }
+}

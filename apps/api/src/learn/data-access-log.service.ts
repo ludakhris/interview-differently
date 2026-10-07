@@ -40,7 +40,7 @@ export interface AccessLogQuery {
   actorId?: string
   resource?: string
   limit?: number
-  /** ISO time of the last row of the previous page. */
+  /** Cursor from the previous page's `nextBefore`: `<ISO time>|<row id>` (a bare ISO time still works). */
   before?: string
 }
 
@@ -104,9 +104,13 @@ export class DataAccessLogService {
     if (query.resource && !DATA_ACCESS_RESOURCES.includes(query.resource as DataAccessResource))
       throw new BadRequestException('Unknown resource')
     let before: Date | undefined
+    let beforeId: string | undefined
     if (query.before) {
-      before = new Date(query.before)
-      if (Number.isNaN(before.getTime())) throw new BadRequestException('before is not a time')
+      const [time, id] = query.before.split('|')
+      before = new Date(time)
+      if (Number.isNaN(before.getTime()))
+        throw new BadRequestException('before is not a valid cursor')
+      beforeId = id || undefined
     }
     const take = Math.min(
       Math.max(Math.floor(query.limit ?? DEFAULT_LIMIT) || DEFAULT_LIMIT, 1),
@@ -118,7 +122,11 @@ export class DataAccessLogService {
         ...(query.subjectUserId ? { subjectUserId: query.subjectUserId } : {}),
         ...(query.actorId ? { actorId: query.actorId } : {}),
         ...(query.resource ? { resource: query.resource } : {}),
-        ...(before ? { createdAt: { lt: before } } : {}),
+        ...(before
+          ? beforeId
+            ? { OR: [{ createdAt: { lt: before } }, { createdAt: before, id: { lt: beforeId } }] }
+            : { createdAt: { lt: before } }
+          : {}),
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: take + 1,
@@ -147,7 +155,10 @@ export class DataAccessLogService {
         detail: r.detail,
         createdAt: r.createdAt.toISOString(),
       })),
-      nextBefore: rows.length > take ? page[page.length - 1].createdAt.toISOString() : null,
+      nextBefore:
+        rows.length > take
+          ? `${page[page.length - 1].createdAt.toISOString()}|${page[page.length - 1].id}`
+          : null,
     }
   }
 }

@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
+import { LEARN_ROLES } from '../learn.service'
 import { PrismaService } from '../../prisma/prisma.service'
 import { DataAccessLogService } from '../data-access-log.service'
 import { ProviderAccessService } from '../provider-access.service'
@@ -123,6 +129,11 @@ export class ParticipantNotesService {
 
   private async guard(actor: Actor, providerId: string, participantId: string) {
     await this.access.assertProviderStaff(actor.userId, actor.role, providerId)
+    // A provider admin who is also a participant must not read staff-only records about themselves.
+    if (actor.userId === participantId)
+      throw new ForbiddenException(
+        'You cannot view or change staff notes and support items about yourself.'
+      )
     await this.access.assertParticipantOfProvider(providerId, participantId)
   }
 
@@ -228,12 +239,15 @@ export class ParticipantNotesService {
     return noteDto(row)
   }
 
-  private async ownNote(providerId: string, participantId: string, noteId: string) {
+  /** The note must belong to this provider and person; only its author (or a system admin) may change it. */
+  private async ownNote(actor: Actor, providerId: string, participantId: string, noteId: string) {
     const n = await this.prisma.participantNote.findFirst({
       where: { id: noteId, providerId, userId: participantId },
-      select: { id: true },
+      select: { id: true, authorId: true },
     })
     if (!n) throw new NotFoundException('Note not found')
+    if (n.authorId !== actor.userId && actor.role !== LEARN_ROLES.systemAdmin)
+      throw new ForbiddenException('Only the author of a note can change or delete it.')
   }
 
   async updateNote(
@@ -245,7 +259,7 @@ export class ParticipantNotesService {
   ): Promise<ParticipantNoteDto> {
     await this.guard(actor, providerId, participantId)
     const body = this.noteText(input?.body)
-    await this.ownNote(providerId, participantId, noteId)
+    await this.ownNote(actor, providerId, participantId, noteId)
     await this.audit.record({
       actorId: actor.userId,
       providerId,
@@ -264,7 +278,7 @@ export class ParticipantNotesService {
     noteId: string
   ): Promise<{ deleted: true }> {
     await this.guard(actor, providerId, participantId)
-    await this.ownNote(providerId, participantId, noteId)
+    await this.ownNote(actor, providerId, participantId, noteId)
     await this.audit.record({
       actorId: actor.userId,
       providerId,

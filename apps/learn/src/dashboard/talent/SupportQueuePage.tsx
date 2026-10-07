@@ -31,6 +31,8 @@ export function SupportQueuePage({ providerId }: { providerId: string }) {
     `/learn/providers/${providerId}/staff-members`
   )
 
+  // A new filter is loading while the old rows are still in hand: say so instead of passing them off as the answer.
+  const updating = rows.loading && rows.data !== null
   return (
     <>
       <h1 className="dash-h2">Support follow-ups</h1>
@@ -65,8 +67,22 @@ export function SupportQueuePage({ providerId }: { providerId: string }) {
           <input type="date" value={dueBefore} onChange={(e) => setDueBefore(e.target.value)} />
         </label>
       </form>
+      {staff.error && (
+        <div className="nt-error" role="alert">
+          <p className="dash-error">
+            Could not load the staff list, so you cannot filter by person yet. {staff.error.message}
+          </p>
+          <button type="button" className="dash-btn-secondary" onClick={staff.reload}>
+            Try again
+          </button>
+        </div>
+      )}
       <p role="status" className="dash-muted nt-status">
-        {rows.data ? `${rows.data.length} ${rows.data.length === 1 ? 'item' : 'items'}` : ''}
+        {updating
+          ? 'Updating…'
+          : rows.data
+            ? `${rows.data.length} ${rows.data.length === 1 ? 'item' : 'items'}`
+            : ''}
       </p>
       {rows.loading && !rows.data ? (
         <p className="dash-loading">Loading…</p>
@@ -80,7 +96,10 @@ export function SupportQueuePage({ providerId }: { providerId: string }) {
       ) : (rows.data ?? []).length === 0 ? (
         <p className="dash-muted nt-empty">Nothing matches. Try changing the filters.</p>
       ) : (
-        <div className="dash-tablewrap">
+        <div
+          className={updating ? 'dash-tablewrap nt-stale' : 'dash-tablewrap'}
+          aria-busy={updating}
+        >
           <table className="dash-table">
             <thead>
               <tr>

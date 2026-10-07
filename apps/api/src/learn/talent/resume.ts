@@ -41,7 +41,22 @@ export function checkResume(file: {
   if (file.mimetype !== kind.type) return null
   if (file.buffer.length < kind.magic.length) return null
   if (!file.buffer.subarray(0, kind.magic.length).equals(kind.magic)) return null
+  if (ext === 'docx' && !looksLikeOoxml(file.buffer)) return null
   return { ext, contentType: kind.type }
+}
+
+/**
+ * A .docx is a zip, but so is any other zip. Word writes `[Content_Types].xml` (or a `word/` part)
+ * first, so one of them must be the first entry name in the opening bytes.
+ */
+function looksLikeOoxml(buf: Buffer): boolean {
+  if (buf.length < 30) return false
+  const nameLen = buf.readUInt16LE(26)
+  if (30 + nameLen > buf.length) return false
+  const first = buf.subarray(30, 30 + nameLen).toString('latin1')
+  if (first === '[Content_Types].xml' || first.startsWith('word/')) return true
+  // Some writers put `_rels/` or `docProps/` first; accept a Word part visible in the first 4 KB.
+  return buf.subarray(0, 4096).includes(Buffer.from('word/', 'latin1'))
 }
 
 /** A file name safe to put in a storage key and a download name: no path, no odd characters. */

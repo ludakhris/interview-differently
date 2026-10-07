@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  PayloadTooLargeException,
+} from '@nestjs/common'
 import type { PrismaService } from '../../prisma/prisma.service'
 import { ProviderAccessService } from '../provider-access.service'
 import { LearnService } from '../learn.service'
@@ -62,7 +67,11 @@ const prisma = {
             r.estimated === where.estimated &&
             r.day.getTime() === where.day.getTime()
         )
-        .sort((a, b) => b.lastSeenAt.getTime() - a.lastSeenAt.getTime())
+        .sort(
+          (a, b) =>
+            b.lastSeenAt.getTime() - a.lastSeenAt.getTime() ||
+            b.startedAt.getTime() - a.startedAt.getTime()
+        )
       return m[0] ?? null
     }),
     updateMany: jest.fn(async ({ where, data }) => {
@@ -71,7 +80,7 @@ const prisma = {
       )
       if (!r) return { count: 0 }
       if (typeof data.seconds === 'number') r.seconds = data.seconds
-      else r.seconds += data.seconds.increment
+      else if (data.seconds) r.seconds += data.seconds.increment
       r.lastSeenAt = data.lastSeenAt
       return { count: 1 }
     }),
@@ -169,6 +178,51 @@ describe('heartbeat rules', () => {
     expect(rows).toHaveLength(0)
   })
 
+  it('switching items inside the window credits the gap to the NEW item', async () => {
+    const x = { ...b, itemId: 'item-1' }
+    const y = { ...b, itemId: 'item-2' }
+    await beat('learner', x, T0)
+    await beat('learner', x, at(30)) // item-1 has 30 s
+    await beat('learner', y, at(60)) // switch: item-2 opens with the 30 s gap
+    expect(rows.map((r) => [r.itemId, r.seconds])).toEqual([
+      ['item-1', 30],
+      ['item-2', 30],
+    ])
+    await beat('learner', y, at(90)) // same item again: adds to item-2
+    expect(rows.find((r) => r.itemId === 'item-2')!.seconds).toBe(60)
+    expect(total()).toBe(90)
+  })
+
+  it('a switch after the window credits nothing; a long gap is capped at 60 s', async () => {
+    const x = { ...b, itemId: 'item-1' }
+    const y = { ...b, itemId: 'item-2' }
+    await beat('learner', x, T0)
+    await beat('learner', y, at(75)) // inside 90 s: min(75, 60)
+    expect(rows.find((r) => r.itemId === 'item-2')!.seconds).toBe(60)
+    await beat('learner', x, at(75 + 600)) // outside the window
+    expect(total()).toBe(60)
+  })
+
+  it('two tabs alternating items cannot earn more than the elapsed time', async () => {
+    const x = { ...b, itemId: 'item-1' }
+    const y = { ...b, itemId: 'item-2' }
+    await beat('learner', x, T0)
+    // Tab Y beats 5 s after tab X, every 30 s, for 10 minutes; every beat is measured against the latest one.
+    for (let s = 0; s <= 600; s += 30) {
+      await beat('learner', x, at(s))
+      await beat('learner', y, at(s + 15))
+    }
+    expect(total()).toBeLessThanOrEqual(615)
+    expect(total()).toBeGreaterThan(0)
+  })
+
+  it('two tabs switching to another item together credit the gap once', async () => {
+    await beat('learner', { ...b, itemId: 'item-1' }, T0)
+    const y = { ...b, itemId: 'item-2' }
+    await Promise.all([beat('learner', y, at(30)), beat('learner', y, at(30))])
+    expect(total()).toBeLessThanOrEqual(30)
+  })
+
   it('stores a page with no item (null)', async () => {
     await beat('learner', { cohortId: 'C1', kind: 'page' }, T0)
     expect(rows[0].itemId).toBeNull()
@@ -240,12 +294,16 @@ describe('heartbeat rules', () => {
 describe('decideBeat', () => {
   const last = { lastSeenAt: T0, itemId: 'a' }
   it('decides by gap and item', () => {
-    expect(decideBeat(null, 'a', T0)).toEqual({ action: 'new' })
+    expect(decideBeat(null, 'a', T0)).toEqual({ action: 'new', seconds: 0 })
     expect(decideBeat(last, 'a', at(9))).toEqual({ action: 'ignore' })
     expect(decideBeat(last, 'a', at(10))).toEqual({ action: 'add', seconds: 10 })
     expect(decideBeat(last, 'a', at(90))).toEqual({ action: 'add', seconds: 60 })
-    expect(decideBeat(last, 'a', at(91))).toEqual({ action: 'new' })
-    expect(decideBeat(last, 'b', at(30))).toEqual({ action: 'new' })
+    expect(decideBeat(last, 'a', at(91))).toEqual({ action: 'new', seconds: 0 })
+    // A different item inside the window: a row for it, credited the gap (at most 60 s).
+    expect(decideBeat(last, 'b', at(30))).toEqual({ action: 'new', seconds: 30 })
+    expect(decideBeat(last, 'b', at(80))).toEqual({ action: 'new', seconds: 60 })
+    expect(decideBeat(last, 'b', at(95))).toEqual({ action: 'new', seconds: 0 })
+    expect(decideBeat(last, 'b', at(5))).toEqual({ action: 'ignore' })
     // A clock that went backwards is too soon, not negative time.
     expect(decideBeat(last, 'a', at(-30))).toEqual({ action: 'ignore' })
   })
@@ -376,7 +434,7 @@ describe('csv', () => {
     expect(csvCell(null)).toBe('')
     expect(csvCell(12)).toBe('12')
   })
-  it('writes the header and one line per row, minutes with one decimal', () => {
+  it('writes a BOM, the header and one line per row; measured and estimated minutes apart', () => {
     const out = activityCsv([
       {
         name: '=evil()',
@@ -384,8 +442,8 @@ describe('csv', () => {
         day: '2026-10-07',
         item: 'Intro, part 1',
         kind: 'page',
-        seconds: 90,
-        estimated: false,
+        measuredSeconds: 90,
+        estimatedSeconds: 0,
       },
       {
         name: 'Pat',
@@ -393,16 +451,48 @@ describe('csv', () => {
         day: '2026-10-07',
         item: 'Tool',
         kind: 'tool',
-        seconds: 600,
-        estimated: true,
+        measuredSeconds: 0,
+        estimatedSeconds: 600,
       },
     ])
-    expect(out.split('\r\n')).toEqual([
-      'learner,email,date,item,kind,minutes,estimated',
-      '\'=evil(),a@x.org,2026-10-07,"Intro, part 1",page,1.5,no',
-      'Pat,,2026-10-07,Tool,tool,10.0,yes',
+    expect(out.startsWith('\uFEFF')).toBe(true)
+    expect(out.slice(1).split('\r\n')).toEqual([
+      'learner,email,date,item,kind,measured_minutes,estimated_minutes',
+      '\'=evil(),a@x.org,2026-10-07,"Intro, part 1",page,1.5,',
+      'Pat,,2026-10-07,Tool,tool,,10.0',
       '',
     ])
+  })
+})
+
+describe('csv size limit', () => {
+  it('refuses more than 100,000 rows with a message asking to narrow the range', async () => {
+    const mk = (n: number) =>
+      new ActivityService(
+        {
+          $queryRawUnsafe: jest.fn(async () =>
+            Array.from({ length: n }, () => ({
+              name: 'A',
+              email: null,
+              day: '2026-10-07',
+              itemId: null,
+              title: null,
+              kind: 'page',
+              measured: 60,
+              estimated: 0,
+            }))
+          ),
+        } as unknown as PrismaService,
+        access as unknown as ProviderAccessService,
+        {} as never
+      )
+    await expect(mk(100_001).cohortCsv('s', 'r', 'C1', '2026-10-01', '2026-10-07')).rejects.toThrow(
+      PayloadTooLargeException
+    )
+    await expect(mk(100_001).cohortCsv('s', 'r', 'C1', '2026-10-01', '2026-10-07')).rejects.toThrow(
+      /shorter date range/
+    )
+    expect(await mk(3).cohortCsv('s', 'r', 'C1', '2026-10-01', '2026-10-07')).toContain('A,,')
   })
 })
 

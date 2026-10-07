@@ -1,6 +1,6 @@
 import './attendance.css'
 import type { AttendanceSheet as Sheet, CohortSessionDto } from '@id/types'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useApiSend, useLoad } from '../api'
 import { AttendanceSheet } from './AttendanceSheet'
 import { AttendanceSummaryView } from './AttendanceSummaryView'
@@ -19,6 +19,8 @@ const when = (iso: string) =>
     minute: '2-digit',
   })
 
+const ADD_COOLDOWN_MS = 1500
+
 /** Sessions and whole-cohort attendance marking. CohortPage mounts it for live and hybrid cohorts. */
 export function AttendancePanel({ cohortId }: { cohortId: string }) {
   const send = useApiSend()
@@ -29,7 +31,11 @@ export function AttendancePanel({ cohortId }: { cohortId: string }) {
   const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [cooling, setCooling] = useState(false)
   const [editing, setEditing] = useState(false)
+  const coolTimer = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => clearTimeout(coolTimer.current), [])
 
   const list = sessions.data
   useEffect(() => {
@@ -59,6 +65,7 @@ export function AttendancePanel({ cohortId }: { cohortId: string }) {
       return
     setBusy(true)
     setMessage(null)
+    setNotice(null)
     try {
       const made = await send<CohortSessionDto>('POST', `/learn/cohorts/${cohortId}/sessions`, {
         title: defaultSessionTitle(list ?? []),
@@ -68,6 +75,11 @@ export function AttendancePanel({ cohortId }: { cohortId: string }) {
       setEditing(false)
       setSelected(made.id)
       sessions.reload()
+      setNotice(`Added ${made.title}; edit its title or time below.`)
+      // A second tap right after the first is almost always an accident: wait a moment.
+      setCooling(true)
+      clearTimeout(coolTimer.current)
+      coolTimer.current = setTimeout(() => setCooling(false), ADD_COOLDOWN_MS)
     } catch (e) {
       setMessage((e as Error).message || 'Could not add the session.')
     } finally {
@@ -147,7 +159,12 @@ export function AttendancePanel({ cohortId }: { cohortId: string }) {
       ) : (
         <>
           <div className="at-sessions">
-            <button type="button" className="dash-btn at-add" onClick={add} disabled={busy}>
+            <button
+              type="button"
+              className="dash-btn at-add"
+              onClick={add}
+              disabled={busy || cooling}
+            >
               Add session
             </button>
             {list.length > 0 && (
@@ -176,6 +193,9 @@ export function AttendancePanel({ cohortId }: { cohortId: string }) {
               {message}
             </p>
           )}
+          <p className="dash-muted at-notice" role="status">
+            {notice ?? ''}
+          </p>
           {list.length === 0 && (
             <p className="dash-muted">
               No sessions yet. Add one to start taking attendance; it is named and timed for you.
@@ -212,7 +232,7 @@ export function AttendancePanel({ cohortId }: { cohortId: string }) {
               </div>
               {editing && (
                 <SessionForm
-                  key={current.id}
+                  key={`form-${current.id}`}
                   session={current}
                   cohortId={cohortId}
                   onDone={() => {
@@ -222,7 +242,7 @@ export function AttendancePanel({ cohortId }: { cohortId: string }) {
                 />
               )}
               <SheetLoader
-                key={current.id}
+                key={`sheet-${current.id}`}
                 cohortId={cohortId}
                 sessionId={current.id}
                 onSaved={onSaved}
@@ -283,15 +303,33 @@ function SessionForm({
   const [title, setTitle] = useState(session.title)
   const [startsAt, setStartsAt] = useState(toLocalInput(session.startsAt))
   const [location, setLocation] = useState(session.location ?? '')
-  const [error, setError] = useState<string | null>(null)
+  const [errors, setErrors] = useState<{ title?: string; startsAt?: string; form?: string }>({})
   const [saving, setSaving] = useState(false)
+  const titleRef = useRef<HTMLInputElement>(null)
+  const startsRef = useRef<HTMLInputElement>(null)
+  const formErrorRef = useRef<HTMLParagraphElement>(null)
+  // Focus follows the error: a missing field takes focus, a server error takes focus on its message.
+  const [focusTick, setFocusTick] = useState(0)
+  useEffect(() => {
+    if (focusTick === 0) return
+    if (errors.title) titleRef.current?.focus()
+    else if (errors.startsAt) startsRef.current?.focus()
+    else if (errors.form) formErrorRef.current?.focus()
+  }, [focusTick, errors])
+  const fail = (e: typeof errors) => {
+    setErrors(e)
+    setFocusTick((n) => n + 1)
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     const iso = fromLocalInput(startsAt)
-    if (!iso) return setError('Enter a valid start time.')
+    const found: typeof errors = {}
+    if (title.trim() === '') found.title = 'Enter a title.'
+    if (startsAt === '' || !iso) found.startsAt = 'Enter a start date and time.'
+    if (found.title || found.startsAt) return fail(found)
     setSaving(true)
-    setError(null)
+    setErrors({})
     try {
       await send('PUT', `/learn/cohorts/${cohortId}/sessions/${session.id}`, {
         title,
@@ -300,26 +338,47 @@ function SessionForm({
       })
       onDone()
     } catch (err) {
-      setError((err as Error).message || 'Could not save the session.')
+      fail({ form: (err as Error).message || 'Could not save the session.' })
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <form className="at-form" onSubmit={submit}>
+    <form className="at-form" onSubmit={submit} noValidate>
       <label>
         Title
-        <input value={title} maxLength={120} required onChange={(e) => setTitle(e.target.value)} />
+        <input
+          ref={titleRef}
+          value={title}
+          maxLength={120}
+          aria-required="true"
+          aria-invalid={!!errors.title}
+          aria-describedby={errors.title ? 'at-err-title' : undefined}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        {errors.title && (
+          <span className="dash-error at-field-error" id="at-err-title">
+            {errors.title}
+          </span>
+        )}
       </label>
       <label>
         Starts
         <input
+          ref={startsRef}
           type="datetime-local"
           value={startsAt}
-          required
+          aria-required="true"
+          aria-invalid={!!errors.startsAt}
+          aria-describedby={errors.startsAt ? 'at-err-starts' : undefined}
           onChange={(e) => setStartsAt(e.target.value)}
         />
+        {errors.startsAt && (
+          <span className="dash-error at-field-error" id="at-err-starts">
+            {errors.startsAt}
+          </span>
+        )}
       </label>
       <label>
         Location
@@ -328,9 +387,9 @@ function SessionForm({
       <button type="submit" className="dash-btn-secondary" disabled={saving}>
         Save session
       </button>
-      {error && (
-        <p className="dash-error" role="alert">
-          {error}
+      {errors.form && (
+        <p className="dash-error" role="alert" tabIndex={-1} ref={formErrorRef}>
+          {errors.form}
         </p>
       )}
     </form>

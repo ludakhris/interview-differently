@@ -110,6 +110,8 @@ d('activity reports on Postgres', () => {
     const ann = rep.learners.find((l) => l.userId === 'u1')!
     expect(ann.totalSeconds).toBe(600 + 300 + 1200 + 120)
     expect(ann.estimatedSeconds).toBe(1200)
+    expect(ann.measuredSeconds).toBe(600 + 300 + 120)
+    expect(ann.totalSeconds).toBe(ann.measuredSeconds + ann.estimatedSeconds)
     expect(ann.activeDays).toBe(2)
     expect(ann.firstSeenAt).toBe('2026-10-05T10:00:00.000Z')
     expect(ann.lastSeenAt).toBe('2026-10-06T10:30:00.000Z')
@@ -129,8 +131,18 @@ d('activity reports on Postgres', () => {
     expect(rep.days.map((x) => x.seconds)).toEqual([0, 2100, 270, 0])
     expect(rep.days.map((x) => x.learners)).toEqual([0, 1, 3, 0])
     expect(rep.days.reduce((s, x) => s + x.seconds, 0)).toBe(rep.totalSeconds)
+    expect(rep.days.map((x) => x.estimatedSeconds)).toEqual([0, 1200, 0, 0])
+    expect(rep.days.map((x) => x.measuredSeconds)).toEqual([0, 900, 270, 0])
+    expect(rep.measuredSeconds + rep.estimatedSeconds).toBe(rep.totalSeconds)
+    expect(rep.estimatedSeconds).toBe(1200)
     expect(rep.items.reduce((s, x) => s + x.seconds, 0)).toBe(rep.totalSeconds)
-    expect(rep.items[0]).toMatchObject({ title: 'Lab tool', seconds: 1200, learners: 1 })
+    expect(rep.items[0]).toMatchObject({
+      title: 'Lab tool',
+      seconds: 1200,
+      measuredSeconds: 0,
+      estimatedSeconds: 1200,
+      learners: 1,
+    })
     expect(rep.items.find((i) => i.itemId === null)?.title).toMatch(/Course pages/)
   })
 
@@ -142,18 +154,23 @@ d('activity reports on Postgres', () => {
     const day5 = rep.days[0]
     expect(day5.seconds).toBe(2100)
     expect(day5.items.reduce((s, i) => s + i.seconds, 0)).toBe(day5.seconds)
+    expect(day5).toMatchObject({ measuredSeconds: 900, estimatedSeconds: 1200 })
     expect(day5.items).toContainEqual({
       itemId: 'i2',
       title: 'Lab tool',
       seconds: 1200,
-      estimated: true,
+      measuredSeconds: 0,
+      estimatedSeconds: 1200,
     })
     expect(day5.items).toContainEqual({
       itemId: 'i1',
       title: 'Intro',
       seconds: 900,
-      estimated: false,
+      measuredSeconds: 900,
+      estimatedSeconds: 0,
     })
+    expect(rep.measuredSeconds).toBe(1020)
+    expect(rep.estimatedSeconds).toBe(1200)
     expect(day5.firstSeenAt).toBe('2026-10-05T10:00:00.000Z')
     expect(day5.lastSeenAt).toBe('2026-10-05T15:10:00.000Z')
     const cohort = await svc.cohortReport('s', 'agency-admin', 'C1', r.from, r.to)
@@ -172,12 +189,22 @@ d('activity reports on Postgres', () => {
   it('the CSV has one row per learner per day per item, formulas neutralized, totals match', async () => {
     const csv = await svc.cohortCsv('s', 'agency-admin', 'C1', r.from, r.to)
     const lines = csv.trim().split('\r\n')
-    expect(lines[0]).toBe('learner,email,date,item,kind,minutes,estimated')
-    expect(lines).toContain('Ann,ann@x.org,2026-10-05,Intro,page,15.0,no')
-    expect(lines).toContain('Ann,ann@x.org,2026-10-05,Lab tool,tool,20.0,yes')
+    expect(csv.startsWith('\uFEFF')).toBe(true)
+    lines[0] = lines[0].replace('\uFEFF', '')
+    expect(lines[0]).toBe('learner,email,date,item,kind,measured_minutes,estimated_minutes')
+    expect(lines).toContain('Ann,ann@x.org,2026-10-05,Intro,page,15.0,')
+    expect(lines).toContain('Ann,ann@x.org,2026-10-05,Lab tool,tool,,20.0')
     expect(lines.some((l) => l.startsWith("'=Bob,"))).toBe(true)
     expect(lines).toHaveLength(1 + 5)
-    const minutes = lines.slice(1).reduce((s, l) => s + Number(l.split(',').slice(-2)[0]), 0)
+    const minutes = lines.slice(1).reduce(
+      (s, l) =>
+        s +
+        l
+          .split(',')
+          .slice(-2)
+          .reduce((n, c) => n + Number(c || 0), 0),
+      0
+    )
     expect(minutes).toBeCloseTo((2220 + 90 + 60) / 60, 1)
   })
 

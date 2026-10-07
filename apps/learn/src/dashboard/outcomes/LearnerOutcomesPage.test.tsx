@@ -44,6 +44,7 @@ const outcomes: LearnerOutcomes = {
         interviewReady: false,
         completed: false,
       },
+      hasInterview: true,
       skills: [
         { id: 's1', label: 'SQL', pct: 40, targetPct: 70, flagged: true },
         { id: 's2', label: 'Charts', pct: null, targetPct: 70, flagged: false },
@@ -57,6 +58,8 @@ const outcomes: LearnerOutcomes = {
           score: 40,
           attempts: 2,
           completedAt: '2026-10-01T10:00:00Z',
+          review: false,
+          preCheck: true,
         },
         {
           itemId: 'i2',
@@ -66,6 +69,8 @@ const outcomes: LearnerOutcomes = {
           score: null,
           attempts: 1,
           completedAt: '2026-10-02T10:00:00Z',
+          review: false,
+          preCheck: false,
         },
       ],
     },
@@ -83,9 +88,17 @@ describe('LearnerOutcomesPage', () => {
     expect(screen.getByText('Needs work')).toBeTruthy()
     // An unanswered skill is "Not yet", not 0%.
     expect(screen.getAllByText('Not yet').length).toBeGreaterThan(0)
-    expect(screen.getByRole('link', { name: 'Open course' }).getAttribute('href')).toBe(
-      '/lms/learning/k1'
-    )
+    // The unreached "after" score reads as words, and decorative bars are hidden from readers.
+    expect(screen.getByText(/After: No score yet/)).toBeTruthy()
+    expect(document.querySelectorAll('.lo-bar[aria-hidden="true"]').length).toBeGreaterThan(0)
+    expect(screen.queryAllByRole('img')).toHaveLength(0)
+    expect(screen.getByText('Nothing scored yet')).toBeTruthy()
+    expect(screen.getByText('Attempts on scored items')).toBeTruthy()
+    // Valid markup: no paragraph inside the definition list.
+    expect(document.querySelector('dl p')).toBeNull()
+    expect(
+      screen.getByRole('link', { name: /Open course Data Analysis/ }).getAttribute('href')
+    ).toBe('/lms/learning/k1')
     expect(screen.getByText('2 attempts · Done')).toBeTruthy()
     const timeline = screen.getByRole('heading', { name: 'Recent results' })
     expect(timeline).toBeTruthy()
@@ -112,7 +125,8 @@ describe('LearnerOutcomesPage', () => {
   it('shows the error and retries', async () => {
     state = { data: null, error: new Error('Request failed (500)'), loading: false }
     render(<LearnerOutcomesPage />)
-    expect(screen.getByRole('alert').textContent).toContain('Request failed (500)')
+    expect(screen.getByRole('alert').textContent).toContain('could not be loaded')
+    expect(screen.getByRole('alert').textContent).not.toContain('Request failed')
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(reload).toHaveBeenCalledTimes(1)
   })

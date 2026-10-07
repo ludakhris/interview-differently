@@ -3,13 +3,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApiSend } from '../api'
 import {
   KEY_STATUS,
+  NOTE_KEY,
   STATUS_LABEL,
   STATUS_LETTER,
   STATUS_ORDER,
   changedMarks,
+  clock,
   draftsFrom,
   isDirty,
   markEveryonePresent,
+  mergeAfterSave,
   tally,
   type Drafts,
 } from './attendanceLogic'
@@ -31,9 +34,13 @@ export function AttendanceSheet({
   const [drafts, setDrafts] = useState<Drafts>(() => draftsFrom(initial.rows))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
+  const [savedAt, setSavedAt] = useState<string | null>(null)
+  const [announce, setAnnounce] = useState('')
   const [openNote, setOpenNote] = useState<Record<string, boolean>>({})
+  const [focusNote, setFocusNote] = useState<string | null>(null)
   const rowRefs = useRef<(HTMLLIElement | null)[]>([])
+  const noteRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const radioRefs = useRef<Record<string, (HTMLButtonElement | null)[]>>({})
 
   const dirty = isDirty(sheet.rows, drafts)
   const counts = useMemo(() => tally(drafts), [drafts])
@@ -52,29 +59,47 @@ export function AttendanceSheet({
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
 
+  // After N: the note field exists once openNote has rendered, then it takes focus.
+  useEffect(() => {
+    if (!focusNote) return
+    noteRefs.current[focusNote]?.focus()
+    setFocusNote(null)
+  }, [focusNote, openNote])
+
+  const nameOf = (userId: string) => sheet.rows.find((r) => r.userId === userId)?.name ?? 'Learner'
   const set = (userId: string, status: AttendanceStatus) => {
-    setSaved(false)
+    setSavedAt(null)
+    setAnnounce(`${nameOf(userId)}: ${STATUS_LABEL[status].toLowerCase()}`)
     setDrafts((d) => ({ ...d, [userId]: { ...d[userId], status } }))
   }
   const setNote = (userId: string, note: string) => {
-    setSaved(false)
+    setSavedAt(null)
     setDrafts((d) => ({ ...d, [userId]: { ...d[userId], note } }))
+  }
+  const openNoteFor = (userId: string) => {
+    setOpenNote((o) => ({ ...o, [userId]: true }))
+    setFocusNote(userId)
   }
 
   const save = async () => {
     const marks = changedMarks(sheet.rows, drafts)
     if (marks.length === 0) return
+    const sent = drafts
+    const prevRows = sheet.rows
+    const savedIds = new Set(marks.map((m) => m.userId))
     setSaving(true)
     setError(null)
     try {
+      // The save returns the fresh sheet. Last write wins for a learner two people marked.
       const next = await send<Sheet>(
         'PUT',
         `/learn/cohorts/${cohortId}/sessions/${sheet.session.id}/marks`,
         { marks }
       )
       setSheet(next)
-      setDrafts(draftsFrom(next.rows))
-      setSaved(true)
+      // Only what was saved is replaced: edits made while the save was in flight stay.
+      setDrafts((cur) => mergeAfterSave(prevRows, sent, savedIds, cur, next.rows))
+      setSavedAt(clock(new Date()))
       onSaved()
     } catch (e) {
       setError((e as Error).message || 'Could not save attendance.')
@@ -84,15 +109,38 @@ export function AttendanceSheet({
   }
 
   const onRowKey = (e: React.KeyboardEvent<HTMLLIElement>, i: number, userId: string) => {
-    if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return
-    const status = KEY_STATUS[e.key.toLowerCase()]
+    if (e.ctrlKey || e.metaKey || e.altKey) return
+    // Shortcuts work on the row itself and on its status buttons, never inside the note field.
+    const onRadio = (e.target as HTMLElement).getAttribute('role') === 'radio'
+    if (e.target !== e.currentTarget && !onRadio) return
+    const key = e.key.toLowerCase()
+    const status = KEY_STATUS[key]
     if (status) {
       e.preventDefault()
       set(userId, status)
-    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    } else if (key === NOTE_KEY) {
+      e.preventDefault()
+      openNoteFor(userId)
+    } else if (e.target === e.currentTarget && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
       e.preventDefault()
       rowRefs.current[i + (e.key === 'ArrowDown' ? 1 : -1)]?.focus()
     }
+  }
+
+  // A radio group: arrows move and choose, Tab stops once per learner (roving tabindex).
+  const onRadioKey = (e: React.KeyboardEvent<HTMLButtonElement>, userId: string, at: number) => {
+    const step =
+      e.key === 'ArrowRight' || e.key === 'ArrowDown'
+        ? 1
+        : e.key === 'ArrowLeft' || e.key === 'ArrowUp'
+          ? -1
+          : 0
+    if (!step) return
+    e.preventDefault()
+    e.stopPropagation()
+    const to = (at + step + STATUS_ORDER.length) % STATUS_ORDER.length
+    set(userId, STATUS_ORDER[to])
+    radioRefs.current[userId]?.[to]?.focus()
   }
 
   const { rows } = sheet
@@ -103,7 +151,8 @@ export function AttendanceSheet({
           type="button"
           className="at-all"
           onClick={() => {
-            setSaved(false)
+            setSavedAt(null)
+            setAnnounce(`${counts.unmarked} marked present`)
             setDrafts((d) => markEveryonePresent(d))
           }}
           disabled={counts.unmarked === 0}
@@ -120,7 +169,7 @@ export function AttendanceSheet({
       </div>
       <p className="dash-muted at-hint">
         Tap a status to change it. On a keyboard: arrow keys move between learners, P, A, L, E set
-        the status.
+        the status, N opens the note.
       </p>
 
       {rows.length === 0 ? (
@@ -144,15 +193,21 @@ export function AttendanceSheet({
                   <span className="at-name">{r.name}</span>
                   {r.email && <span className="dash-muted at-email">{r.email}</span>}
                 </div>
-                <div className="at-seg" role="group" aria-label={`Status for ${r.name}`}>
-                  {STATUS_ORDER.map((s) => (
+                <div className="at-seg" role="radiogroup" aria-label={`Status for ${r.name}`}>
+                  {STATUS_ORDER.map((s, k) => (
                     <button
                       key={s}
                       type="button"
-                      tabIndex={-1}
+                      role="radio"
+                      ref={(el) => {
+                        ;(radioRefs.current[r.userId] ??= [])[k] = el
+                      }}
+                      // Roving tabindex: the chosen status (or the first, if none) is the one stop.
+                      tabIndex={(d.status ?? STATUS_ORDER[0]) === s ? 0 : -1}
                       className={`at-seg-btn at-s-${s}`}
-                      aria-pressed={d.status === s}
+                      aria-checked={d.status === s}
                       onClick={() => set(r.userId, s)}
+                      onKeyDown={(e) => onRadioKey(e, r.userId, k)}
                     >
                       <span aria-hidden="true" className="at-letter">
                         {STATUS_LETTER[s]}
@@ -167,6 +222,9 @@ export function AttendanceSheet({
                       type="text"
                       className="at-note"
                       aria-label={`Note for ${r.name}`}
+                      ref={(el) => {
+                        noteRefs.current[r.userId] = el
+                      }}
                       placeholder="Note"
                       maxLength={500}
                       value={d.note}
@@ -175,9 +233,8 @@ export function AttendanceSheet({
                   ) : (
                     <button
                       type="button"
-                      tabIndex={-1}
                       className="dash-btn-quiet at-note-add"
-                      onClick={() => setOpenNote((o) => ({ ...o, [r.userId]: true }))}
+                      onClick={() => openNoteFor(r.userId)}
                     >
                       + Note
                     </button>
@@ -203,7 +260,10 @@ export function AttendanceSheet({
         </button>
       </div>
       <p className="at-status" role="status">
-        {saved && !error ? 'Attendance saved.' : ''}
+        {savedAt && !error ? `Saved at ${savedAt}` : ''}
+      </p>
+      <p className="dash-visually-hidden" role="status" aria-live="polite">
+        {announce}
       </p>
       {error && (
         <p className="dash-error" role="alert">

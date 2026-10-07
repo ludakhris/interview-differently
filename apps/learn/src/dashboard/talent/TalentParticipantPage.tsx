@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useApiFetch, useLoad } from '../api'
 import { useApp } from '../app-context'
 import { errorNotice } from '../shared'
+import { openLinkInNewTab } from './openTab'
 import { NotesSection } from './NotesSection'
 import { StaffProfileView } from './StaffProfileView'
 import { SupportSection } from './SupportSection'
@@ -23,17 +24,24 @@ export function TalentParticipantPage({
   const apiFetch = useApiFetch()
   const base = `/learn/providers/${providerId}/participants/${userId}`
   const header = useLoad<TalentParticipantHeader>(base)
-  // Loading the profile is what the access log records as a view. It carries no pay.
-  const profile = useLoad<TalentProfileStaffView | null>(header.data ? `${base}/profile` : null)
+  // Loading the profile is what the access log records as a view. It carries no pay. It starts with
+  // the header (the server checks access itself), so "loading" is true from the first render and
+  // "has not started a profile" can only mean the request really finished with no profile.
+  const profile = useLoad<TalentProfileStaffView | null>(`${base}/profile`)
   const [busy, setBusy] = useState(false)
   const [resumeError, setResumeError] = useState<string | null>(null)
+  const [resumeUrl, setResumeUrl] = useState<string | null>(null)
 
   async function openResume() {
     setBusy(true)
     setResumeError(null)
+    setResumeUrl(null)
     try {
-      const link = (await (await apiFetch(`${base}/resume`)).json()) as ResumeLink
-      window.open(link.url, '_blank', 'noopener')
+      // The tab opens inside the click, before the fetch, so popup blockers allow it.
+      const { url, opened } = await openLinkInNewTab(
+        async () => ((await (await apiFetch(`${base}/resume`)).json()) as ResumeLink).url
+      )
+      if (!opened) setResumeUrl(url)
     } catch (err) {
       setResumeError((err as Error).message)
     } finally {
@@ -70,11 +78,12 @@ export function TalentParticipantPage({
             onOpenResume={openResume}
             resumeBusy={busy}
             resumeError={resumeError}
+            resumeFallbackUrl={resumeUrl}
           />
         )}
       </section>
 
-      <NotesSection providerId={providerId} userId={userId} />
+      <NotesSection providerId={providerId} userId={userId} cohorts={h.cohorts} />
       <SupportSection providerId={providerId} userId={userId} />
     </>
   )

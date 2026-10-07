@@ -53,9 +53,14 @@ describe('week buckets', () => {
     const days = Array.from({ length: 60 }, (_, i) => ({
       day: new Date(Date.UTC(2026, 8, 1 + i)).toISOString().slice(0, 10),
       seconds: 60,
+      measuredSeconds: 40,
+      estimatedSeconds: 20,
     }))
     expect(chartBars(days.slice(0, 30))).toHaveLength(30)
     const weeks = chartBars(days)
+    // Measured and estimated stay apart when days are folded into weeks.
+    expect(weeks.reduce((n, b) => n + b.measuredSeconds, 0)).toBe(2400)
+    expect(weeks.reduce((n, b) => n + b.estimatedSeconds, 0)).toBe(1200)
     expect(weeks.length).toBeLessThan(12)
     expect(weeks.reduce((n, b) => n + b.seconds, 0)).toBe(3600)
     expect(weeks[0].start).toBe('2026-09-01')

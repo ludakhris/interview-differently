@@ -34,16 +34,19 @@ const cohort: CohortActivityReport = {
   from: '2026-10-05',
   to: '2026-10-07',
   totalSeconds: 4500,
+  measuredSeconds: 3300,
+  estimatedSeconds: 1200,
   days: [
-    { day: '2026-10-05', seconds: 1800, learners: 1 },
-    { day: '2026-10-06', seconds: 0, learners: 0 },
-    { day: '2026-10-07', seconds: 2700, learners: 2 },
+    { day: '2026-10-05', seconds: 1800, measuredSeconds: 600, estimatedSeconds: 1200, learners: 1 },
+    { day: '2026-10-06', seconds: 0, measuredSeconds: 0, estimatedSeconds: 0, learners: 0 },
+    { day: '2026-10-07', seconds: 2700, measuredSeconds: 2700, estimatedSeconds: 0, learners: 2 },
   ],
   learners: [
     {
       userId: 'u1',
       name: 'Ann Lee',
       totalSeconds: 3600,
+      measuredSeconds: 2400,
       estimatedSeconds: 1200,
       activeDays: 2,
       firstSeenAt: '2026-10-05T10:00:00.000Z',
@@ -53,13 +56,23 @@ const cohort: CohortActivityReport = {
       userId: 'u2',
       name: 'Bo Quiet',
       totalSeconds: 900,
+      measuredSeconds: 900,
       estimatedSeconds: 0,
       activeDays: 1,
       firstSeenAt: null,
       lastSeenAt: null,
     },
   ],
-  items: [{ itemId: 'i1', title: 'Intro', seconds: 4500, learners: 2 }],
+  items: [
+    {
+      itemId: 'i1',
+      title: 'Intro',
+      seconds: 4500,
+      measuredSeconds: 3300,
+      estimatedSeconds: 1200,
+      learners: 2,
+    },
+  ],
 }
 
 describe('CohortView', () => {
@@ -105,6 +118,13 @@ describe('DailyBars', () => {
     expect(screen.getByRole('img').getAttribute('aria-label')).toMatch(/Most: 45 min/)
     expect(screen.getByText(/show the daily figures as a table/i)).toBeTruthy()
     expect(screen.getAllByRole('row')).toHaveLength(4)
+    // Measured and estimated are separate columns of the same table.
+    const first = screen.getAllByRole('row')[1]
+    expect(
+      within(first)
+        .getAllByRole('cell')
+        .map((c) => c.textContent)
+    ).toEqual(['10 min', '20 min'])
   })
 })
 
@@ -116,16 +136,32 @@ describe('LearnerLog', () => {
     from: '2026-10-05',
     to: '2026-10-07',
     totalSeconds: 3600,
+    measuredSeconds: 2400,
+    estimatedSeconds: 1200,
     activeDays: 1,
     days: [
       {
         day: '2026-10-05',
         seconds: 3600,
+        measuredSeconds: 2400,
+        estimatedSeconds: 1200,
         firstSeenAt: '2026-10-05T10:00:00.000Z',
         lastSeenAt: '2026-10-05T11:30:00.000Z',
         items: [
-          { itemId: 'i1', title: 'Intro', seconds: 2400, estimated: false },
-          { itemId: 'i2', title: 'Lab tool', seconds: 1200, estimated: true },
+          {
+            itemId: 'i1',
+            title: 'Intro',
+            seconds: 2400,
+            measuredSeconds: 2400,
+            estimatedSeconds: 0,
+          },
+          {
+            itemId: 'i2',
+            title: 'Lab tool',
+            seconds: 1200,
+            measuredSeconds: 0,
+            estimatedSeconds: 1200,
+          },
         ],
       },
     ],
@@ -136,9 +172,11 @@ describe('LearnerLog', () => {
     const est = screen.getByText(/Lab tool: 20 min/)
     expect(est.textContent).toContain('(estimated)')
     expect(screen.getByText('Oct 5, 10:00 UTC')).toBeTruthy()
+    expect(screen.getByText(/40 min measured, 20 min estimated/)).toBeTruthy()
   })
   it('handles a learner with no activity', () => {
     render(<LearnerLog report={{ ...report, days: [], totalSeconds: 0, activeDays: 0 }} />)
+    expect(document.activeElement?.tagName).toBe('H2')
     expect(screen.getByText(/no activity was recorded for this learner/i)).toBeTruthy()
   })
 })
@@ -156,12 +194,23 @@ describe('ActivityPage', () => {
     loads['/learn/cohorts/c1/activity'] = cohort
     loads['/learn/cohorts/c1'] = { id: 'c1', name: 'Fall' }
     render(<ActivityPage workspace="prov" cohortId="c1" />)
+    expect(screen.getByText('How is time counted?').tagName).toBe('SUMMARY')
     expect(screen.getByText(/counted by the server/i)).toBeTruthy()
+    const explainer = document.querySelector('details.ac-explainer')!.textContent!
+    expect(explainer).toMatch(/Idle time is not counted/)
+    expect(explainer).toMatch(/can overlap/)
+    expect(explainer).toMatch(/a guess from the moment/)
+    expect(document.querySelector('p.dash-sub')!.textContent).toMatch(
+      /^\w{3}, \w{3} \d+ to \w{3}, \w{3} \d+ \(UTC\)$/
+    )
     const btn = screen.getByRole('button', { name: /download csv for grant reporting/i })
     await userEvent.click(btn)
     expect(downloads).toHaveLength(1)
     expect(downloads[0]).toMatch(
       /^\/learn\/cohorts\/c1\/activity\.csv\?from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}$/
+    )
+    expect((await screen.findAllByRole('status'))[0].textContent).toMatch(
+      /^Downloaded activity-\d{4}-\d{2}-\d{2}-to-\d{4}-\d{2}-\d{2}\.csv$/
     )
   })
 
@@ -174,13 +223,17 @@ describe('ActivityPage', () => {
       from: 'a',
       to: 'b',
       totalSeconds: 0,
+      measuredSeconds: 0,
+      estimatedSeconds: 0,
       activeDays: 0,
       days: [],
     }
     render(<ActivityPage workspace="prov" cohortId="c1" />)
     await userEvent.click(screen.getByRole('button', { name: 'Ann Lee' }))
     expect(screen.getByRole('heading', { name: 'Ann Lee' })).toBeTruthy()
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Ann Lee' }))
     await userEvent.click(screen.getByRole('button', { name: /back to the cohort/i }))
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1 }))
     expect(screen.getByRole('table', { name: /time spent per learner/i })).toBeTruthy()
   })
 
@@ -191,5 +244,20 @@ describe('ActivityPage', () => {
     expect(
       (screen.getByRole('button', { name: /download csv/i }) as HTMLButtonElement).disabled
     ).toBe(true)
+  })
+
+  it('"Last 7 days" counts back from the moment it is clicked, not from when the page opened', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      vi.setSystemTime(new Date('2026-10-07T12:00:00Z'))
+      loads['/learn/cohorts/c1/activity'] = cohort
+      render(<ActivityPage workspace="prov" cohortId="c1" />)
+      vi.setSystemTime(new Date('2026-10-09T12:00:00Z')) // the tab sat open for two days
+      await userEvent.click(screen.getByRole('button', { name: 'Last 7 days' }))
+      await userEvent.click(screen.getByRole('button', { name: /download csv/i }))
+      expect(downloads[0]).toContain('from=2026-10-03&to=2026-10-09')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

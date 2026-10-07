@@ -161,7 +161,20 @@ describe('DataAccessLogService.list', () => {
     expect(findMany.mock.calls[0][0].take).toBe(3)
     expect(out.rows.map((r) => r.id)).toEqual(['3', '2'])
     expect(out.rows[0].subjectName).toBe('Lee')
-    expect(out.nextBefore).toBe('2026-10-02T00:00:00.000Z')
+    expect(out.nextBefore).toBe('2026-10-02T00:00:00.000Z|2')
+  })
+  it('a (time, id) cursor keeps rows with the same timestamp from being skipped', async () => {
+    findMany.mockResolvedValue([])
+    await log.list('staff-p1', 'provider-admin', {
+      providerId: 'P1',
+      before: '2026-10-02T00:00:00.000Z|row-5',
+    })
+    const at = new Date('2026-10-02T00:00:00.000Z')
+    expect(findMany.mock.calls[0][0].where.OR).toEqual([
+      { createdAt: { lt: at } },
+      { createdAt: at, id: { lt: 'row-5' } },
+    ])
+    expect(findMany.mock.calls[0][0].orderBy).toEqual([{ createdAt: 'desc' }, { id: 'desc' }])
   })
   it('rejects a bad cursor or resource filter', async () => {
     await expect(log.list('root', 'system-admin', { before: 'not a date' })).rejects.toThrow(

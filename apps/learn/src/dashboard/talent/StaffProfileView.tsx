@@ -1,5 +1,5 @@
 import type { TalentCompensation, TalentProfileStaffView } from '@id/types'
-import { useId, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useApiFetch } from '../api'
 import { dateOnly } from '../format'
 import { educationLabel, fileSize, money } from './profileForm'
@@ -27,12 +27,23 @@ export function StaffProfileView(props: {
   onOpenResume: () => void
   resumeBusy?: boolean
   resumeError?: string | null
+  /** Set when the browser blocked the new tab: the link is shown for the person to click. */
+  resumeFallbackUrl?: string | null
 }) {
   const apiFetch = useApiFetch()
   const [pay, setPay] = useState<TalentCompensation | null>(null)
   const [payBusy, setPayBusy] = useState(false)
   const [payError, setPayError] = useState<string | null>(null)
   const payId = useId()
+  const showBtn = useRef<HTMLButtonElement>(null)
+  const refocusShow = useRef(false)
+  useEffect(() => {
+    // After Hide the Show button comes back; keep keyboard focus there, not on the page body.
+    if (!pay && refocusShow.current) {
+      refocusShow.current = false
+      showBtn.current?.focus()
+    }
+  }, [pay])
   const p = props.profile
   if (!p) return <p className="dash-muted">This person has not started a profile yet.</p>
   async function revealPay() {
@@ -88,6 +99,14 @@ export function StaffProfileView(props: {
           {props.resumeError}
         </p>
       )}
+      {props.resumeFallbackUrl && (
+        <p>
+          Your browser blocked the new tab.{' '}
+          <a href={props.resumeFallbackUrl} target="_blank" rel="noopener noreferrer">
+            Download {p.resume?.name ?? 'the resume'}
+          </a>
+        </p>
+      )}
       {p.resume && <p className="dash-hint">Opening a resume is recorded in the access log.</p>}
 
       <section className="tl-pay-box" aria-label="Compensation">
@@ -100,7 +119,14 @@ export function StaffProfileView(props: {
               <Row label="Earned in last job">{money(pay.previousCompensation)}</Row>
               <Row label="Hopes to earn">{money(pay.targetCompensation)}</Row>
             </dl>
-            <button type="button" className="dash-btn-quiet" onClick={() => setPay(null)}>
+            <button
+              type="button"
+              className="dash-btn-quiet"
+              onClick={() => {
+                refocusShow.current = true
+                setPay(null)
+              }}
+            >
               Hide compensation
             </button>
           </>
@@ -112,6 +138,7 @@ export function StaffProfileView(props: {
             </p>
             <button
               type="button"
+              ref={showBtn}
               className="dash-btn-secondary"
               aria-expanded={false}
               aria-controls={payId}
