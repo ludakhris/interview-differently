@@ -167,7 +167,7 @@ export class AttendanceService {
       if (m.note !== undefined && m.note !== null) {
         if (!str(m.note) || m.note.length > 500)
           throw new BadRequestException('note must be at most 500 characters')
-        note = m.note.trim() === '' ? null : m.note
+        note = m.note.trim() === '' ? null : m.note.trim()
       } else note = m.note as null | undefined
       marks.push({ userId: m.userId, status: m.status, note })
     }
@@ -234,6 +234,7 @@ export class AttendanceService {
         'sessions_counted',
         'sessions_held',
         'rate_percent',
+        'note',
       ]),
       ...s.rows.map((r) =>
         csvLine([
@@ -246,8 +247,28 @@ export class AttendanceService {
           r.sessions,
           r.sessionsHeld,
           r.ratePct,
+          s.sessionList
+            .filter((x) => r.notes[x.id])
+            .map((x) => `${x.title}: ${r.notes[x.id]}`)
+            .join('; '),
         ])
       ),
+    ]
+    return CSV_BOM + lines.join('\r\n') + '\r\n'
+  }
+
+  /** One session's register: every learner on the sheet, their status (empty if not marked) and note. */
+  async sessionCsv(
+    userId: string,
+    role: string | undefined,
+    cohortId: string,
+    sessionId: string
+  ): Promise<string> {
+    await this.access.assertCohortStaff(userId, role, cohortId)
+    const sheet = await this.buildSheet(cohortId, sessionId)
+    const lines = [
+      csvLine(['name', 'email', 'status', 'marked_at', 'note']),
+      ...sheet.rows.map((r) => csvLine([r.name, r.email, r.status, r.markedAt, r.note])),
     ]
     return CSV_BOM + lines.join('\r\n') + '\r\n'
   }
@@ -439,15 +460,17 @@ export class AttendanceService {
       held.length
         ? this.prisma.attendanceMark.findMany({
             where: { sessionId: { in: held.map((s) => s.id) } },
-            select: { sessionId: true, userId: true, status: true },
+            select: { sessionId: true, userId: true, status: true, note: true },
           })
         : Promise.resolve([]),
     ])
     // A session was "taken" once anyone has a mark for it.
     const taken = new Set(marks.map((m) => m.sessionId))
     const byUser = new Map<string, Map<string, AttendanceStatus>>()
+    const notesOf = new Map<string, Record<string, string>>()
     for (const m of marks) {
       if (!isStatus(m.status)) continue
+      if (m.note) notesOf.set(m.userId, { ...notesOf.get(m.userId), [m.sessionId]: m.note })
       if (!byUser.has(m.userId)) byUser.set(m.userId, new Map())
       byUser.get(m.userId)!.set(m.sessionId, m.status)
     }
@@ -467,6 +490,7 @@ export class AttendanceService {
           ratePct: st.ratePct,
           marks: st.statuses,
           skipped: st.skipped,
+          notes: notesOf.get(e.userId) ?? {},
         }
       })
       .sort((a, b) => a.name.localeCompare(b.name))

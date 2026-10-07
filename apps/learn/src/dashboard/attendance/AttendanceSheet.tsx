@@ -36,8 +36,6 @@ export function AttendanceSheet({
   const [error, setError] = useState<string | null>(null)
   const [savedAt, setSavedAt] = useState<string | null>(null)
   const [announce, setAnnounce] = useState('')
-  const [openNote, setOpenNote] = useState<Record<string, boolean>>({})
-  const [focusNote, setFocusNote] = useState<string | null>(null)
   const rowRefs = useRef<(HTMLLIElement | null)[]>([])
   const noteRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const radioRefs = useRef<Record<string, (HTMLButtonElement | null)[]>>({})
@@ -59,13 +57,6 @@ export function AttendanceSheet({
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
 
-  // After N: the note field exists once openNote has rendered, then it takes focus.
-  useEffect(() => {
-    if (!focusNote) return
-    noteRefs.current[focusNote]?.focus()
-    setFocusNote(null)
-  }, [focusNote, openNote])
-
   const nameOf = (userId: string) => sheet.rows.find((r) => r.userId === userId)?.name ?? 'Learner'
   const set = (userId: string, status: AttendanceStatus) => {
     setSavedAt(null)
@@ -76,10 +67,7 @@ export function AttendanceSheet({
     setSavedAt(null)
     setDrafts((d) => ({ ...d, [userId]: { ...d[userId], note } }))
   }
-  const openNoteFor = (userId: string) => {
-    setOpenNote((o) => ({ ...o, [userId]: true }))
-    setFocusNote(userId)
-  }
+  const focusNoteOf = (userId: string) => noteRefs.current[userId]?.focus()
 
   const save = async () => {
     const marks = changedMarks(sheet.rows, drafts)
@@ -120,7 +108,7 @@ export function AttendanceSheet({
       set(userId, status)
     } else if (key === NOTE_KEY) {
       e.preventDefault()
-      openNoteFor(userId)
+      focusNoteOf(userId)
     } else if (e.target === e.currentTarget && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
       e.preventDefault()
       rowRefs.current[i + (e.key === 'ArrowDown' ? 1 : -1)]?.focus()
@@ -150,6 +138,7 @@ export function AttendanceSheet({
         <button
           type="button"
           className="at-all"
+          data-autofocus
           onClick={() => {
             setSavedAt(null)
             setAnnounce(`${counts.unmarked} marked present`)
@@ -169,7 +158,7 @@ export function AttendanceSheet({
       </div>
       <p className="dash-muted at-hint">
         Tap a status to change it. On a keyboard: arrow keys move between learners, P, A, L, E set
-        the status, N opens the note.
+        the status, N goes to the note.
       </p>
 
       {rows.length === 0 ? (
@@ -217,28 +206,18 @@ export function AttendanceSheet({
                   ))}
                 </div>
                 <div className="at-note-cell">
-                  {openNote[r.userId] || d.note ? (
-                    <input
-                      type="text"
-                      className="at-note"
-                      aria-label={`Note for ${r.name}`}
-                      ref={(el) => {
-                        noteRefs.current[r.userId] = el
-                      }}
-                      placeholder="Note"
-                      maxLength={500}
-                      value={d.note}
-                      onChange={(e) => setNote(r.userId, e.target.value)}
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      className="dash-btn-quiet at-note-add"
-                      onClick={() => openNoteFor(r.userId)}
-                    >
-                      + Note
-                    </button>
-                  )}
+                  <input
+                    type="text"
+                    className="at-note"
+                    aria-label={`Note for ${r.name}`}
+                    ref={(el) => {
+                      noteRefs.current[r.userId] = el
+                    }}
+                    placeholder="Add a note"
+                    maxLength={500}
+                    value={d.note}
+                    onChange={(e) => setNote(r.userId, e.target.value)}
+                  />
                 </div>
               </li>
             )

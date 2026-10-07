@@ -1,4 +1,5 @@
-// Small pure helpers for the activity feature (#69 E). All days are UTC dates, like the API.
+// Small pure helpers for the activity feature (#69 E). Times come from the API in UTC and are shown
+// in the viewer's timezone; a report's `day` values are dates in that timezone.
 
 /** "1 h 05 min", "12 min", "< 1 min", "0 min". Whole minutes: sub-minute time is shown, not rounded to 0. */
 export function formatDuration(seconds: number): string {
@@ -21,10 +22,33 @@ const startMs = (day: string): number => Date.parse(`${day}T00:00:00.000Z`)
 
 export type RangePreset = 'last7' | 'last30' | 'custom'
 
-/** The date range of a preset, ending today (UTC). */
-export function presetRange(preset: 'last7' | 'last30', now: Date): { from: string; to: string } {
+/** The viewer's timezone (an IANA name such as America/New_York), UTC if the browser will not say. */
+export function localTz(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  } catch {
+    return 'UTC'
+  }
+}
+
+/** The calendar date (YYYY-MM-DD) of an instant in a timezone. */
+export function dayIn(d: Date, tz: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d)
+}
+
+/** The date range of a preset, ending today in the viewer's timezone. */
+export function presetRange(
+  preset: 'last7' | 'last30',
+  now: Date,
+  tz = 'UTC'
+): { from: string; to: string } {
   const n = preset === 'last7' ? 7 : 30
-  const to = utcDay(now)
+  const to = dayIn(now, tz)
   return { from: utcDay(new Date(startMs(to) - (n - 1) * DAY_MS)), to }
 }
 
@@ -49,39 +73,20 @@ export interface Bar {
   /** Last day included in the bar. */
   end: string
   seconds: number
-  measuredSeconds: number
-  estimatedSeconds: number
 }
 
 /**
  * Bars for the chart: one per day, or one per week (Monday to Sunday, clipped to the range) when
- * there are more than `maxBars` days. Measured and estimated seconds stay apart.
+ * there are more than `maxBars` days.
  */
-export function chartBars(
-  days: { day: string; seconds: number; measuredSeconds: number; estimatedSeconds: number }[],
-  maxBars = 45
-): Bar[] {
+export function chartBars(days: { day: string; seconds: number }[], maxBars = 45): Bar[] {
   if (days.length <= maxBars)
-    return days.map((d) => ({
-      start: d.day,
-      end: d.day,
-      seconds: d.seconds,
-      measuredSeconds: d.measuredSeconds,
-      estimatedSeconds: d.estimatedSeconds,
-    }))
+    return days.map((d) => ({ start: d.day, end: d.day, seconds: d.seconds }))
   const weeks = new Map<string, Bar>()
   for (const d of days) {
     const key = weekStart(d.day)
-    const w = weeks.get(key) ?? {
-      start: d.day,
-      end: d.day,
-      seconds: 0,
-      measuredSeconds: 0,
-      estimatedSeconds: 0,
-    }
+    const w = weeks.get(key) ?? { start: d.day, end: d.day, seconds: 0 }
     w.seconds += d.seconds
-    w.measuredSeconds += d.measuredSeconds
-    w.estimatedSeconds += d.estimatedSeconds
     if (d.day < w.start) w.start = d.day
     if (d.day > w.end) w.end = d.day
     weeks.set(key, w)
@@ -93,15 +98,33 @@ export function chartBars(
 export const isActive = (lastInputAt: number | null, now: number, idleMs: number): boolean =>
   lastInputAt !== null && now - lastInputAt <= idleMs
 
-/** "Oct 7, 14:05 UTC" for a timestamp. */
-export function timeUtc(iso: string | null): string {
+/** "Oct 7, 2:05 PM" for a timestamp, in the viewer's timezone. */
+export function timeLocal(iso: string | null, tz: string): string {
   if (!iso) return '—'
-  const d = new Date(iso)
-  const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
-  return `${date}, ${d.toISOString().slice(11, 16)} UTC`
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: tz,
+  })
+    .format(new Date(iso))
+    .replace(/\u202f/g, ' ')
 }
 
-/** "Tue, Oct 7" for a UTC day. */
+/** "2:05 PM" for a timestamp, in the viewer's timezone. */
+export function clockLocal(iso: string | null, tz: string): string {
+  if (!iso) return '—'
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: tz,
+  })
+    .format(new Date(iso))
+    .replace(/\u202f/g, ' ')
+}
+
+/** "Tue, Oct 7" for a report day (a plain date, the same in every timezone). */
 export const dayLabel = (day: string): string =>
   new Date(startMs(day)).toLocaleDateString('en-US', {
     weekday: 'short',

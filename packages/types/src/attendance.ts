@@ -83,6 +83,8 @@ export interface AttendanceSummaryRow {
   marks: Record<string, AttendanceStatus>
   /** Held sessions that do not count for this learner, by session id. */
   skipped: Record<string, SessionSkip>
+  /** Staff note by session id, only where one was written. Staff endpoints only. */
+  notes: Record<string, string>
 }
 
 /** GET /learn/cohorts/:cohortId/attendance. The CSV at .../attendance.csv has the same columns. */

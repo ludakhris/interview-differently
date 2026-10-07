@@ -84,6 +84,10 @@
 .ac-table .ac-learner {
   padding: 4px 0;
   text-align: left;
+  font-weight: 700;
+}
+.ac-items li {
+  padding: 2px 0;
 }
 .ac-chart {
   display: flex;
@@ -100,31 +104,9 @@
   display: flex;
   align-items: flex-end;
 }
-.ac-stack {
+.ac-bar {
   width: 100%;
   min-height: 2px;
-  display: flex;
-  flex-direction: column;
-}
-.ac-bar {
-  background: var(--blue);
-}
-.ac-bar-est,
-.ac-key-e {
-  background: repeating-linear-gradient(45deg, var(--blue) 0 3px, transparent 3px 6px);
-  box-shadow: inset 0 0 0 1px var(--blue);
-}
-.ac-legend {
-  font-size: 13px;
-}
-.ac-key {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  margin: 0 4px 0 8px;
-  vertical-align: -2px;
-}
-.ac-key-m {
   background: var(--blue);
 }
 .ac-explainer summary {
@@ -132,7 +114,14 @@
   font-weight: 700;
 }
 .ac-explainer p {
-  margin: 8px 0 0;
+  margin: 12px 0 0;
+}
+.ac-explainer ul {
+  margin: 6px 0 0;
+  padding-left: 22px;
+}
+.ac-explainer li {
+  margin: 4px 0;
 }
 .ac-downloaded {
   margin: 0;

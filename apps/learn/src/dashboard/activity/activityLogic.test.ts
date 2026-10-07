@@ -2,11 +2,15 @@ import { describe, expect, it } from 'vitest'
 import {
   chartBars,
   formatDuration,
+  clockLocal,
+  dayIn,
   isActive,
+  localTz,
   minutesOf,
   parseLearningPath,
   presetRange,
   rangeProblem,
+  timeLocal,
   weekStart,
 } from './activityLogic'
 
@@ -33,6 +37,14 @@ describe('ranges', () => {
     expect(presetRange('last7', now)).toEqual({ from: '2026-10-01', to: '2026-10-07' })
     expect(presetRange('last30', now)).toEqual({ from: '2026-09-08', to: '2026-10-07' })
   })
+  it('presets end today in the viewer timezone', () => {
+    // 02:00 UTC on Oct 8 is still Oct 7 in New York, already Oct 8 in Tokyo.
+    const late = new Date('2026-10-08T02:00:00Z')
+    expect(presetRange('last7', late, 'America/New_York').to).toBe('2026-10-07')
+    expect(presetRange('last7', late, 'Asia/Tokyo').to).toBe('2026-10-08')
+    expect(presetRange('last7', late, 'America/New_York').from).toBe('2026-10-01')
+    expect(dayIn(late, 'UTC')).toBe('2026-10-08')
+  })
   it('flags a bad custom range', () => {
     expect(rangeProblem('2026-10-01', '2026-10-07')).toBeNull()
     expect(rangeProblem('', '2026-10-07')).not.toBeNull()
@@ -40,6 +52,20 @@ describe('ranges', () => {
     expect(rangeProblem('2026-10-08', '2026-10-07')).not.toBeNull()
     expect(rangeProblem('2025-10-06', '2026-10-07')).not.toBeNull()
     expect(rangeProblem('2025-10-07', '2026-10-07')).toBeNull()
+  })
+})
+
+describe('local time', () => {
+  it('asks the browser for its timezone', () => {
+    expect(localTz()).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')
+  })
+  it('formats an instant in the given timezone, not UTC', () => {
+    const t = '2026-10-08T03:30:00.000Z'
+    expect(timeLocal(t, 'America/New_York')).toBe('Oct 7, 11:30 PM')
+    expect(timeLocal(t, 'UTC')).toBe('Oct 8, 3:30 AM')
+    expect(clockLocal(t, 'Asia/Kolkata')).toBe('9:00 AM')
+    expect(timeLocal(null, 'UTC')).toBe('—')
+    expect(clockLocal(null, 'UTC')).toBe('—')
   })
 })
 
@@ -53,14 +79,9 @@ describe('week buckets', () => {
     const days = Array.from({ length: 60 }, (_, i) => ({
       day: new Date(Date.UTC(2026, 8, 1 + i)).toISOString().slice(0, 10),
       seconds: 60,
-      measuredSeconds: 40,
-      estimatedSeconds: 20,
     }))
     expect(chartBars(days.slice(0, 30))).toHaveLength(30)
     const weeks = chartBars(days)
-    // Measured and estimated stay apart when days are folded into weeks.
-    expect(weeks.reduce((n, b) => n + b.measuredSeconds, 0)).toBe(2400)
-    expect(weeks.reduce((n, b) => n + b.estimatedSeconds, 0)).toBe(1200)
     expect(weeks.length).toBeLessThan(12)
     expect(weeks.reduce((n, b) => n + b.seconds, 0)).toBe(3600)
     expect(weeks[0].start).toBe('2026-09-01')

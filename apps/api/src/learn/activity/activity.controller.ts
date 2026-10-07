@@ -36,9 +36,10 @@ export class ActivityController {
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
     @Query('from') from?: string,
-    @Query('to') to?: string
+    @Query('to') to?: string,
+    @Query('tz') tz?: string
   ) {
-    return this.service.ownReport(req.userId, cohortId, from, to)
+    return this.service.ownReport(req.userId, cohortId, from, to, tz)
   }
 
   @Get('cohorts/:cohortId/activity')
@@ -46,9 +47,10 @@ export class ActivityController {
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
     @Query('from') from?: string,
-    @Query('to') to?: string
+    @Query('to') to?: string,
+    @Query('tz') tz?: string
   ) {
-    return this.service.cohortReport(req.userId, req.userRole, cohortId, from, to)
+    return this.service.cohortReport(req.userId, req.userRole, cohortId, from, to, tz)
   }
 
   @Get('cohorts/:cohortId/activity/learners/:userId')
@@ -57,9 +59,10 @@ export class ActivityController {
     @Param('cohortId') cohortId: string,
     @Param('userId') userId: string,
     @Query('from') from?: string,
-    @Query('to') to?: string
+    @Query('to') to?: string,
+    @Query('tz') tz?: string
   ) {
-    return this.service.learnerReport(req.userId, req.userRole, cohortId, userId, from, to)
+    return this.service.learnerReport(req.userId, req.userRole, cohortId, userId, from, to, tz)
   }
 
   @Get('cohorts/:cohortId/activity.csv')
@@ -69,8 +72,9 @@ export class ActivityController {
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
     @Query('from') from?: string,
-    @Query('to') to?: string
+    @Query('to') to?: string,
+    @Query('tz') tz?: string
   ) {
-    return this.service.cohortCsv(req.userId, req.userRole, cohortId, from, to)
+    return this.service.cohortCsv(req.userId, req.userRole, cohortId, from, to, tz)
   }
 }

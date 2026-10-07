@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { AttendanceSheetRow } from '@id/types'
 import {
+  attendanceStats,
+  isTaken,
   changedMarks,
   clock,
   defaultSessionTitle,
@@ -119,5 +121,48 @@ describe('attendance logic', () => {
   })
   it('formats a clock time as HH:MM', () => {
     expect(clock(new Date(2026, 9, 7, 9, 5))).toBe('09:05')
+  })
+})
+
+describe('attendanceStats', () => {
+  const NOW = Date.parse('2026-10-07T12:00:00Z')
+  const c = (present = 0, absent = 0, late = 0, excused = 0) => ({
+    present,
+    absent,
+    late,
+    excused,
+    unmarked: 0,
+  })
+  const sess = (id: string, startsAt: string, counts = c()) =>
+    ({ id, cohortId: 'c', title: id, startsAt, endsAt: null, location: null, counts }) as never
+  const sessions = [
+    sess('a', '2026-10-01T10:00:00Z', c(3, 1)),
+    sess('b', '2026-10-05T10:00:00Z', c(2, 0, 1)),
+    sess('c', '2026-10-06T10:00:00Z'),
+    sess('d', '2026-10-09T10:00:00Z'),
+  ]
+  const r = (
+    userId: string,
+    present: number,
+    late: number,
+    counted: number,
+    ratePct: number | null
+  ) => ({ userId, present, late, sessions: counted, ratePct }) as never
+
+  it('counts held and upcoming, takes the last session that was taken, and flags low rates', () => {
+    const summary = {
+      rows: [r('u1', 2, 0, 2, 100), r('u2', 1, 0, 2, 50), r('u3', 0, 0, 0, null)],
+    } as never
+    const st = attendanceStats(sessions, summary, NOW)
+    expect(st.held).toBe(3)
+    expect(st.upcoming).toBe(1)
+    expect(st.overallPct).toBe(75)
+    expect(st.last?.id).toBe('b')
+    expect(st.below).toEqual(['u2'])
+  })
+  it('has nothing to show before any register is taken', () => {
+    const st = attendanceStats([sess('x', '2026-10-06T10:00:00Z')], null, NOW)
+    expect(st).toMatchObject({ held: 1, overallPct: null, last: null, below: [] })
+    expect(isTaken(sess('y', '2026-10-06T10:00:00Z', c(0, 0, 0, 1)))).toBe(true)
   })
 })

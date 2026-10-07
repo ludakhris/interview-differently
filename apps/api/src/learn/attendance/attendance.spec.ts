@@ -224,6 +224,7 @@ describe('staff access matrix (same rule as the roster)', () => {
       () => svc.saveMarks(user, role, 'c1', s.id, { marks: [{ userId: 'u1', status: 'present' }] }),
       () => svc.summary(user, role, 'c1'),
       () => svc.csv(user, role, 'c1'),
+      () => svc.sessionCsv(user, role, 'c1', s.id),
     ]
     for (const call of calls) await expect(call()).rejects.toBeInstanceOf(ForbiddenException)
   })
@@ -488,10 +489,10 @@ describe('summary, rate and csv', () => {
     expect(csv.startsWith('\uFEFF')).toBe(true)
     const lines = csv.slice(1).trimEnd().split('\r\n')
     expect(lines[0]).toBe(
-      'name,email,present,absent,late,excused,sessions_counted,sessions_held,rate_percent'
+      'name,email,present,absent,late,excused,sessions_counted,sessions_held,rate_percent,note'
     )
-    expect(lines).toContain('Ann Able,ann@x.org,1,0,0,0,1,1,100')
-    expect(lines).toContain('Bo Baker,bo@x.org,0,1,0,0,1,1,0')
+    expect(lines).toContain('Ann Able,ann@x.org,1,0,0,0,1,1,100,')
+    expect(lines).toContain('Bo Baker,bo@x.org,0,1,0,0,1,1,0,')
     expect(lines.some((l) => l.startsWith("'=cmd|calc,'+evil@x.org,"))).toBe(true)
     expect(csvCell('a,"b"\nc')).toBe('"a,""b""\nc"')
     for (const c of ['=1+1', '+1', '-1', '@SUM(A1)', '\tx', '\rx'])
@@ -503,7 +504,85 @@ describe('summary, rate and csv', () => {
     const { svc, addSession } = build()
     addSession() // held, not taken
     const lines = (await svc.csv('prov-staff', P, 'c1')).slice(1).trimEnd().split('\r\n')
-    expect(lines).toContain('Ann Able,ann@x.org,0,0,0,0,0,1,')
+    expect(lines).toContain('Ann Able,ann@x.org,0,0,0,0,0,1,,')
+  })
+})
+
+describe('notes', () => {
+  it('saves a trimmed note, turns a blank one into null, and returns it on the sheet and summary', async () => {
+    const { svc, addSession } = build()
+    const s = addSession()
+    const sheet = await svc.saveMarks('prov-staff', P, 'c1', s.id, {
+      marks: [
+        { userId: 'u1', status: 'late', note: '  stuck on the bus  ' },
+        { userId: 'u2', status: 'present', note: '   ' },
+      ],
+    })
+    expect(sheet.rows.find((r) => r.userId === 'u1')?.note).toBe('stuck on the bus')
+    expect(sheet.rows.find((r) => r.userId === 'u2')?.note).toBeNull()
+    const again = await svc.sheet('prov-staff', P, 'c1', s.id)
+    expect(again.rows.find((r) => r.userId === 'u1')?.note).toBe('stuck on the bus')
+    const sum = await svc.summary('prov-staff', P, 'c1')
+    expect(sum.rows.find((r) => r.userId === 'u1')?.notes).toEqual({ [s.id]: 'stuck on the bus' })
+    expect(sum.rows.find((r) => r.userId === 'u2')?.notes).toEqual({})
+  })
+  it('rejects a note over 500 characters', async () => {
+    const { svc, addSession } = build()
+    const s = addSession()
+    await expect(
+      svc.saveMarks('prov-staff', P, 'c1', s.id, {
+        marks: [{ userId: 'u1', status: 'present', note: 'x'.repeat(501) }],
+      })
+    ).rejects.toBeInstanceOf(BadRequestException)
+  })
+  it('the overall csv carries the notes, labelled by session and CSV-safe', async () => {
+    const { svc, addSession, db } = build()
+    const s1 = addSession({ title: 'Kickoff' })
+    db.marks.push({
+      sessionId: s1.id,
+      userId: 'u1',
+      status: 'late',
+      note: 'said "hi", then left',
+      markedBy: 'x',
+      markedAt: new Date(),
+    })
+    const lines = (await svc.csv('prov-staff', P, 'c1')).slice(1).trimEnd().split('\r\n')
+    expect(lines).toContain('Ann Able,ann@x.org,0,0,1,0,1,1,100,"Kickoff: said ""hi"", then left"')
+  })
+})
+
+describe('per-session csv', () => {
+  it('has a BOM, one row per learner on the sheet with status and note, empty status when unmarked', async () => {
+    const { svc, addSession, db } = build()
+    const s = addSession()
+    db.marks.push({
+      sessionId: s.id,
+      userId: 'u1',
+      status: 'excused',
+      note: '=HYPERLINK("x")',
+      markedBy: 'x',
+      markedAt: new Date('2026-10-05T14:00:00Z'),
+    })
+    const csv = await svc.sessionCsv('prov-staff', P, 'c1', s.id)
+    expect(csv.startsWith('\uFEFF')).toBe(true)
+    const lines = csv.slice(1).trimEnd().split('\r\n')
+    expect(lines[0]).toBe('name,email,status,marked_at,note')
+    expect(lines).toContain(
+      `Ann Able,ann@x.org,excused,2026-10-05T14:00:00.000Z,"'=HYPERLINK(""x"")"`
+    )
+    expect(lines).toContain('Bo Baker,bo@x.org,,,')
+    expect(lines.some((l) => l.startsWith("'=cmd|calc,'+evil@x.org,"))).toBe(true)
+    expect(lines).toHaveLength(4)
+  })
+  it('is staff only, and a session of another cohort is 404', async () => {
+    const { svc, addSession } = build()
+    const s = addSession()
+    await expect(svc.sessionCsv('other-org', P, 'c1', s.id)).rejects.toBeInstanceOf(
+      ForbiddenException
+    )
+    await expect(svc.sessionCsv('prov-staff', P, 'c1', 'nope')).rejects.toBeInstanceOf(
+      NotFoundException
+    )
   })
 })
 

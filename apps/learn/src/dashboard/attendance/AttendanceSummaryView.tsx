@@ -1,73 +1,45 @@
 import type { AttendanceSummary } from '@id/types'
-import { useState } from 'react'
-import { downloadFile, useApiFetch, useLoad } from '../api'
 import { STATUS_LABEL, STATUS_LETTER, rateLabel } from './attendanceLogic'
 
 const day = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
-/** Learners down, held sessions across: a letter and a colour per mark, plus the attendance rate. */
-export function AttendanceSummaryView({ cohortId }: { cohortId: string }) {
-  const { data, error, loading, reload } = useLoad<AttendanceSummary>(
-    `/learn/cohorts/${cohortId}/attendance`
-  )
-  const apiFetch = useApiFetch()
-  const [exportError, setExportError] = useState(false)
-  const [downloaded, setDownloaded] = useState<string | null>(null)
-
-  if (error)
-    return (
-      <div className="at-error">
-        <p className="dash-error" role="alert">
-          Could not load the attendance summary.
-        </p>
-        <button type="button" className="dash-btn-secondary" onClick={reload}>
-          Try again
-        </button>
-      </div>
-    )
-  if (loading || !data) return <p className="dash-loading">Loading summary…</p>
-
+/**
+ * Learners down, held sessions across, in the Roster table's style: a letter and a colour per mark,
+ * the attendance rate, and a corner flag where the mark has a staff note (its text is the tooltip).
+ * Each name links to the learner's record page.
+ */
+export function AttendanceSummaryView({
+  data,
+  href,
+  cohortId,
+  onlyUserIds,
+}: {
+  data: AttendanceSummary
+  href: (path: string) => string
+  cohortId: string
+  /** Show only these learners (the "below 75%" filter). */
+  onlyUserIds?: string[] | null
+}) {
+  const rows = onlyUserIds ? data.rows.filter((r) => onlyUserIds.includes(r.userId)) : data.rows
   return (
     <div>
-      <div className="at-summary-head">
-        <p className="dash-muted">
-          {data.sessions} session{data.sessions === 1 ? '' : 's'} held so far. The rate is present
-          and late over the sessions that count for each learner: ones where attendance was taken
-          and the learner had joined, leaving out excused ones. Someone with no mark in a session
-          that was taken is absent.
-        </p>
-        <button
-          type="button"
-          className="dash-btn-secondary"
-          onClick={() => {
-            setExportError(false)
-            setDownloaded(null)
-            downloadFile(apiFetch, `/learn/cohorts/${cohortId}/attendance.csv`, 'attendance.csv')
-              .then(() => setDownloaded('attendance.csv'))
-              .catch(() => setExportError(true))
-          }}
-        >
-          Export CSV
-        </button>
-      </div>
-      <p role="status" className="dash-muted at-downloaded">
-        {downloaded ? `Downloaded ${downloaded}` : ''}
-      </p>
-      {exportError && (
-        <p className="dash-error" role="alert">
-          Could not export the CSV. Try again.
-        </p>
-      )}
       <p className="dash-muted at-legend">
-        P present, A absent (including no mark in a session that was taken), L late, E excused (left
-        out of the rate), · does not count: attendance not taken yet, or before the learner joined.
+        P present, A absent (also no mark in a session that was taken), L late, E excused, · not
+        counted. A corner flag means a note: hover the cell to read it.
       </p>
-      {data.rows.length === 0 ? (
-        <p className="dash-muted">No learners yet.</p>
+      {rows.length === 0 ? (
+        <p className="dash-muted">No learners to show.</p>
+      ) : data.sessionList.length === 0 ? (
+        <p className="dash-muted">No sessions have been held yet.</p>
       ) : (
-        <div className="at-grid-wrap" tabIndex={0} role="region" aria-label="Attendance by session">
-          <table className="at-grid">
+        <div
+          className="dash-tablewrap at-grid-wrap"
+          tabIndex={0}
+          role="region"
+          aria-label="Attendance by learner"
+        >
+          <table className="dash-table at-grid">
             <thead>
               <tr>
                 <th scope="col" className="at-g-name">
@@ -96,25 +68,28 @@ export function AttendanceSummaryView({ cohortId }: { cohortId: string }) {
               </tr>
             </thead>
             <tbody>
-              {data.rows.map((r) => (
+              {rows.map((r) => (
                 <tr key={r.userId}>
                   <th scope="row" className="at-g-name">
-                    {r.name}
+                    <a href={href(`/lms/cohorts/${cohortId}/learners/${r.userId}`)}>{r.name}</a>
                   </th>
                   <td className="at-g-rate">{rateLabel(r.ratePct)}</td>
                   {data.sessionList.map((s) => {
                     const st = r.marks[s.id]
                     const skip = r.skipped[s.id]
+                    const note = r.notes?.[s.id]
                     const word = st
                       ? STATUS_LABEL[st]
                       : skip === 'before_join'
                         ? 'before enrolled, not counted'
                         : 'attendance not taken yet'
+                    const label = `${r.name}, ${s.title}: ${word}${note ? `. Note: ${note}` : ''}`
                     return (
                       <td
                         key={s.id}
-                        className={`at-cell ${st ? `at-s-${st}` : 'at-s-none'}`}
-                        aria-label={`${r.name}, ${s.title}: ${word}`}
+                        className={`at-cell ${st ? `at-s-${st}` : 'at-s-none'}${note ? ' at-has-note' : ''}`}
+                        aria-label={label}
+                        title={note ? `${word}. Note: ${note}` : undefined}
                       >
                         <span aria-hidden="true">{st ? STATUS_LETTER[st] : '·'}</span>
                       </td>

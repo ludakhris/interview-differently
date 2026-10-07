@@ -4,18 +4,20 @@ import type {
   CohortListItem,
   LearnerActivityReport,
 } from '@id/types'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { downloadFile, useApiFetch, useLoad } from '../api'
 import { useApp } from '../app-context'
 import { StatTile } from '../charts'
 import { errorNotice } from '../shared'
 import {
   chartBars,
+  clockLocal,
   dayLabel,
   formatDuration,
+  localTz,
   presetRange,
   rangeProblem,
-  timeUtc,
+  timeLocal,
   type RangePreset,
 } from './activityLogic'
 import './activity.css'
@@ -65,20 +67,39 @@ export function Explainer() {
     <details className="ac-caption ac-explainer">
       <summary>How is time counted?</summary>
       <p>
-        <strong>Measured</strong> time is active time: the learner had a course page open in front
-        of them and was clicking, typing or scrolling, counted by the server about every 30 seconds.
-        Idle time is not counted. <strong>Estimated</strong> time is for connected tools: a guess
-        from the moment the tool was launched to the moment its score came back, at most 4 hours per
-        launch, so it can be above or below the real time. The two are always shown apart, and they
-        can overlap: a learner may have a course page open while a tool runs, so adding them can
-        count some minutes twice. Days are UTC dates. Time before activity logging was switched on
-        is not recorded.
+        Time is active time: the learner had a course page open in front of them and was clicking,
+        typing or scrolling. Each stretch of time is a session with a start and a length.
       </p>
+      <p>What is counted:</p>
+      <ul>
+        <li>Time on the course pages, checked about every 30 seconds.</li>
+        <li>
+          Time on an activity, from opening it until the learner leaves it, finishes it or comes
+          back from a connected tool.
+        </li>
+        <li>
+          Time in a connected tool, from launching it until its score comes back (at most 4 hours),
+          because the tool opens in another window. This is the time between launch and return, not
+          what the tool itself recorded.
+        </li>
+      </ul>
+      <p>What is not counted:</p>
+      <ul>
+        <li>
+          Time when the page is hidden or the learner has not clicked, typed or scrolled for a
+          minute.
+        </li>
+        <li>
+          A break of more than a minute and a half. It ends the session; the next one starts fresh.
+        </li>
+        <li>Time from before activity logging was switched on.</li>
+      </ul>
+      <p>Times are shown in your timezone.</p>
     </details>
   )
 }
 
-function useRange() {
+function useRange(tz: string) {
   const [preset, setPresetState] = useState<RangePreset>('last30')
   const [custom, setCustom] = useState({ from: '', to: '' })
   // "Last 7/30 days" counts back from the moment of the click, not from when the page opened.
@@ -88,15 +109,16 @@ function useRange() {
     setPresetState(p)
   }
   const problem = preset === 'custom' ? rangeProblem(custom.from, custom.to) : null
-  const range = preset === 'custom' ? custom : presetRange(preset, base)
-  const query = problem ? null : `from=${range.from}&to=${range.to}`
+  const range = preset === 'custom' ? custom : presetRange(preset, base, tz)
+  const query = problem ? null : `from=${range.from}&to=${range.to}&tz=${encodeURIComponent(tz)}`
   return { preset, setPreset, custom, setCustom, problem, range, query }
 }
 
 function CohortActivity({ cohortId }: { cohortId: string }) {
   const { href } = useApp()
   const apiFetch = useApiFetch()
-  const r = useRange()
+  const tz = useMemo(localTz, [])
+  const r = useRange(tz)
   const [learner, setLearner] = useState<{ id: string; name: string } | null>(null)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState(false)
@@ -149,7 +171,7 @@ function CohortActivity({ cohortId }: { cohortId: string }) {
           <p className="dash-sub">
             {r.problem
               ? 'Choose a date range.'
-              : `${dayLabel(r.range.from)} to ${dayLabel(r.range.to)} (UTC)`}
+              : `${dayLabel(r.range.from)} to ${dayLabel(r.range.to)}`}
           </p>
         </div>
         <div className="ac-export">
@@ -159,7 +181,7 @@ function CohortActivity({ cohortId }: { cohortId: string }) {
             onClick={exportCsv}
             disabled={exporting || !r.query}
           >
-            {exporting ? 'Preparing…' : 'Download CSV for grant reporting'}
+            {exporting ? 'Preparing…' : 'Download CSV'}
           </button>
           {exportError && (
             <p role="alert" className="ac-error">
@@ -189,7 +211,7 @@ function CohortActivity({ cohortId }: { cohortId: string }) {
           ) : log.loading || !log.data ? (
             <p className="dash-loading">Loading {learner.name}…</p>
           ) : (
-            <LearnerLog report={log.data} />
+            <LearnerLog report={log.data} tz={tz} />
           )}
         </>
       ) : report.error ? (
@@ -197,7 +219,7 @@ function CohortActivity({ cohortId }: { cohortId: string }) {
       ) : report.loading || !report.data ? (
         <p className="dash-loading">Loading activity…</p>
       ) : (
-        <CohortView report={report.data} onPick={(id, name) => setLearner({ id, name })} />
+        <CohortView report={report.data} tz={tz} onPick={(id, name) => setLearner({ id, name })} />
       )}
     </div>
   )
@@ -255,12 +277,15 @@ function RangePicker({ r }: { r: ReturnType<typeof useRange> }) {
 
 export function CohortView({
   report,
+  tz,
   onPick,
 }: {
   report: CohortActivityReport
+  tz: string
   onPick: (userId: string, name: string) => void
 }) {
-  const active = report.learners.filter((l) => l.totalSeconds > 0).length
+  const { href } = useApp()
+  const avg = report.averages
   if (report.totalSeconds === 0) {
     return (
       <p className="dash-muted ac-empty">
@@ -272,21 +297,21 @@ export function CohortView({
     <>
       <section aria-label="Totals" className="dash-tiles">
         <StatTile
-          label="Total time"
-          value={formatDuration(report.totalSeconds)}
-          note="Measured plus estimated; they can overlap"
+          label="Average per learner"
+          value={formatDuration(avg.perLearnerSeconds)}
+          note={`Over all ${report.learners.length} ${report.learners.length === 1 ? 'learner' : 'learners'} listed`}
         />
         <StatTile
-          label="Measured"
-          value={formatDuration(report.measuredSeconds)}
-          note="Active on a course page"
+          label="Average per active day"
+          value={formatDuration(avg.perActiveDaySeconds)}
+          note="For a learner, on a day they had any time"
         />
         <StatTile
-          label="Estimated"
-          value={formatDuration(report.estimatedSeconds)}
-          note="Connected tools, a guess"
+          label="Active learners"
+          value={`${avg.activeLearners} of ${report.learners.length}`}
+          note={`${avg.learnersPerDay} per day on average`}
         />
-        <StatTile label="Learners with time" value={`${active} of ${report.learners.length}`} />
+        <StatTile label="Total time" value={formatDuration(report.totalSeconds)} />
       </section>
 
       <section className="dash-section" aria-labelledby="ac-h-days">
@@ -303,7 +328,8 @@ export function CohortView({
         <div className="dash-tablewrap">
           <table className="dash-table ac-table">
             <caption className="dash-visually-hidden">
-              Time spent per learner. Select a learner to see their day-by-day log.
+              Time spent per learner. Select a name for the learner's record, or Daily log for their
+              day-by-day sessions.
             </caption>
             <thead>
               <tr>
@@ -312,36 +338,46 @@ export function CohortView({
                   Total
                 </th>
                 <th scope="col" className="num">
-                  Measured
-                </th>
-                <th scope="col" className="num">
-                  Estimated
+                  Average per active day
                 </th>
                 <th scope="col" className="num">
                   Days active
                 </th>
-                <th scope="col">Last seen</th>
+                <th scope="col">Last active</th>
+                <th scope="col">
+                  <span className="dash-visually-hidden">Daily log</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {report.learners.map((l) => (
                 <tr key={l.userId}>
                   <th scope="row">
-                    <button
-                      type="button"
-                      className="dash-btn-quiet ac-learner"
-                      onClick={() => onPick(l.userId, l.name)}
+                    <a
+                      className="ac-learner"
+                      href={href(
+                        `/lms/cohorts/${encodeURIComponent(report.cohortId)}/learners/${encodeURIComponent(l.userId)}`
+                      )}
                     >
                       {l.name}
-                    </button>
+                    </a>
                   </th>
                   <td className="num">{formatDuration(l.totalSeconds)}</td>
-                  <td className="num">{formatDuration(l.measuredSeconds)}</td>
                   <td className="num">
-                    {l.estimatedSeconds > 0 ? formatDuration(l.estimatedSeconds) : '—'}
+                    {l.activeDays > 0 ? formatDuration(l.averagePerActiveDaySeconds) : '—'}
                   </td>
                   <td className="num">{l.activeDays}</td>
-                  <td>{timeUtc(l.lastSeenAt)}</td>
+                  <td>{timeLocal(l.lastSeenAt, tz)}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="dash-btn-quiet"
+                      aria-label={`Daily log for ${l.name}`}
+                      onClick={() => onPick(l.userId, l.name)}
+                    >
+                      Daily log
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -352,18 +388,15 @@ export function CohortView({
       {report.items.length > 0 && (
         <section className="dash-section" aria-labelledby="ac-h-items">
           <h2 className="dash-h2" id="ac-h-items">
-            Time per item
+            Time per activity
           </h2>
           <div className="dash-tablewrap">
             <table className="dash-table ac-table">
               <thead>
                 <tr>
-                  <th scope="col">Item</th>
+                  <th scope="col">Activity</th>
                   <th scope="col" className="num">
-                    Measured
-                  </th>
-                  <th scope="col" className="num">
-                    Estimated
+                    Time
                   </th>
                   <th scope="col" className="num">
                     Learners
@@ -374,10 +407,7 @@ export function CohortView({
                 {report.items.map((i) => (
                   <tr key={i.itemId ?? 'none'}>
                     <th scope="row">{i.title}</th>
-                    <td className="num">{formatDuration(i.measuredSeconds)}</td>
-                    <td className="num">
-                      {i.estimatedSeconds > 0 ? formatDuration(i.estimatedSeconds) : '—'}
-                    </td>
+                    <td className="num">{formatDuration(i.seconds)}</td>
                     <td className="num">{i.learners}</td>
                   </tr>
                 ))}
@@ -390,20 +420,11 @@ export function CohortView({
   )
 }
 
-/**
- * Bars for each day (each week for a long range), stacked measured (solid) over estimated
- * (striped), with the same figures as a table underneath.
- */
+/** Bars for each day (each week for a long range), with the same figures as a table underneath. */
 export function DailyBars({
   days,
 }: {
-  days: {
-    day: string
-    seconds: number
-    measuredSeconds: number
-    estimatedSeconds: number
-    learners: number
-  }[]
+  days: { day: string; seconds: number; learners: number }[]
 }) {
   const bars = chartBars(days)
   const max = Math.max(1, ...bars.map((b) => b.seconds))
@@ -416,18 +437,11 @@ export function DailyBars({
       <div
         className="ac-chart"
         role="img"
-        aria-label={`Time per ${weekly ? 'week' : 'day'}, measured and estimated apart. Most: ${formatDuration(peak.seconds)}, ${label(peak)}.`}
+        aria-label={`Time per ${weekly ? 'week' : 'day'}. Most: ${formatDuration(peak.seconds)}, ${label(peak)}.`}
       >
         {bars.map((b) => (
-          <div
-            key={b.start}
-            className="ac-col"
-            title={`${label(b)}: ${formatDuration(b.measuredSeconds)} measured, ${formatDuration(b.estimatedSeconds)} estimated`}
-          >
-            <div className="ac-stack" style={{ height: `${(b.seconds / max) * 100}%` }}>
-              <div className="ac-bar-est" style={{ flexGrow: b.estimatedSeconds }} />
-              <div className="ac-bar" style={{ flexGrow: b.measuredSeconds }} />
-            </div>
+          <div key={b.start} className="ac-col" title={`${label(b)}: ${formatDuration(b.seconds)}`}>
+            <div className="ac-bar" style={{ height: `${(b.seconds / max) * 100}%` }} />
           </div>
         ))}
       </div>
@@ -435,10 +449,6 @@ export function DailyBars({
         <span>{dayLabel(bars[0].start)}</span>
         <span>{dayLabel(bars[bars.length - 1].end)}</span>
       </div>
-      <p className="dash-muted ac-legend">
-        <span className="ac-key ac-key-m" aria-hidden="true" /> Measured (active on a course page){' '}
-        <span className="ac-key ac-key-e" aria-hidden="true" /> Estimated (connected tools)
-      </p>
       <details className="ac-details">
         <summary>Show the {weekly ? 'weekly' : 'daily'} figures as a table</summary>
         <div className="dash-tablewrap">
@@ -447,10 +457,7 @@ export function DailyBars({
               <tr>
                 <th scope="col">{weekly ? 'Week' : 'Day'}</th>
                 <th scope="col" className="num">
-                  Measured
-                </th>
-                <th scope="col" className="num">
-                  Estimated
+                  Time
                 </th>
               </tr>
             </thead>
@@ -458,10 +465,7 @@ export function DailyBars({
               {bars.map((b) => (
                 <tr key={b.start}>
                   <th scope="row">{label(b)}</th>
-                  <td className="num">{formatDuration(b.measuredSeconds)}</td>
-                  <td className="num">
-                    {b.estimatedSeconds > 0 ? formatDuration(b.estimatedSeconds) : '—'}
-                  </td>
+                  <td className="num">{formatDuration(b.seconds)}</td>
                 </tr>
               ))}
             </tbody>
@@ -472,8 +476,11 @@ export function DailyBars({
   )
 }
 
-/** One learner's day-by-day log: when they were seen and minutes per item, estimates marked. */
-export function LearnerLog({ report }: { report: LearnerActivityReport }) {
+/**
+ * One learner's log, in the viewer's timezone: a table by day (first start, last activity end,
+ * total, sessions) where each day opens to its sessions (start, length, activity).
+ */
+export function LearnerLog({ report, tz }: { report: LearnerActivityReport; tz: string }) {
   const head = useRef<HTMLHeadingElement>(null)
   // Arriving from the cohort list: put focus on this learner's heading.
   useEffect(() => head.current?.focus(), [])
@@ -484,9 +491,10 @@ export function LearnerLog({ report }: { report: LearnerActivityReport }) {
       </h2>
       <p className="dash-sub">
         {formatDuration(report.totalSeconds)} on {report.activeDays}{' '}
-        {report.activeDays === 1 ? 'day' : 'days'} ({formatDuration(report.measuredSeconds)}{' '}
-        measured, {formatDuration(report.estimatedSeconds)} estimated), {dayLabel(report.from)} to{' '}
-        {dayLabel(report.to)}.
+        {report.activeDays === 1 ? 'day' : 'days'}
+        {report.activeDays > 0 &&
+          `, ${formatDuration(report.averagePerActiveDaySeconds)} on an average active day`}
+        , {dayLabel(report.from)} to {dayLabel(report.to)}.
       </p>
       {report.days.length === 0 ? (
         <p className="dash-muted ac-empty">
@@ -498,39 +506,17 @@ export function LearnerLog({ report }: { report: LearnerActivityReport }) {
             <thead>
               <tr>
                 <th scope="col">Date</th>
-                <th scope="col">First seen</th>
-                <th scope="col">Last seen</th>
+                <th scope="col">First start</th>
+                <th scope="col">Last activity end</th>
                 <th scope="col" className="num">
-                  Measured
+                  Total
                 </th>
-                <th scope="col" className="num">
-                  Estimated
-                </th>
-                <th scope="col">By item</th>
+                <th scope="col">Sessions</th>
               </tr>
             </thead>
-            <tbody>
-              {report.days.map((d) => (
-                <tr key={d.day}>
-                  <th scope="row">{dayLabel(d.day)}</th>
-                  <td>{timeUtc(d.firstSeenAt)}</td>
-                  <td>{timeUtc(d.lastSeenAt)}</td>
-                  <td className="num">{formatDuration(d.measuredSeconds)}</td>
-                  <td className="num">
-                    {d.estimatedSeconds > 0 ? formatDuration(d.estimatedSeconds) : '—'}
-                  </td>
-                  <td>
-                    <ul className="ac-items">
-                      {d.items.map((i) => (
-                        <li key={i.itemId ?? 'none'}>
-                          {i.title}: {itemTime(i)}
-                        </li>
-                      ))}
-                    </ul>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+            {report.days.map((d) => (
+              <DayRows key={d.day} day={d} tz={tz} />
+            ))}
           </table>
         </div>
       )}
@@ -538,11 +524,44 @@ export function LearnerLog({ report }: { report: LearnerActivityReport }) {
   )
 }
 
-/** "40 min", "20 min (estimated)" or "40 min + 20 min (estimated)": the two kinds stay apart. */
-function itemTime(i: { measuredSeconds: number; estimatedSeconds: number }): string {
-  const parts: string[] = []
-  if (i.measuredSeconds > 0 || i.estimatedSeconds === 0)
-    parts.push(formatDuration(i.measuredSeconds))
-  if (i.estimatedSeconds > 0) parts.push(`${formatDuration(i.estimatedSeconds)} (estimated)`)
-  return parts.join(' + ')
+function DayRows({ day, tz }: { day: LearnerActivityReport['days'][number]; tz: string }) {
+  const [open, setOpen] = useState(false)
+  const listId = `ac-sessions-${day.day}`
+  return (
+    <tbody>
+      <tr>
+        <th scope="row">{dayLabel(day.day)}</th>
+        <td>{clockLocal(day.firstSeenAt, tz)}</td>
+        <td>{clockLocal(day.lastSeenAt, tz)}</td>
+        <td className="num">{formatDuration(day.seconds)}</td>
+        <td>
+          <button
+            type="button"
+            className="dash-btn-quiet"
+            aria-expanded={open}
+            aria-controls={listId}
+            onClick={() => setOpen(!open)}
+          >
+            {day.sessionCount} {day.sessionCount === 1 ? 'session' : 'sessions'}
+            <span className="dash-visually-hidden">
+              {open ? ', hide them' : ', show them'} for {dayLabel(day.day)}
+            </span>
+          </button>
+        </td>
+      </tr>
+      {open && (
+        <tr id={listId}>
+          <td colSpan={5}>
+            <ul className="ac-items">
+              {day.sessions.map((x) => (
+                <li key={`${x.startedAt}-${x.itemId ?? 'none'}`}>
+                  {clockLocal(x.startedAt, tz)}, {formatDuration(x.seconds)}: {x.title}
+                </li>
+              ))}
+            </ul>
+          </td>
+        </tr>
+      )}
+    </tbody>
+  )
 }

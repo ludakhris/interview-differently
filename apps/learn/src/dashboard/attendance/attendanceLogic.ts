@@ -1,5 +1,6 @@
 import type {
   AttendanceSheetRow,
+  AttendanceSummary,
   AttendanceStatus,
   CohortSessionDto,
   MarkInput,
@@ -155,3 +156,57 @@ export function learnerAttendanceLine(a: {
   }
   return quiet ? `Attendance: no sessions counted yet (${quiet})` : null
 }
+
+/** Learners under this whole-percent rate are flagged in the status strip. */
+export const LOW_RATE_PCT = 75
+
+/** A session is taken once anyone has a mark for it. */
+export const isTaken = (s: Pick<CohortSessionDto, 'counts'>): boolean => {
+  const c = s.counts
+  return c.present + c.absent + c.late + c.excused > 0
+}
+
+export interface AttendanceStats {
+  held: number
+  upcoming: number
+  /** (present + late) over the counted sessions of every learner; null when nothing counts. */
+  overallPct: number | null
+  /** The most recent held session whose register was taken. */
+  last: CohortSessionDto | null
+  /** Learners under LOW_RATE_PCT (not those with no counted session). */
+  below: string[]
+}
+
+export function attendanceStats(
+  sessions: CohortSessionDto[],
+  summary: AttendanceSummary | null,
+  now: number
+): AttendanceStats {
+  const started = sessions.filter((s) => new Date(s.startsAt).getTime() <= now)
+  const taken = started.filter(isTaken)
+  let attended = 0
+  let counted = 0
+  const below: string[] = []
+  for (const r of summary?.rows ?? []) {
+    attended += r.present + r.late
+    counted += r.sessions
+    if (r.ratePct !== null && r.ratePct < LOW_RATE_PCT) below.push(r.userId)
+  }
+  return {
+    held: started.length,
+    upcoming: sessions.length - started.length,
+    overallPct: counted > 0 ? Math.round((attended / counted) * 100) : null,
+    last: taken.length ? taken[taken.length - 1] : null,
+    below,
+  }
+}
+
+/** "Mon, Oct 5, 9:00 AM" in local time. */
+export const whenLabel = (iso: string): string =>
+  new Date(iso).toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })

@@ -1576,6 +1576,12 @@
   max-width: 44em;
   margin-bottom: 24px;
 }
+.dash-cohort-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
 .dash-btn-link {
   display: inline-block;
   text-decoration: none;

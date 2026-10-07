@@ -1,4 +1,5 @@
 // Pure rules for the activity log (#69 E). Kept free of Prisma so they are tested directly.
+import type { ActivityAverages } from '../activity-types'
 
 /** A beat further than this from the learner's last one starts a new row instead of adding to it. */
 export const JOIN_WINDOW_S = 90
@@ -90,19 +91,51 @@ export function eachDay(from: string, to: string): string[] {
   return Array.from({ length: n }, (_, i) => utcDay(new Date(dayStart(from) + i * DAY_MS)))
 }
 
+export const DEFAULT_TZ = 'UTC'
+
 /**
- * Reads ?from&to. Default: the last 30 days up to today (UTC). Returns an error message for an
- * invalid date, a reversed range, or a range over 366 days; the caller turns it into a 400.
+ * Reads ?tz: an IANA timezone name (America/New_York), default UTC. Unknown names are an error
+ * (the caller turns it into a 400). The shape check keeps odd text (offsets, spaces) out of the
+ * SQL timezone argument; the value is also passed as a bound parameter, never spliced in.
+ */
+export function parseTz(tz: unknown): { tz: string } | { error: string } {
+  if (tz === undefined || tz === null || tz === '') return { tz: DEFAULT_TZ }
+  const bad = { error: 'tz must be a timezone name such as America/New_York' }
+  if (typeof tz !== 'string' || tz.length > 64) return bad
+  if (!/^[A-Za-z][A-Za-z0-9_+-]*(?:\/[A-Za-z0-9_+-]+){0,2}$/.test(tz)) return bad
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz })
+  } catch {
+    return bad
+  }
+  return { tz }
+}
+
+/** The calendar date (YYYY-MM-DD) of an instant in a timezone. */
+export function localDay(d: Date, tz: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d)
+}
+
+/**
+ * Reads ?from&to (dates in the viewer's timezone). Default: the last 30 days up to today in that
+ * timezone. Returns an error message for an invalid date, a reversed range, or a range over 366
+ * days; the caller turns it into a 400.
  */
 export function parseRange(
   from: unknown,
   to: unknown,
-  now = new Date()
+  now = new Date(),
+  tz = DEFAULT_TZ
 ): { range: DateRange } | { error: string } {
   const present = (v: unknown) => v !== undefined && v !== null && v !== ''
   if (present(from) && !validDay(from)) return { error: 'from must be a date, YYYY-MM-DD' }
   if (present(to) && !validDay(to)) return { error: 'to must be a date, YYYY-MM-DD' }
-  const end = present(to) ? (to as string) : utcDay(now)
+  const end = present(to) ? (to as string) : localDay(now, tz)
   const start = present(from)
     ? (from as string)
     : utcDay(new Date(dayStart(end) - (DEFAULT_RANGE_DAYS - 1) * DAY_MS))
@@ -110,6 +143,32 @@ export function parseRange(
   if (daysInclusive(start, end) > MAX_RANGE_DAYS)
     return { error: `The date range can be at most ${MAX_RANGE_DAYS} days` }
   return { range: { from: start, to: end } }
+}
+
+/**
+ * The cohort averages. Everything divides the same total: by every listed learner, by learners
+ * with time, by (learner, day) pairs with time, and the learners active per day over every day of
+ * the range (quiet days included). Nothing divides by zero.
+ */
+export function computeAverages(
+  totalSeconds: number,
+  learners: { totalSeconds: number; activeDays: number }[],
+  dayCount: number,
+  learnersByDay: number[]
+): ActivityAverages {
+  const active = learners.filter((l) => l.totalSeconds > 0).length
+  const learnerDays = learners.reduce((n, l) => n + l.activeDays, 0)
+  const per = (n: number, d: number) => (d > 0 ? Math.round(n / d) : 0)
+  return {
+    perLearnerSeconds: per(totalSeconds, learners.length),
+    perActiveLearnerSeconds: per(totalSeconds, active),
+    perActiveDaySeconds: per(totalSeconds, learnerDays),
+    activeLearners: active,
+    learnersPerDay:
+      dayCount > 0
+        ? Math.round((learnersByDay.reduce((n, x) => n + x, 0) / dayCount) * 10) / 10
+        : 0,
+  }
 }
 
 /** A CSV opens in Excel as UTF-8 only with this byte order mark (names with accents). */
@@ -136,35 +195,27 @@ export const minutes1 = (seconds: number): string => (seconds / 60).toFixed(1)
 export const CSV_COLUMNS = [
   'learner',
   'email',
-  'date',
+  'start_utc',
+  'date_local',
   'item',
-  'kind',
-  'measured_minutes',
-  'estimated_minutes',
+  'minutes',
 ] as const
 
 export interface CsvRow {
   name: string
   email: string | null
-  day: string
+  /** When the session started (UTC). */
+  startedAt: Date
+  /** The session's start day in the viewer's timezone. */
+  dateLocal: string
   item: string
-  kind: string
-  measuredSeconds: number
-  estimatedSeconds: number
+  seconds: number
 }
 
-/** Measured and estimated minutes sit in separate columns; the empty one is left blank. */
+/** One row per session: start in UTC (ISO), its local date, the activity and the minutes. */
 export function activityCsv(rows: CsvRow[]): string {
   const lines = rows.map((r) =>
-    [
-      r.name,
-      r.email,
-      r.day,
-      r.item,
-      r.kind,
-      r.measuredSeconds > 0 ? minutes1(r.measuredSeconds) : '',
-      r.estimatedSeconds > 0 ? minutes1(r.estimatedSeconds) : '',
-    ]
+    [r.name, r.email, r.startedAt.toISOString(), r.dateLocal, r.item, minutes1(r.seconds)]
       .map(csvCell)
       .join(',')
   )

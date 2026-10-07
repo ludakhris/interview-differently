@@ -4,6 +4,7 @@ import { DataAccessLogService } from '../data-access-log.service'
 import { ProviderAccessService } from '../provider-access.service'
 import type {
   ActivityDay,
+  ActivitySessionRow,
   CohortActivityLearnerRow,
   CohortActivityReport,
   LearnerActivityReport,
@@ -16,7 +17,9 @@ import {
   ENDED_GRACE_MS,
   MAX_CSV_ROWS,
   MAX_TOOL_ESTIMATE_S,
+  computeAverages,
   parseRange,
+  parseTz,
   splitToolEstimate,
   utcDay,
   type DateRange,
@@ -26,21 +29,17 @@ const NO_ITEM_TITLE = 'Course pages (outline, dashboard)'
 const REMOVED_ITEM_TITLE = 'Removed item'
 
 const num = (v: unknown): number => Number(v ?? 0)
-/** Measured and estimated seconds of one aggregate row, with their sum. */
-const split = (r: { measured?: unknown; estimated?: unknown } | undefined) => {
-  const measuredSeconds = num(r?.measured)
-  const estimatedSeconds = num(r?.estimated)
-  return { seconds: measuredSeconds + estimatedSeconds, measuredSeconds, estimatedSeconds }
-}
+/** An item's name; the course pages when there is no item; a note when the item was removed. */
+const itemTitle = (r: { itemId: string | null; title: string | null }): string =>
+  r.title ?? (r.itemId ? REMOVED_ITEM_TITLE : NO_ITEM_TITLE)
 const iso = (d: Date | null | undefined): string | null => (d ? d.toISOString() : null)
 
 /**
- * Time learners spent in online courses (#69 E).
- * Measured: active time, from a heartbeat from the learner pages while the page was visible and the
- * learner active (idle time is not counted).
- * Estimated: a connected tool's time from launch (an open row) to score return (closes it)
- * (`estimated` true). Reported apart everywhere (measuredSeconds, estimatedSeconds); it can overlap
- * page time, so it is never silently merged.
+ * Time learners spent in online courses (#69 E). One concept everywhere: a session has a start and
+ * a duration (seconds of active time). Page rows come from a heartbeat from the learner pages
+ * while the page was visible and the learner active (idle time is not counted); a connected tool's
+ * row runs from launch to score return (the tool runs in another window). Reports read every row
+ * the same way. Times are stored in UTC; reports bucket days in the viewer's timezone.
  */
 @Injectable()
 export class ActivityService {
@@ -217,10 +216,32 @@ export class ActivityService {
 
   // ── reports ───────────────────────────────────────────────────────────────
 
-  private range(from: unknown, to: unknown): DateRange {
-    const r = parseRange(from, to)
+  private range(from: unknown, to: unknown, tz: string): DateRange {
+    const r = parseRange(from, to, new Date(), tz)
     if ('error' in r) throw new BadRequestException(r.error)
     return r.range
+  }
+
+  private zone(tz: unknown): string {
+    const r = parseTz(tz)
+    if ('error' in r) throw new BadRequestException(r.error)
+    return r.tz
+  }
+
+  /**
+   * The sessions of a cohort that have time, with each one's day in the viewer's timezone. A
+   * session that crosses local midnight is attributed to the day it started. `startedAt` is a
+   * zoneless UTC timestamp, so it is read as UTC first and then moved to the viewer's zone.
+   * `day` (the UTC date of the start) narrows the scan by a day each side to use its index.
+   * Params: $1 cohort, $2 from, $3 to, $4 tz, and $5 a learner when `learner` is true.
+   */
+  private sessions(learner = false): string {
+    return `(SELECT a."userId", a."itemId", a."startedAt", a."lastSeenAt", a."seconds",
+                    (a."startedAt" AT TIME ZONE 'UTC' AT TIME ZONE $4::text)::date AS "localDay"
+               FROM "ActivitySession" a JOIN "Enrollment" e ON e."id" = a."enrollmentId"
+              WHERE e."cohortId" = $1 ${learner ? 'AND e."userId" = $5' : ''}
+                AND a."seconds" > 0
+                AND a."day" BETWEEN ($2::date - 1) AND ($3::date + 1)) s`
   }
 
   /** The cohort's daily activity. Staff only (the roster guard). */
@@ -229,19 +250,21 @@ export class ActivityService {
     role: string | undefined,
     cohortId: string,
     from: unknown,
-    to: unknown
+    to: unknown,
+    tz?: unknown
   ): Promise<CohortActivityReport> {
     await this.access.assertCohortStaff(userId, role, cohortId)
-    const range = this.range(from, to)
-    return this.buildCohortReport(cohortId, range)
+    const zone = this.zone(tz)
+    return this.buildCohortReport(cohortId, this.range(from, to, zone), zone)
   }
 
   private async buildCohortReport(
     cohortId: string,
-    range: DateRange
+    range: DateRange,
+    tz: string
   ): Promise<CohortActivityReport> {
-    const params = [cohortId, range.from, range.to]
-    const where = `e."cohortId" = $1 AND a."day" BETWEEN $2::date AND $3::date`
+    const params = [cohortId, range.from, range.to, tz]
+    const inRange = `s."localDay" BETWEEN $2::date AND $3::date`
     const [people, perLearner, perDay, perItem] = await Promise.all([
       this.prisma.enrollment.findMany({
         where: { cohortId },
@@ -254,54 +277,37 @@ export class ActivityService {
       this.prisma.$queryRawUnsafe<
         {
           userId: string
-          measured: unknown
-          estimated: unknown
+          total: unknown
           activeDays: unknown
           firstSeen: Date | null
           lastSeen: Date | null
         }[]
       >(
-        `SELECT a."userId" AS "userId",
-                COALESCE(SUM(a."seconds") FILTER (WHERE NOT a."estimated"), 0) AS measured,
-                COALESCE(SUM(a."seconds") FILTER (WHERE a."estimated"), 0) AS estimated,
-                COUNT(DISTINCT a."day") FILTER (WHERE a."seconds" > 0) AS "activeDays",
-                MIN(a."startedAt") AS "firstSeen",
-                MAX(a."lastSeenAt") AS "lastSeen"
-           FROM "ActivitySession" a JOIN "Enrollment" e ON e."id" = a."enrollmentId"
-          WHERE ${where}
-          GROUP BY a."userId"`,
+        `SELECT s."userId" AS "userId", COALESCE(SUM(s."seconds"), 0) AS total,
+                COUNT(DISTINCT s."localDay") AS "activeDays",
+                MIN(s."startedAt") AS "firstSeen", MAX(s."lastSeenAt") AS "lastSeen"
+           FROM ${this.sessions()}
+          WHERE ${inRange}
+          GROUP BY s."userId"`,
+        ...params
+      ),
+      this.prisma.$queryRawUnsafe<{ day: string; total: unknown; learners: unknown }[]>(
+        `SELECT to_char(s."localDay", 'YYYY-MM-DD') AS day, COALESCE(SUM(s."seconds"), 0) AS total,
+                COUNT(DISTINCT s."userId") AS learners
+           FROM ${this.sessions()}
+          WHERE ${inRange}
+          GROUP BY s."localDay"`,
         ...params
       ),
       this.prisma.$queryRawUnsafe<
-        { day: string; measured: unknown; estimated: unknown; learners: unknown }[]
+        { itemId: string | null; title: string | null; total: unknown; learners: unknown }[]
       >(
-        `SELECT to_char(a."day", 'YYYY-MM-DD') AS day,
-                COALESCE(SUM(a."seconds") FILTER (WHERE NOT a."estimated"), 0) AS measured,
-                COALESCE(SUM(a."seconds") FILTER (WHERE a."estimated"), 0) AS estimated,
-                COUNT(DISTINCT a."userId") FILTER (WHERE a."seconds" > 0) AS learners
-           FROM "ActivitySession" a JOIN "Enrollment" e ON e."id" = a."enrollmentId"
-          WHERE ${where}
-          GROUP BY a."day"`,
-        ...params
-      ),
-      this.prisma.$queryRawUnsafe<
-        {
-          itemId: string | null
-          title: string | null
-          measured: unknown
-          estimated: unknown
-          learners: unknown
-        }[]
-      >(
-        `SELECT a."itemId" AS "itemId", i."title" AS title,
-                COALESCE(SUM(a."seconds") FILTER (WHERE NOT a."estimated"), 0) AS measured,
-                COALESCE(SUM(a."seconds") FILTER (WHERE a."estimated"), 0) AS estimated,
-                COUNT(DISTINCT a."userId") FILTER (WHERE a."seconds" > 0) AS learners
-           FROM "ActivitySession" a JOIN "Enrollment" e ON e."id" = a."enrollmentId"
-           LEFT JOIN "CourseItem" i ON i."id" = a."itemId"
-          WHERE ${where}
-          GROUP BY a."itemId", i."title"
-          ORDER BY COALESCE(SUM(a."seconds"), 0) DESC, title ASC`,
+        `SELECT s."itemId" AS "itemId", i."title" AS title, COALESCE(SUM(s."seconds"), 0) AS total,
+                COUNT(DISTINCT s."userId") AS learners
+           FROM ${this.sessions()} LEFT JOIN "CourseItem" i ON i."id" = s."itemId"
+          WHERE ${inRange}
+          GROUP BY s."itemId", i."title"
+          ORDER BY COALESCE(SUM(s."seconds"), 0) DESC, title ASC`,
         ...params
       ),
     ])
@@ -312,13 +318,14 @@ export class ActivityService {
       .filter((p) => p.status !== 'withdrawn' || stats.has(p.userId))
       .map((p) => {
         const s = stats.get(p.userId)
+        const totalSeconds = num(s?.total)
+        const activeDays = num(s?.activeDays)
         return {
           userId: p.userId,
           name: p.user.displayName || p.user.email || p.userId,
-          totalSeconds: num(s?.measured) + num(s?.estimated),
-          measuredSeconds: num(s?.measured),
-          estimatedSeconds: num(s?.estimated),
-          activeDays: num(s?.activeDays),
+          totalSeconds,
+          activeDays,
+          averagePerActiveDaySeconds: activeDays > 0 ? Math.round(totalSeconds / activeDays) : 0,
           firstSeenAt: iso(s?.firstSeen),
           lastSeenAt: iso(s?.lastSeen),
         }
@@ -328,22 +335,28 @@ export class ActivityService {
     const byDay = new Map(perDay.map((d) => [d.day, d]))
     const days = eachDay(range.from, range.to).map((day) => ({
       day,
-      ...split(byDay.get(day)),
+      seconds: num(byDay.get(day)?.total),
       learners: num(byDay.get(day)?.learners),
     }))
+    const totalSeconds = learners.reduce((n, l) => n + l.totalSeconds, 0)
     return {
       cohortId,
       from: range.from,
       to: range.to,
-      totalSeconds: learners.reduce((n, l) => n + l.totalSeconds, 0),
-      measuredSeconds: learners.reduce((n, l) => n + l.measuredSeconds, 0),
-      estimatedSeconds: learners.reduce((n, l) => n + l.estimatedSeconds, 0),
+      tz,
+      totalSeconds,
+      averages: computeAverages(
+        totalSeconds,
+        learners,
+        days.length,
+        days.map((d) => d.learners)
+      ),
       days,
       learners,
       items: perItem.map((r) => ({
         itemId: r.itemId,
-        title: r.title ?? (r.itemId ? REMOVED_ITEM_TITLE : NO_ITEM_TITLE),
-        ...split(r),
+        title: itemTitle(r),
+        seconds: num(r.total),
         learners: num(r.learners),
       })),
     }
@@ -356,12 +369,14 @@ export class ActivityService {
     cohortId: string,
     learnerId: string,
     from: unknown,
-    to: unknown
+    to: unknown,
+    tz?: unknown
   ): Promise<LearnerActivityReport> {
     await this.access.assertCohortStaff(userId, role, cohortId)
-    const range = this.range(from, to)
+    const zone = this.zone(tz)
+    const range = this.range(from, to, zone)
     await this.access.assertLearnerOfCohort(learnerId, cohortId)
-    return this.buildLearnerReport(cohortId, learnerId, range)
+    return this.buildLearnerReport(cohortId, learnerId, range, zone)
   }
 
   /** The caller's own report. */
@@ -369,97 +384,102 @@ export class ActivityService {
     userId: string,
     cohortId: string,
     from: unknown,
-    to: unknown
+    to: unknown,
+    tz?: unknown
   ): Promise<LearnerActivityReport> {
     await this.access.assertLearnerOfCohort(userId, cohortId)
-    return this.buildLearnerReport(cohortId, userId, this.range(from, to))
+    const zone = this.zone(tz)
+    return this.buildLearnerReport(cohortId, userId, this.range(from, to, zone), zone)
   }
 
   private async buildLearnerReport(
     cohortId: string,
     learnerId: string,
-    range: DateRange
+    range: DateRange,
+    tz: string
   ): Promise<LearnerActivityReport> {
     const [user, rows] = await Promise.all([
       this.prisma.user.findUnique({
         where: { id: learnerId },
         select: { displayName: true, email: true },
       }),
+      // One learner over at most 366 days: their sessions are read one by one, oldest first.
       this.prisma.$queryRawUnsafe<
         {
           day: string
           itemId: string | null
           title: string | null
-          measured: unknown
-          estimated: unknown
-          firstSeen: Date
-          lastSeen: Date
+          startedAt: Date
+          lastSeenAt: Date
+          seconds: unknown
         }[]
       >(
-        `SELECT to_char(a."day", 'YYYY-MM-DD') AS day, a."itemId" AS "itemId", i."title" AS title,
-                COALESCE(SUM(a."seconds") FILTER (WHERE NOT a."estimated"), 0) AS measured,
-                COALESCE(SUM(a."seconds") FILTER (WHERE a."estimated"), 0) AS estimated,
-                MIN(a."startedAt") AS "firstSeen", MAX(a."lastSeenAt") AS "lastSeen"
-           FROM "ActivitySession" a JOIN "Enrollment" e ON e."id" = a."enrollmentId"
-           LEFT JOIN "CourseItem" i ON i."id" = a."itemId"
-          WHERE e."cohortId" = $1 AND e."userId" = $2 AND a."day" BETWEEN $3::date AND $4::date
-          GROUP BY a."day", a."itemId", i."title"
-          ORDER BY a."day" ASC, title ASC NULLS FIRST`,
+        `SELECT to_char(s."localDay", 'YYYY-MM-DD') AS day, s."itemId" AS "itemId", i."title" AS title,
+                s."startedAt" AS "startedAt", s."lastSeenAt" AS "lastSeenAt", s."seconds" AS seconds
+           FROM ${this.sessions(true)} LEFT JOIN "CourseItem" i ON i."id" = s."itemId"
+          WHERE s."localDay" BETWEEN $2::date AND $3::date
+          ORDER BY s."startedAt" ASC, s."lastSeenAt" ASC`,
         cohortId,
-        learnerId,
         range.from,
-        range.to
+        range.to,
+        tz,
+        learnerId
       ),
     ])
     const days = new Map<string, ActivityDay>()
     for (const r of rows) {
+      const seconds = num(r.seconds)
+      const startedAt = r.startedAt.toISOString()
+      const lastSeenAt = r.lastSeenAt.toISOString()
       const d = days.get(r.day) ?? {
         day: r.day,
         seconds: 0,
-        measuredSeconds: 0,
-        estimatedSeconds: 0,
-        firstSeenAt: r.firstSeen.toISOString(),
-        lastSeenAt: r.lastSeen.toISOString(),
-        items: [],
+        firstSeenAt: startedAt,
+        lastSeenAt,
+        sessionCount: 0,
+        sessions: [],
       }
-      const parts = split(r)
-      d.seconds += parts.seconds
-      d.measuredSeconds += parts.measuredSeconds
-      d.estimatedSeconds += parts.estimatedSeconds
-      if (r.firstSeen.toISOString() < d.firstSeenAt) d.firstSeenAt = r.firstSeen.toISOString()
-      if (r.lastSeen.toISOString() > d.lastSeenAt) d.lastSeenAt = r.lastSeen.toISOString()
-      d.items.push({
+      const session: ActivitySessionRow = {
+        startedAt,
+        seconds,
         itemId: r.itemId,
-        title: r.title ?? (r.itemId ? REMOVED_ITEM_TITLE : NO_ITEM_TITLE),
-        ...parts,
-      })
+        title: itemTitle(r),
+      }
+      d.seconds += seconds
+      d.sessionCount += 1
+      if (startedAt < d.firstSeenAt) d.firstSeenAt = startedAt
+      if (lastSeenAt > d.lastSeenAt) d.lastSeenAt = lastSeenAt
+      d.sessions.push(session)
       days.set(r.day, d)
     }
-    const list = [...days.values()]
+    const list = [...days.values()].sort((a, b) => a.day.localeCompare(b.day))
+    const totalSeconds = list.reduce((n, d) => n + d.seconds, 0)
     return {
       cohortId,
       userId: learnerId,
       name: user?.displayName || user?.email || learnerId,
       from: range.from,
       to: range.to,
-      totalSeconds: list.reduce((n, d) => n + d.seconds, 0),
-      measuredSeconds: list.reduce((n, d) => n + d.measuredSeconds, 0),
-      estimatedSeconds: list.reduce((n, d) => n + d.estimatedSeconds, 0),
-      activeDays: list.filter((d) => d.seconds > 0).length,
+      tz,
+      totalSeconds,
+      activeDays: list.length,
+      averagePerActiveDaySeconds: list.length > 0 ? Math.round(totalSeconds / list.length) : 0,
       days: list,
     }
   }
 
-  /** One row per learner per day per item, for grant reporting. Staff only. */
+  /** One row per session (a start and the minutes on one activity), for download. Staff only. */
   async cohortCsv(
     userId: string,
     role: string | undefined,
     cohortId: string,
     from: unknown,
-    to: unknown
+    to: unknown,
+    tz?: unknown
   ): Promise<string> {
     await this.access.assertCohortStaff(userId, role, cohortId)
-    const range = this.range(from, to)
+    const zone = this.zone(tz)
+    const range = this.range(from, to, zone)
     const rows = await this.prisma.$queryRawUnsafe<
       {
         name: string | null
@@ -467,27 +487,23 @@ export class ActivityService {
         day: string
         itemId: string | null
         title: string | null
-        kind: string
-        measured: unknown
-        estimated: unknown
+        startedAt: Date
+        seconds: unknown
       }[]
     >(
-      `SELECT u."displayName" AS name, u."email" AS email, to_char(a."day", 'YYYY-MM-DD') AS day,
-              a."itemId" AS "itemId", i."title" AS title, a."kind" AS kind,
-              COALESCE(SUM(a."seconds") FILTER (WHERE NOT a."estimated"), 0) AS measured,
-              COALESCE(SUM(a."seconds") FILTER (WHERE a."estimated"), 0) AS estimated
-         FROM "ActivitySession" a
-         JOIN "Enrollment" e ON e."id" = a."enrollmentId"
-         JOIN "User" u ON u."id" = a."userId"
-         LEFT JOIN "CourseItem" i ON i."id" = a."itemId"
-        WHERE e."cohortId" = $1 AND a."day" BETWEEN $2::date AND $3::date
-        GROUP BY u."id", u."displayName", u."email", a."day", a."itemId", i."title", a."kind", a."estimated"
-       HAVING SUM(a."seconds") > 0
-        ORDER BY COALESCE(u."displayName", u."email", u."id") ASC, a."day" ASC, title ASC NULLS FIRST
+      `SELECT u."displayName" AS name, u."email" AS email, to_char(s."localDay", 'YYYY-MM-DD') AS day,
+              s."itemId" AS "itemId", i."title" AS title, s."startedAt" AS "startedAt",
+              s."seconds" AS seconds
+         FROM ${this.sessions()}
+         JOIN "User" u ON u."id" = s."userId"
+         LEFT JOIN "CourseItem" i ON i."id" = s."itemId"
+        WHERE s."localDay" BETWEEN $2::date AND $3::date
+        ORDER BY COALESCE(u."displayName", u."email", u."id") ASC, s."startedAt" ASC
         LIMIT ${MAX_CSV_ROWS + 1}`,
       cohortId,
       range.from,
-      range.to
+      range.to,
+      zone
     )
     if (rows.length > MAX_CSV_ROWS)
       throw new PayloadTooLargeException(
@@ -496,11 +512,10 @@ export class ActivityService {
     const csv: CsvRow[] = rows.map((r) => ({
       name: r.name || r.email || '',
       email: r.email,
-      day: r.day,
-      item: r.title ?? (r.itemId ? REMOVED_ITEM_TITLE : NO_ITEM_TITLE),
-      kind: r.kind,
-      measuredSeconds: num(r.measured),
-      estimatedSeconds: num(r.estimated),
+      startedAt: r.startedAt,
+      dateLocal: r.day,
+      item: itemTitle(r),
+      seconds: num(r.seconds),
     }))
     return activityCsv(csv)
   }

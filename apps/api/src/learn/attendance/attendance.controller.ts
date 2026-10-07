@@ -84,6 +84,17 @@ export class AttendanceController {
     return this.service.csv(req.userId, req.userRole, cohortId)
   }
 
+  @Get('cohorts/:cohortId/sessions/:sessionId/attendance.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="session-attendance.csv"')
+  sessionCsv(
+    @Req() req: LearnRequest,
+    @Param('cohortId') cohortId: string,
+    @Param('sessionId') sessionId: string
+  ) {
+    return this.service.sessionCsv(req.userId, req.userRole, cohortId, sessionId)
+  }
+
   /** The signed-in learner's own attendance: their marks only, never the staff note. */
   @Get('me/cohorts/:cohortId/attendance')
   mine(@Req() req: LearnRequest, @Param('cohortId') cohortId: string) {

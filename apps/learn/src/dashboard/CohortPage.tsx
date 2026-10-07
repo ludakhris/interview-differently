@@ -233,7 +233,15 @@ function Cohort({
             {cohort.lengthWeeks ? ` (${cohort.lengthWeeks} weeks)` : ''}
           </p>
         </div>
-        <CohortStatusChip status={cohort.status} />
+        <div className="dash-cohort-actions">
+          <a
+            className="dash-btn-secondary dash-btn-link"
+            href={href(`/lms/activity/${encodeURIComponent(cohort.id)}`)}
+          >
+            Activity
+          </a>
+          <CohortStatusChip status={cohort.status} />
+        </div>
       </div>
 
       {message && (
@@ -259,13 +267,6 @@ function Cohort({
           </button>
         </div>
       </section>
-
-      {cohort.delivery !== 'online' && <AttendancePanel cohortId={cohort.id} />}
-
-      <p className="dash-sub">
-        <a href={href(`/lms/activity/${encodeURIComponent(cohort.id)}`)}>Activity</a>
-        {' · '}time learners spent in this cohort
-      </p>
 
       <section className="dash-section" aria-labelledby="h-roster">
         <div className="dash-head">
@@ -386,6 +387,8 @@ function Cohort({
           </div>
         )}
       </section>
+
+      {cohort.delivery !== 'online' && <AttendancePanel cohortId={cohort.id} />}
 
       <section className="dash-card" aria-labelledby="h-details">
         <h2 className="dash-card-title" id="h-details">

@@ -9,11 +9,14 @@ import { ProviderAccessService } from '../provider-access.service'
 import { LearnService } from '../learn.service'
 import {
   activityCsv,
+  computeAverages,
   csvCell,
   decideBeat,
   daysInclusive,
   eachDay,
+  localDay,
   parseRange,
+  parseTz,
   splitToolEstimate,
 } from './activity-rules'
 import { ActivityService } from './activity.service'
@@ -410,6 +413,16 @@ describe('range', () => {
     expect('error' in parseRange('2025-10-06', '2026-10-07', now)).toBe(true) // 367 days
     expect('error' in parseRange('2025-10-07', '2026-10-07', now)).toBe(false) // 366 days
   })
+  it('defaults to the last 30 days ending today in the viewer timezone', () => {
+    // 02:00 UTC on Oct 7 is still the evening of Oct 6 in New York.
+    const late = new Date('2026-10-07T02:00:00Z')
+    expect(parseRange(undefined, undefined, late, 'America/New_York')).toEqual({
+      range: { from: '2026-09-07', to: '2026-10-06' },
+    })
+    expect(parseRange(undefined, undefined, late)).toEqual({
+      range: { from: '2026-09-08', to: '2026-10-07' },
+    })
+  })
   it('lists every day', () => {
     expect(eachDay('2026-02-27', '2026-03-02')).toEqual([
       '2026-02-27',
@@ -418,6 +431,51 @@ describe('range', () => {
       '2026-03-02',
     ])
     expect(daysInclusive('2026-10-07', '2026-10-07')).toBe(1)
+  })
+})
+
+describe('tz', () => {
+  it('defaults to UTC and accepts real names', () => {
+    expect(parseTz(undefined)).toEqual({ tz: 'UTC' })
+    expect(parseTz('')).toEqual({ tz: 'UTC' })
+    expect(parseTz('America/New_York')).toEqual({ tz: 'America/New_York' })
+    expect(parseTz('UTC')).toEqual({ tz: 'UTC' })
+    expect(parseTz('Asia/Kolkata')).toEqual({ tz: 'Asia/Kolkata' })
+  })
+  it('rejects unknown names and odd text', () => {
+    for (const bad of ['Mars/Olympus', 'nope', "UTC'; DROP TABLE x", '+05:00', 5, 'A'.repeat(80)])
+      expect('error' in parseTz(bad)).toBe(true)
+  })
+  it('reads the local day of an instant', () => {
+    const t = new Date('2026-10-08T03:30:00Z')
+    expect(localDay(t, 'UTC')).toBe('2026-10-08')
+    expect(localDay(t, 'America/New_York')).toBe('2026-10-07')
+  })
+})
+
+describe('averages', () => {
+  const rows = [
+    { totalSeconds: 3600, activeDays: 2 },
+    { totalSeconds: 900, activeDays: 1 },
+    { totalSeconds: 0, activeDays: 0 },
+  ]
+  it('divides the total by learners, active learners and active days', () => {
+    expect(computeAverages(4500, rows, 4, [0, 1, 2, 0])).toEqual({
+      perLearnerSeconds: 1500,
+      perActiveLearnerSeconds: 2250,
+      perActiveDaySeconds: 1500,
+      activeLearners: 2,
+      learnersPerDay: 0.8,
+    })
+  })
+  it('never divides by zero', () => {
+    expect(computeAverages(0, [], 0, [])).toEqual({
+      perLearnerSeconds: 0,
+      perActiveLearnerSeconds: 0,
+      perActiveDaySeconds: 0,
+      activeLearners: 0,
+      learnersPerDay: 0,
+    })
   })
 })
 
@@ -434,32 +492,30 @@ describe('csv', () => {
     expect(csvCell(null)).toBe('')
     expect(csvCell(12)).toBe('12')
   })
-  it('writes a BOM, the header and one line per row; measured and estimated minutes apart', () => {
+  it('writes a BOM, the header and one line per session: UTC start, local date, minutes', () => {
     const out = activityCsv([
       {
         name: '=evil()',
         email: 'a@x.org',
-        day: '2026-10-07',
+        startedAt: new Date('2026-10-08T03:30:00Z'),
+        dateLocal: '2026-10-07',
         item: 'Intro, part 1',
-        kind: 'page',
-        measuredSeconds: 90,
-        estimatedSeconds: 0,
+        seconds: 90,
       },
       {
         name: 'Pat',
         email: null,
-        day: '2026-10-07',
+        startedAt: new Date('2026-10-07T10:00:00Z'),
+        dateLocal: '2026-10-07',
         item: 'Tool',
-        kind: 'tool',
-        measuredSeconds: 0,
-        estimatedSeconds: 600,
+        seconds: 600,
       },
     ])
     expect(out.startsWith('\uFEFF')).toBe(true)
     expect(out.slice(1).split('\r\n')).toEqual([
-      'learner,email,date,item,kind,measured_minutes,estimated_minutes',
-      '\'=evil(),a@x.org,2026-10-07,"Intro, part 1",page,1.5,',
-      'Pat,,2026-10-07,Tool,tool,,10.0',
+      'learner,email,start_utc,date_local,item,minutes',
+      '\'=evil(),a@x.org,2026-10-08T03:30:00.000Z,2026-10-07,"Intro, part 1",1.5',
+      'Pat,,2026-10-07T10:00:00.000Z,2026-10-07,Tool,10.0',
       '',
     ])
   })
@@ -477,9 +533,8 @@ describe('csv size limit', () => {
               day: '2026-10-07',
               itemId: null,
               title: null,
-              kind: 'page',
-              measured: 60,
-              estimated: 0,
+              startedAt: new Date('2026-10-07T10:00:00Z'),
+              seconds: 60,
             }))
           ),
         } as unknown as PrismaService,
@@ -492,7 +547,31 @@ describe('csv size limit', () => {
     await expect(mk(100_001).cohortCsv('s', 'r', 'C1', '2026-10-01', '2026-10-07')).rejects.toThrow(
       /shorter date range/
     )
-    expect(await mk(3).cohortCsv('s', 'r', 'C1', '2026-10-01', '2026-10-07')).toContain('A,,')
+    expect(await mk(3).cohortCsv('s', 'r', 'C1', '2026-10-01', '2026-10-07')).toContain(
+      'A,,2026-10-07T10:00:00.000Z,2026-10-07,"Course pages (outline, dashboard)",1.0'
+    )
+  })
+})
+
+describe('tz on the reports', () => {
+  const svc = new ActivityService(
+    { $queryRawUnsafe: jest.fn(async () => []) } as unknown as PrismaService,
+    access as unknown as ProviderAccessService,
+    {} as never
+  )
+  it('an unknown timezone is a 400 on every report and the CSV', async () => {
+    await expect(
+      svc.cohortReport('s', 'r', 'C1', undefined, undefined, 'Mars/Olympus')
+    ).rejects.toThrow(BadRequestException)
+    await expect(svc.cohortCsv('s', 'r', 'C1', undefined, undefined, 'nope')).rejects.toThrow(
+      BadRequestException
+    )
+    await expect(
+      svc.learnerReport('s', 'r', 'C1', 'u1', undefined, undefined, '+05:00')
+    ).rejects.toThrow(BadRequestException)
+    await expect(svc.ownReport('u1', 'C1', undefined, undefined, 'nope')).rejects.toThrow(
+      BadRequestException
+    )
   })
 })
 
