@@ -22,6 +22,10 @@ describe('ToolRegistryController', () => {
       tools: [],
       connections: [],
       canManage: true,
+      registration: {
+        configurationUrl: expect.stringMatching(/\/lti\/platform\/openid-configuration$/),
+        registrationUrl: expect.stringMatching(/\/lti\/platform\/registration$/),
+      },
     })
   })
 

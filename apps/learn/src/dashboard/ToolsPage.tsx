@@ -321,7 +321,11 @@ export function ToolsPage() {
           </button>
         </div>
       </header>
-      <ToolsInfoDialog open={infoOpen} onClose={() => setInfoOpen(false)} />
+      <ToolsInfoDialog
+        open={infoOpen}
+        registration={data?.registration}
+        onClose={() => setInfoOpen(false)}
+      />
 
       <div className="dash-visually-hidden" role="status" aria-live="polite">
         {live}

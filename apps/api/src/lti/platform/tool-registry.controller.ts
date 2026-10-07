@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common'
 import { LearnGuard } from '../../auth/learn.guard'
 import type { LearnToolList } from '../../learn/learn-types'
+import { openIdConfigurationUrl, registrationEndpoint } from './dynamic-registration'
 import { connectionView, toolView } from './tool-config'
 import { RegistrationService } from './registration.service'
 import { ToolRegistryService, type Registry } from './tool-registry.service'
@@ -26,6 +27,10 @@ const view = (r: Registry): LearnToolList => ({
   tools: r.tools.map((t) => toolView(t, true)),
   connections: r.connections.map((c) => connectionView(c, r.tools)),
   canManage: true,
+  registration: {
+    configurationUrl: openIdConfigurationUrl(),
+    registrationUrl: registrationEndpoint(),
+  },
 })
 
 /**

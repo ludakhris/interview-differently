@@ -461,6 +461,8 @@ export interface LearnToolList {
   connections: LearnConnection[]
   /** Whether the caller may add, change or remove tools. */
   canManage: boolean
+  /** The addresses a registering tool uses, as this platform serves them (for the how-it-works text). */
+  registration?: { configurationUrl: string; registrationUrl: string }
 }
 
 // ── Public catalog (#49) ────────────────────────────────────────────────────
