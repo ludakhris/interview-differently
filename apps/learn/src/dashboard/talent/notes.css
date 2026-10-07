@@ -1,0 +1,161 @@
+/* Staff notes and support items (#69 B). Own styles only. Uses the dashboard colour tokens. */
+.nt-section {
+  margin: 0 0 32px;
+}
+.nt-reminder {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border-left: 4px solid var(--navy);
+  background: var(--sky);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.nt-form {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 8px;
+}
+.nt-row,
+.nt-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+.nt-filters {
+  margin: 0 0 12px;
+}
+.nt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.nt-status {
+  min-height: 1.5em;
+  margin: 4px 0 8px;
+  font-size: 14px;
+}
+.nt-list,
+.nt-items {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nt-note,
+.nt-item {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+.nt-meta {
+  margin: 0 0 6px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.nt-body {
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.nt-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-left: 4px solid var(--orange-text);
+  background: var(--sky);
+}
+.nt-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px 12px;
+  align-items: start;
+}
+.nt-item-done .nt-item-title {
+  color: var(--ink-soft);
+}
+.nt-check {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+}
+.nt-item-title {
+  margin: 0 0 4px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.nt-item-side {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+}
+.nt-item-side select {
+  padding: 6px 8px;
+  border: 1px solid var(--ink-soft);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.nt-chip {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border: 1px solid var(--ink-soft);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.nt-chip-open {
+  border-color: var(--navy);
+  color: var(--navy);
+}
+.nt-chip-in_progress {
+  border-color: var(--orange-text);
+  color: var(--orange-text);
+}
+.nt-chip-resolved {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: var(--on-dark);
+}
+.nt-due-overdue {
+  color: var(--orange-text);
+  font-weight: 700;
+}
+.nt-due-today,
+.nt-due-soon {
+  color: var(--ink);
+  font-weight: 700;
+}
+.nt-empty {
+  margin: 0;
+}
+.nt-error {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.nt-item :focus-visible,
+.nt-note :focus-visible {
+  outline: 3px solid var(--navy);
+  outline-offset: 2px;
+}
+@media (max-width: 560px) {
+  .nt-item {
+    grid-template-columns: auto 1fr;
+  }
+  .nt-item-side {
+    grid-column: 1 / -1;
+    grid-auto-flow: column;
+    justify-content: space-between;
+    justify-items: start;
+  }
+}

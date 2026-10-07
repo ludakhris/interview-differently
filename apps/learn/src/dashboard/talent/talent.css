@@ -1,4 +1,150 @@
 /* Talent profile, staff notes and support items (#69 B and C). Own styles only. */
-.tl-placeholder {
+
+.tl-lede {
+  max-width: 44em;
+  margin: 0 0 20px;
+  color: var(--ink-soft);
+}
+.tl-card {
+  margin-bottom: 24px;
+}
+.tl-form {
+  max-width: 44em;
+}
+.tl-group {
+  display: grid;
+  gap: 14px;
   margin: 0;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--dash-radius, 0);
+}
+.tl-group > legend {
+  padding: 0 6px;
+  color: var(--navy);
+  font-weight: 700;
+}
+.tl-note {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.tl-consent {
+  align-items: start;
+}
+.tl-resume .tl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.tl-resume-file {
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+}
+/* Visually hidden but focusable: the label around it is the visible control. */
+.tl-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+.tl-resume label:focus-within {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+.tl-next {
+  margin: 16px 0 0;
+}
+.tl-search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+.tl-search-box {
+  flex: 1 1 16em;
+  max-width: 28em;
+}
+.tl-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11em, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.tl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.tl-chips .dash-chip-btn {
+  padding: 6px 12px;
+  background: transparent;
+}
+.tl-chips .dash-chip-on {
+  background: var(--navy);
+}
+.tl-export {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+.tl-pay {
+  max-width: 28em;
+}
+.tl-email {
+  font-size: 13px;
+  font-weight: 400;
+}
+.tl-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.tl-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.tl-row {
+  display: grid;
+  grid-template-columns: minmax(9em, 14em) 1fr;
+  gap: 12px;
+}
+.tl-row dt {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.tl-row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.tl-pay-box {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px dashed var(--ink-soft);
+  border-radius: var(--dash-radius, 0);
+}
+.tl-pay-h {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+@media (max-width: 600px) {
+  .tl-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .tl-group {
+    padding: 12px;
+  }
 }
