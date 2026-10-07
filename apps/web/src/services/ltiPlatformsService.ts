@@ -4,7 +4,7 @@ import { authHeader } from './authToken'
  * Admin client for the LTI platforms that can send learners into Interview Differently.
  * `/api/lti/platforms*` sits behind the ID admin guard.
  */
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 export interface LtiPlatform {
   id: string
@@ -66,8 +66,23 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as T
 }
 
+/** The addresses a platform needs from Interview Differently; absent from an older API. */
+export interface ToolEndpointsResponse {
+  registrationUrl: string
+  loginUrl: string
+  launchUrl: string
+  jwksUrl: string
+}
+
 export async function listPlatforms(): Promise<LtiPlatform[]> {
-  return (await call<{ platforms: LtiPlatform[] }>('')).platforms
+  return (await listPlatformsWithEndpoints()).platforms
+}
+
+export function listPlatformsWithEndpoints(): Promise<{
+  platforms: LtiPlatform[]
+  endpoints?: Partial<ToolEndpointsResponse>
+}> {
+  return call('')
 }
 
 export function setPlatformEnabled(id: string, enabled: boolean): Promise<LtiPlatform> {

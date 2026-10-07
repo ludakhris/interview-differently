@@ -13,12 +13,13 @@ import {
 } from '@/lib/ltiPlatforms'
 import {
   listPlatformHistory,
-  listPlatforms,
+  listPlatformsWithEndpoints,
   PlatformsApiError,
   rejectPlatform,
   setPlatformEnabled,
   type LtiPlatform,
   type PlatformChange,
+  type ToolEndpointsResponse,
 } from '@/services/ltiPlatformsService'
 
 const CHIP: Record<StatusTone, string> = {
@@ -32,7 +33,15 @@ const FORBIDDEN = 'Only full administrators can manage platforms.'
 const message = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback)
 
 /** The platform list: what an admin approves or switches off. Rendered by AdminLtiPlatformsPage. */
-export function LtiPlatformsPanel() {
+export function LtiPlatformsPanel({
+  onHowItWorks,
+  onEndpoints,
+}: {
+  /** Opens the "How this works" dialog; shown as a link in the empty state. */
+  onHowItWorks?: () => void
+  /** Called with the addresses the API sent, if it sent any. */
+  onEndpoints?: (e: Partial<ToolEndpointsResponse>) => void
+} = {}) {
   const [platforms, setPlatforms] = useState<LtiPlatform[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -42,7 +51,9 @@ export function LtiPlatformsPanel() {
     setLoading(true)
     setError(null)
     try {
-      setPlatforms(await listPlatforms())
+      const res = await listPlatformsWithEndpoints()
+      setPlatforms(res.platforms)
+      if (res.endpoints) onEndpoints?.(res.endpoints)
     } catch (e) {
       setError(
         e instanceof PlatformsApiError && e.status === 403
@@ -52,6 +63,7 @@ export function LtiPlatformsPanel() {
     } finally {
       setLoading(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -96,6 +108,15 @@ export function LtiPlatformsPanel() {
             No platforms yet. When a learning system registers itself it will appear here, switched
             off, waiting for you.
           </p>
+          {onHowItWorks && (
+            <button
+              type="button"
+              onClick={onHowItWorks}
+              className="mt-3 text-[13px] font-semibold text-green-light hover:text-green underline underline-offset-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-light rounded"
+            >
+              How does this work?
+            </button>
+          )}
         </div>
       ) : (
         <ul className="space-y-4">

@@ -186,6 +186,9 @@ admin does not copy client ids and URLs by hand. Many platforms can do this; eac
 `LTI_TOOL_CLIENT_ID`, `LTI_DEPLOYMENT_ID`) stays as a built-in fallback, used only while the table has no row for its
 issuer and client id.
 
+`GET /api/lti/platforms` (full admins) also returns `endpoints: { registrationUrl, loginUrl, launchUrl, jwksUrl }`, the real
+public addresses this tool serves, built from the same config as the launch itself (`LTI_API_BASE`, `LTI_TOOL_LAUNCH_URL`).
+
 **Flow**
 
 1. The platform's admin opens `GET /api/lti/tool/register?openid_configuration=<url>&registration_token=<token>` (the

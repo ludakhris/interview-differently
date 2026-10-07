@@ -227,6 +227,12 @@ describe('Interview Differently registers itself with a platform (end to end)', 
 
     // the administrator sees it, waiting for approval
     const list = await (await fetch(`${base}/lti/platforms`, { headers: idAdmin })).json()
+    expect(Object.keys(list.endpoints).sort()).toEqual([
+      'jwksUrl',
+      'launchUrl',
+      'loginUrl',
+      'registrationUrl',
+    ])
     const row = list.platforms.find((p: Row) => p.id === stored.id)
     expect(row).toMatchObject({
       name: `learndifferently (${new URL(origin).host})`,

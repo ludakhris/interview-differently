@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common'
 import { AdminGuard } from '../../auth/admin.guard'
 import { ClerkService } from '../../auth/clerk.service'
+import { jwksUrl, launchUrl, loginUrl, registrationUrl } from './lti-tool.config'
 import { PlatformRegistryService } from './platform-registry.service'
 
 interface AdminRequest {
@@ -33,7 +34,16 @@ export class PlatformsController {
 
   @Get()
   async list() {
-    return { platforms: await this.platforms.list() }
+    return {
+      platforms: await this.platforms.list(),
+      // the real public addresses a platform administrator pastes into their platform
+      endpoints: {
+        registrationUrl: registrationUrl(),
+        loginUrl: loginUrl(),
+        launchUrl: launchUrl(),
+        jwksUrl: jwksUrl(),
+      },
+    }
   }
 
   // before `:id`, so "history" is never read as a platform id

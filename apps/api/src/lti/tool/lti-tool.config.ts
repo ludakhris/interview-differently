@@ -31,3 +31,5 @@ export const learnUrl = (): string =>
 export const loginUrl = (): string => `${base()}/lti/tool/login`
 /** The tool's public key set. */
 export const jwksUrl = (): string => `${base()}/lti/tool/jwks`
+/** Where a platform administrator is sent to register this tool (Dynamic Registration). */
+export const registrationUrl = (): string => `${base()}/lti/tool/register`
