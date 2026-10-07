@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { CohortDeliveryChip } from './CohortsPage'
+import { CohortAttendanceChip, CohortDeliveryChip } from './CohortsPage'
 
 afterEach(cleanup)
 
@@ -15,5 +15,14 @@ describe('CohortDeliveryChip', () => {
     const chip = screen.getByText(label)
     expect(chip.className).toContain('dash-chip-delivery-' + delivery)
     expect(chip.getAttribute('title')).toMatch(hint)
+  })
+
+  it('marks live and hybrid cohorts as attendance tracked, and not online ones', () => {
+    const { container, rerender } = render(<CohortAttendanceChip delivery="online" />)
+    expect(container.textContent).toBe('')
+    rerender(<CohortAttendanceChip delivery="live" />)
+    expect(screen.getByText(/Attendance tracking/)).toBeTruthy()
+    rerender(<CohortAttendanceChip delivery="hybrid" />)
+    expect(screen.getByText(/Attendance tracking/)).toBeTruthy()
   })
 })

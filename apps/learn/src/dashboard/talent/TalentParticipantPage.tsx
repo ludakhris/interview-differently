@@ -62,6 +62,24 @@ export function TalentParticipantPage({
         {h.email ?? 'No email on file'}
         {h.cohorts.length > 0 && ` · ${h.cohorts.map((c) => c.cohortName).join(', ')}`}
       </p>
+      {h.cohorts.length > 0 && (
+        <p className="tl-records">
+          Learner record:{' '}
+          {h.cohorts.map((c, i) => (
+            <span key={c.cohortId}>
+              {i > 0 && ' · '}
+              <a
+                href={href(
+                  `/lms/cohorts/${encodeURIComponent(c.cohortId)}/learners/${encodeURIComponent(userId)}`
+                )}
+              >
+                {c.cohortName} →
+              </a>
+            </span>
+          ))}
+          <span className="dash-muted"> (attendance, activity and notes in that cohort)</span>
+        </p>
+      )}
 
       <section className="dash-card tl-card" aria-labelledby="tl-profile-h">
         <h2 id="tl-profile-h" className="dash-card-title">

@@ -17,6 +17,7 @@ export function CohortStatusChip({ status }: { status: keyof typeof STATUS_LABEL
 }
 
 const DELIVERY_LABEL = { online: 'Online', live: 'Live', hybrid: 'Hybrid' } as const
+const DELIVERY_EMOJI = { online: '💻', live: '🏫', hybrid: '🔀' } as const
 
 /** How the cohort meets, as a chip: shown on the cohorts list and the cohort page. */
 export function CohortDeliveryChip({ delivery }: { delivery: keyof typeof DELIVERY_LABEL }) {
@@ -31,7 +32,20 @@ export function CohortDeliveryChip({ delivery }: { delivery: keyof typeof DELIVE
             : 'Hybrid: online work plus live meetings'
       }
     >
-      {DELIVERY_LABEL[delivery]}
+      <span aria-hidden="true">{DELIVERY_EMOJI[delivery]}</span> {DELIVERY_LABEL[delivery]}
+    </span>
+  )
+}
+
+/** Live and hybrid cohorts take attendance; online ones do not, so no chip. */
+export function CohortAttendanceChip({ delivery }: { delivery: keyof typeof DELIVERY_LABEL }) {
+  if (delivery === 'online') return null
+  return (
+    <span
+      className="dash-chip dash-chip-delivery dash-chip-attendance"
+      title="Attendance is tracked for this cohort: sessions, who came, and notes"
+    >
+      <span aria-hidden="true">📋</span> Attendance tracking
     </span>
   )
 }
@@ -234,6 +248,7 @@ export function CohortsPage({ workspace }: { workspace: string }) {
               <div className="dash-course-side">
                 <CohortStatusChip status={c.status} />
                 <CohortDeliveryChip delivery={c.delivery} />
+                <CohortAttendanceChip delivery={c.delivery} />
               </div>
             </li>
           ))}

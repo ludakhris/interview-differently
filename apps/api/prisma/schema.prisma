@@ -193,6 +193,9 @@ model Institution {
   subdomain   String?      @unique            // {subdomain}.learndifferently.tech
   brand       Json?                            // { primary, accent, logoUrl, ... }
   parentId    String?
+  // Demo institutions seeded with full sample data (attendance, talent, activity, notes); shown
+  // with a star in the workspace chooser so they stand out among many.
+  featuredDemo Boolean     @default(false)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   parent      Institution?  @relation("InstitutionParent", fields: [parentId], references: [id], onDelete: SetNull)

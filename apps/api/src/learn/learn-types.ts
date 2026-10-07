@@ -96,6 +96,8 @@ export interface LearnWorkspace {
   kind: string
   subdomain: string
   parentId: string | null
+  /** Marked as a demo with full sample data (attendance, talent, activity, notes), to find it among many. */
+  featuredDemo: boolean
 }
 
 /** A workspace as shown on the chooser: who it reports to, and what is in it. */

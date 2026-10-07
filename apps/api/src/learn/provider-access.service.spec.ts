@@ -75,7 +75,7 @@ const prisma = {
 const learn = new LearnService(prisma)
 // What each person may open, as LearnService.workspaces decides it (tested in learn.service.spec.ts).
 jest.spyOn(learn, 'workspaces').mockImplementation(async (userId, role) => {
-  const all = institutions.map((i) => ({ ...i, name: i.id }))
+  const all = institutions.map((i) => ({ ...i, name: i.id, featuredDemo: false }))
   if (role === 'agency-admin' || role === 'system-admin') return all
   const mine = memberships.filter((m) => m.userId === userId && m.cohortId === null)
   return all.filter((i) => mine.some((m) => m.institutionId === i.id))

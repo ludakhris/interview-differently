@@ -380,6 +380,9 @@ const COHORT_PLAN = [
   { label: 'C', startOffsetWeeks: 5, trend: 4 },
 ]
 
+/** Providers seeded with full sample data (attendance, talent, activity, notes): starred in the chooser. */
+const FEATURED_DEMOS = ['cedar-mill', 'lantern-hill']
+
 const AGENCY_ID = 'demo-inst-delaware-dol'
 const CHESAPEAKE_ID = 'demo-inst-chesapeake-workforce'
 const MEMBER_ID = 'demo-inst-wilmington-workforce'
@@ -510,6 +513,7 @@ async function load(prisma: PrismaClient) {
         kind: 'provider',
         parentId: p.agency === 'chesapeake' ? CHESAPEAKE_ID : AGENCY_ID,
         subdomain: p.subdomain,
+        featuredDemo: FEATURED_DEMOS.includes(p.key),
       },
     })
 

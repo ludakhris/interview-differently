@@ -46,6 +46,7 @@ export function WorkspaceSwitcher() {
           {!tenant && <option value="">Choose…</option>}
           {data.map((w) => (
             <option key={w.id} value={w.subdomain}>
+              {w.featuredDemo ? '⭐ ' : ''}
               {w.name}
               {w.kind === 'agency' ? '' : ` (${KIND_LABEL[w.kind] ?? w.kind})`}
             </option>

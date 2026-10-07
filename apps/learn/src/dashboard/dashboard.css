@@ -677,6 +677,15 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+.dash-ws-featured {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #fff4d6;
+  color: #7a5200;
+  letter-spacing: 0.04em;
+  cursor: help;
+}
 .dash-ws-name {
   margin-top: 2px;
   font-weight: 700;

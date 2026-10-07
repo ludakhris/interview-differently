@@ -18,6 +18,7 @@ const delaware = {
   kind: 'agency',
   subdomain: 'delaware',
   parentId: null,
+  featuredDemo: false,
 }
 
 describe('LearnService workspaces', () => {
@@ -30,6 +31,7 @@ describe('LearnService workspaces', () => {
       subdomain: { not: null },
       OR: [{ kind: 'agency' }, { parent: { kind: 'agency' } }],
     })
+    expect(findMany.mock.calls[0][0].select.featuredDemo).toBe(true)
   })
 
   it('gives a system admin everything an agency admin has, and passes any role check', async () => {
@@ -68,6 +70,7 @@ describe('LearnService workspaceSummaries', () => {
     kind: 'provider',
     subdomain: 'lanternhill',
     parentId: 'a1',
+    featuredDemo: true,
   }
   const org = {
     id: 'o1',
@@ -75,6 +78,7 @@ describe('LearnService workspaceSummaries', () => {
     kind: 'organization',
     subdomain: 'wilmington',
     parentId: 'a1',
+    featuredDemo: false,
   }
   const cohort = (institutionId: string, providerId: string | null, learners: number) => ({
     institutionId,

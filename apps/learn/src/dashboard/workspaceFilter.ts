@@ -1,18 +1,29 @@
 import type { LearnWorkspace } from '@id/types'
 
-export type KindFilter = 'all' | 'agency' | 'provider' | 'organization'
+export type KindFilter = 'all' | 'featured' | 'agency' | 'provider' | 'organization'
 
 /** The name a person knows a workspace type by; colleges count as organizations. */
-export const kindOf = (kind: string): Exclude<KindFilter, 'all'> =>
+export const kindOf = (kind: string): Exclude<KindFilter, 'all' | 'featured'> =>
   kind === 'agency' ? 'agency' : kind === 'provider' ? 'provider' : 'organization'
 
-type Searchable = LearnWorkspace & { parentName?: string | null }
+type Searchable = Omit<LearnWorkspace, 'featuredDemo'> & {
+  parentName?: string | null
+  featuredDemo?: boolean
+}
 
 /** Whether the words typed all appear in a workspace's name, address, type or agency. */
 export function textMatch(w: Searchable, query: string): boolean {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
   if (words.length === 0) return true
-  const hay = [w.name, w.subdomain, kindOf(w.kind), w.parentName ?? ''].join(' ').toLowerCase()
+  const hay = [
+    w.name,
+    w.subdomain,
+    kindOf(w.kind),
+    w.parentName ?? '',
+    w.featuredDemo ? 'full demo' : '',
+  ]
+    .join(' ')
+    .toLowerCase()
   return words.every((word) => hay.includes(word))
 }
 
@@ -27,7 +38,8 @@ export function filterWorkspaces<T extends Searchable>(
   query: string,
   kind: KindFilter
 ): { trees: { agency: T; kids: T[] }[]; standalone: T[]; shown: number } {
-  const kindOk = (w: T) => kind === 'all' || kindOf(w.kind) === kind
+  const kindOk = (w: T) =>
+    kind === 'all' || (kind === 'featured' ? !!w.featuredDemo : kindOf(w.kind) === kind)
   const agencies = list.filter((w) => w.kind === 'agency')
   const agencyIds = new Set(agencies.map((a) => a.id))
   const trees = agencies

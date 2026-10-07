@@ -499,6 +499,73 @@
 
       <article
         class="entry"
+        id="support-followups"
+        data-status="review"
+        data-short="Support follow-ups"
+        data-summary="Track what helps a person succeed (a bus pass, childcare) as cards with status, due date and assignee."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Support follow-ups: track what helps a person succeed</h2>
+        <p>
+          Staff often learn that someone needs help with something outside the course: a bus pass
+          for evening sessions, childcare during a workshop, a loaner laptop. A support follow-up is
+          a small, trackable to-do for exactly that, kept with the person so the next instructor
+          sees it too.
+        </p>
+        <p>
+          Each follow-up is a card with a bold title, chips for the kind of help, the due date (an
+          amber "Due soon" and a red "Overdue by N days") and who it is assigned to, a short details
+          note, and who added it and when. One Status control (Open, In progress, Resolved,
+          Cancelled) saves immediately. "Add follow-up" and Edit open a dialog, so the title, date
+          and assignee can be changed later. Resolved items fold into a collapsed group so the open
+          ones stay on top.
+        </p>
+        <p>
+          Follow-ups show in three places: on the Talent participant page, on each learner's record
+          inside a cohort (with an open count in the page's navigation), and in the provider-wide
+          Support queue, which lists every open item across the provider with filters for status,
+          assignee and due date.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              Follow-ups are private to provider staff and marked with a lock. Learners never see
+              them, and every read or change is recorded in the access log.
+            </li>
+            <li>Nobody can read follow-ups or notes about themselves.</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/talent-management/09-support-follow-ups.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/talent-management/09-support-follow-ups.jpg"
+                alt="A support follow-up card with a status control and edit and delete buttons"
+            /></a>
+            <figcaption>A follow-up card on a learner's record.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/talent-management/07-support-queue.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/talent-management/07-support-queue.jpg"
+                alt="Provider-wide support queue with filters"
+            /></a>
+            <figcaption>The provider-wide Support queue.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/pull/70">PR #70</a
+          ><a href="https://github.com/ludakhris/interview-differently/issues/69">Issue #69</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
         id="learner-record"
         data-status="review"
         data-short="Learner record"
@@ -698,15 +765,6 @@
           items by status, assignee and due date. Staff can export shared profiles to a spreadsheet,
           with or without pay.
         </p>
-        <p>
-          <strong>Support follow-ups</strong> are the things staff track to help a person succeed,
-          such as a bus pass or childcare. Each follow-up is a card with a bold title, chips for the
-          kind of help, the due date (amber "Due soon", red "Overdue by N days") and who it is
-          assigned to, and one Status control (Open, In progress, Resolved, Cancelled) that saves
-          immediately. "Add follow-up" and Edit open a dialog, so the title, date and assignee can
-          be changed later. Resolved items fold into a collapsed group. Follow-ups appear on the
-          Talent participant page, on each learner's record, and in the provider-wide Support queue.
-        </p>
         <div class="know">
           <strong>Good to know</strong>
           <ul>
@@ -725,15 +783,6 @@
           </ul>
         </div>
         <div class="shots">
-          <figure>
-            <a href="../screenshots/talent-management/09-support-follow-ups.jpg"
-              ><img
-                loading="lazy"
-                src="../screenshots/talent-management/09-support-follow-ups.jpg"
-                alt="Notes with a staff-only lock notice and a support follow-up card with a status control and edit and delete buttons"
-            /></a>
-            <figcaption>A support follow-up card on a learner's record.</figcaption>
-          </figure>
           <figure>
             <a href="../screenshots/talent-management/01-talent-list.jpg"
               ><img
@@ -780,14 +829,16 @@
         </div>
         <h2>Attendance for live and hybrid cohorts</h2>
         <p>
-          Cohorts now say how they meet: online, live, or hybrid. For live and hybrid cohorts, the
-          cohort page has an Attendance section above the roster. A status strip shows sessions
-          held, the overall rate, the last session, and how many learners are below 75%. Each
-          session is a row with its own buttons: Record attendance (or Edit), View, Download CSV,
-          Edit session and Delete. Recording opens a roomy popup where "Mark everyone present" fills
-          the sheet and you flip only the exceptions with four clear Present, Absent, Late and
-          Excused buttons or the P, A, L and E keys. Every learner row has a visible note field, so
-          notes are entered with the attendance itself.
+          Cohorts now say how they meet: online, live, or hybrid, and show it as a chip (💻 Online,
+          🏫 Live, 🔀 Hybrid) on the cohorts list and the cohort page. Live and hybrid cohorts also
+          carry a 📋 Attendance tracking chip. For live and hybrid cohorts, the cohort page has an
+          Attendance section above the roster. A status strip shows sessions held, the overall rate,
+          the last session, and how many learners are below 75%. Each session is a row with its own
+          buttons: Record attendance (or Edit), View, Download CSV, Edit session and Delete.
+          Recording opens a roomy popup where "Mark everyone present" fills the sheet and you flip
+          only the exceptions with four clear Present, Absent, Late and Excused buttons or the P, A,
+          L and E keys. Every learner row has a visible note field, so notes are entered with the
+          attendance itself.
         </p>
         <p>
           "Attendance by learner" is a button that opens a grid styled like the roster, with a
