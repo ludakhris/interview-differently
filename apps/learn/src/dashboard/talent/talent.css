@@ -576,3 +576,22 @@
   margin: 4px 0 16px;
   font-size: 15px;
 }
+
+.tl-anchor {
+  scroll-margin-top: 56px;
+}
+.tl-ind {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.tl-ind-link {
+  color: inherit;
+  text-decoration: none;
+}
+.tl-ind-link:hover,
+.tl-ind-link:focus-visible {
+  text-decoration: underline;
+}

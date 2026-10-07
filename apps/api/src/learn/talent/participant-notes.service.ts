@@ -127,6 +127,52 @@ export class ParticipantNotesService {
     private readonly audit: DataAccessLogService
   ) {}
 
+  /**
+   * How many notes and open follow-ups exist for each person: counts only, never content, so no
+   * audit row (same as the Talent list). Null unless the caller is staff of the cohort's provider;
+   * a person never gets a count about themselves. One grouped query per kind for the whole roster.
+   */
+  async rosterNoteSummaries(
+    actorId: string,
+    role: string | undefined,
+    providerId: string,
+    cohortId: string,
+    userIds: string[]
+  ): Promise<Map<string, { notes: number; openFollowUps: number }> | null> {
+    try {
+      await this.access.assertProviderStaff(actorId, role, providerId)
+    } catch (e) {
+      if (e instanceof ForbiddenException) return null
+      throw e
+    }
+    const ids = userIds.filter((id) => id !== actorId)
+    const out = new Map<string, { notes: number; openFollowUps: number }>()
+    if (ids.length === 0) return out
+    const [notes, marks, open] = await Promise.all([
+      this.prisma.participantNote.groupBy({
+        by: ['userId'],
+        where: { providerId, userId: { in: ids } },
+        _count: { _all: true },
+      }),
+      this.prisma.attendanceMark.groupBy({
+        by: ['userId'],
+        where: { userId: { in: ids }, session: { cohortId }, note: { not: null } },
+        _count: { _all: true },
+      }),
+      this.prisma.supportItem.groupBy({
+        by: ['userId'],
+        where: { providerId, userId: { in: ids }, status: { in: ['open', 'in_progress'] } },
+        _count: { _all: true },
+      }),
+    ])
+    const n = new Map<string, number>()
+    for (const r of notes) n.set(r.userId, r._count._all)
+    for (const r of marks) n.set(r.userId, (n.get(r.userId) ?? 0) + r._count._all)
+    const o = new Map(open.map((r) => [r.userId, r._count._all]))
+    for (const id of ids) out.set(id, { notes: n.get(id) ?? 0, openFollowUps: o.get(id) ?? 0 })
+    return out
+  }
+
   private async guard(actor: Actor, providerId: string, participantId: string) {
     await this.access.assertProviderStaff(actor.userId, actor.role, providerId)
     // A provider admin who is also a participant must not read staff-only records about themselves.

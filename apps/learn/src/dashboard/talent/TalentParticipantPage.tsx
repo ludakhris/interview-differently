@@ -3,8 +3,9 @@ import { useState } from 'react'
 import { useApiFetch, useLoad } from '../api'
 import { useApp } from '../app-context'
 import { errorNotice } from '../shared'
-import { openLinkInNewTab } from './openTab'
+import { useScrollToHash } from './NoteIndicators'
 import { NotesSection } from './NotesSection'
+import { openLinkInNewTab } from './openTab'
 import { StaffProfileView } from './StaffProfileView'
 import { SupportSection } from './SupportSection'
 import './talent.css'
@@ -49,6 +50,7 @@ export function TalentParticipantPage({
     }
   }
 
+  useScrollToHash(!!header.data)
   if (header.error) return errorNotice(header.error)
   if (header.loading || !header.data) return <p className="dash-loading">Loading…</p>
   const h = header.data
@@ -101,8 +103,12 @@ export function TalentParticipantPage({
         )}
       </section>
 
-      <NotesSection providerId={providerId} userId={userId} cohorts={h.cohorts} />
-      <SupportSection providerId={providerId} userId={userId} />
+      <div id="notes" className="tl-anchor">
+        <NotesSection providerId={providerId} userId={userId} cohorts={h.cohorts} />
+      </div>
+      <div id="follow-ups" className="tl-anchor">
+        <SupportSection providerId={providerId} userId={userId} />
+      </div>
     </>
   )
 }

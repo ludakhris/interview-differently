@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { downloadFile, useApiFetch, useLoad } from '../api'
 import { useApp } from '../app-context'
 import { errorNotice } from '../shared'
+import { NoteIndicators } from './NoteIndicators'
 import { EDUCATION_OPTIONS } from './profileForm'
 import './talent.css'
 
@@ -69,6 +70,7 @@ export function ParticipantTable({ rows }: { rows: TalentParticipantRow[] }) {
             </th>
             <th scope="col">Profile</th>
             <th scope="col">Status</th>
+            <th scope="col">Notes</th>
           </tr>
         </thead>
         <tbody>
@@ -87,6 +89,20 @@ export function ParticipantTable({ rows }: { rows: TalentParticipantRow[] }) {
                 {r.profile?.allowEmployers && <span className="tl-tag">OK to share</span>}
               </td>
               <td>{status(r)}</td>
+              <td>
+                {r.noteCount > 0 || r.openSupportItems > 0 ? (
+                  <NoteIndicators
+                    notes={r.noteCount}
+                    openFollowUps={r.openSupportItems}
+                    notesHref={href(`/lms/talent/${r.userId}`) + '#notes'}
+                    followUpsHref={href(`/lms/talent/${r.userId}`) + '#follow-ups'}
+                  />
+                ) : (
+                  <span className="dash-muted" aria-label="No notes or follow-ups">
+                    —
+                  </span>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

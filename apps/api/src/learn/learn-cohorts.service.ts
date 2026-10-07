@@ -27,6 +27,7 @@ import {
 } from './cohort-config'
 import { LearnerService } from './learner.service'
 import { LEARN_ROLES, LearnService } from './learn.service'
+import { ParticipantNotesService } from './talent/participant-notes.service'
 
 const MANAGERS = [LEARN_ROLES.agencyAdmin, LEARN_ROLES.providerAdmin]
 
@@ -36,7 +37,8 @@ export class LearnCohortsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly learn: LearnService,
-    private readonly learner: LearnerService
+    private readonly learner: LearnerService,
+    private readonly notes: ParticipantNotesService
   ) {}
 
   // ── access ────────────────────────────────────────────────────────────────
@@ -63,6 +65,7 @@ export class LearnCohortsService {
           select: {
             id: true,
             title: true,
+            providerId: true,
             lengthWeeks: true,
             modules: { select: { _count: { select: { items: true } } } },
           },
@@ -204,6 +207,13 @@ export class LearnCohortsService {
       },
       orderBy: { enrolledAt: 'asc' },
     })
+    const summaries = await this.notes.rosterNoteSummaries(
+      userId,
+      role,
+      c.course.providerId,
+      cohortId,
+      enrollments.map((e) => e.userId)
+    )
     const roster: CohortRosterRow[] = enrollments
       .map((e) => ({
         enrollmentId: e.id,
@@ -214,6 +224,7 @@ export class LearnCohortsService {
         enrolledAt: e.enrolledAt.toISOString(),
         itemsDone: e.progress.length,
         itemsTotal,
+        noteSummary: summaries?.get(e.userId) ?? null,
       }))
       .sort((a, b) => a.name.localeCompare(b.name))
     return {

@@ -9,6 +9,7 @@ import { STATUS_LABEL, STATUS_LETTER } from '../attendance/attendanceLogic'
 import { dateShort } from '../format'
 import { errorNotice } from '../shared'
 import { StaffOnlyNotice } from '../StaffOnlyNotice'
+import { useScrollToHash } from '../talent/NoteIndicators'
 import { SupportSection } from '../talent/SupportSection'
 import {
   PROFILE_LABEL,
@@ -52,6 +53,7 @@ export function LearnerRecordPage({ cohortId, userId }: { cohortId: string; user
       <a href={href(`/lms/cohorts/${encodeURIComponent(cohortId)}`)}>← Back to the cohort</a>
     </p>
   )
+  useScrollToHash(!!record.data)
   if (record.error) {
     return (
       <>

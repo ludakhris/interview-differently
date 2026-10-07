@@ -499,6 +499,96 @@
 
       <article
         class="entry"
+        id="note-indicators"
+        data-status="review"
+        data-short="Note indicators"
+        data-summary="A quiet 📝 notes and 🤝 open follow-ups count on the Talent list and the cohort roster."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Note and follow-up indicators on the Talent list and the roster</h2>
+        <p>
+          Staff no longer have to open a person to find out whether anyone left a note. The Talent
+          list and the cohort roster now show a small Notes column: 📝 for the number of notes and
+          🤝 for open follow-ups, or a dash when there are none. Each count links straight to that
+          section on the person's page or learner record. Only counts are shown, never the text.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              The indicators appear only for provider staff of that provider. Other cohort staff see
+              no Notes column, and nobody sees their own counts.
+            </li>
+            <li>On the roster the note count includes attendance notes from this cohort.</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/learner-record/03-roster-indicators.png"
+              ><img
+                loading="lazy"
+                src="../screenshots/learner-record/03-roster-indicators.png"
+                alt="Cohort page with a Notes column in the roster showing note and follow-up counts"
+            /></a>
+            <figcaption>Notes column on the roster (sample data).</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/pull/70">PR #70</a
+          ><a href="https://github.com/ludakhris/interview-differently/issues/69">Issue #69</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="featured-demo"
+        data-status="review"
+        data-short="Featured demo workspaces"
+        data-summary="⭐ marks the organizations that have full demo data, in the workspace chooser and switcher."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>⭐ Full demo marker on workspaces</h2>
+        <p>
+          With thirty-plus organizations in the list, it is easy to forget which ones have full demo
+          data. Workspaces flagged as a featured demo now show a ⭐ FULL DEMO badge in the workspace
+          chooser (with the tooltip "Full demo data: attendance, talent, activity, notes"), a
+          "Featured" filter chip, and a ⭐ in the workspace dropdown. Cedar Mill Trades Institute
+          and Lantern Hill Tech Academy are marked.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              It is a flag on the institution, set by the demo seed or by
+              <code>npm run set:featured-demos</code>, which only runs on a development database
+              unless explicitly allowed.
+            </li>
+            <li>Marking organizations in production is a separate step.</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/workspaces/01-full-demo-badge.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/workspaces/01-full-demo-badge.jpg"
+                alt="Workspace chooser with a Full demo badge on two providers"
+            /></a>
+            <figcaption>The badge in the workspace chooser.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/pull/70">PR #70</a
+          ><a href="https://github.com/ludakhris/interview-differently/issues/69">Issue #69</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
         id="support-followups"
         data-status="review"
         data-short="Support follow-ups"

@@ -8,6 +8,9 @@ import type { PrismaService } from '../prisma/prisma.service'
 import { LearnCohortsService } from './learn-cohorts.service'
 import type { LearnService } from './learn.service'
 import type { LearnerService } from './learner.service'
+import type { DataAccessLogService } from './data-access-log.service'
+import type { ProviderAccessService } from './provider-access.service'
+import { ParticipantNotesService } from './talent/participant-notes.service'
 
 const prisma = {
   institution: { findFirst: jest.fn(), findMany: jest.fn() },
@@ -38,14 +41,23 @@ const prisma = {
   $transaction: jest.fn(),
   $queryRaw: jest.fn(),
   user: { findUnique: jest.fn() },
+  participantNote: { groupBy: jest.fn() },
+  attendanceMark: { groupBy: jest.fn() },
+  supportItem: { groupBy: jest.fn() },
   courseOffer: { findMany: jest.fn(), upsert: jest.fn(), deleteMany: jest.fn() },
 }
 const learn = { assertRole: jest.fn(), assertWorkspace: jest.fn() }
 const learner = { recomputeCompletion: jest.fn(), attemptLogOf: jest.fn() }
+const access = { assertProviderStaff: jest.fn() }
 const service = new LearnCohortsService(
   prisma as unknown as PrismaService,
   learn as unknown as LearnService,
-  learner as unknown as LearnerService
+  learner as unknown as LearnerService,
+  new ParticipantNotesService(
+    prisma as unknown as PrismaService,
+    access as unknown as ProviderAccessService,
+    {} as unknown as DataAccessLogService
+  )
 )
 
 const ws = { id: 'w1', name: 'Harbor Point', kind: 'provider', subdomain: 'harborpoint' }
@@ -61,7 +73,13 @@ function cohortRow(over: object = {}) {
     endsAt: new Date('2099-04-23T00:00:00Z'),
     delivery: 'online',
     institution: { id: 'w1', name: 'Harbor Point', subdomain: 'harborpoint' },
-    course: { id: 'c1', title: 'MA', lengthWeeks: 16, modules: [{ _count: { items: 5 } }] },
+    course: {
+      id: 'c1',
+      title: 'MA',
+      providerId: 'w1',
+      lengthWeeks: 16,
+      modules: [{ _count: { items: 5 } }],
+    },
     ...over,
   }
 }
@@ -567,5 +585,80 @@ describe('approval setting (#68)', () => {
     )
     await service.update('u', 'agency-admin', 'k1', { requiresApproval: false })
     expect(prisma.cohort.update.mock.calls[0][0].data.requiresApproval).toBe(false)
+  })
+})
+
+describe('roster note indicators', () => {
+  const enrollment = (userId: string, name: string) => ({
+    id: `e-${userId}`,
+    userId,
+    status: 'enrolled',
+    enrolledAt: new Date('2099-01-02T00:00:00Z'),
+    user: { displayName: name, email: `${userId}@x.org` },
+    progress: [],
+  })
+  beforeEach(() => {
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    prisma.joinRequest.count.mockResolvedValue(0)
+    prisma.enrollment.findMany.mockResolvedValue([
+      enrollment('a', 'Ann'),
+      enrollment('b', 'Bo'),
+      enrollment('me', 'Staff Self'),
+    ])
+    prisma.participantNote.groupBy.mockResolvedValue([{ userId: 'a', _count: { _all: 2 } }])
+    prisma.attendanceMark.groupBy.mockResolvedValue([
+      { userId: 'a', _count: { _all: 1 } },
+      { userId: 'b', _count: { _all: 1 } },
+    ])
+    prisma.supportItem.groupBy.mockResolvedValue([{ userId: 'b', _count: { _all: 1 } }])
+  })
+
+  it('counts notes (plus attendance notes in this cohort) and open follow-ups, one grouped query per kind', async () => {
+    const d = await service.detail('me', 'provider-admin', 'k1')
+    expect(access.assertProviderStaff).toHaveBeenCalledWith('me', 'provider-admin', 'w1')
+    const by = Object.fromEntries(d.roster.map((r) => [r.userId, r.noteSummary]))
+    expect(by.a).toEqual({ notes: 3, openFollowUps: 0 })
+    expect(by.b).toEqual({ notes: 1, openFollowUps: 1 })
+    expect(prisma.participantNote.groupBy).toHaveBeenCalledTimes(1)
+    expect(prisma.attendanceMark.groupBy).toHaveBeenCalledTimes(1)
+    expect(prisma.supportItem.groupBy).toHaveBeenCalledTimes(1)
+    expect(prisma.supportItem.groupBy.mock.calls[0][0].where).toMatchObject({
+      providerId: 'w1',
+      status: { in: ['open', 'in_progress'] },
+    })
+    expect(prisma.attendanceMark.groupBy.mock.calls[0][0].where).toMatchObject({
+      session: { cohortId: 'k1' },
+    })
+  })
+
+  it('never shows a person their own counts', async () => {
+    const d = await service.detail('me', 'provider-admin', 'k1')
+    expect(d.roster.find((r) => r.userId === 'me')?.noteSummary).toBeNull()
+    const ids = prisma.participantNote.groupBy.mock.calls[0][0].where.userId.in
+    expect(ids).not.toContain('me')
+  })
+
+  it('is null on every row, with no counting, for cohort staff who are not provider staff', async () => {
+    access.assertProviderStaff.mockRejectedValue(new ForbiddenException('No access'))
+    const d = await service.detail('x', 'agency-admin', 'k1')
+    expect(d.roster).toHaveLength(3)
+    expect(d.roster.every((r) => r.noteSummary === null)).toBe(true)
+    expect(prisma.participantNote.groupBy).not.toHaveBeenCalled()
+    expect(prisma.attendanceMark.groupBy).not.toHaveBeenCalled()
+    expect(prisma.supportItem.groupBy).not.toHaveBeenCalled()
+  })
+
+  it('carries counts only: no note text, titles or ids in the payload, and no bodies are selected', async () => {
+    const d = await service.detail('me', 'provider-admin', 'k1')
+    const json = JSON.stringify(d.roster)
+    for (const row of d.roster) {
+      expect(Object.keys(row.noteSummary ?? {}).sort()).toEqual(
+        row.noteSummary ? ['notes', 'openFollowUps'] : []
+      )
+    }
+    expect(json).not.toMatch(/body|title|details|note"/i)
+    for (const m of [prisma.participantNote, prisma.attendanceMark, prisma.supportItem]) {
+      expect(m.groupBy.mock.calls[0][0].by).toEqual(['userId'])
+    }
   })
 })

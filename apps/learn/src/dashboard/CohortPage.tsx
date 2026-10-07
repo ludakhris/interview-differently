@@ -10,6 +10,7 @@ import { CohortAttendanceChip, CohortDeliveryChip, CohortStatusChip } from './Co
 import { dateOnly, dateShort } from './format'
 import type { PendingJoinRequest } from './joinRequests'
 import { errorNotice } from './shared'
+import { NoteIndicators } from './talent/NoteIndicators'
 
 /** People who joined with the code on an approval cohort, waiting for Approve or Decline. */
 export function PendingRequests({
@@ -201,6 +202,10 @@ function Cohort({
     }
   }
 
+  // Note counts are for provider staff only: when the server sent none, there is no column.
+  const showNotes = cohort.roster.some((r) => r.noteSummary !== null)
+  const recordHref = (userId: string) =>
+    href(`/lms/cohorts/${encodeURIComponent(cohort.id)}/learners/${encodeURIComponent(userId)}`)
   return (
     <>
       <p className="dash-back">
@@ -320,6 +325,7 @@ function Cohort({
                   <th scope="col">Status</th>
                   <th scope="col">Course progress</th>
                   <th scope="col">Joined</th>
+                  {showNotes && <th scope="col">Notes</th>}
                   <th scope="col">
                     <span className="dash-visually-hidden">Actions</span>
                   </th>
@@ -347,6 +353,23 @@ function Cohort({
                         />
                       </td>
                       <td>{dateShort(r.enrolledAt)}</td>
+                      {showNotes && (
+                        <td>
+                          {r.noteSummary &&
+                          (r.noteSummary.notes > 0 || r.noteSummary.openFollowUps > 0) ? (
+                            <NoteIndicators
+                              notes={r.noteSummary.notes}
+                              openFollowUps={r.noteSummary.openFollowUps}
+                              notesHref={`${recordHref(r.userId)}#lr-notes`}
+                              followUpsHref={`${recordHref(r.userId)}#lr-support`}
+                            />
+                          ) : r.noteSummary ? (
+                            <span className="dash-muted" aria-label="No notes or follow-ups">
+                              —
+                            </span>
+                          ) : null}
+                        </td>
+                      )}
                       <td>
                         {r.status !== 'withdrawn' && (
                           <>

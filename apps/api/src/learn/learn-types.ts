@@ -284,6 +284,11 @@ export interface CohortRosterRow {
   enrolledAt: string
   itemsDone: number
   itemsTotal: number
+  /**
+   * Counts of staff notes about the person and open follow-ups, for provider staff only (null
+   * for everyone else, and on a person's own row). Counts only, never content.
+   */
+  noteSummary: { notes: number; openFollowUps: number } | null
 }
 
 export interface CohortDetail extends CohortListItem {
