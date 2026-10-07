@@ -5,6 +5,7 @@ import { useApp } from './app-context'
 import { Meter } from './charts'
 import { CohortStatusChip } from './CohortsPage'
 import { dateOnly, score } from './format'
+import { LearnerAttendanceLine } from './attendance/LearnerAttendanceLine'
 import { LEARNER_TYPE_LABEL } from './ItemEditor'
 import { recordGroups, type RecordShape } from './recordGroups'
 import { errorNotice } from './shared'
@@ -61,6 +62,7 @@ export function LearningCoursePage({ cohortId }: { cohortId: string }) {
               {c.itemsDone} of {c.itemsTotal} items
               {data.added.length > 0 ? `, including ${data.added.length} added to your plan` : ''}
             </p>
+            <LearnerAttendanceLine cohortId={cohortId} />
           </div>
           <ol className="dash-modules dash-learner-modules">
             {data.modules.map((m) => (

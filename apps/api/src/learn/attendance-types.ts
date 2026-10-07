@@ -69,12 +69,16 @@ export interface AttendanceSummaryRow {
   sessions: number
   /** (present + late) / counted sessions, whole percent; null when no counted session. */
   ratePct: number | null
+  /** Marks by session id (only sessions held so far), for the sessions grid. Unmarked sessions are absent. */
+  marks: Record<string, AttendanceStatus>
 }
 
 /** GET /learn/cohorts/:cohortId/attendance. The CSV at .../attendance.csv has the same columns. */
 export interface AttendanceSummary {
   cohortId: string
   sessions: number
+  /** The sessions held so far, oldest first: the columns of the sessions grid. */
+  sessionList: { id: string; title: string; startsAt: string }[]
   rows: AttendanceSummaryRow[]
 }
 
