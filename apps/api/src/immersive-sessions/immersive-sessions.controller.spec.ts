@@ -69,13 +69,21 @@ describe('ImmersiveSessionsController for an LTI session', () => {
   it('creates the session for the token learner, whatever the body says', async () => {
     const { c, service } = setup(null)
     await c.createSession(req, { scenarioId: 'S1', userId: 'attacker' } as never)
-    expect(service.createSession).toHaveBeenCalledWith('S1', 'u1')
+    expect(service.createSession).toHaveBeenCalledWith('S1', 'u1', true)
   })
 
   it('rate limits writes per learner', async () => {
     const { c } = setup(null)
     for (let i = 0; i < 20; i++) await c.createSession(req, { scenarioId: 'S1' })
     await expect(c.createSession(req, { scenarioId: 'S1' })).rejects.toMatchObject({ status: 429 })
+  })
+})
+
+describe('ImmersiveSessionsController session creation', () => {
+  it('does not abandon other sessions for a signed-in (non-LTI) user', async () => {
+    const { c, service } = setup(null)
+    await c.createSession({ userId: 'u1' } as never, { scenarioId: 'S1' })
+    expect(service.createSession).toHaveBeenCalledWith('S1', 'u1', false)
   })
 })
 
@@ -122,5 +130,44 @@ describe('ImmersiveSessionsController transcripts', () => {
 
   it('stores a failure marker when transcription itself failed, so the player can ask again', async () => {
     expect(await upload(null)).toHaveBeenCalledWith('r1', TRANSCRIPTION_FAILED)
+  })
+
+  it('retries a failed transcript write once', async () => {
+    const { c, service } = setup(
+      { userId: 'u1', scenarioId: 'S1' },
+      jest.fn().mockResolvedValue('I would page the on-call lead.')
+    )
+    service.updateTranscript.mockRejectedValueOnce(new Error('db')).mockResolvedValue({})
+    await c.createResponse(req, 's1', { nodeId: 'n1', questionText: 'q' }, file as never)
+    await new Promise((r) => setImmediate(r))
+    expect(service.updateTranscript).toHaveBeenCalledTimes(2)
+    expect(service.updateTranscript).toHaveBeenLastCalledWith(
+      'r1',
+      'I would page the on-call lead.'
+    )
+  })
+
+  it('falls back to the failure marker when the transcript write keeps failing', async () => {
+    const { c, service } = setup(
+      { userId: 'u1', scenarioId: 'S1' },
+      jest.fn().mockResolvedValue('I would page the on-call lead.')
+    )
+    service.updateTranscript
+      .mockRejectedValueOnce(new Error('db'))
+      .mockRejectedValueOnce(new Error('db'))
+      .mockResolvedValue({})
+    await c.createResponse(req, 's1', { nodeId: 'n1', questionText: 'q' }, file as never)
+    await new Promise((r) => setImmediate(r))
+    expect(service.updateTranscript).toHaveBeenLastCalledWith('r1', TRANSCRIPTION_FAILED)
+  })
+
+  it('writes the failure marker when transcribe unexpectedly throws', async () => {
+    const { c, service } = setup(
+      { userId: 'u1', scenarioId: 'S1' },
+      jest.fn().mockRejectedValue(new Error('boom'))
+    )
+    await c.createResponse(req, 's1', { nodeId: 'n1', questionText: 'q' }, file as never)
+    await new Promise((r) => setImmediate(r))
+    expect(service.updateTranscript).toHaveBeenCalledWith('r1', TRANSCRIPTION_FAILED)
   })
 })

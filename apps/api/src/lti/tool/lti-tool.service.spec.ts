@@ -1276,6 +1276,12 @@ describe('completeImmersive', () => {
     expect(h.calls).toEqual([])
   })
 
+  it('says an abandoned session was replaced (410), not already sent', async () => {
+    const h = ready({ status: 'abandoned' })
+    await expect(h.svc.completeImmersive(session, 'im1')).rejects.toMatchObject({ status: 410 })
+    expect(h.calls).toEqual([])
+  })
+
   it('refuses a session created before the LTI session, allowing a minute of skew', async () => {
     const iatMs = session.iat * 1000
     const stale = ready({ createdAt: new Date(iatMs - 61_000) })

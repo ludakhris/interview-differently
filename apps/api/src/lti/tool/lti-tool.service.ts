@@ -627,6 +627,9 @@ export class LtiToolService {
     if (!row || row.userId !== session.sub || row.scenarioId !== session.ref) {
       throw new LtiError('Session not found', 404)
     }
+    if (row.status === 'abandoned') {
+      throw new LtiError('This interview was restarted in another tab. Use the newest one.', 410)
+    }
     if (row.status !== 'active') {
       throw new LtiError('This interview was already completed. Relaunch it from your course.', 409)
     }

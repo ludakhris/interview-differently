@@ -6,7 +6,9 @@ import { toFile } from 'openai'
 @Injectable()
 export class TranscriptionService {
   private readonly logger = new Logger(TranscriptionService.name)
-  private readonly client = new OpenAI()
+  // The SDK retries network errors, 429 and 5xx itself. Two attempts of at most 30 s each keep the
+  // worst case (about 62 s with its backoff) inside the player's 90 s wait, so the failure marker lands first.
+  private readonly client = new OpenAI({ timeout: 30_000, maxRetries: 1 })
 
   /**
    * Transcribe an audio buffer using OpenAI Whisper.

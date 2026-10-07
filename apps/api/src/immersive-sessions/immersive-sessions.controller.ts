@@ -9,6 +9,7 @@ import {
   HttpStatus,
   ForbiddenException,
   Inject,
+  Logger,
   NotFoundException,
   Req,
   UploadedFile,
@@ -61,6 +62,8 @@ interface CreateSessionDto {
 @Controller('immersive-sessions')
 @UseGuards(AuthenticatedOrLtiGuard)
 export class ImmersiveSessionsController {
+  private readonly logger = new Logger(ImmersiveSessionsController.name)
+
   constructor(
     private readonly service: ImmersiveSessionsService,
     private readonly transcription: TranscriptionService,
@@ -79,7 +82,7 @@ export class ImmersiveSessionsController {
   @HttpCode(201)
   async createSession(@Req() req: Req, @Body() dto: CreateSessionDto) {
     await this.limit(req, 'immersive-create')
-    return this.service.createSession(dto.scenarioId, req.userId)
+    return this.service.createSession(dto.scenarioId, req.userId, !!req.lti)
   }
 
   @Get('user/:userId')
@@ -128,14 +131,10 @@ export class ImmersiveSessionsController {
           .transcribe(file.buffer, file.originalname)
           .then((transcript) =>
             // null means the transcription itself failed; '' or a few stray words mean no speech.
-            this.service.updateTranscript(
-              response.id,
-              transcript === null ? TRANSCRIPTION_FAILED : transcriptOrNoSpeech(transcript)
-            )
+            transcript === null ? TRANSCRIPTION_FAILED : transcriptOrNoSpeech(transcript)
           )
-          .catch(() => {
-            /* best effort */
-          })
+          .catch(() => TRANSCRIPTION_FAILED)
+          .then((stored) => this.saveTranscript(response.id, stored))
 
         // Preserve the recorder's content-type so playback works for both
         // audio-only and audio+video webm.
@@ -152,6 +151,23 @@ export class ImmersiveSessionsController {
     } catch (err) {
       if (err instanceof NotFoundException) throw err
       throw new HttpException('Failed to save response', HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+  }
+
+  /**
+   * Writes the transcript, retrying the write once and then falling back to the failure marker, so
+   * a response is never left without a transcript for the player to wait on. Never throws.
+   */
+  private async saveTranscript(responseId: string, transcript: string) {
+    const tries = [transcript, transcript]
+    if (transcript !== TRANSCRIPTION_FAILED) tries.push(TRANSCRIPTION_FAILED)
+    for (const value of tries) {
+      try {
+        await this.service.updateTranscript(responseId, value)
+        return
+      } catch (err) {
+        this.logger.error(`Saving transcript for response ${responseId} failed`, err)
+      }
     }
   }
 

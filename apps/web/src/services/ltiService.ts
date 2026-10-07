@@ -11,7 +11,10 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
  */
 export type HandBack =
   | { ok: true; navigateTo: string | null; courseUrl: string | null }
-  | { ok: false }
+  | {
+      ok: false
+      /** The session was replaced by a newer launch; retrying cannot help. */ replaced?: true
+    }
 
 /** The value when it is a parseable http(s) URL, else null. */
 export function safeHttpUrl(raw: unknown): string | null {
@@ -35,6 +38,7 @@ export function interpretHandBack(
   body: unknown,
   sessionReturnUrl: string | null = null
 ): HandBack {
+  if (status === 410) return { ok: false, replaced: true }
   if (status !== 200 && status !== 201 && status !== 409) return { ok: false }
   const fromBody = safeHttpUrl((body as { returnUrl?: unknown } | null)?.returnUrl)
   if (status !== 409 && !fromBody) return { ok: false }

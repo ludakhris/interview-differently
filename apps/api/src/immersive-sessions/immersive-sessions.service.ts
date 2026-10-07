@@ -13,10 +13,21 @@ export class ImmersiveSessionsService {
     @Inject(PRIVATE_MEDIA_STORAGE) private readonly privateStorage: PrivateMediaStorage
   ) {}
 
-  async createSession(scenarioId: string, userId: string) {
-    return this.prisma.immersiveSession.create({
-      data: { scenarioId, userId },
-    })
+  /**
+   * With `abandonOthers` (LTI, where a reload starts a fresh session), the user's other active
+   * sessions for this scenario are marked abandoned in the same transaction.
+   */
+  async createSession(scenarioId: string, userId: string, abandonOthers = false) {
+    const create = this.prisma.immersiveSession.create({ data: { scenarioId, userId } })
+    if (!abandonOthers) return create
+    const [, session] = await this.prisma.$transaction([
+      this.prisma.immersiveSession.updateMany({
+        where: { userId, scenarioId, status: 'active' },
+        data: { status: 'abandoned' },
+      }),
+      create,
+    ])
+    return session
   }
 
   async createResponse(

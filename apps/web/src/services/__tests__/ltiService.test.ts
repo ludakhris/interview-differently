@@ -19,6 +19,10 @@ describe('interpretHandBack', () => {
       courseUrl: LINK,
     })
   })
+  it('on 410 reports a replaced session, never success', () => {
+    expect(interpretHandBack(410, null, SESSION)).toEqual({ ok: false, replaced: true })
+  })
+
   it('on 409 without a link, shows the session link instead of navigating', () => {
     expect(interpretHandBack(409, null, SESSION)).toEqual({
       ok: true,

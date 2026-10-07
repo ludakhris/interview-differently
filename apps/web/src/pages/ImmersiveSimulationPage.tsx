@@ -234,6 +234,10 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
       }
       setFinishStage('scoring')
       const done = await completeLtiInterview(sessionId)
+      if (!done.ok && done.replaced)
+        throw new Error(
+          'We could not use this one: the interview was restarted in another tab. Finish it there, or relaunch it from your course.'
+        )
       if (!done.ok) throw new Error('Score hand-back was not accepted')
       if (done.navigateTo) {
         window.location.assign(done.navigateTo)
