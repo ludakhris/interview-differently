@@ -1,7 +1,7 @@
-import { withFirstTool } from '../lti/platform/tool-test-helpers'
+import { resetToDefaults, withFirstTool } from '../lti/platform/tool-test-helpers'
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common'
 import type { PrismaService } from '../prisma/prisma.service'
-import { managedTools, resetStoredTools, setStoredTools } from '../lti/platform/lti-platform-config'
+import { managedTools, setStoredTools } from '../lti/platform/lti-platform-config'
 import { CoursesService } from './courses.service'
 import type { LearnService } from './learn.service'
 
@@ -249,7 +249,7 @@ describe('CoursesService tool access', () => {
       provider: { id: 'p1', parentId: 'a1' },
     })
   })
-  afterEach(() => resetStoredTools())
+  afterEach(() => resetToDefaults())
 
   it('adds an item for a tool open to everyone, or limited to this provider or its agency', async () => {
     await service.addItem('u', 'agency-admin', 'm1', item)

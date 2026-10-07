@@ -1,4 +1,4 @@
-import { withFirstTool } from './tool-test-helpers'
+import { resetToDefaults, withFirstTool } from './tool-test-helpers'
 import { HttpException } from '@nestjs/common'
 import type { PrismaService } from '../../prisma/prisma.service'
 import type { LearnerService } from '../../learn/learner.service'
@@ -13,12 +13,7 @@ import {
   signJwt,
   verifyJwt,
 } from '../lti-spec'
-import {
-  platformRegistration,
-  registeredTools,
-  resetStoredTools,
-  setStoredTools,
-} from './lti-platform-config'
+import { platformRegistration, registeredTools, setStoredTools } from './lti-platform-config'
 import { MemoryLtiStore } from '../lti-store'
 import { LtiPlatformService, autoSubmitForm, escapeHtml } from './lti-platform.service'
 
@@ -201,7 +196,7 @@ describe('keys and secrets', () => {
 describe('tool availability', () => {
   const limited = (workspaceIds: string[]) =>
     setStoredTools(withFirstTool({ enabled: true, workspaceIds }))
-  afterEach(() => resetStoredTools())
+  afterEach(() => resetToDefaults())
 
   it('launches a tool limited to the provider, or to its agency', async () => {
     limited(['p1'])
@@ -710,7 +705,7 @@ describe('token', () => {
       const out = await service.token(body({ client_assertion: assertion() }))
       expect(out.access_token).toBeDefined()
     } finally {
-      resetStoredTools()
+      resetToDefaults()
     }
   })
 
@@ -722,7 +717,7 @@ describe('token', () => {
 })
 
 describe('scores', () => {
-  afterEach(() => resetStoredTools())
+  afterEach(() => resetToDefaults())
 
   const bearer = async (over: Record<string, unknown> = {}, key = service['keys']) =>
     `Bearer ${signJwt(

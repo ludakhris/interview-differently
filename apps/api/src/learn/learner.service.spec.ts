@@ -1,8 +1,8 @@
-import { withFirstTool } from '../lti/platform/tool-test-helpers'
+import { resetToDefaults, withFirstTool } from '../lti/platform/tool-test-helpers'
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common'
 import type { ClerkService } from '../auth/clerk.service'
 import type { PrismaService } from '../prisma/prisma.service'
-import { resetStoredTools, setStoredTools } from '../lti/platform/lti-platform-config'
+import { setStoredTools } from '../lti/platform/lti-platform-config'
 import type { InterviewScoringService } from './interview-scoring.service'
 import {
   attemptsAllowed,
@@ -471,7 +471,7 @@ describe('completion', () => {
       await service.completeLesson('u1', 'k1', 'i1')
       expect(prisma.enrollment.update).not.toHaveBeenCalled()
     } finally {
-      resetStoredTools()
+      resetToDefaults()
     }
   })
 
@@ -1487,7 +1487,7 @@ describe('recordToolResult', () => {
       setStoredTools(withFirstTool({ enabled: true, workspaceIds: ['a1'] }))
       expect((await service.item('u1', 'k1', 'i1')).tool).toMatchObject({ toolId: 'id-interview' })
     } finally {
-      resetStoredTools()
+      resetToDefaults()
     }
   })
 

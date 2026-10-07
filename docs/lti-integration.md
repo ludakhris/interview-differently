@@ -91,10 +91,15 @@ What a course item may launch lives in two tables, managed by a system administr
 
 Rules:
 
-- **First start:** the Interview Differently connection and its two tools below are written once per database,
-  from the `LTI_TOOL_*` and `LTI_API_BASE` environment variables (so each environment points at its own host). A
-  `PlatformConfig` row (`lti-tools-seeded`) records that, so a tool an admin removes is not written back. After
-  that the tables are the only source: changing those variables has no effect.
+- **Setting up an environment:** the registry tables start empty, and nothing can be launched until they hold a
+  tool. Run `npm run seed:lti-tools` (from `apps/api`) once per database, after its migrations have applied: it
+  adds the Interview Differently connection and its two tools below, from `LTI_API_BASE` and the optional
+  `LTI_TOOL_*` variables of the environment it runs against (so each environment points at its own host). It only
+  adds what is missing, never changes a row an admin has edited, matches an existing connection by id or client id,
+  and logs what it added as "System (seed script)". `--dry-run` shows what it would add. It refuses a database that
+  is not local or the Railway dev database unless you pass `--allow-host <host>`; do that for production only with
+  the owner's OK, and with production's `LTI_API_BASE` set. The running API never reads those variables or any
+  defaults in code: the tables are the only source.
 - Only the LearnDifferently Clerk role `system-admin` can list, add, change or remove anything here (it is a
   superset of `agency-admin`). A tool receives each launching learner's name and ID, so registering one is a
   security decision. Authors see only the tools their course's provider may use, with nothing about who else may
@@ -115,10 +120,10 @@ Rules:
   on or marks the item optional. An author can still edit such an item (rename, mark optional) while its tool is
   unchanged. A switched-off tool can still get a token and post a score for work a learner already did.
 - The registry is cached in memory and refreshed every 15 seconds, so a change reaches another API instance within
-  that time. Until it has loaded once after start-up (three tries, then every 15 seconds), no tool can be launched, so
-  a restriction is never lost to a failed read.
+  that time. The cache starts empty and is filled by the first successful read (three tries at start-up, then every
+  15 seconds), so no tool can be launched before then: a restriction is never lost to a failed read.
 
-### The connection and two tools seeded on first start
+### The connection and two tools the seed script adds
 
 - Two tools, `id-interview` (name "Interview Differently") and `id-assessment` ("Interview Differently assessment"), share
   one client id `ld-platform`, deployment id `1` and the same login/launch/jwks URLs. The id_token's custom claim says which

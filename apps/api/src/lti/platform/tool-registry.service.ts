@@ -13,11 +13,8 @@ import type { LearnRegistryChange } from '../../learn/learn-types'
 import { LEARN_ROLES } from '../../learn/learn.service'
 import { PrismaService } from '../../prisma/prisma.service'
 import {
-  defaultConnections,
-  defaultTools,
   managedConnections,
   managedTools,
-  setRegistryReady,
   setStoredConnections,
   setStoredTools,
   type StoredConnection,
@@ -33,9 +30,6 @@ import {
 
 /** How often another instance's change is picked up. */
 const REFRESH_MS = 15_000
-
-/** Marks that the default connection and tools have been written to the tables, once. */
-const SEEDED_KEY = 'lti-tools-seeded'
 
 /** The connections and tools as the registry holds them. */
 export interface Registry {
@@ -84,60 +78,12 @@ export class ToolRegistryService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    // Until the stored tools have loaded once, no tool may be launched (see setRegistryReady).
-    setRegistryReady(false)
     // The database may still be coming up: try a few times before the 15-second refresh takes over.
-    for (let attempt = 0; attempt < 3 && !(await this.start()); attempt++)
+    // Until the first read succeeds the registry is empty, so no tool can be launched.
+    for (let attempt = 0; attempt < 3 && !(await this.load()); attempt++)
       await new Promise((r) => setTimeout(r, this.retryDelayMs))
     // Another instance may have changed a tool: pick it up without waiting for a request.
     setInterval(() => void this.load(), REFRESH_MS).unref()
-  }
-
-  /** First start of an environment writes the default connection and tools; then loads them. */
-  private async start(): Promise<boolean> {
-    try {
-      await this.seedOnce()
-    } catch (err) {
-      this.logger.warn(
-        `Could not set up the tool registry: ${err instanceof Error ? err.message : err}`
-      )
-      return false
-    }
-    return this.load()
-  }
-
-  /**
-   * Writes the default connection and tools once per database. After that the tables are the only
-   * source: an admin who removes one is not undone by the next start. Safe if two instances start
-   * together.
-   */
-  private async seedOnce(): Promise<void> {
-    if (await this.prisma.platformConfig.findUnique({ where: { key: SEEDED_KEY } })) return
-    const connections = defaultConnections()
-    const tools: ToolRow[] = defaultTools()
-    const system: Who = { userId: null, userName: 'System (first start)' }
-    await this.prisma.$transaction([
-      this.prisma.ltiConnection.createMany({
-        data: connections.map(connectionColumns),
-        skipDuplicates: true,
-      }),
-      this.prisma.ltiTool.createMany({ data: tools.map(toolColumns), skipDuplicates: true }),
-      this.prisma.ltiRegistryChange.createMany({
-        data: [
-          ...connections.map((c) =>
-            this.entry('connection', c.id, c.name, 'created', system, diffConnection(null, c))
-          ),
-          ...tools.map((t) =>
-            this.entry('tool', t.toolId, t.name, 'created', system, diffTool(null, t))
-          ),
-        ],
-      }),
-      this.prisma.platformConfig.upsert({
-        where: { key: SEEDED_KEY },
-        create: { key: SEEDED_KEY, value: new Date().toISOString() },
-        update: {},
-      }),
-    ])
   }
 
   /** Reads the stored connections and tools into the cache. A failed read keeps what was loaded before. */
@@ -169,7 +115,6 @@ export class ToolRegistryService implements OnModuleInit {
           jwksUrl: t.connection.jwksUrl,
         }))
       )
-      setRegistryReady(true)
       this.loadedAt = Date.now()
       return true
     } catch (err) {

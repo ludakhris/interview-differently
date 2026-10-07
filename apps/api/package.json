@@ -19,6 +19,7 @@
     "seed:fake": "ts-node -r tsconfig-paths/register scripts/seed-fake-cohort.ts",
     "remap:user": "ts-node -r tsconfig-paths/register scripts/remap-user-ids.ts",
     "seed:learn-demo": "ts-node -r tsconfig-paths/register scripts/seed-learn-demo.ts",
+    "seed:lti-tools": "ts-node -r tsconfig-paths/register scripts/seed-lti-tools.ts",
     "sync:types": "node scripts/sync-learn-types.mjs",
     "railway:lti-vars": "node scripts/railway-lti-vars.mjs"
   },

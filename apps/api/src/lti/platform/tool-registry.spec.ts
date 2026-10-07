@@ -1,15 +1,12 @@
 import { ConflictException, ForbiddenException } from '@nestjs/common'
 import type { ClerkService } from '../../auth/clerk.service'
 import type { PrismaService } from '../../prisma/prisma.service'
+import { defaultConnections, defaultTools } from './default-tools'
 import {
-  defaultConnections,
-  defaultTools,
   managedConnections,
   managedTools,
   registeredTools,
-  resetStoredTools,
   scopeOf,
-  setRegistryReady,
   setStoredConnections,
   setStoredTools,
   toolAllowedFor,
@@ -26,6 +23,7 @@ import {
   validateConnectionInput,
   validateToolInput,
 } from './tool-config'
+import { resetToDefaults } from './tool-test-helpers'
 import { ToolRegistryService } from './tool-registry.service'
 
 const goodTool = {
@@ -267,27 +265,20 @@ describe('what changed', () => {
 })
 
 describe('start-up', () => {
-  afterEach(() => {
-    resetStoredTools()
-    setRegistryReady(true)
-  })
+  afterEach(() => resetToDefaults())
 
-  it('has the two Interview Differently tools and their connection until a registry is loaded', () => {
-    expect(managedTools().map((t) => t.toolId)).toEqual(['id-interview', 'id-assessment'])
-    expect(managedConnections().map((c) => c.id)).toEqual(['interview-differently'])
-  })
-
-  it('treats every tool as off until the stored tools have loaded, so a restriction is not lost', () => {
-    setRegistryReady(false)
+  it('has no tools until the registry has loaded, so nothing can launch before it is read', () => {
+    setStoredConnections([])
+    setStoredTools([])
+    expect(managedTools()).toEqual([])
+    expect(managedConnections()).toEqual([])
     expect(registeredTools()).toEqual([])
     expect(toolById('id-interview')).toBeUndefined()
-    setRegistryReady(true)
-    expect(registeredTools().length).toBe(2)
   })
 })
 
 describe('the tools the platform reads', () => {
-  afterEach(() => resetStoredTools())
+  afterEach(() => resetToDefaults())
 
   const row = (over: Partial<StoredTool> = {}): StoredTool => ({
     ...defaultTools()[0],
@@ -313,7 +304,6 @@ describe('the tools the platform reads', () => {
 describe('ToolRegistryService', () => {
   const prisma = {
     institution: { findMany: jest.fn() },
-    platformConfig: { findUnique: jest.fn(), upsert: jest.fn() },
     ltiConnection: {
       findMany: jest.fn(),
       createMany: jest.fn(),
@@ -358,7 +348,6 @@ describe('ToolRegistryService', () => {
     jest.resetAllMocks()
     stored()
     prisma.institution.findMany.mockResolvedValue([])
-    prisma.platformConfig.findUnique.mockResolvedValue({ key: 'lti-tools-seeded' })
     prisma.$transaction.mockResolvedValue([])
     prisma.ltiRegistryChange.findMany.mockResolvedValue([])
     clerk.getUserProfile.mockResolvedValue({
@@ -366,14 +355,9 @@ describe('ToolRegistryService', () => {
       displayName: 'Boss Person',
     })
     service.retryDelayMs = 0
-    setRegistryReady(true)
-    setStoredConnections(defaultConnections())
-    setStoredTools(defaultTools())
+    resetToDefaults()
   })
-  afterEach(() => {
-    resetStoredTools()
-    setRegistryReady(true)
-  })
+  afterEach(() => resetToDefaults())
 
   it('lets only a system administrator manage tools', () => {
     expect(service.canManage('system-admin')).toBe(true)
@@ -382,58 +366,34 @@ describe('ToolRegistryService', () => {
   })
 
   describe('start', () => {
-    it('writes the default connection and tools once, with a history entry each, then loads', async () => {
-      prisma.platformConfig.findUnique.mockResolvedValue(null)
+    it('loads the stored connections and tools, and nothing is written', async () => {
+      setStoredConnections([])
+      setStoredTools([])
       await service.onModuleInit()
-      expect(prisma.ltiConnection.createMany).toHaveBeenCalledWith({
-        data: [expect.objectContaining({ id: 'interview-differently' })],
-        skipDuplicates: true,
-      })
-      expect(prisma.ltiTool.createMany).toHaveBeenCalledWith({
-        data: [
-          expect.objectContaining({
-            toolId: 'id-interview',
-            connectionId: 'interview-differently',
-          }),
-          expect.objectContaining({ toolId: 'id-assessment' }),
-        ],
-        skipDuplicates: true,
-      })
-      const log = prisma.ltiRegistryChange.createMany.mock.calls[0][0].data
-      expect(
-        log.map((e: { subject: string; subjectId: string }) => [e.subject, e.subjectId])
-      ).toEqual([
-        ['connection', 'interview-differently'],
-        ['tool', 'id-interview'],
-        ['tool', 'id-assessment'],
-      ])
-      expect(log[0]).toMatchObject({
-        action: 'created',
-        userId: null,
-        userName: 'System (first start)',
-      })
-      expect(prisma.platformConfig.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { key: 'lti-tools-seeded' } })
-      )
+      expect(registeredTools().length).toBe(2)
+      expect(prisma.ltiTool.createMany).not.toHaveBeenCalled()
+      expect(prisma.ltiConnection.createMany).not.toHaveBeenCalled()
+    })
+
+    it('keeps every tool unlaunchable while the database cannot be read, trying three times', async () => {
+      setStoredConnections([])
+      setStoredTools([])
+      prisma.ltiConnection.findMany.mockRejectedValue(new Error('db down'))
+      await service.onModuleInit()
+      expect(prisma.ltiConnection.findMany).toHaveBeenCalledTimes(3)
+      expect(registeredTools()).toEqual([])
+      stored()
+      await service.load()
       expect(registeredTools().length).toBe(2)
     })
 
-    it('does not write them again, so a tool an admin removed stays removed', async () => {
+    it('starts with nothing launchable when the tables are empty, until the seed script has run', async () => {
+      setStoredConnections([])
+      setStoredTools([])
       prisma.ltiConnection.findMany.mockResolvedValue([])
       prisma.ltiTool.findMany.mockResolvedValue([])
       await service.onModuleInit()
-      expect(prisma.ltiTool.createMany).not.toHaveBeenCalled()
       expect(registeredTools()).toEqual([])
-    })
-
-    it('keeps every tool off when the database cannot be read, trying three times', async () => {
-      prisma.platformConfig.findUnique.mockRejectedValue(new Error('db down'))
-      await service.onModuleInit()
-      expect(prisma.platformConfig.findUnique).toHaveBeenCalledTimes(3)
-      expect(registeredTools()).toEqual([])
-      prisma.platformConfig.findUnique.mockResolvedValue({ key: 'x' })
-      await service.load()
-      expect(registeredTools().length).toBe(2)
     })
 
     it('gives each tool the launch settings of its connection', async () => {

@@ -56,17 +56,8 @@ export interface StoredConnection {
   jwksUrl: string
 }
 
-let storedTools: StoredTool[] | null = null
-let storedConnections: StoredConnection[] | null = null
-let registryReady = true
-
-/**
- * False from start-up until the stored tools have loaded once. Until then every tool is treated as
- * off: a restriction or switch-off an admin saved must not be ignored because a read failed.
- */
-export function setRegistryReady(ready: boolean): void {
-  registryReady = ready
-}
+let storedTools: StoredTool[] = []
+let storedConnections: StoredConnection[] = []
 
 /** Replaces the tools the platform reads (called by the registry after it loads or writes). */
 export function setStoredTools(rows: StoredTool[]): void {
@@ -78,77 +69,14 @@ export function setStoredConnections(rows: StoredConnection[]): void {
   storedConnections = rows
 }
 
-/** Forgets what was loaded, so the defaults apply again (for tests and for a service never started). */
-export function resetStoredTools(): void {
-  storedTools = null
-  storedConnections = null
-}
-
-/** The id of the Interview Differently connection a new environment starts with. */
-export const DEFAULT_CONNECTION_ID = 'interview-differently'
-
 /**
- * The Interview Differently connection as a new environment is first set up (each field comes from
- * env, so a dev, staging and production API each point at their own host). Written to the registry
- * once, at first start; after that the registry is the only source and this is not read.
+ * Every tool, switched-off ones included. Empty until the registry has loaded once, which is also
+ * what keeps everything shut if the first read fails: no tool can be launched that is not listed.
  */
-export function defaultConnections(): StoredConnection[] {
-  const base = apiBase()
-  return [
-    {
-      id: DEFAULT_CONNECTION_ID,
-      name: env('LTI_TOOL_NAME') ?? 'Interview Differently',
-      clientId: env('LTI_TOOL_CLIENT_ID') ?? 'ld-platform',
-      deploymentId: env('LTI_TOOL_DEPLOYMENT_ID') ?? '1',
-      loginUrl: env('LTI_TOOL_LOGIN_URL') ?? `${base}/lti/tool/login`,
-      launchUrl: env('LTI_TOOL_LAUNCH_URL') ?? `${base}/lti/tool/launch`,
-      jwksUrl: env('LTI_TOOL_JWKS_URL') ?? `${base}/lti/tool/jwks`,
-    },
-  ]
-}
-
-/** The two Interview Differently tools a new environment starts with, on the default connection. */
-export function defaultTools(): StoredTool[] {
-  const [c] = defaultConnections()
-  const shared = {
-    connectionId: c.id,
-    clientId: c.clientId,
-    deploymentId: c.deploymentId,
-    loginUrl: c.loginUrl,
-    launchUrl: c.launchUrl,
-    jwksUrl: c.jwksUrl,
-    workspaceIds: [],
-    enabled: true,
-  }
-  return [
-    {
-      toolId: 'id-interview',
-      name: c.name,
-      ...shared,
-      kind: 'interview',
-      retries: true,
-      labelable: false,
-    },
-    {
-      toolId: 'id-assessment',
-      name: 'Interview Differently assessment',
-      ...shared,
-      kind: 'assessment',
-      retries: false,
-      labelable: true,
-    },
-  ]
-}
-
-/** Every tool, switched-off ones included. Nothing can be launched until the registry has loaded. */
-export function managedTools(): StoredTool[] {
-  const tools = storedTools ?? defaultTools()
-  return registryReady ? tools : tools.map((t) => ({ ...t, enabled: false }))
-}
+export const managedTools = (): StoredTool[] => storedTools
 
 /** Every connection (registration with a vendor). */
-export const managedConnections = (): StoredConnection[] =>
-  storedConnections ?? defaultConnections()
+export const managedConnections = (): StoredConnection[] => storedConnections
 
 /** The tools a course item may launch: every enabled tool. */
 export function registeredTools(): PlatformTool[] {

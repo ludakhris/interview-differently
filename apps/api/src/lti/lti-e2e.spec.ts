@@ -1,3 +1,4 @@
+import { resetToDefaults } from './platform/tool-test-helpers'
 import type { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 import type { AddressInfo } from 'node:net'
@@ -401,10 +402,13 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     await app.listen(0, '127.0.0.1')
     base = `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}/api`
     process.env.LTI_API_BASE = base
+    // The tools point at the API's own URL, which is only known now that it is listening.
+    resetToDefaults()
     platform = app.get(LtiPlatformService)
   })
   afterAll(async () => {
     delete process.env.LTI_API_BASE
+    resetToDefaults()
     delete process.env.LTI_TOOL_SCORING
     await app.close()
   })
