@@ -56,9 +56,9 @@
       header,
       main,
       footer {
-        max-width: 900px;
+        max-width: 1180px;
         margin: 0 auto;
-        padding: 0 20px;
+        padding: 0 24px;
       }
       header {
         padding-top: 40px;
@@ -97,7 +97,7 @@
       }
       nav.timeline ol {
         list-style: none;
-        margin: 22px 0 0;
+        margin: 6px 0 0;
         padding: 0 0 0 24px;
         border-left: 2px solid var(--line);
       }
@@ -159,6 +159,115 @@
         display: block;
         color: var(--soft);
         font-size: 14px;
+      }
+      .entry p,
+      .entry .know,
+      .entry .links {
+        max-width: 78ch;
+      }
+      .tl-month {
+        position: relative;
+        margin: 14px 0 8px;
+      }
+      .tl-month > details > summary {
+        cursor: pointer;
+        list-style: none;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--soft);
+      }
+      .tl-month > details > summary::-webkit-details-marker {
+        display: none;
+      }
+      .tl-month > details > summary::before {
+        content: '\25b8';
+        display: inline-block;
+        margin-right: 8px;
+        color: var(--accent);
+        transition: transform 0.15s;
+      }
+      .tl-month > details[open] > summary::before {
+        transform: rotate(90deg);
+      }
+      .tl-month > details > summary small {
+        font-weight: 400;
+        letter-spacing: 0;
+        text-transform: none;
+        margin-left: 6px;
+      }
+      .tl-month ol {
+        list-style: none;
+        margin: 10px 0 0;
+        padding: 0;
+      }
+      .tl-month .tl-day {
+        margin-top: 14px;
+      }
+      .tl-month .tl-day::before {
+        left: -33px;
+      }
+      .search {
+        display: block;
+        width: 100%;
+        max-width: 420px;
+        margin: 12px 0 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 9px 12px;
+        background: var(--card);
+        color: var(--ink);
+        font: inherit;
+        font-size: 15px;
+      }
+      .empty-note {
+        margin: 24px 0;
+        color: var(--soft);
+      }
+      .top {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 300px;
+        gap: 40px;
+        align-items: start;
+        margin-top: 18px;
+      }
+      .find {
+        position: sticky;
+        top: 16px;
+        order: 2;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px 18px;
+      }
+      .find h2 {
+        margin: 0 0 10px;
+        font-size: 15px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--soft);
+      }
+      .find .tools {
+        margin: 0;
+      }
+      .find .search {
+        max-width: none;
+      }
+      .counts {
+        margin: 12px 0 0;
+        font-size: 14px;
+        color: var(--soft);
+      }
+      @media (max-width: 860px) {
+        .top {
+          grid-template-columns: 1fr;
+          gap: 18px;
+        }
+        .find {
+          position: static;
+          order: -1;
+        }
       }
       .shots a {
         cursor: zoom-in;
@@ -313,7 +422,7 @@
       }
       .shots {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 12px;
         margin: 14px 0 0;
       }
@@ -360,15 +469,29 @@
         What changed in Interview Differently and LearnDifferently, newest first. Plain words, with
         screenshots. All data shown is fictional.
       </p>
-      <div class="tools" role="group" aria-label="Filter entries">
-        <button type="button" data-filter="all" aria-pressed="true">All</button>
-        <button type="button" data-filter="review" aria-pressed="false">In review</button>
-        <button type="button" data-filter="shipped" aria-pressed="false">Shipped</button>
+      <div class="top">
+        <nav class="timeline" aria-label="Timeline"><ol id="toc"></ol></nav>
+        <aside class="find" aria-label="Find updates">
+          <h2>Find an update</h2>
+          <div class="tools" role="group" aria-label="Filter entries">
+            <button type="button" data-filter="all" aria-pressed="true">All</button>
+            <button type="button" data-filter="review" aria-pressed="false">In review</button>
+            <button type="button" data-filter="shipped" aria-pressed="false">Shipped</button>
+          </div>
+          <input
+            class="search"
+            id="q"
+            type="search"
+            placeholder="Search, e.g. resume"
+            aria-label="Search updates"
+          />
+          <p class="counts" id="counts"></p>
+        </aside>
       </div>
-      <nav class="timeline" aria-label="Timeline"><ol id="toc"></ol></nav>
     </header>
 
     <main id="entries">
+      <p class="empty-note" id="none" hidden>No updates match. Clear the search or choose All.</p>
       <!-- ======================= IN REVIEW (PR #70) ======================= -->
 
       <article
@@ -1146,26 +1269,48 @@
     </footer>
 
     <script>
-      // Timeline (grouped by day), filter buttons, and an in-page screenshot viewer.
+      // Timeline: the last RECENT_DAYS days stay open day by day; older updates roll into
+      // collapsed month groups. Filter buttons and a search box narrow both the timeline and the entries.
       ;(function () {
+        var RECENT_DAYS = 14
         var entries = Array.prototype.slice.call(document.querySelectorAll('.entry'))
         var toc = document.getElementById('toc')
-        var lastDay = null
-        entries.forEach(function (e) {
+        var MONTHS = [
+          'January',
+          'February',
+          'March',
+          'April',
+          'May',
+          'June',
+          'July',
+          'August',
+          'September',
+          'October',
+          'November',
+          'December',
+        ]
+        var DAY = 86400000
+        function when(e) {
           var t = e.querySelector('time')
-          var day = t ? t.textContent.replace(', 2026', '') : ''
-          if (day !== lastDay) {
-            var h = document.createElement('li')
-            h.className = 'tl-day'
-            h.dataset.day = day
-            h.textContent = day
-            toc.appendChild(h)
-            lastDay = day
+          var d = new Date((t && t.getAttribute('datetime')) + 'T00:00:00Z')
+          return {
+            d: d,
+            label: MONTHS[d.getUTCMonth()].slice(0, 3) + ' ' + d.getUTCDate(),
+            month: MONTHS[d.getUTCMonth()] + ' ' + d.getUTCFullYear(),
           }
+        }
+        var newest = Math.max.apply(
+          null,
+          entries.map(function (e) {
+            return when(e).d.getTime()
+          })
+        )
+        function item(e, day) {
           var li = document.createElement('li')
           li.className = 'tl-item'
           li.dataset.status = e.dataset.status
           li.dataset.day = day
+          li.dataset.id = e.id
           var a = document.createElement('a')
           a.href = '#' + e.id
           a.textContent = e.dataset.short || e.querySelector('h2').textContent
@@ -1178,28 +1323,132 @@
           li.appendChild(a)
           li.appendChild(chip)
           li.appendChild(sum)
+          return li
+        }
+        var recent = []
+        var older = {}
+        var order = []
+        entries.forEach(function (e) {
+          var w = when(e)
+          if ((newest - w.d.getTime()) / DAY < RECENT_DAYS) recent.push([e, w])
+          else {
+            if (!older[w.month]) {
+              older[w.month] = []
+              order.push(w.month)
+            }
+            older[w.month].push([e, w])
+          }
+        })
+        function days(list, into) {
+          var last = null
+          list.forEach(function (pair) {
+            if (pair[1].label !== last) {
+              var h = document.createElement('li')
+              h.className = 'tl-day'
+              h.dataset.day = pair[1].label
+              h.textContent = pair[1].label
+              into.appendChild(h)
+              last = pair[1].label
+            }
+            into.appendChild(item(pair[0], pair[1].label))
+          })
+        }
+        days(recent, toc)
+        order.forEach(function (m) {
+          var li = document.createElement('li')
+          li.className = 'tl-month'
+          var det = document.createElement('details')
+          var sm = document.createElement('summary')
+          sm.appendChild(document.createTextNode(m))
+          var small = document.createElement('small')
+          small.textContent = older[m].length + (older[m].length === 1 ? ' update' : ' updates')
+          sm.appendChild(small)
+          det.appendChild(sm)
+          var inner = document.createElement('ol')
+          days(older[m], inner)
+          det.appendChild(inner)
+          li.appendChild(det)
           toc.appendChild(li)
         })
 
+        var status = 'all'
+        var q = ''
+        var qbox = document.getElementById('q')
+        var none = document.getElementById('none')
         var buttons = document.querySelectorAll('[data-filter]')
+        var text = {}
+        entries.forEach(function (e) {
+          text[e.id] = (e.textContent + ' ' + (e.dataset.short || '')).toLowerCase()
+        })
+        function matches(e) {
+          return (
+            (status === 'all' || e.dataset.status === status) &&
+            (!q || text[e.id].indexOf(q) !== -1)
+          )
+        }
+        var countsEl = document.getElementById('counts')
+        function counts() {
+          var r = entries.filter(function (e) {
+            return e.dataset.status === 'review'
+          }).length
+          countsEl.textContent =
+            r +
+            ' in review \u00b7 ' +
+            (entries.length - r) +
+            ' shipped \u00b7 ' +
+            entries.length +
+            ' updates'
+        }
+        counts()
+        function apply() {
+          var ok = {}
+          var count = 0
+          entries.forEach(function (e) {
+            e.hidden = !matches(e)
+            if (!e.hidden) {
+              ok[e.id] = true
+              count++
+            }
+          })
+          none.hidden = count > 0
+          var shownDays = {}
+          Array.prototype.forEach.call(toc.querySelectorAll('.tl-item'), function (li) {
+            li.hidden = !ok[li.dataset.id]
+            if (!li.hidden)
+              shownDays[li.parentNode === toc ? 'r:' + li.dataset.day : li.dataset.id] = true
+          })
+          Array.prototype.forEach.call(toc.querySelectorAll('.tl-day'), function (h) {
+            var sib = h.nextElementSibling
+            var any = false
+            while (
+              sib &&
+              !sib.classList.contains('tl-day') &&
+              !sib.classList.contains('tl-month')
+            ) {
+              if (sib.classList.contains('tl-item') && !sib.hidden) any = true
+              sib = sib.nextElementSibling
+            }
+            h.hidden = !any
+          })
+          Array.prototype.forEach.call(toc.querySelectorAll('.tl-month'), function (m) {
+            var vis = m.querySelectorAll('.tl-item:not([hidden])').length
+            m.hidden = vis === 0
+            var det = m.querySelector('details')
+            if (q || status !== 'all') det.open = vis > 0
+          })
+        }
         buttons.forEach(function (b) {
           b.addEventListener('click', function () {
-            var f = b.dataset.filter
+            status = b.dataset.filter
             buttons.forEach(function (x) {
               x.setAttribute('aria-pressed', x === b ? 'true' : 'false')
             })
-            entries.forEach(function (e) {
-              e.hidden = !(f === 'all' || e.dataset.status === f)
-            })
-            var shown = {}
-            Array.prototype.forEach.call(toc.querySelectorAll('.tl-item'), function (li) {
-              li.hidden = !(f === 'all' || li.dataset.status === f)
-              if (!li.hidden) shown[li.dataset.day] = true
-            })
-            Array.prototype.forEach.call(toc.querySelectorAll('.tl-day'), function (h) {
-              h.hidden = !shown[h.dataset.day]
-            })
+            apply()
           })
+        })
+        qbox.addEventListener('input', function () {
+          q = qbox.value.trim().toLowerCase()
+          apply()
         })
 
         // Screenshot viewer: stays on the page, steps through one entry's screenshots.
