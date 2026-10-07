@@ -31,7 +31,7 @@ import { ScormService } from './scorm.service'
     forwardRef(() => LtiPlatformModule),
     LearnAccessModule,
     OutcomesModule,
-    TalentModule,
+    forwardRef(() => TalentModule),
     AttendanceModule,
     ActivityModule,
   ],

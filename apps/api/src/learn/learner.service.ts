@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common'
 import type {
   InterviewAttempt,
@@ -41,6 +42,8 @@ import { imageUrl, isImageKey } from './item-image'
 import { isSupportedItemType } from './course-config'
 import { doneSince, parseSkills, remediationOf, reviewOf, skillResults } from './skills'
 import { isVideoId, VIDEO_COMPLETE_PCT } from './youtube'
+import { ActivityService } from './activity/activity.service'
+import { toolLaunchTime } from './activity/activity-rules'
 import { randomUUID } from 'node:crypto'
 
 /** A tool's score is still accepted this long after the cohort ends (a timed assessment begun just before). */
@@ -150,7 +153,8 @@ export class LearnerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clerk: ClerkService,
-    private readonly scoring: InterviewScoringService
+    private readonly scoring: InterviewScoringService,
+    @Optional() private readonly activity?: ActivityService
   ) {}
 
   // ── joining ───────────────────────────────────────────────────────────────
@@ -657,6 +661,54 @@ export class LearnerService {
   }
 
   /**
+   * Completing the talent profile (a complete save) finishes that provider's `profile` items in the
+   * learner's open cohorts. Cohorts that have not started or have ended stay as they are, like every
+   * other item. Returns how many items were marked.
+   */
+  async completeProfileItems(userId: string, providerId: string): Promise<number> {
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: { userId, status: { not: 'withdrawn' }, cohort: { course: { providerId } } },
+      select: {
+        id: true,
+        status: true,
+        cohort: { select: { startsAt: true, endsAt: true, courseId: true } },
+      },
+    })
+    let marked = 0
+    for (const e of enrollments) {
+      const courseId = e.cohort.courseId
+      if (!courseId || this.lockReason(e.cohort.startsAt, e.cohort.endsAt)) continue
+      const items = await this.prisma.courseItem.findMany({
+        where: { type: 'profile', module: { courseId } },
+        select: { id: true },
+      })
+      if (items.length === 0) continue
+      const done = await this.prisma.itemProgress.findMany({
+        where: { enrollmentId: e.id, itemId: { in: items.map((i) => i.id) }, status: 'completed' },
+        select: { itemId: true },
+      })
+      const doneIds = new Set(done.map((d) => d.itemId))
+      for (const item of items) {
+        if (doneIds.has(item.id)) continue
+        await this.prisma.itemProgress.upsert({
+          where: { enrollmentId_itemId: { enrollmentId: e.id, itemId: item.id } },
+          create: {
+            enrollmentId: e.id,
+            itemId: item.id,
+            status: 'completed',
+            attempts: 1,
+            completedAt: new Date(),
+          },
+          update: { status: 'completed', attempts: { increment: 1 }, completedAt: new Date() },
+        })
+        marked++
+      }
+      await this.completeIfDone(e.id, e.status, courseId)
+    }
+    return marked
+  }
+
+  /**
    * Marks a video done. The player reports how much was watched; it is the
    * learner's browser saying so, so what is kept is labelled with the evidence:
    * 'player-verified' (the player counted the watching) or 'self-attested' (the
@@ -896,6 +948,13 @@ export class LearnerService {
         return this.item(userId, cohortId, itemId)
       throw new ConflictException(`You have used all ${cap} attempts.`)
     }
+    // #69 E: tool time, estimated from launch to score return. Only with a recorded launch time;
+    // a failure here never loses the score.
+    const launchedAt = toolLaunchTime(progress?.data, new Date())
+    if (launchedAt && this.activity)
+      await this.activity
+        .recordToolEstimate(e.id, userId, itemId, launchedAt, new Date())
+        .catch(() => undefined)
     // Plan first, so a skill flagged by this result holds the course open.
     const added = await this.updatePlan(e.id, e.cohort.course, itemId)
     await this.completeIfDone(e.id, e.status, e.cohort.course.id)

@@ -42,6 +42,7 @@ function useWorkspaceNav(): MenuLink[] {
       { label: 'Courses', href: href('/lms/courses') },
       { label: 'Cohorts', href: href('/lms/cohorts') },
       { label: 'Talent', href: href('/lms/talent') },
+      { label: 'Support', href: href('/lms/talent/support') },
       { label: 'Activity', href: href('/lms/activity') },
       { label: 'Outcomes', href: href('/lms/dashboard') },
     ]

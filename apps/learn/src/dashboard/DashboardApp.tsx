@@ -19,6 +19,7 @@ import { OutcomesPage } from './OutcomesPage'
 import { errorNotice } from './shared'
 import { MyProfilePage } from './talent/MyProfilePage'
 import { TalentPage } from './talent/TalentPage'
+import { SupportQueuePage } from './talent/SupportQueuePage'
 import { TalentParticipantPage } from './talent/TalentParticipantPage'
 import { ToolsPage } from './ToolsPage'
 import { WorkspaceChooser } from './WorkspaceChooser'
@@ -169,7 +170,9 @@ function Routes({ pathname }: { pathname: string }) {
     if (isProvider && onTalent) {
       return (
         <DashboardShell>
-          {talent ? (
+          {/^\/lms\/talent\/support\/?$/.test(pathname) ? (
+            <SupportQueuePage providerId={current.id} />
+          ) : talent ? (
             <TalentParticipantPage providerId={current.id} userId={decodeURIComponent(talent[1])} />
           ) : (
             <TalentPage providerId={current.id} workspace={current.subdomain} />
