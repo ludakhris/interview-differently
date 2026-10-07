@@ -43,6 +43,11 @@ export class LearnCohortsController {
     return this.cohorts.addLearner(req.userId, req.userRole, id, body)
   }
 
+  @Post('enrollments/:id/recompute')
+  recompute(@Req() req: LearnRequest, @Param('id') id: string) {
+    return this.cohorts.recompute(req.userId, req.userRole, id)
+  }
+
   @Delete('enrollments/:id')
   withdraw(@Req() req: LearnRequest, @Param('id') id: string) {
     return this.cohorts.withdraw(req.userId, req.userRole, id)

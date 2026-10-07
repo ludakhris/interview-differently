@@ -78,6 +78,32 @@ function Cohort({
     await run(() => send<CohortDetail>('PUT', `/learn/cohorts/${cohort.id}`, body), 'Saved.')
   }
 
+  /** Re-applies the completion rules to one learner, e.g. after the rules or the course changed. */
+  async function recompute(id: string, name: string) {
+    setBusy(true)
+    setMessage(null)
+    try {
+      const out = await send<{ change: string | null; cohort: CohortDetail }>(
+        'POST',
+        `/learn/enrollments/${id}/recompute`
+      )
+      onChange(out.cohort)
+      const text: Record<string, string> = {
+        completed: `${name} meets the completion rules and is now marked completed.`,
+        reopened: `${name} no longer meets the completion rules, so their course is open again.`,
+        date: `${name}'s completion date was corrected.`,
+      }
+      setMessage({
+        kind: 'ok',
+        text: text[out.change ?? ''] ?? `${name}'s record is already up to date.`,
+      })
+    } catch (err) {
+      setMessage({ kind: 'error', text: (err as Error).message })
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const withdraw = (id: string, name: string) => {
     if (window.confirm(`Withdraw ${name} from this cohort? Their results are kept.`)) {
       void run(() => send<CohortDetail>('DELETE', `/learn/enrollments/${id}`), `${name} withdrawn.`)
@@ -199,14 +225,25 @@ function Cohort({
                     <td>{dateShort(r.enrolledAt)}</td>
                     <td>
                       {r.status !== 'withdrawn' && (
-                        <button
-                          type="button"
-                          className="dash-btn-quiet"
-                          disabled={busy}
-                          onClick={() => withdraw(r.enrollmentId, r.name)}
-                        >
-                          Withdraw
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="dash-btn-quiet"
+                            disabled={busy}
+                            title="Check this learner's course status and completion date against the current rules"
+                            onClick={() => void recompute(r.enrollmentId, r.name)}
+                          >
+                            Recompute
+                          </button>{' '}
+                          <button
+                            type="button"
+                            className="dash-btn-quiet"
+                            disabled={busy}
+                            onClick={() => withdraw(r.enrollmentId, r.name)}
+                          >
+                            Withdraw
+                          </button>
+                        </>
                       )}
                     </td>
                   </tr>

@@ -861,10 +861,73 @@ export class LearnerService {
   }
 
   /**
+   * Whether the learner meets the course's completion rule now, and when they got there: the last
+   * moment a required item was finished or an interview reached the readiness goal.
+   */
+  private async evaluateCompletion(
+    enrollmentId: string,
+    courseId: string
+  ): Promise<{ met: boolean; at: Date | null }> {
+    const [modules, plan, course] = await Promise.all([
+      this.courseItems(courseId),
+      this.prisma.planItem.findMany({
+        where: { enrollmentId },
+        select: { itemId: true, createdAt: true },
+      }),
+      this.prisma.course.findUnique({
+        where: { id: courseId },
+        select: { readinessThreshold: true },
+      }),
+    ])
+    const items = modules.flatMap((m) => m.items)
+    // The outline's required items, plus whatever this learner's results added. An item in both
+    // (a review) must be done in the outline and again since it was added to the plan.
+    const outline = items
+      .filter((i) => !isPracticeItem(i) && !remediationOf(i.config))
+      .map((i) => i.id)
+    const interviewIds = items.filter((i) => isInterviewLike(i)).map((i) => i.id)
+    const [finished, scored] = await Promise.all([
+      this.prisma.itemProgress.findMany({
+        where: {
+          enrollmentId,
+          status: 'completed',
+          itemId: { in: [...outline, ...plan.map((p) => p.itemId)] },
+        },
+        select: { itemId: true, status: true, completedAt: true },
+      }),
+      interviewIds.length
+        ? this.prisma.itemProgress.findMany({
+            where: { enrollmentId, itemId: { in: interviewIds }, score: { not: null } },
+            select: { score: true, completedAt: true },
+          })
+        : Promise.resolve([] as { score: number | null; completedAt: Date | null }[]),
+    ])
+    const byItem = new Map(finished.map((p) => [p.itemId, p]))
+    const required = outline.length + plan.length
+    const done =
+      outline.filter((id) => byItem.has(id)).length +
+      plan.filter((p) => doneSince(byItem.get(p.itemId), p.createdAt)).length
+    // Anything that counts as an interview must reach the course's readiness goal.
+    const goal = course?.readinessThreshold ?? 70
+    const reached = scored.filter((p) => (p.score as number) >= goal)
+    const ready = interviewIds.length === 0 || reached.length > 0
+    if (!(required > 0 && done >= required && ready)) return { met: false, at: null }
+    const moments = [...finished, ...reached]
+      .map((p) => p.completedAt)
+      .filter((d): d is Date => d instanceof Date)
+    return {
+      met: true,
+      at: moments.length ? new Date(Math.max(...moments.map((d) => d.getTime()))) : null,
+    }
+  }
+
+  /**
    * A learner completes the course when every lesson, knowledge check and
    * assessment is done, including a connected tool labelled pre or post (an assessment in
-   * Interview Differently). Practice interviews and unlabelled connected tools (an interview in
-   * Interview Differently) are practice and do not hold completion back.
+   * Interview Differently), and, when the course has anything that counts as an interview, the
+   * best of those scores reaches the course's readiness goal: finishing the program means being
+   * ready to interview. A practice interview is not required by itself, but readiness needs one.
+   * A completion is a record, so an ordinary change never reopens it; only recomputeCompletion does.
    */
   private async completeIfDone(
     enrollmentId: string,
@@ -872,38 +935,54 @@ export class LearnerService {
     courseId: string
   ): Promise<void> {
     if (status === 'completed') return
-    const [modules, plan] = await Promise.all([
-      this.courseItems(courseId),
-      this.prisma.planItem.findMany({
-        where: { enrollmentId },
-        select: { itemId: true, createdAt: true },
-      }),
-    ])
-    // The outline's required items, plus whatever this learner's results added. An item in both
-    // (a review) must be done in the outline and again since it was added to the plan.
-    const outline = modules
-      .flatMap((m) => m.items)
-      .filter((i) => !isPracticeItem(i) && !remediationOf(i.config))
-      .map((i) => i.id)
-    const finished = await this.prisma.itemProgress.findMany({
-      where: {
-        enrollmentId,
-        status: 'completed',
-        itemId: { in: [...outline, ...plan.map((p) => p.itemId)] },
-      },
-      select: { itemId: true, status: true, completedAt: true },
-    })
-    const byItem = new Map(finished.map((p) => [p.itemId, p]))
-    const required = outline.length + plan.length
-    const done =
-      outline.filter((id) => byItem.has(id)).length +
-      plan.filter((p) => doneSince(byItem.get(p.itemId), p.createdAt)).length
-    if (required > 0 && done >= required) {
+    const { met, at } = await this.evaluateCompletion(enrollmentId, courseId)
+    if (met) {
       await this.prisma.enrollment.update({
         where: { id: enrollmentId },
-        data: { status: 'completed', completedAt: new Date() },
+        data: { status: 'completed', completedAt: at ?? new Date() },
       })
     }
+  }
+
+  /**
+   * Applies the completion rule as it stands now to one enrollment, in either direction: completes
+   * a learner who meets it, reopens one who completed under an older rule, and corrects the
+   * completion date. For staff, to settle a record after the rules or the course changed.
+   */
+  async recomputeCompletion(
+    enrollmentId: string
+  ): Promise<{ change: 'completed' | 'reopened' | 'date' | null }> {
+    const e = await this.prisma.enrollment.findUnique({
+      where: { id: enrollmentId },
+      select: { id: true, status: true, completedAt: true, cohort: { select: { courseId: true } } },
+    })
+    if (!e) throw new NotFoundException('Enrollment not found')
+    if (e.status === 'withdrawn') throw new ConflictException('This learner has withdrawn')
+    const courseId = e.cohort.courseId
+    if (!courseId) throw new ConflictException('This cohort has no course')
+    const { met, at } = await this.evaluateCompletion(enrollmentId, courseId)
+    if (met && e.status !== 'completed') {
+      await this.prisma.enrollment.update({
+        where: { id: enrollmentId },
+        data: { status: 'completed', completedAt: at ?? new Date() },
+      })
+      return { change: 'completed' }
+    }
+    if (met && at && e.completedAt?.getTime() !== at.getTime()) {
+      await this.prisma.enrollment.update({
+        where: { id: enrollmentId },
+        data: { completedAt: at },
+      })
+      return { change: 'date' }
+    }
+    if (!met && e.status === 'completed') {
+      await this.prisma.enrollment.update({
+        where: { id: enrollmentId },
+        data: { status: 'enrolled', completedAt: null },
+      })
+      return { change: 'reopened' }
+    }
+    return { change: null }
   }
 }
 

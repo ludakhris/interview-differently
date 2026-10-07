@@ -20,6 +20,7 @@ import {
   validateCohortFields,
   validateEmail,
 } from './cohort-config'
+import { LearnerService } from './learner.service'
 import { LEARN_ROLES, LearnService } from './learn.service'
 
 const MANAGERS = [LEARN_ROLES.agencyAdmin, LEARN_ROLES.providerAdmin]
@@ -29,7 +30,8 @@ const MANAGERS = [LEARN_ROLES.agencyAdmin, LEARN_ROLES.providerAdmin]
 export class LearnCohortsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly learn: LearnService
+    private readonly learn: LearnService,
+    private readonly learner: LearnerService
   ) {}
 
   // ── access ────────────────────────────────────────────────────────────────
@@ -314,6 +316,19 @@ export class LearnCohortsService {
       data: { status: 'withdrawn' },
     })
     return this.detail(userId, role, e.cohortId)
+  }
+
+  /** Recomputes one learner's completion from the rules as they stand, and says what changed. */
+  async recompute(
+    userId: string,
+    role: string | undefined,
+    enrollmentId: string
+  ): Promise<{ change: 'completed' | 'reopened' | 'date' | null; cohort: CohortDetail }> {
+    const e = await this.prisma.enrollment.findUnique({ where: { id: enrollmentId } })
+    if (!e) throw new NotFoundException('Enrollment not found')
+    await this.cohortFor(userId, role, e.cohortId)
+    const { change } = await this.learner.recomputeCompletion(enrollmentId)
+    return { change, cohort: await this.detail(userId, role, e.cohortId) }
   }
 
   // ── offering a course to organizations ───────────────────────────────────

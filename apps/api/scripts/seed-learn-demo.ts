@@ -965,7 +965,8 @@ async function load(prisma: PrismaClient) {
             toolId: 'id-interview',
             ref: 'ops-001-immersive',
             countsAsInterview: true,
-            passScore: 60,
+            // The course's readiness goal (70): finishing this lab means interview-ready.
+            passScore: 70,
           },
         },
       ],

@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import type { PrismaService } from '../prisma/prisma.service'
 import { LearnCohortsService } from './learn-cohorts.service'
 import type { LearnService } from './learn.service'
+import type { LearnerService } from './learner.service'
 
 const prisma = {
   institution: { findFirst: jest.fn(), findMany: jest.fn() },
@@ -25,9 +26,11 @@ const prisma = {
   courseOffer: { findMany: jest.fn(), upsert: jest.fn(), deleteMany: jest.fn() },
 }
 const learn = { assertRole: jest.fn(), assertWorkspace: jest.fn() }
+const learner = { recomputeCompletion: jest.fn() }
 const service = new LearnCohortsService(
   prisma as unknown as PrismaService,
-  learn as unknown as LearnService
+  learn as unknown as LearnService,
+  learner as unknown as LearnerService
 )
 
 const ws = { id: 'w1', name: 'Harbor Point', kind: 'provider', subdomain: 'harborpoint' }
@@ -151,6 +154,25 @@ describe('addLearner', () => {
       where: { id: 'e1' },
       data: { status: 'enrolled' },
     })
+  })
+})
+
+describe('recompute', () => {
+  it('recomputes the learner after checking the staff member may manage the cohort', async () => {
+    prisma.enrollment.findUnique.mockResolvedValue({ id: 'e1', cohortId: 'k1' })
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    learner.recomputeCompletion.mockResolvedValue({ change: 'reopened' })
+    const out = await service.recompute('u', 'agency-admin', 'e1')
+    expect(learner.recomputeCompletion).toHaveBeenCalledWith('e1')
+    expect(out.change).toBe('reopened')
+    expect(out.cohort.id).toBe('k1')
+  })
+
+  it('refuses an enrollment that does not exist, and does not recompute it', async () => {
+    learner.recomputeCompletion.mockClear()
+    prisma.enrollment.findUnique.mockResolvedValue(null)
+    await expect(service.recompute('u', 'agency-admin', 'nope')).rejects.toThrow(NotFoundException)
+    expect(learner.recomputeCompletion).not.toHaveBeenCalled()
   })
 })
 

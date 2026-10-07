@@ -22,6 +22,7 @@ const prisma = {
     count: jest.fn(),
   },
   membership: { upsert: jest.fn() },
+  course: { findUnique: jest.fn() },
   courseItem: { findUnique: jest.fn() },
   courseModule: { findMany: jest.fn() },
   itemProgress: { findUnique: jest.fn(), upsert: jest.fn(), count: jest.fn(), findMany: jest.fn() },
@@ -261,7 +262,40 @@ describe('outline with a legacy item', () => {
 })
 
 describe('completion', () => {
-  it('completes the enrollment when everything but the interview is done', async () => {
+  /** The completion check reads progress twice: what is finished, then the interview scores. */
+  const check = (ids: string[], interviewScores: number[]) => {
+    // Unused queued answers from an earlier step (an early exit never reads the scores) must go.
+    prisma.itemProgress.findMany.mockReset()
+    prisma.itemProgress.findMany
+      .mockResolvedValueOnce(
+        ids.map((itemId) => ({
+          itemId,
+          status: 'completed',
+          score: null,
+          attempts: 1,
+          data: null,
+          completedAt: new Date(),
+        }))
+      )
+      .mockResolvedValueOnce(interviewScores.map((score) => ({ score })))
+    prisma.course.findUnique.mockResolvedValue({ readinessThreshold: 70 })
+  }
+
+  it('completes a course with no interview once everything required is done', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    prisma.courseModule.findMany.mockResolvedValue([
+      { id: 'm1', title: 'M', position: 1, items: [{ id: 'i1', type: 'lesson' }] },
+    ])
+    finished('i1')
+    await service.completeLesson('u1', 'k1', 'i1')
+    expect(prisma.enrollment.update).toHaveBeenCalledWith({
+      where: { id: 'e1' },
+      data: expect.objectContaining({ status: 'completed' }),
+    })
+  })
+
+  it('holds the course open until an interview reaches the readiness goal', async () => {
     prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
     prisma.itemProgress.findUnique.mockResolvedValue(null)
     prisma.courseModule.findMany.mockResolvedValue([
@@ -275,7 +309,13 @@ describe('completion', () => {
         ],
       },
     ])
-    finished('i1') // the lesson; the interview is not required
+    check(['i1'], [])
+    await service.completeLesson('u1', 'k1', 'i1')
+    expect(prisma.enrollment.update).not.toHaveBeenCalled()
+    check(['i1', 'i2'], [46])
+    await service.completeLesson('u1', 'k1', 'i1')
+    expect(prisma.enrollment.update).not.toHaveBeenCalled()
+    check(['i1', 'i2'], [46, 82])
     await service.completeLesson('u1', 'k1', 'i1')
     expect(prisma.enrollment.update).toHaveBeenCalledWith({
       where: { id: 'e1' },
@@ -283,7 +323,7 @@ describe('completion', () => {
     })
   })
 
-  it('requires every tool item, labelled or not, flagged as an interview or not', async () => {
+  it('requires every tool item, and readiness when one counts as an interview', async () => {
     prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
     prisma.itemProgress.findUnique.mockResolvedValue(null)
     prisma.courseModule.findMany.mockResolvedValue([
@@ -298,12 +338,88 @@ describe('completion', () => {
         ],
       },
     ])
-    finished('i1')
+    check(['i1'], [])
     await service.completeLesson('u1', 'k1', 'i1')
     expect(prisma.enrollment.update).not.toHaveBeenCalled()
-    finished('i1', 'i2', 'i3')
+    check(['i1', 'i2', 'i3'], [0])
+    await service.completeLesson('u1', 'k1', 'i1')
+    expect(prisma.enrollment.update).not.toHaveBeenCalled()
+    check(['i1', 'i2', 'i3'], [75])
     await service.completeLesson('u1', 'k1', 'i1')
     expect(prisma.enrollment.update).toHaveBeenCalled()
+  })
+
+  describe('recomputeCompletion', () => {
+    const modulesWithInterview = () =>
+      prisma.courseModule.findMany.mockResolvedValue([
+        {
+          id: 'm1',
+          title: 'M',
+          position: 1,
+          items: [
+            { id: 'i1', type: 'lesson' },
+            { id: 'i2', type: 'interview' },
+          ],
+        },
+      ])
+    const enrollment = (status: string, completedAt: Date | null) =>
+      prisma.enrollment.findUnique.mockResolvedValue({
+        id: 'e1',
+        status,
+        completedAt,
+        cohort: { courseId: 'c1' },
+      })
+    const rows = (finishedAt: Date, scores: { score: number; completedAt: Date }[]) => {
+      prisma.itemProgress.findMany.mockReset()
+      prisma.itemProgress.findMany
+        .mockResolvedValueOnce([{ itemId: 'i1', status: 'completed', completedAt: finishedAt }])
+        .mockResolvedValueOnce(scores)
+      prisma.course.findUnique.mockResolvedValue({ readinessThreshold: 70 })
+    }
+    const day = (d: number) => new Date(`2026-09-${String(d).padStart(2, '0')}T12:00:00Z`)
+
+    it('reopens a learner who completed under an older rule but is not ready', async () => {
+      modulesWithInterview()
+      enrollment('completed', day(20))
+      rows(day(10), [{ score: 46, completedAt: day(20) }])
+      expect(await service.recomputeCompletion('e1')).toEqual({ change: 'reopened' })
+      expect(prisma.enrollment.update).toHaveBeenCalledWith({
+        where: { id: 'e1' },
+        data: { status: 'enrolled', completedAt: null },
+      })
+    })
+
+    it('completes a ready learner, dated to when the last requirement was met', async () => {
+      modulesWithInterview()
+      enrollment('enrolled', null)
+      rows(day(10), [{ score: 82, completedAt: day(15) }])
+      expect(await service.recomputeCompletion('e1')).toEqual({ change: 'completed' })
+      expect(prisma.enrollment.update).toHaveBeenCalledWith({
+        where: { id: 'e1' },
+        data: { status: 'completed', completedAt: day(15) },
+      })
+    })
+
+    it('corrects a wrong completion date and leaves a correct record alone', async () => {
+      modulesWithInterview()
+      enrollment('completed', day(25))
+      rows(day(10), [{ score: 82, completedAt: day(15) }])
+      expect(await service.recomputeCompletion('e1')).toEqual({ change: 'date' })
+      expect(prisma.enrollment.update).toHaveBeenCalledWith({
+        where: { id: 'e1' },
+        data: { completedAt: day(15) },
+      })
+      prisma.enrollment.update.mockClear()
+      enrollment('completed', day(15))
+      rows(day(10), [{ score: 82, completedAt: day(15) }])
+      expect(await service.recomputeCompletion('e1')).toEqual({ change: null })
+      expect(prisma.enrollment.update).not.toHaveBeenCalled()
+    })
+
+    it('refuses a withdrawn learner', async () => {
+      enrollment('withdrawn', null)
+      await expect(service.recomputeCompletion('e1')).rejects.toThrow('withdrawn')
+    })
   })
 
   it('stays enrolled while required items remain', async () => {
