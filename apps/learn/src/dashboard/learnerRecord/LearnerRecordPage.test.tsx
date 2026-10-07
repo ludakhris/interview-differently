@@ -227,12 +227,12 @@ describe('LearnerRecordPage', () => {
       '/lms/talent/u1'
     )
     const h2 = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    expect(h2).toEqual(['Attendance', 'Activity', 'Notes', 'Support follow-ups'])
+    expect(h2).toEqual(['Attendance', 'Activity', 'Instructor notes', 'Support follow-ups'])
     const nav = within(screen.getByRole('navigation', { name: 'On this page' }))
     expect(nav.getAllByRole('link').map((a) => a.textContent)).toEqual([
       'Attendance',
       'Activity',
-      'Notes',
+      'Instructor notes',
       'Support follow-ups1',
     ])
   })
@@ -309,7 +309,7 @@ describe('LearnerRecordPage', () => {
     open()
     const note = screen.getByRole('note')
     expect(note.textContent).toBe(
-      "Only your organization's staff can see notes. Learners never can."
+      "Instructor notes are for your team: record context, observations and next steps so whoever works with this person next is up to speed. Your organization's staff can read them. Learners never can."
     )
     expect(note.querySelector('svg[aria-hidden="true"]')).toBeTruthy()
   })

@@ -76,7 +76,9 @@ describe('NotesSection', () => {
     loads[`${P}/notes`] = { data: [] }
     render(<NotesSection providerId="P1" userId="U1" />)
     expect(
-      screen.getByText("Only your organization's staff can see notes. Learners never can.")
+      screen.getByText(
+        "Instructor notes are for your team: record context, observations and next steps so whoever works with this person next is up to speed. Your organization's staff can read them. Learners never can."
+      )
     ).toBeTruthy()
     expect(screen.getByText('No notes yet. Add the first one above.')).toBeTruthy()
   })
@@ -158,7 +160,7 @@ describe('NotesSection', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
     await userEvent.click(screen.getByRole('button', { name: 'Yes, delete it' }))
     await waitFor(() => expect(screen.queryByText('keep me')).toBeNull())
-    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Notes' }))
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Instructor notes' }))
   })
 
   it('does not fetch the participant header when the page already has the cohorts', () => {

@@ -32,7 +32,7 @@ const STATUS_WORD = {
 const SECTIONS = [
   { id: 'lr-attendance', label: 'Attendance' },
   { id: 'lr-activity', label: 'Activity' },
-  { id: 'lr-notes', label: 'Notes' },
+  { id: 'lr-notes', label: 'Instructor notes' },
   { id: 'lr-support', label: 'Support follow-ups' },
 ] as const
 
@@ -385,7 +385,7 @@ function NotesSection({
   return (
     <section id="lr-notes" className="lr-section" aria-labelledby="lr-h-notes">
       <h2 className="dash-h2 lr-h" id="lr-h-notes" tabIndex={-1}>
-        Notes
+        Instructor notes
       </h2>
       <StaffOnlyNotice />
       {n.restricted ? (

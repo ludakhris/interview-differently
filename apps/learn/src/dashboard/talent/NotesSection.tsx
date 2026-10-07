@@ -211,7 +211,7 @@ export function NotesSection({
   return (
     <section className="nt-section" aria-labelledby="nt-notes-h">
       <h2 id="nt-notes-h" ref={heading} tabIndex={-1} className="dash-card-title">
-        Notes
+        Instructor notes
       </h2>
       <StaffOnlyNotice />
       <form onSubmit={add} className="nt-form">

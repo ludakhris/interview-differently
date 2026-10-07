@@ -1,6 +1,7 @@
 import './staffOnlyNotice.css'
 
-export const STAFF_ONLY_NOTICE = "Only your organization's staff can see notes. Learners never can."
+export const STAFF_ONLY_NOTICE =
+  "Instructor notes are for your team: record context, observations and next steps so whoever works with this person next is up to speed. Your organization's staff can read them. Learners never can."
 
 /**
  * The one reminder shown wherever staff write or read notes and support follow-ups. The full
