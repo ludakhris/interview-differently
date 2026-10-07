@@ -157,6 +157,12 @@ for a token to return a score for work already done, which is why its client id 
 trusts one the tool sends. The platform does not yet register Deep Linking
 messages or read a tool's other message types; they are ignored.
 
+**Trying it without a real tool.** No tool we ship registers itself yet (Interview Differently has no
+registration link), so use the stand-in: with the API and the learn app running, `npm run mock:lti-tool` (from
+`apps/api`), then paste `http://localhost:4010/register` into the panel. It writes a switched-off connection and
+tool to whichever database the API uses, so remove them afterwards. It is local only and refuses to run with
+`NODE_ENV=production`.
+
 ### The connection and two tools the seed script adds
 
 - Two tools, `id-interview` (name "Interview Differently") and `id-assessment` ("Interview Differently assessment"), share

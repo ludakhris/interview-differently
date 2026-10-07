@@ -80,6 +80,7 @@ export function RegisterPanel({
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             autoCapitalize="none"
+            autoFocus
             spellCheck={false}
           />
           <small className="dash-muted">
