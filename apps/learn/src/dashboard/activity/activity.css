@@ -1,4 +1,152 @@
-/* Activity logs (#69 E). Own styles only. */
-.ac-placeholder {
+/* Activity logs (#69 E). Own styles only; colours come from the dashboard theme variables. */
+.ac-cohorts {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ac-cohorts li {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.ac-export {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.ac-error {
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--orange-text, #a04800);
+}
+.ac-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  margin: 16px 0;
+}
+.ac-presets {
+  display: inline-flex;
+  border: 1px solid var(--navy);
+  border-radius: var(--dash-radius, 0);
+  overflow: hidden;
+}
+.ac-preset {
+  font: inherit;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  color: var(--navy);
+  cursor: pointer;
+}
+.ac-preset[aria-pressed='true'] {
+  background: var(--navy);
+  color: var(--on-dark, #fff);
+}
+.ac-custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+.ac-custom label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.ac-custom input {
+  font: inherit;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--dash-radius, 0);
+  background: var(--surface, #fff);
+  color: inherit;
+}
+.ac-caption {
+  max-width: 70ch;
+  margin: 0 0 20px;
+  padding: 10px 14px;
+  border-left: 4px solid var(--blue);
+  background: var(--surface-alt);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.ac-empty {
+  margin: 24px 0;
+}
+.ac-table .ac-learner {
+  padding: 4px 0;
+  text-align: left;
+}
+.ac-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.ac-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 160px;
+  padding: 0 0 2px;
+  border-bottom: 2px solid var(--navy);
+  overflow-x: auto;
+}
+.ac-col {
+  flex: 1 0 8px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+.ac-bar {
+  width: 100%;
+  min-height: 2px;
+  background: var(--blue);
+}
+.ac-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--ink-soft, inherit);
+}
+.ac-details {
+  margin-top: 12px;
+}
+.ac-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--blue);
+}
+.ac-items {
   margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ac-tag {
+  font-weight: 600;
+  font-style: italic;
+}
+@media (max-width: 640px) {
+  .ac-export,
+  .ac-export .dash-btn {
+    width: 100%;
+  }
+  .ac-presets {
+    width: 100%;
+  }
+  .ac-preset {
+    flex: 1;
+    padding: 0 8px;
+  }
 }
