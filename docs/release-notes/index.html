@@ -1,0 +1,1300 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Release notes</title>
+    <!--
+  HOW TO ADD AN ENTRY
+  1. Copy one <article class="entry"> block (keep data-short = the short name and data-summary = one sentence: the timeline reads them) and paste it at the TOP of <main id="entries"> (newest first).
+  2. Set data-status to "review" or "shipped", the date, title, the two or three plain sentences, the
+     "Good to know" points, links, and screenshots. Screenshots live in docs/screenshots/<feature>/
+     (reference them as ../screenshots/<feature>/NN-name.jpg). Use fictional data only.
+  3. When an entry that was "In review" ships, change its status chip and data-status.
+  This repo is public: no production configuration, contacts, funding or procurement details here.
+-->
+    <style>
+      :root {
+        --bg: #f6f7f9;
+        --card: #fff;
+        --ink: #14202e;
+        --soft: #4a5a6c;
+        --line: #dfe5ec;
+        --accent: #0d4f7a;
+        --ok: #176b2c;
+        --ok-bg: #e4f4e8;
+        --rev: #8a5a00;
+        --rev-bg: #fff2d6;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #10161d;
+          --card: #18212b;
+          --ink: #e8eef5;
+          --soft: #a7b4c3;
+          --line: #2a3644;
+          --accent: #7cc0ee;
+          --ok: #7fd49a;
+          --ok-bg: #173a22;
+          --rev: #f1c46a;
+          --rev-bg: #3b2f12;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          16px/1.55 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      header,
+      main,
+      footer {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+      header {
+        padding-top: 40px;
+        padding-bottom: 8px;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 32px;
+        line-height: 1.15;
+      }
+      .lede {
+        margin: 0;
+        color: var(--soft);
+      }
+      .tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 22px 0 6px;
+      }
+      .tools button {
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--ink);
+        border-radius: 999px;
+        padding: 7px 14px;
+        font: inherit;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .tools button[aria-pressed='true'] {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--bg);
+        font-weight: 600;
+      }
+      nav.timeline ol {
+        list-style: none;
+        margin: 22px 0 0;
+        padding: 0 0 0 24px;
+        border-left: 2px solid var(--line);
+      }
+      .tl-day {
+        position: relative;
+        margin: 22px 0 8px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--soft);
+      }
+      .tl-day:first-child {
+        margin-top: 0;
+      }
+      .tl-day::before {
+        content: '';
+        position: absolute;
+        left: -33px;
+        top: 1px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent);
+        border: 3px solid var(--bg);
+      }
+      .tl-item {
+        position: relative;
+        margin: 0 0 10px;
+        font-size: 15px;
+        line-height: 1.4;
+      }
+      .tl-item::before {
+        content: '';
+        position: absolute;
+        left: -30px;
+        top: 6px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--ok);
+      }
+      .tl-item[data-status='review']::before {
+        background: var(--rev);
+      }
+      .tl-item a {
+        font-weight: 600;
+        color: var(--accent);
+        text-decoration: none;
+      }
+      .tl-item a:hover {
+        text-decoration: underline;
+      }
+      .tl-item .chip {
+        margin-left: 6px;
+        vertical-align: 1px;
+      }
+      .tl-item .tl-sum {
+        display: block;
+        color: var(--soft);
+        font-size: 14px;
+      }
+      .shots a {
+        cursor: zoom-in;
+      }
+      .lb {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: grid;
+        grid-template-rows: 1fr auto;
+        background: rgba(8, 12, 18, 0.96);
+        padding: 16px;
+      }
+      .lb[hidden] {
+        display: none;
+      }
+      .lb-stage {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 12px;
+        min-height: 0;
+      }
+      .lb-stage img {
+        justify-self: center;
+        max-width: 100%;
+        max-height: calc(100vh - 150px);
+        border-radius: 8px;
+        background: #fff;
+      }
+      .lb button {
+        border: 0;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.16);
+        color: #fff;
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+        cursor: pointer;
+      }
+      .lb button:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+      .lb button:disabled {
+        opacity: 0.3;
+        cursor: default;
+      }
+      .lb-close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+      }
+      .lb-cap {
+        text-align: center;
+        color: #e8eef5;
+        font-size: 15px;
+        padding: 8px 56px 4px;
+      }
+      .lb-cap small {
+        display: block;
+        color: #aebccb;
+        margin-top: 2px;
+      }
+      @media (max-width: 560px) {
+        .lb-stage {
+          grid-template-columns: 1fr;
+        }
+        .lb-prev,
+        .lb-next {
+          position: absolute;
+          bottom: 64px;
+        }
+        .lb-prev {
+          left: 16px;
+        }
+        .lb-next {
+          right: 16px;
+        }
+      }
+      main {
+        padding-top: 12px;
+        padding-bottom: 56px;
+      }
+      .entry {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 22px 24px;
+        margin: 20px 0;
+      }
+      .entry[hidden] {
+        display: none;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 4px;
+        font-size: 14px;
+        color: var(--soft);
+      }
+      .chip {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 2px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .chip.shipped {
+        background: var(--ok-bg);
+        color: var(--ok);
+      }
+      .chip.review {
+        background: var(--rev-bg);
+        color: var(--rev);
+      }
+      .entry h2 {
+        margin: 2px 0 8px;
+        font-size: 22px;
+        line-height: 1.25;
+      }
+      .entry p {
+        margin: 0 0 10px;
+      }
+      .know {
+        margin: 12px 0 0;
+        padding: 10px 14px;
+        border-left: 4px solid var(--accent);
+        background: color-mix(in srgb, var(--accent) 8%, transparent);
+        border-radius: 0 8px 8px 0;
+        font-size: 15px;
+      }
+      .know strong {
+        display: block;
+        margin-bottom: 2px;
+      }
+      .know ul {
+        margin: 4px 0 0;
+        padding-left: 20px;
+      }
+      .links {
+        margin-top: 12px;
+        font-size: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+      }
+      .links a {
+        color: var(--accent);
+      }
+      .shots {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+        margin: 14px 0 0;
+      }
+      .shots figure {
+        margin: 0;
+      }
+      .shots img {
+        width: 100%;
+        height: auto;
+        display: block;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+      }
+      .shots figcaption {
+        margin-top: 5px;
+        font-size: 13px;
+        color: var(--soft);
+      }
+      footer {
+        padding-bottom: 40px;
+        color: var(--soft);
+        font-size: 14px;
+      }
+      a:focus-visible,
+      button:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 2px;
+      }
+      @media (max-width: 560px) {
+        h1 {
+          font-size: 26px;
+        }
+        .entry {
+          padding: 18px 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Release notes</h1>
+      <p class="lede">
+        What changed in Interview Differently and LearnDifferently, newest first. Plain words, with
+        screenshots. All data shown is fictional.
+      </p>
+      <div class="tools" role="group" aria-label="Filter entries">
+        <button type="button" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" data-filter="review" aria-pressed="false">In review</button>
+        <button type="button" data-filter="shipped" aria-pressed="false">Shipped</button>
+      </div>
+      <nav class="timeline" aria-label="Timeline"><ol id="toc"></ol></nav>
+    </header>
+
+    <main id="entries">
+      <!-- ======================= IN REVIEW (PR #70) ======================= -->
+
+      <article
+        class="entry"
+        id="talent-profile"
+        data-status="review"
+        data-short="My profile"
+        data-summary="One profile per person; the learner chooses who sees it; complete needs a resume."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>My profile: one profile per person, shared on the learner's terms</h2>
+        <p>
+          Learners now keep a single profile about themselves: resume, education (as many entries as
+          they need), work experience, and salary targets. It is about the person, so it does not
+          change from program to program. The learner chooses which organizations can see it from a
+          list, and nothing is shared until they say so. Staff see the content only for people who
+          shared it with their organization.
+        </p>
+        <p>
+          A profile counts as complete when it has an education entry with a level, years of
+          experience, at least one industry, at least one job wanted, and a resume. The side panel
+          shows that checklist as it fills in, with green ticks for what is done and an open circle
+          for what is not. Industries and jobs are typed or tapped as chips, not comma lists. The
+          Save bar stays pinned to the bottom of the screen.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              Complete now includes a resume, and both industries and jobs. Profiles that had only
+              one of those read as incomplete until the missing item is added.
+            </li>
+            <li>
+              Sharing a profile with an organization also lets that organization introduce the
+              learner to employers it works with. The page says so.
+            </li>
+            <li>
+              Pay is never shown in lists, reports, or logs. Staff reveal it with a separate click,
+              and each reveal is recorded.
+            </li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/profile/02-my-profile-top.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/profile/02-my-profile-top.jpg"
+                alt="My profile page with the resume section first and the completeness panel on the right"
+            /></a>
+            <figcaption>Resume first, and a panel that shows what counts as complete.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/profile/04-salary-targets.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/profile/04-salary-targets.jpg"
+                alt="Salary targets section with an explanation of why the information is requested"
+            /></a>
+            <figcaption>Salary targets say why we ask.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/profile/03-who-can-see.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/profile/03-who-can-see.jpg"
+                alt="Who can see this profile section with the organization list and a callout"
+            /></a>
+            <figcaption>
+              The learner decides who can see it, and can change that any time.
+            </figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/pull/70">PR #70</a
+          ><a href="https://github.com/ludakhris/interview-differently/issues/69">Issue #69</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="profile-required"
+        data-status="review"
+        data-short="Profile required by a cohort"
+        data-summary="A cohort can require the profile first and a refresh every few months."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>A cohort can require the profile, and a refresh</h2>
+        <p>
+          On the cohort page, staff can tick "Learners must complete their profile first" and choose
+          how often learners must refresh it (every 3, 6 or 12 months, or never). When it is on,
+          "Your profile" appears as the first item in the learner's course, counts toward
+          completion, and is marked done only while the profile is complete and fresh. When a
+          refresh comes due, the item reopens with a note and My learning shows a small banner.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>It is off by default; cohorts without it behave exactly as before.</li>
+            <li>
+              It does not lock the rest of the course. It is required for completion, and shown
+              first.
+            </li>
+            <li>Learners still decide whether the organization can read the profile.</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/profile/01-course-first-item.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/profile/01-course-first-item.jpg"
+                alt="Course page with Your profile as the first item, marked Done"
+            /></a>
+            <figcaption>"Your profile" as the first course item.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/pull/70">PR #70</a
+          ><a href="https://github.com/ludakhris/interview-differently/issues/69">Issue #69</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="talent-management"
+        data-status="review"
+        data-short="Talent management"
+        data-summary="Private notes, support follow-ups, search and export for provider staff."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Talent management for staff: notes, support follow-ups, search and export</h2>
+        <p>
+          Provider staff get a Talent area. They can search and filter participants, open a profile,
+          and keep private notes and support follow-ups (for example a bus pass or childcare) that
+          follow the person across that provider's cohorts. A provider-wide support queue shows open
+          items by status, assignee and due date. Staff can export shared profiles to a spreadsheet,
+          with or without pay.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              Notes and support items are never shown to the learner and never returned by any
+              learner screen.
+            </li>
+            <li>
+              Only provider admins of that provider (and system admins) can read them. Every read or
+              change is recorded in an access log, and nobody can read notes about themselves.
+            </li>
+            <li>
+              A person who did not share their profile shows as "Not shared", with only whether it
+              is complete and up to date.
+            </li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/talent-management/01-talent-list.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/talent-management/01-talent-list.jpg"
+                alt="Talent list with a profile column showing shared, not shared and none"
+            /></a>
+            <figcaption>Participants and their profile status.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/talent-management/04-notes.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/talent-management/04-notes.jpg"
+                alt="Private notes with a staff-only reminder"
+            /></a>
+            <figcaption>Private notes, with a staff-only reminder.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/talent-management/07-support-queue.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/talent-management/07-support-queue.jpg"
+                alt="Provider-wide support queue with filters"
+            /></a>
+            <figcaption>Support queue across the provider.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/pull/70">PR #70</a
+          ><a href="https://github.com/ludakhris/interview-differently/issues/69">Issue #69</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="attendance"
+        data-status="review"
+        data-short="Attendance"
+        data-summary="One-tap attendance for live and hybrid cohorts, with a summary grid and export."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Attendance for live and hybrid cohorts</h2>
+        <p>
+          Cohorts now say how they meet: online, live, or hybrid. For live and hybrid cohorts, an
+          instructor adds a session in one tap, presses "Mark everyone present", and flips only the
+          exceptions (absent, late, excused), with keyboard shortcuts for speed. A summary grid
+          shows every learner across every session, and it exports to a spreadsheet.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              The rate counts only sessions that were actually taken and that the learner was
+              enrolled for; excused sessions are left out.
+            </li>
+            <li>Learners see their own attendance line on the course page, never staff notes.</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/attendance/01-take-attendance.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/attendance/01-take-attendance.jpg"
+                alt="Roster sheet for taking attendance with a status control per learner"
+            /></a>
+            <figcaption>Take attendance for a whole class.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/attendance/04-summary.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/attendance/04-summary.jpg"
+                alt="Attendance summary grid by learner and session"
+            /></a>
+            <figcaption>Summary across sessions.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/pull/70">PR #70</a
+          ><a href="https://github.com/ludakhris/interview-differently/issues/69">Issue #69</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="activity-logs"
+        data-status="review"
+        data-short="Activity logs"
+        data-summary="Active time per learner per day, with a report and CSV for grant reporting."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Activity logs: active time per learner per day, for grant reporting</h2>
+        <p>
+          For online courses, the learner pages now record how long each person is actively working,
+          per item and per day. Staff get a cohort report with a daily chart, a learner table, a
+          day-by-day log for one learner, and a CSV download. Time spent inside a connected tool is
+          estimated from launch to score return and reported separately from measured time. Learners
+          are told on the course page that their time is recorded.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              It counts active time only (page open, visible, with recent input). Idle time is not
+              counted.
+            </li>
+            <li>Days are UTC days.</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/activity-logs/04-totals-chart.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/activity-logs/04-totals-chart.jpg"
+                alt="Activity report with totals, measured and estimated time, and a daily chart"
+            /></a>
+            <figcaption>Totals and daily chart.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/activity-logs/01-learner-notice.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/activity-logs/01-learner-notice.jpg"
+                alt="Course page with the notice that time spent is recorded"
+            /></a>
+            <figcaption>The notice learners see.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/pull/70">PR #70</a
+          ><a href="https://github.com/ludakhris/interview-differently/issues/69">Issue #69</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="learner-outcomes"
+        data-status="review"
+        data-short="My outcomes"
+        data-summary="A learner sees results across all their courses on one page."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>My outcomes: a learner's results across all their courses</h2>
+        <p>
+          A new "My outcomes" page shows a learner their own progress and results across every
+          cohort and course: how many items are done, best scores and attempts, interview readiness
+          against the goal, and a timeline of recent results. Anything without a score reads "No
+          score yet", never 0%.
+        </p>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/learner-outcomes/02-outcomes-summary.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/learner-outcomes/02-outcomes-summary.jpg"
+                alt="My outcomes summary strip and a course card"
+            /></a>
+            <figcaption>Summary and course card.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/learner-outcomes/03-best-scores-attempts.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/learner-outcomes/03-best-scores-attempts.jpg"
+                alt="Best score and attempts per item"
+            /></a>
+            <figcaption>Best scores and attempts per item.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/pull/70">PR #70</a
+          ><a href="https://github.com/ludakhris/interview-differently/issues/69">Issue #69</a>
+        </div>
+      </article>
+
+      <!-- ======================= SHIPPED ======================= -->
+
+      <article
+        class="entry"
+        id="join-approval"
+        data-status="shipped"
+        data-short="Join approval"
+        data-summary="Admins can approve people who join with a code; learners see what is pending."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Optional admin approval for people who join with a code</h2>
+        <p>
+          A cohort can now ask an admin to approve anyone who joins with its code. With approval on,
+          joining creates a request instead of an enrollment. The learner sees that it is waiting
+          and who to contact, and a small line on My learning shows what is pending. Staff see
+          "Waiting for approval" above the roster with Approve and Decline.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>Off by default. A contact line is required when it is on.</li>
+            <li>
+              Pending people do not count as enrolled in rosters, seat counts or outcomes. Approving
+              checks capacity again.
+            </li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/join-approval/02-learner-pending.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/join-approval/02-learner-pending.jpg"
+                alt="My learning with a request sent message and a pending line"
+            /></a>
+            <figcaption>What the learner sees.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/join-approval/03-staff-waiting.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/join-approval/03-staff-waiting.jpg"
+                alt="Roster with a waiting for approval block"
+            /></a>
+            <figcaption>What staff see.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/68">Issue #68</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="attempt-log"
+        data-status="shipped"
+        data-short="Attempt log"
+        data-summary="Each attempt’s score and date is kept and shown, not just the best."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Every attempt's score is kept and shown</h2>
+        <p>
+          Learners used to see only "Best score 59%, 4 attempts". Now each score a connected tool
+          returns is logged, and the result screen has a collapsed "Your attempts" list with the
+          date and score of each run. Staff can open the same list for any learner from the roster.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              Attempts made before this shipped were never stored, so the list says how many earlier
+              attempts were not recorded.
+            </li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/attempt-log/02-open.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/attempt-log/02-open.jpg"
+                alt="Result screen with an open Your attempts list"
+            /></a>
+            <figcaption>The learner's attempts.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/attempt-log/03-staff-roster.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/attempt-log/03-staff-roster.jpg"
+                alt="Roster with an Attempts panel for one learner"
+            /></a>
+            <figcaption>Staff view from the roster.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/67">Issue #67</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="platforms"
+        data-status="shipped"
+        data-short="Platforms and self-registration"
+        data-summary="Interview Differently registers itself with a platform; admins approve it."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Interview Differently can register itself with a learning platform</h2>
+        <p>
+          A learning platform can now register Interview Differently on its own, using the standard
+          LTI Dynamic Registration steps. The platform arrives switched off and waits on a new
+          Platforms page, where an admin approves or rejects it. A "How platforms work" dialog lists
+          the exact addresses to give a platform.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>A registration never enables itself. Each change is recorded in a history.</li>
+            <li>
+              Interview Differently now supports more than one platform, found by issuer and client
+              id.
+            </li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/platforms/02-waiting-for-approval.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/platforms/02-waiting-for-approval.jpg"
+                alt="Platforms page with a platform waiting for approval"
+            /></a>
+            <figcaption>A platform waiting for approval.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/platforms/05-how-it-works-addresses.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/platforms/05-how-it-works-addresses.jpg"
+                alt="Dialog listing the registration, login, launch and key set addresses"
+            /></a>
+            <figcaption>The addresses to give a platform.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/63">Issue #63</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="connected-tools"
+        data-status="shipped"
+        data-short="Connected tools registry"
+        data-summary="A tool registry with registration by link, workspace limits and history."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Connected tools: a registry, registration by link, and change history</h2>
+        <p>
+          LearnDifferently's connected tools now live in a registry that system admins manage:
+          connections (one registration with a vendor) with tools under them, per-tool wording for
+          the reference field, and limits on which workspaces may use each tool. A tool that
+          supports Dynamic Registration can be added by pasting its registration link. Every change
+          is kept in a searchable, day-grouped history, and a "How this works" dialog explains
+          registration.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              Only system admins can change tools. The two built-in tools are now seeded by a
+              script, not at start-up.
+            </li>
+            <li>A tool added by link arrives switched off.</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/connected-tools/01-connections-and-tools.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/connected-tools/01-connections-and-tools.jpg"
+                alt="Connected tools page with a connection and its tools"
+            /></a>
+            <figcaption>Connections and their tools.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/connected-tools/05-how-it-works-dialog.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/connected-tools/05-how-it-works-dialog.jpg"
+                alt="How connected tools work dialog"
+            /></a>
+            <figcaption>How registration works.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/admin-toolbox/04-tools-history-search.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/admin-toolbox/04-tools-history-search.jpg"
+                alt="Searchable tools history"
+            /></a>
+            <figcaption>Searchable change history.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/63">Issue #63</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="server-scoring"
+        data-status="shipped"
+        data-short="Server-side scoring"
+        data-summary="Simulation scores are decided on the server; learner SQL is bounded."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Scores are decided on the server, and learner SQL is bounded</h2>
+        <p>
+          Text simulations launched from a course are now scored on the server from the learner's
+          choices, so a score can no longer be made up in the browser. Learner SQL queries are
+          limited in how long they can run and how much they can return.
+        </p>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/lti-text-simulation-grading/02-sql-graded-on-server.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/lti-text-simulation-grading/02-sql-graded-on-server.jpg"
+                alt="SQL step graded on the server"
+            /></a>
+            <figcaption>SQL graded on the server.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/63">Issue #63</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="voice-recovery"
+        data-status="shipped"
+        data-short="Voice answer recovery"
+        data-summary="Silence or a failed transcription now asks the learner to record again."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Voice interviews recover from silence and failed transcription</h2>
+        <p>
+          If a learner's answer has no speech in it, or the transcription fails, the player now says
+          so right away and asks them to record again, instead of ending in a 0% score or a long
+          wait. Reloading the player marks the unfinished session as abandoned, and finishing an
+          abandoned session gives its own clear message.
+        </p>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/63">Issue #63</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="pass-marks"
+        data-status="shipped"
+        data-short="Pass marks and readiness"
+        data-summary="Pass marks per item; a course completes only when the learner is ready."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-06">Oct 6, 2026</time>
+        </div>
+        <h2>Pass marks, and a course is complete only when the learner is ready</h2>
+        <p>
+          A connected-tool item can have a pass mark, and "Done" then needs a good score. A course
+          now completes only when every required item is done and the best practice interview
+          reaches the course's readiness goal. The readiness record shows interview readiness as one
+          line, and staff can recompute a learner's record (with the completion date corrected) from
+          the roster. Finished tool items show a result screen with a score ring and a named next
+          button.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>Tool items are required unless the author marks them optional.</li>
+          </ul>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/63">Issue #63</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="lti"
+        data-status="shipped"
+        data-short="LTI 1.3 launch and score return"
+        data-summary="Simulations, SQL labs, voice interviews and assessments launch from a course and score back."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-06">Oct 6, 2026</time>
+        </div>
+        <h2>LTI 1.3: Interview Differently launches from LearnDifferently and returns the score</h2>
+        <p>
+          LearnDifferently can now launch Interview Differently's simulations, SQL labs, voice
+          interviews and timed assessments from a course item, in the same window, and the score
+          comes back to the course. The launched screens wear the tenant's own branding, and the
+          learner gets a "Back to course" link. Pre- and post-assessments run on Interview
+          Differently's assessments, with retakes and per-item time limits.
+        </p>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/tools-assessments/05-student-result.png"
+              ><img
+                loading="lazy"
+                src="../screenshots/tools-assessments/05-student-result.png"
+                alt="Assessment result screen"
+            /></a>
+            <figcaption>An assessment result.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/tools-assessments/09-attempt-schema-rail.png"
+              ><img
+                loading="lazy"
+                src="../screenshots/tools-assessments/09-attempt-schema-rail.png"
+                alt="SQL attempt with a schema panel"
+            /></a>
+            <figcaption>A SQL lab.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/63">Issue #63</a
+          ><a href="../lti-integration.md">LTI integration notes</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="adaptive-plan"
+        data-status="shipped"
+        data-short="Adaptive plans and content items"
+        data-summary="Results add content to a learner’s plan; video and external items."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-06">Oct 6, 2026</time>
+        </div>
+        <h2>Adaptive plans, video and external content items</h2>
+        <p>
+          Results can now add content to a learner's own plan: when a skill check shows a weak
+          skill, the author's matching material is added for that learner and counted toward
+          completion. Authors can also add YouTube video and external-link items to a course.
+        </p>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/adaptive-plan/04-result-card.png"
+              ><img
+                loading="lazy"
+                src="../screenshots/adaptive-plan/04-result-card.png"
+                alt="Result card after a skill check"
+            /></a>
+            <figcaption>A result that adds to the plan.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/external-content/02-video-player.png"
+              ><img
+                loading="lazy"
+                src="../screenshots/external-content/02-video-player.png"
+                alt="Video item player"
+            /></a>
+            <figcaption>A video item.</figcaption>
+          </figure>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="admin-toolbox"
+        data-status="shipped"
+        data-short="Admin toolbox"
+        data-summary="One admin page, with user permissions to change a person’s role."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-06">Oct 6, 2026</time>
+        </div>
+        <h2>Admin toolbox with user permissions</h2>
+        <p>
+          System admins get an admin page that gathers the admin tools, including a user permissions
+          screen to change someone's role (system admin, agency admin, provider admin and others).
+          The workspace chooser also gained search and type filters, and shows the agency hierarchy
+          with counts.
+        </p>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/admin-toolbox/01-toolbox.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/admin-toolbox/01-toolbox.jpg"
+                alt="Admin toolbox tiles"
+            /></a>
+            <figcaption>The admin toolbox.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/admin-toolbox/02-user-permissions-role-menu.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/admin-toolbox/02-user-permissions-role-menu.jpg"
+                alt="User permissions with a role menu"
+            /></a>
+            <figcaption>Changing a role.</figcaption>
+          </figure>
+        </div>
+      </article>
+    </main>
+
+    <footer>
+      <p>Add new entries at the top of the list. See the comment at the top of this file.</p>
+    </footer>
+
+    <script>
+      // Timeline (grouped by day), filter buttons, and an in-page screenshot viewer.
+      ;(function () {
+        var entries = Array.prototype.slice.call(document.querySelectorAll('.entry'))
+        var toc = document.getElementById('toc')
+        var lastDay = null
+        entries.forEach(function (e) {
+          var t = e.querySelector('time')
+          var day = t ? t.textContent.replace(', 2026', '') : ''
+          if (day !== lastDay) {
+            var h = document.createElement('li')
+            h.className = 'tl-day'
+            h.dataset.day = day
+            h.textContent = day
+            toc.appendChild(h)
+            lastDay = day
+          }
+          var li = document.createElement('li')
+          li.className = 'tl-item'
+          li.dataset.status = e.dataset.status
+          li.dataset.day = day
+          var a = document.createElement('a')
+          a.href = '#' + e.id
+          a.textContent = e.dataset.short || e.querySelector('h2').textContent
+          var chip = document.createElement('span')
+          chip.className = 'chip ' + e.dataset.status
+          chip.textContent = e.dataset.status === 'review' ? 'IN REVIEW' : 'SHIPPED'
+          var sum = document.createElement('span')
+          sum.className = 'tl-sum'
+          sum.textContent = e.dataset.summary || ''
+          li.appendChild(a)
+          li.appendChild(chip)
+          li.appendChild(sum)
+          toc.appendChild(li)
+        })
+
+        var buttons = document.querySelectorAll('[data-filter]')
+        buttons.forEach(function (b) {
+          b.addEventListener('click', function () {
+            var f = b.dataset.filter
+            buttons.forEach(function (x) {
+              x.setAttribute('aria-pressed', x === b ? 'true' : 'false')
+            })
+            entries.forEach(function (e) {
+              e.hidden = !(f === 'all' || e.dataset.status === f)
+            })
+            var shown = {}
+            Array.prototype.forEach.call(toc.querySelectorAll('.tl-item'), function (li) {
+              li.hidden = !(f === 'all' || li.dataset.status === f)
+              if (!li.hidden) shown[li.dataset.day] = true
+            })
+            Array.prototype.forEach.call(toc.querySelectorAll('.tl-day'), function (h) {
+              h.hidden = !shown[h.dataset.day]
+            })
+          })
+        })
+
+        // Screenshot viewer: stays on the page, steps through one entry's screenshots.
+        var lb = document.createElement('div')
+        lb.className = 'lb'
+        lb.hidden = true
+        lb.setAttribute('role', 'dialog')
+        lb.setAttribute('aria-modal', 'true')
+        lb.setAttribute('aria-label', 'Screenshot viewer')
+        lb.innerHTML =
+          '<button type="button" class="lb-close" aria-label="Close viewer">\u00d7</button>' +
+          '<div class="lb-stage">' +
+          '<button type="button" class="lb-prev" aria-label="Previous screenshot">\u2039</button>' +
+          '<img alt="" />' +
+          '<button type="button" class="lb-next" aria-label="Next screenshot">\u203a</button>' +
+          '</div>' +
+          '<div class="lb-cap" aria-live="polite"></div>'
+        document.body.appendChild(lb)
+        var img = lb.querySelector('img')
+        var cap = lb.querySelector('.lb-cap')
+        var prev = lb.querySelector('.lb-prev')
+        var next = lb.querySelector('.lb-next')
+        var close = lb.querySelector('.lb-close')
+        var set = []
+        var at = 0
+        var opener = null
+
+        function show(i) {
+          at = i
+          var a = set[i]
+          var im = a.querySelector('img')
+          img.src = a.href
+          img.alt = im ? im.alt : ''
+          var fc = a.parentNode.querySelector('figcaption')
+          cap.textContent = ''
+          cap.appendChild(
+            document.createTextNode(fc ? fc.textContent.replace(/\s+/g, ' ').trim() : '')
+          )
+          var small = document.createElement('small')
+          small.textContent = i + 1 + ' of ' + set.length
+          cap.appendChild(small)
+          prev.disabled = i === 0
+          next.disabled = i === set.length - 1
+          // Warm the neighbours so stepping feels instant.
+          ;[i - 1, i + 1].forEach(function (j) {
+            if (set[j]) new Image().src = set[j].href
+          })
+        }
+        function open(list, i, from) {
+          set = list
+          opener = from
+          lb.hidden = false
+          document.body.style.overflow = 'hidden'
+          show(i)
+          close.focus()
+        }
+        function shut() {
+          lb.hidden = true
+          document.body.style.overflow = ''
+          if (opener) opener.focus()
+        }
+        document.querySelectorAll('.shots').forEach(function (g) {
+          var links = Array.prototype.slice.call(g.querySelectorAll('a'))
+          links.forEach(function (a, i) {
+            a.addEventListener('click', function (ev) {
+              ev.preventDefault()
+              open(links, i, a)
+            })
+          })
+        })
+        prev.addEventListener('click', function () {
+          if (at > 0) show(at - 1)
+        })
+        next.addEventListener('click', function () {
+          if (at < set.length - 1) show(at + 1)
+        })
+        close.addEventListener('click', shut)
+        lb.addEventListener('click', function (ev) {
+          if (ev.target === lb || ev.target.classList.contains('lb-stage')) shut()
+        })
+        document.addEventListener('keydown', function (ev) {
+          if (lb.hidden) return
+          if (ev.key === 'Escape') shut()
+          else if (ev.key === 'ArrowLeft' && at > 0) show(at - 1)
+          else if (ev.key === 'ArrowRight' && at < set.length - 1) show(at + 1)
+          else if (ev.key === 'Tab') {
+            var f = [close, prev, next].filter(function (b) {
+              return !b.disabled
+            })
+            var i = f.indexOf(document.activeElement)
+            ev.preventDefault()
+            f[(i + (ev.shiftKey ? f.length - 1 : 1)) % f.length].focus()
+          }
+        })
+      })()
+    </script>
+  </body>
+</html>

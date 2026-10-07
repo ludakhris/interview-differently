@@ -10,7 +10,7 @@
 
 ## Release notes
 
-`docs/release-notes/README.md` is the checked-in, plain-words changelog (Markdown so GitHub renders it; newest first, with screenshots). When a feature is finished or ships, add a timeline bullet and an entry at the top (the how-to is in the comment at the top of the file) and reference screenshots from `docs/screenshots/<feature>/`. The repo is public: fictional data only, no production configuration, contacts or funding details.
+`docs/release-notes/index.html` is the checked-in, plain-words changelog (open it in a browser; newest first, with a timeline, screenshots and an in-page screenshot viewer). When a feature is finished or ships, add an entry at the top: copy an `<article class="entry">` block, keeping its `data-short` and `data-summary` (the timeline reads them); the how-to is in the comment at the top of the file and reference screenshots from `docs/screenshots/<feature>/`. The repo is public: fictional data only, no production configuration, contacts or funding details.
 
 ## Reviewing larger PRs
 
