@@ -32,6 +32,17 @@ describe('LearnService workspaces', () => {
     })
   })
 
+  it('gives a system admin everything an agency admin has, and passes any role check', async () => {
+    findMany.mockResolvedValue([delaware])
+    await service.workspaces('u1', 'system-admin')
+    expect(findMany.mock.calls[0][0].where).toEqual({
+      subdomain: { not: null },
+      OR: [{ kind: 'agency' }, { parent: { kind: 'agency' } }],
+    })
+    expect(() => service.assertRole('system-admin', ['provider-admin'])).not.toThrow()
+    expect(() => service.assertRole('agency-admin', ['provider-admin'])).toThrow(ForbiddenException)
+  })
+
   it('limits everyone else to institutions they are a member of', async () => {
     findMany.mockResolvedValue([])
     await service.workspaces('u2', 'provider-admin')

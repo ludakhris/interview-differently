@@ -1,5 +1,7 @@
+import { withFirstTool } from '../lti/platform/tool-test-helpers'
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common'
 import type { PrismaService } from '../prisma/prisma.service'
+import { managedTools, resetStoredTools, setStoredTools } from '../lti/platform/lti-platform-config'
 import { CoursesService } from './courses.service'
 import type { LearnService } from './learn.service'
 
@@ -20,7 +22,7 @@ const prisma = {
   },
   cohort: { count: jest.fn() },
   itemProgress: { count: jest.fn() },
-  institution: { findFirst: jest.fn() },
+  institution: { findFirst: jest.fn(), findUnique: jest.fn() },
   $transaction: jest.fn(),
 }
 const learn = {
@@ -227,5 +229,110 @@ describe('CoursesService reorder', () => {
       })
     ).rejects.toThrow(BadRequestException)
     expect(prisma.$transaction).not.toHaveBeenCalled()
+  })
+})
+
+describe('CoursesService tool access', () => {
+  const limited = (workspaceIds: string[]) =>
+    setStoredTools(withFirstTool({ enabled: true, workspaceIds }))
+  const item = {
+    type: 'tool',
+    title: 'Lab',
+    label: null,
+    config: { toolId: 'id-interview', ref: 'x' },
+  }
+  beforeEach(() => {
+    prisma.courseModule.findUnique.mockResolvedValue({ id: 'm1', courseId: 'c1' })
+    prisma.courseItem.aggregate.mockResolvedValue({ _max: { position: 0 } })
+    prisma.course.findUnique.mockResolvedValue({
+      ...course,
+      provider: { id: 'p1', parentId: 'a1' },
+    })
+  })
+  afterEach(() => resetStoredTools())
+
+  it('adds an item for a tool open to everyone, or limited to this provider or its agency', async () => {
+    await service.addItem('u', 'agency-admin', 'm1', item)
+    limited(['p1'])
+    await service.addItem('u', 'agency-admin', 'm1', item)
+    limited(['a1'])
+    await service.addItem('u', 'agency-admin', 'm1', item)
+    expect(prisma.courseItem.create).toHaveBeenCalledTimes(3)
+  })
+
+  it('refuses a tool this provider is not approved for, creating nothing', async () => {
+    limited(['someone-else'])
+    await expect(service.addItem('u', 'agency-admin', 'm1', item)).rejects.toThrow(
+      /not available to this provider/
+    )
+    expect(prisma.courseItem.create).not.toHaveBeenCalled()
+  })
+
+  it('refuses the same on an edit, and leaves other item types alone', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue({
+      id: 'i1',
+      type: 'tool',
+      config: {},
+      module: { courseId: 'c1' },
+    })
+    limited(['someone-else'])
+    await expect(service.updateItem('u', 'agency-admin', 'i1', item)).rejects.toThrow(
+      /not available to this provider/
+    )
+    expect(prisma.courseItem.update).not.toHaveBeenCalled()
+    await service.addItem('u', 'agency-admin', 'm1', {
+      type: 'lesson',
+      title: 'L',
+      config: { body: 'x' },
+    })
+    expect(prisma.courseItem.create).toHaveBeenCalledTimes(1)
+  })
+
+  it('lets an item keep a tool that was switched off or limited since, but not move to one', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue({
+      id: 'i1',
+      type: 'tool',
+      config: { toolId: 'id-interview', ref: 'x' },
+      module: { courseId: 'c1' },
+    })
+    setStoredTools(withFirstTool({ enabled: false, workspaceIds: ['someone-else'] }))
+    // renamed and marked optional, same tool: still saves
+    await service.updateItem('u', 'agency-admin', 'i1', {
+      ...item,
+      title: 'Renamed',
+      config: { ...item.config, optional: true },
+    })
+    expect(prisma.courseItem.update).toHaveBeenCalledTimes(1)
+    // a different, unavailable tool: refused
+    setStoredTools([
+      { ...managedTools()[0], enabled: true, workspaceIds: [] },
+      { ...managedTools()[1], enabled: true, workspaceIds: ['someone-else'] },
+    ])
+    await expect(
+      service.updateItem('u', 'agency-admin', 'i1', {
+        ...item,
+        config: { toolId: 'id-assessment', ref: 'x' },
+        label: 'pre',
+      })
+    ).rejects.toThrow(/not available to this provider/)
+  })
+
+  it('lists for an author only the enabled tools their provider may use, without connection settings', async () => {
+    prisma.institution.findUnique.mockResolvedValue({ id: 'p1', parentId: 'a1' })
+    setStoredTools([
+      { ...managedTools()[0], enabled: true, workspaceIds: ['someone-else'] },
+      { ...managedTools()[1], enabled: false, workspaceIds: [] },
+    ])
+    expect((await service.toolsFor('u', 'provider-admin', 'c1')).tools).toEqual([])
+    limited(['a1'])
+    const out = await service.toolsFor('u', 'provider-admin', 'c1')
+    expect(out.tools.map((t) => t.toolId)).toEqual(['id-interview', 'id-assessment'])
+    expect(out.canManage).toBe(false)
+    // An author sees which tools they may pick, not who else may use them or where they live.
+    expect(out.tools[0].workspaceIds).toEqual([])
+    expect(out.connections).toEqual([])
+    expect((await service.toolsFor('u', 'system-admin', 'c1')).tools[0].workspaceIds).toEqual([
+      'a1',
+    ])
   })
 })

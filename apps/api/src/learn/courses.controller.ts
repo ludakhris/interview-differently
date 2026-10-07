@@ -35,6 +35,11 @@ export class CoursesController {
     return this.courses.create(req.userId, req.userRole, workspace, body)
   }
 
+  @Get('courses/:id/tools')
+  tools(@Req() req: LearnRequest, @Param('id') id: string) {
+    return this.courses.toolsFor(req.userId, req.userRole, id)
+  }
+
   @Get('courses/:id')
   detail(@Req() req: LearnRequest, @Param('id') id: string) {
     return this.courses.detail(req.userId, req.userRole, id)

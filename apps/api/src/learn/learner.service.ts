@@ -28,7 +28,10 @@ import {
   assessmentLimits,
   isInterviewLike,
   passScoreOf,
+  scopeOf,
+  toolAllowedFor,
   isPracticeItem,
+  toolAnyById,
   toolById,
 } from '../lti/platform/lti-platform-config'
 import { imageUrl, isImageKey } from './item-image'
@@ -210,6 +213,17 @@ export class LearnerService {
   }
 
   // ── reading ───────────────────────────────────────────────────────────────
+
+  /** The tool a course item names, or undefined when it is off or not available to this course's provider. */
+  private async toolFor(courseId: string, toolId: unknown) {
+    const tool = toolById(toolId)
+    if (!tool || tool.workspaceIds.length === 0) return tool
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      select: { provider: { select: { id: true, parentId: true } } },
+    })
+    return course && toolAllowedFor(tool, scopeOf(course.provider)) ? tool : undefined
+  }
 
   private async courseItems(courseId: string) {
     const modules = await this.prisma.courseModule.findMany({
@@ -463,7 +477,8 @@ export class LearnerService {
         imageUrl: isImageKey(config.imageKey) ? imageUrl(config.imageKey) : null,
       }
     }
-    const registered = item.type === 'tool' ? toolById(config.toolId) : undefined
+    const registered =
+      item.type === 'tool' ? await this.toolFor(e.cohort.course.id, config.toolId) : undefined
     const limits = registered?.kind === 'assessment' ? assessmentLimits(config) : null
     const tool: LearnerItem['tool'] =
       registered && typeof config.ref === 'string'
@@ -721,7 +736,8 @@ export class LearnerService {
     const pct = result.scorePct
     if (typeof pct !== 'number' || !Number.isFinite(pct) || pct < 0 || pct > 100)
       throw new BadRequestException('Score must be from 0 to 100')
-    const registered = toolById((item.config as { toolId?: unknown } | null)?.toolId)
+    // Any state: an attempt cap still applies to a tool switched off since the learner launched it.
+    const registered = toolAnyById((item.config as { toolId?: unknown } | null)?.toolId)
     const cap = registered?.kind === 'assessment' ? assessmentLimits(item.config).maxAttempts : null
 
     // A tool may report the same result twice (a retry after a timeout): a report with the same

@@ -10,6 +10,7 @@ import {
   resultCopy,
   toolItemLabel,
   toolLabelable,
+  toolOptions,
   toolRefProblem,
 } from './toolKinds'
 
@@ -187,5 +188,41 @@ describe('onPageRestore', () => {
     onPageRestore(target, reset)()
     target.dispatchEvent(pageshow(true))
     expect(reset).not.toHaveBeenCalled()
+  })
+})
+
+describe('toolOptions', () => {
+  const tools = [
+    { toolId: 'a', name: 'A', labelable: false, enabled: true },
+    { toolId: 'off', name: 'Off', labelable: true, enabled: false },
+    { toolId: 'lab', name: 'Lab', labelable: true, enabled: true },
+  ]
+
+  it('offers the built-ins until the registry has loaded', () => {
+    expect(toolOptions(null, 'a', null).map((o) => o.id)).toEqual(['id-interview', 'id-assessment'])
+  })
+
+  it('offers only enabled tools for a new item, even if its default is switched off', () => {
+    expect(toolOptions(tools, 'off', null).map((o) => o.id)).toEqual(['a', 'lab'])
+    expect(toolOptions(tools, 'gone', null).map((o) => o.id)).toEqual(['a', 'lab'])
+  })
+
+  it('keeps an existing item on its tool when it is switched off, or not available here', () => {
+    expect(toolOptions(tools, 'off', { labelled: true }).map((o) => o.id)).toEqual([
+      'a',
+      'off',
+      'lab',
+    ])
+    const missing = toolOptions(tools, 'gone', { labelled: true })
+    expect(missing.at(-1)).toEqual({ id: 'gone', label: 'gone (not available)', labelable: true })
+    expect(toolOptions(tools, 'gone', { labelled: false }).at(-1)?.labelable).toBe(false)
+  })
+
+  it('judges the pre/post label by the tool list given', () => {
+    const opts = toolOptions(tools, 'lab', null)
+    expect(toolLabelable('lab', opts)).toBe(true)
+    expect(toolLabelable('a', opts)).toBe(false)
+    expect(toolItemLabel('lab', 'post', opts)).toBe('post')
+    expect(toolItemLabel('a', 'post', opts)).toBeNull()
   })
 })

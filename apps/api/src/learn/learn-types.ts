@@ -412,6 +412,58 @@ export interface LearnerItem {
   locked: string | null
 }
 
+// ── Connected tools (#63) ───────────────────────────────────────────────────
+
+/** A connected LTI tool as the registry shows it. */
+export interface LearnTool {
+  toolId: string
+  /** The connection (registration with a vendor) it launches through. */
+  connectionId: string
+  name: string
+  /** An interview is a practice lab that can be retried; an assessment is a graded question bank. */
+  kind: 'interview' | 'assessment'
+  retries: boolean
+  /** Whether an item for it can be the course's pre or post assessment. */
+  labelable: boolean
+  enabled: boolean
+  /** Agencies and providers that may use it; empty means every workspace. */
+  workspaceIds: string[]
+}
+
+/** A registration with a tool vendor: the client id and URLs one or more tools launch through. */
+export interface LearnConnection {
+  id: string
+  name: string
+  clientId: string
+  deploymentId: string
+  loginUrl: string
+  launchUrl: string
+  jwksUrl: string
+  /** How many tools use it. */
+  toolCount: number
+}
+
+/** One change to a connection or tool: who made it, when, and each field's old and new value. */
+export interface LearnRegistryChange {
+  id: string
+  subject: 'connection' | 'tool'
+  subjectId: string
+  subjectName: string
+  action: 'created' | 'updated' | 'removed'
+  /** The person's name or email when they made the change; "System" for first-start setup. */
+  userName: string
+  changes: Record<string, { from: unknown; to: unknown }>
+  createdAt: string
+}
+
+export interface LearnToolList {
+  tools: LearnTool[]
+  /** Only for someone who may manage tools; empty for an author picking a tool. */
+  connections: LearnConnection[]
+  /** Whether the caller may add, change or remove tools. */
+  canManage: boolean
+}
+
 // ── Public catalog (#49) ────────────────────────────────────────────────────
 
 /** An offering in an agency's training catalog: a published course of a provider the agency lists. */

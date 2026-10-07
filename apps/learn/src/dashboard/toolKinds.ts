@@ -1,16 +1,47 @@
-/** The connected tools an author can pick (mirrors the API registry; the API is the authority). */
-export const TOOL_OPTIONS = [
+/** A tool an author can pick. */
+export interface ToolOption {
+  id: string
+  label: string
+  labelable: boolean
+}
+
+/** The built-in tools, used until the registry loads (the API is the authority). */
+export const TOOL_OPTIONS: ToolOption[] = [
   { id: 'id-interview', label: 'Interview Differently interview', labelable: false },
   { id: 'id-assessment', label: 'Interview Differently assessment', labelable: true },
-] as const
+]
+
+/**
+ * The options for the tool picker: the enabled tools, plus the one an existing item already uses
+ * when it has since been switched off or is not available here (shown as such, so opening the item
+ * never changes its tool silently). A new item never gets that extra entry.
+ */
+export function toolOptions(
+  tools: { toolId: string; name: string; labelable: boolean; enabled: boolean }[] | null,
+  current: string,
+  existing: { labelled: boolean } | null
+): ToolOption[] {
+  if (!tools) return TOOL_OPTIONS
+  const options = tools
+    .filter((t) => t.enabled || (existing && t.toolId === current))
+    .map((t) => ({ id: t.toolId, label: t.name, labelable: t.labelable }))
+  if (!existing || !current || options.some((o) => o.id === current)) return options
+  return [
+    ...options,
+    { id: current, label: `${current} (not available)`, labelable: existing.labelled },
+  ]
+}
 
 /** Whether a tool's item can be the course's pre or post assessment. */
-export const toolLabelable = (toolId: string): boolean =>
-  TOOL_OPTIONS.some((t) => t.id === toolId && t.labelable)
+export const toolLabelable = (toolId: string, tools: ToolOption[] = TOOL_OPTIONS): boolean =>
+  tools.some((t) => t.id === toolId && t.labelable)
 
 /** The label an item is saved with: only a labelable tool keeps pre or post. */
-export const toolItemLabel = (toolId: string, label: 'pre' | 'post'): 'pre' | 'post' | null =>
-  toolLabelable(toolId) ? label : null
+export const toolItemLabel = (
+  toolId: string,
+  label: 'pre' | 'post',
+  tools: ToolOption[] = TOOL_OPTIONS
+): 'pre' | 'post' | null => (toolLabelable(toolId, tools) ? label : null)
 
 /** What the "ready to start" card says: one wording for a graded assessment, one for a practice lab. */
 export interface ReadyCopy {
@@ -157,6 +188,8 @@ export function toolConfig(f: {
   passScore: string
   countsAsInterview: boolean
   optional: boolean
+  /** The tools on offer; the built-ins when omitted. */
+  tools?: ToolOption[]
 }): Record<string, unknown> {
   const limit = parseTimeLimit(f.timeLimit)
   const pass = parsePassScore(f.passScore)
@@ -165,7 +198,7 @@ export function toolConfig(f: {
     ref: f.ref.trim(),
     ...(f.skill ? { skill: f.skill } : {}),
     ...(pass ? { passScore: pass } : {}),
-    ...(toolLabelable(f.toolId)
+    ...(toolLabelable(f.toolId, f.tools)
       ? { maxAttempts: parseAttempts(f.attempts), ...(limit ? { timeLimitMinutes: limit } : {}) }
       : f.countsAsInterview
         ? { countsAsInterview: true }

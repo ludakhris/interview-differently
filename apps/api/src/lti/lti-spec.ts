@@ -200,7 +200,11 @@ export function jwksKeyResolver(url: string, fetchImpl: typeof fetch = fetch, tt
   const unknown = new Map<string, number>()
   const loadOnce = async () => {
     try {
-      const res = await fetchImpl(url, { signal: AbortSignal.timeout(JWKS_TIMEOUT_MS) })
+      // A redirect could send the request to an internal address the URL check never saw.
+      const res = await fetchImpl(url, {
+        signal: AbortSignal.timeout(JWKS_TIMEOUT_MS),
+        redirect: 'error',
+      })
       if (!res.ok) throw new Error(`status ${res.status}`)
       const keys = (JSON.parse(await readCapped(res, JWKS_MAX_BYTES)) as { keys?: Jwk[] }).keys
       if (!Array.isArray(keys)) throw new Error('no keys')

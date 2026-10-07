@@ -32,7 +32,7 @@ To remove admin access, edit the same **Public metadata** field and either delet
 
 ## LearnDifferently admin toolbox (`/lms/admin`)
 
-System admins (LearnDifferently Clerk `publicMetadata.role` = `system-admin`) get an **Admin** link with system tools. Today there is one: **User permissions** (`/lms/admin/users`), which finds a user by email or name and sets their role to any value in `LEARN_ROLES` (`apps/api/src/learn/learn.service.ts`), or clears it. A user holds one role. You cannot change your own role.
+System admins (LearnDifferently Clerk `publicMetadata.role` = `system-admin`) get an **Admin** link with system tools. Today there are two. **User permissions** (`/lms/admin/users`) finds a user by email or name and sets their role to any value in `LEARN_ROLES` (`apps/api/src/learn/learn.service.ts`), or clears it. A user holds one role. You cannot change your own role. **Connected tools** (`/lms/admin/tools`) lists the tools learners can be sent to (Interview Differently is there from the first start), adds new ones (and the connections they launch through), switches them off, limits each to chosen agencies and providers, and keeps a history of who changed what. See `docs/lti-integration.md`, "Registration".
 
 The first system admin must be set by hand in the **LearnDifferently** Clerk dashboard (same steps as above, with `{ "role": "system-admin" }`). After that, roles are managed in the tool.
 

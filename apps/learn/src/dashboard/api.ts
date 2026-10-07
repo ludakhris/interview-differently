@@ -67,15 +67,17 @@ export interface Loaded<T> {
   reload: () => void
 }
 
-export function useLoad<T>(path: string): Loaded<T> {
+/** `path` null loads nothing (for data only some views need). */
+export function useLoad<T>(path: string | null): Loaded<T> {
   const apiFetch = useApiFetch()
   const [state, setState] = useState<Omit<Loaded<T>, 'reload'>>({
     data: null,
     error: null,
-    loading: true,
+    loading: path !== null,
   })
   const [tick, setTick] = useState(0)
   useEffect(() => {
+    if (path === null) return
     let cancelled = false
     setState((s) => ({ ...s, loading: true, error: null }))
     apiFetch(path)

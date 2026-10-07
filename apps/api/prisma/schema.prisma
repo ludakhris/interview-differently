@@ -560,6 +560,61 @@ model UsageEvent {
   @@index([userId, createdAt])
 }
 
+// One registration with a tool vendor (#63): the client id the platform knows it by, and where its
+// login, launch and key set live. Several tools can share one connection (a vendor with a practice
+// lab and a graded assessment over the same server). Holds no secrets: the keys are fetched from
+// jwksUrl.
+model LtiConnection {
+  id           String    @id
+  name         String
+  clientId     String    @unique
+  deploymentId String
+  loginUrl     String
+  launchUrl    String
+  jwksUrl      String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  tools        LtiTool[]
+}
+
+// A connected tool a course item may launch (#63): what it is and who may use it. Where it lives is
+// its connection's.
+model LtiTool {
+  toolId       String        @id
+  connectionId String
+  connection   LtiConnection @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  name         String
+  kind         String // 'interview' | 'assessment'
+  retries      Boolean
+  labelable    Boolean
+  enabled      Boolean       @default(true)
+  // Institution ids (agencies or providers) that may use the tool; empty means every workspace.
+  // A workspace is allowed when it, or the agency it reports to, is listed.
+  workspaceIds String[]      @default([])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([connectionId])
+}
+
+// Who changed which connection or tool, and how (#63). One row per change, written in the same
+// transaction as the change. subjectId is not a foreign key so the history of a removed one stays.
+model LtiRegistryChange {
+  id          String   @id @default(uuid())
+  subject     String // 'connection' | 'tool'
+  subjectId   String
+  subjectName String
+  action      String // 'created' | 'updated' | 'removed'
+  userId      String? // null for the first-start setup
+  userName    String // the person's name or email when they made the change
+  // { field: { from, to } } for each field that changed (from is null on create, to on remove)
+  changes     Json
+  createdAt   DateTime @default(now())
+
+  @@index([subjectId, createdAt])
+  @@index([createdAt])
+}
+
 // Single-use and rate-limit state shared by every API instance for LTI (#63): launch hints,
 // client-assertion ids, login state, submission tokens, request counters. One row per
 // scope + key; expired rows are ignored on read and deleted opportunistically.

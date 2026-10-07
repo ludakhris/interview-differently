@@ -6,8 +6,9 @@ lives in `apps/api/src/lti/platform/`, tool code in `apps/api/src/lti/tool/`. Ne
 other (enforced by `apps/api/src/lti/lti-boundary.spec.ts`). They talk only over HTTP URLs.
 
 Base URL: `LTI_API_BASE` (default `http://localhost:3000/api`). Platform issuer: `LTI_PLATFORM_ISSUER`
-(default: the origin of `LTI_API_BASE`). Registrations are static config in each side. The only database
-state is the `LtiSingleUse` table (see "Shared store").
+(default: the origin of `LTI_API_BASE`). The platform's own registration is static config. The tools it can launch are
+in code (the two built-ins) plus the `LtiTool` table (see "Registration"); the other database state is the
+`LtiSingleUse` table (see "Shared store").
 
 ## Environment variables
 
@@ -74,19 +75,62 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
 | platform `GET|POST /auth` | 30 / minute | client IP (`req.ip`) | JSON |
 | platform `POST /token` | 60 / minute | client id, counted only after the assertion signature verifies | JSON `{error:'rate_limited'}` |
 
-## Registration (static)
+## Registration
+
+What a course item may launch lives in two tables, managed by a system administrator at `/lms/admin/tools`
+(part of the Admin toolbox; API `/api/learn/tools`, `/api/learn/tools/connections`, `/api/learn/tools/history`):
+
+- A **connection** (`LtiConnection`) is one registration with a tool vendor: the client id the platform knows
+  it by (unique), the deployment id, and the login, launch and key-set URLs. It holds no secret; the vendor's
+  keys are fetched from the key-set URL.
+- A **tool** (`LtiTool`) is something a course item opens: its name, kind (practice lab or graded assessment),
+  whether it can be retried, whether it can stand in for the pre/post assessment, whether it is on, who may use
+  it, and the connection it launches through. Several tools can use one connection: Interview Differently has a
+  practice-lab tool and a graded-assessment tool over one server, one client id and one set of keys. Changing a
+  connection changes where all its tools launch. A connection with tools cannot be removed.
+
+Rules:
+
+- **First start:** the Interview Differently connection and its two tools below are written once per database,
+  from the `LTI_TOOL_*` and `LTI_API_BASE` environment variables (so each environment points at its own host). A
+  `PlatformConfig` row (`lti-tools-seeded`) records that, so a tool an admin removes is not written back. After
+  that the tables are the only source: changing those variables has no effect.
+- Only the LearnDifferently Clerk role `system-admin` can list, add, change or remove anything here (it is a
+  superset of `agency-admin`). A tool receives each launching learner's name and ID, so registering one is a
+  security decision. Authors see only the tools their course's provider may use, with nothing about who else may
+  use them and no connection settings (`GET /api/learn/courses/:id/tools`).
+- **History:** every change writes a row to `LtiRegistryChange` in the same transaction: who (their name or
+  email when they did it), when, what, and each changed field's old and new value. Rows are kept after the tool
+  or connection is removed. The admin page shows them, filterable to one tool or connection. Saving without
+  changing anything writes nothing.
+- URLs must be https and point at a public address (IPv4 and IPv6 private, loopback, link-local and mapped
+  forms are refused); `http://localhost` is allowed only outside production. The platform never follows a
+  redirect when it fetches a tool's key set.
+- **Access:** a tool's `workspaceIds` limits it to chosen agencies and providers (empty: every workspace). A
+  course's provider is allowed when it, or the agency it reports to, is listed. This covers every program that
+  runs the provider's courses, whichever organization runs the cohort. Checked when an author saves a tool item,
+  when a learner opens the item, and when the tool is launched.
+- A tool item whose tool is switched off or not available to the course's provider cannot be launched. It stays
+  required for completion (a brief switch-off must never complete a course early), so an author turns the tool back
+  on or marks the item optional. An author can still edit such an item (rename, mark optional) while its tool is
+  unchanged. A switched-off tool can still get a token and post a score for work a learner already did.
+- The registry is cached in memory and refreshed every 15 seconds, so a change reaches another API instance within
+  that time. Until it has loaded once after start-up (three tries, then every 15 seconds), no tool can be launched, so
+  a restriction is never lost to a failed read.
+
+### The connection and two tools seeded on first start
 
 - Two tools, `id-interview` (name "Interview Differently") and `id-assessment` ("Interview Differently assessment"), share
   one client id `ld-platform`, deployment id `1` and the same login/launch/jwks URLs. The id_token's custom claim says which
   was launched: `{ ref, tool }` (plus `attempt` and `timeLimitMinutes?` for `id-assessment`, see "Attempts and time limits"), where `tool` is the LearnDifferently tool id and, for `id-assessment`, `ref` is the Assessment slug.
 - Platform-only properties per tool (never on the wire): `kind` (`interview` | `assessment`), `retries` (registry default only; the learner view derives `retries` per item, see "Attempts and time limits") and `labelable` (assessment true). A `tool` course item may carry the `pre`/`post`
   label only when its tool is labelable; such an item stands in for LearnDifferently's own assessment (required for course
-  completion, its best score feeds pre/post/gain, not counted as an interview). An unlabelled tool item is practice: never required for completion, and its score shows only beside it in the course outline (the readiness record has no per-item practice list). It feeds interview readiness (`interviewBest`, `interviewAttempts`, "Ready to interview") only when its config has `countsAsInterview: true` (interview-kind tools only; dropped for assessments and labelled items). Native `interview` items always feed readiness.
-- Platform side config (`ToolRegistration`): loginUrl `${BASE}/lti/tool/login`, launchUrl `${BASE}/lti/tool/launch`,
+  completion, its best score feeds pre/post/gain, not counted as an interview). An unlabelled tool item is required for completion unless its config sets `optional: true` (not allowed with `countsAsInterview` or a label), and its score shows beside it in the course outline. A tool item may set `passScore` (1-100, never on a `pre` item): a score below it leaves the item to do and the learner retries. A course that has anything counting as an interview does not complete until the best such score reaches the course's readiness goal; staff can recompute one learner with `POST /api/learn/enrollments/:id/recompute`. It feeds interview readiness (`interviewBest`, `interviewAttempts`, "Ready to interview") only when its config has `countsAsInterview: true` (interview-kind tools only; dropped for assessments and labelled items). Native `interview` items always feed readiness.
+- The seeded values (`ToolRegistration`): loginUrl `${BASE}/lti/tool/login`, launchUrl `${BASE}/lti/tool/launch`,
   jwksUrl `${BASE}/lti/tool/jwks`.
 - Tool side config (`PlatformRegistration`): issuer, authUrl `${BASE}/lti/platform/auth`,
   tokenUrl `${BASE}/lti/platform/token`, jwksUrl `${BASE}/lti/platform/jwks`.
-- Each side's registration config is overridable by env so it can point at another host.
+- The tool side's own config (below) is static and overridable by env so it can point at another host; the platform's tool list comes from the registry.
 
 ## Platform endpoints (`/api/lti/platform`)
 

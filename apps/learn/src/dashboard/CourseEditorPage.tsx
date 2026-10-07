@@ -497,6 +497,7 @@ function Editor({
                     {editingItem === it.id && (
                       <ItemEditor
                         key={it.id}
+                        courseId={course.id}
                         item={it}
                         skills={course.skills}
                         busy={busy}
@@ -512,6 +513,7 @@ function Editor({
               {newItem?.moduleId === m.id && (
                 <ItemEditor
                   key={`new-${newItem.item.type}-${newItem.item.label}`}
+                  courseId={course.id}
                   item={newItem.item}
                   skills={course.skills}
                   busy={busy}

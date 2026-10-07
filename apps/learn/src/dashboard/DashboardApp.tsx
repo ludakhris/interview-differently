@@ -14,6 +14,7 @@ import { LearningItemPage } from './LearningItemPage'
 import { LearningPage } from './LearningPage'
 import { OutcomesPage } from './OutcomesPage'
 import { errorNotice } from './shared'
+import { ToolsPage } from './ToolsPage'
 import { WorkspaceChooser } from './WorkspaceChooser'
 
 /** Signed-in app: agency reports (/dashboard) and provider course setup (/courses). */
@@ -93,6 +94,13 @@ function Routes({ pathname }: { pathname: string }) {
     return (
       <DashboardShell>
         <AdminUsersPage />
+      </DashboardShell>
+    )
+  }
+  if (pathname === '/lms/admin/tools' || pathname === '/lms/admin/tools/') {
+    return (
+      <DashboardShell>
+        <ToolsPage />
       </DashboardShell>
     )
   }

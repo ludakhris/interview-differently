@@ -34,7 +34,11 @@ import {
   assessmentLimits,
   learnUrl,
   platformRegistration,
+  managedTools,
   registeredTools,
+  scopeOf,
+  toolAllowedFor,
+  toolAnyById,
   toolById,
 } from './lti-platform-config'
 
@@ -153,11 +157,18 @@ export class LtiPlatformService {
   /**
    * The item as a tool item, with its tool and ref. With `userId`, the learner must also be
    * enrolled and the cohort open (launching); without, the item need only belong to the cohort's course.
+   * `scoring`: a score coming back for work the learner already did is accepted even if the tool has
+   * since been switched off or its access narrowed; only launching a tool needs it to be available.
    */
-  private async toolItem(cohortId: string, itemId: string, userId?: string) {
+  private async toolItem(cohortId: string, itemId: string, userId?: string, scoring = false) {
     const cohort = await this.prisma.cohort.findUnique({
       where: { id: cohortId },
-      select: { courseId: true, startsAt: true, endsAt: true },
+      select: {
+        courseId: true,
+        startsAt: true,
+        endsAt: true,
+        course: { select: { provider: { select: { id: true, parentId: true } } } },
+      },
     })
     if (!cohort?.courseId) throw new NotFoundException('Item not found')
     if (userId) {
@@ -176,9 +187,14 @@ export class LtiPlatformService {
     if (!item || item.module.courseId !== cohort.courseId || item.type !== 'tool')
       throw new NotFoundException('Item not found')
     const config = (item.config ?? {}) as { toolId?: unknown; ref?: unknown }
-    const tool = toolById(config.toolId)
+    const tool = scoring ? toolAnyById(config.toolId) : toolById(config.toolId)
     if (!tool || typeof config.ref !== 'string')
       throw new ConflictException('This item has no valid tool')
+    // The tool receives learners' identities, so a program may only use one it has been approved for.
+    if (!scoring && (!cohort.course || !toolAllowedFor(tool, scopeOf(cohort.course.provider))))
+      throw new ConflictException(
+        'This tool is not available to this program. Tell your instructor.'
+      )
     return { tool, ref: config.ref, config: item.config }
   }
 
@@ -356,7 +372,7 @@ export class LtiPlatformService {
       this.oauthError('invalid_request', 'client_assertion_type is not supported')
     const assertion = str(p.client_assertion)
     const claimed = decodePayload(assertion)
-    const tool = registeredTools().find((t) => t.clientId === str(claimed?.iss))
+    const tool = managedTools().find((t) => t.clientId === str(claimed?.iss))
     if (!tool) this.oauthError('invalid_client', 'Unknown client', 401)
     const registered = tool as ToolRegistration
 
@@ -424,7 +440,7 @@ export class LtiPlatformService {
     const token = authorization?.startsWith('Bearer ') ? authorization.slice(7).trim() : ''
     if (!token) throw new HttpException('Missing Bearer token', 401)
     const aud = decodePayload(token)?.aud
-    const tool = registeredTools().find((t) => t.clientId === aud)
+    const tool = managedTools().find((t) => t.clientId === aud)
     if (!tool) throw new HttpException('Invalid token', 401)
     let payload: JwtClaims
     try {
@@ -451,7 +467,7 @@ export class LtiPlatformService {
     body: unknown
   ): Promise<{ recorded: true }> {
     const client = await this.clientOf(authorization)
-    const { tool } = await this.toolItem(cohortId, itemId)
+    const { tool } = await this.toolItem(cohortId, itemId, undefined, true)
     if (tool.clientId !== client.clientId)
       throw new HttpException('Token is not for this tool', 403)
 

@@ -187,7 +187,7 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
           Assessment scores before and after training for each cohort, grouped by provider. Open a
           cohort for its gradebook.
         </p>
-        {role === 'agency-admin' && (
+        {(role === 'agency-admin' || role === 'system-admin') && (
           <p className="dash-sub">
             <button type="button" className="dash-linkbtn" onClick={exportCsv} disabled={exporting}>
               {exporting ? 'Preparing…' : 'Export participant records (CSV)'}

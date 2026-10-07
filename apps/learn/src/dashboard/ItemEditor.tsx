@@ -1,6 +1,14 @@
-import type { CourseItemDto, CourseSkill, KnowledgeCheckQuestion } from '@id/types'
+import type { CourseItemDto, CourseSkill, KnowledgeCheckQuestion, LearnToolList } from '@id/types'
 import { useState } from 'react'
-import { TOOL_OPTIONS, toolConfig, toolItemLabel, toolLabelable, toolRefProblem } from './toolKinds'
+import { useLoad } from './api'
+import { useApp } from './app-context'
+import {
+  toolConfig,
+  toolItemLabel,
+  toolLabelable as labelableIn,
+  toolOptions,
+  toolRefProblem,
+} from './toolKinds'
 
 export interface ItemDraft {
   type: string
@@ -38,6 +46,8 @@ const emptyQuestion = (): KnowledgeCheckQuestion => ({
 
 /** Edits one item in place. The fields shown depend on its type. */
 export function ItemEditor(props: {
+  /** The course the item belongs to: the tools on offer depend on its provider. */
+  courseId: string
   item: CourseItemDto
   /** The course's skills, for tagging questions and choosing remediation. */
   skills: CourseSkill[]
@@ -50,6 +60,7 @@ export function ItemEditor(props: {
   onImage?: (file: File | null) => void
 }) {
   const { item } = props
+  const { href } = useApp()
   const [title, setTitle] = useState(item.title)
   const [label, setLabel] = useState<'pre' | 'post'>(item.label === 'post' ? 'post' : 'pre')
   const [body, setBody] = useState(String(item.config.body ?? ''))
@@ -66,7 +77,33 @@ export function ItemEditor(props: {
   const [linkSummary, setLinkSummary] = useState(String(item.config.summary ?? ''))
   const [role, setRole] = useState(String(item.config.role ?? ''))
   const [skill, setSkill] = useState(String(item.config.skill ?? ''))
-  const [toolId, setToolId] = useState(String(item.config.toolId ?? 'id-interview'))
+  const [pickedTool, setToolId] = useState(String(item.config.toolId ?? 'id-interview'))
+  // Only a connected-tool item needs the registry; the others skip the request.
+  const registry = useLoad<LearnToolList>(
+    item.type === 'tool' ? `/learn/courses/${props.courseId}/tools` : null
+  )
+  const tools = toolOptions(
+    registry.data?.tools ?? null,
+    pickedTool,
+    props.isNew ? null : { labelled: item.label !== null }
+  )
+  // A new item starts on the first tool this provider may use, not on one that is off or off limits.
+  const toolId =
+    props.isNew && registry.data && !tools.some((t) => t.id === pickedTool)
+      ? (tools[0]?.id ?? pickedTool)
+      : pickedTool
+  // What stops a tool item being saved: the list has not loaded, failed, or has nothing to pick.
+  const toolBlock =
+    item.type !== 'tool'
+      ? null
+      : registry.loading
+        ? 'Loading the connected tools…'
+        : registry.error
+          ? 'Could not load the connected tools. Reload the page and try again.'
+          : tools.length === 0
+            ? 'No connected tools are available to this provider. Ask a system administrator.'
+            : null
+  const toolLabelable = (id: string) => labelableIn(id, tools)
   const [toolRef, setToolRef] = useState(String(item.config.ref ?? ''))
   // How this item is used in a learner's plan: ordinary content, extra content only flagged
   // learners get, or ordinary content that flagged learners must complete again.
@@ -112,6 +149,7 @@ export function ItemEditor(props: {
                 }
               : item.type === 'tool'
                 ? toolConfig({
+                    tools,
                     toolId,
                     ref: toolRef,
                     skill,
@@ -141,7 +179,7 @@ export function ItemEditor(props: {
     props.onSave({
       type: item.type,
       title,
-      label: item.type === 'tool' ? toolItemLabel(toolId, label) : null,
+      label: item.type === 'tool' ? toolItemLabel(toolId, label, tools) : null,
       config: saved,
     })
   }
@@ -337,12 +375,17 @@ export function ItemEditor(props: {
           <label className="dash-field">
             <span>Tool</span>
             <select value={toolId} onChange={(e) => setToolId(e.target.value)}>
-              {TOOL_OPTIONS.map((t) => (
+              {tools.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.label}
                 </option>
               ))}
             </select>
+            {registry.data?.canManage && (
+              <small className="dash-muted">
+                <a href={href('/lms/admin/tools')}>Manage connected tools</a>
+              </small>
+            )}
           </label>
           {toolLabelable(toolId) && (
             <>
@@ -502,8 +545,18 @@ export function ItemEditor(props: {
           {problem}
         </p>
       )}
+      {toolBlock && (
+        <p className="dash-muted" role="status">
+          {toolBlock}
+        </p>
+      )}
       <div className="dash-form-actions">
-        <button type="button" className="dash-btn" onClick={save} disabled={props.busy}>
+        <button
+          type="button"
+          className="dash-btn"
+          onClick={save}
+          disabled={props.busy || toolBlock !== null}
+        >
           {props.busy ? 'Saving…' : props.isNew ? 'Add item' : 'Save item'}
         </button>
         <button type="button" className="dash-btn-quiet" onClick={props.onCancel}>

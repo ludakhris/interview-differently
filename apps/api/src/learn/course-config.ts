@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { DEFAULT_ATTEMPTS } from './interview-scoring'
 import { ALLOWED_LINK_SITES, parseExternalLink } from './external-link'
 import { isImageKey } from './item-image'
-import { toolById } from '../lti/platform/lti-platform-config'
+import { toolAnyById, toolById } from '../lti/platform/lti-platform-config'
 import { parseYouTube } from './youtube'
 import type {
   CourseItemType,
@@ -166,11 +166,18 @@ function validateQuestions(v: unknown): KnowledgeCheckQuestion[] {
 /**
  * Item fields from a request body, with the config checked for its type.
  */
-export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'type' | 'title'>> & {
+/**
+ * `keepTool`: the tool the item already uses. Saving it again unchanged is allowed even when the
+ * tool has since been switched off, so an author can still rename the item or mark it optional.
+ */
+export function validateItemInput(
+  input: unknown,
+  opts: { keepTool?: string } = {}
+): Required<Pick<ItemInput, 'type' | 'title'>> & {
   label: 'pre' | 'post' | null
   config: Record<string, unknown>
 } {
-  const item = validateItemByType(input)
+  const item = validateItemByType(input, opts)
   // Remediation content: kept out of the outline until a flagged skill adds it to a learner's plan.
   // A scored assessment or an interview cannot be remediation.
   const config = isObject(input) && isObject(input.config) ? input.config : {}
@@ -188,7 +195,10 @@ export function validateItemInput(input: unknown): Required<Pick<ItemInput, 'typ
   return item
 }
 
-function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | 'title'>> & {
+function validateItemByType(
+  input: unknown,
+  opts: { keepTool?: string }
+): Required<Pick<ItemInput, 'type' | 'title'>> & {
   label: 'pre' | 'post' | null
   config: Record<string, unknown>
 } {
@@ -284,7 +294,7 @@ function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | '
     }
     case 'tool': {
       const toolId = text(config.toolId, 'Tool', 60, true) as string
-      const tool = toolById(toolId)
+      const tool = toolById(toolId) ?? (opts.keepTool === toolId ? toolAnyById(toolId) : undefined)
       if (!tool) return bad('That tool is not connected')
       const ref = text(config.ref, 'Tool reference', 200, true) as string
       const skill = text(config.skill, 'Skill', 60)

@@ -269,6 +269,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         courseId: 'c1',
         startsAt: new Date('2020-01-01T00:00:00Z'),
         endsAt: new Date('2099-01-01T00:00:00Z'),
+        course: { provider: { id: 'prov-1', parentId: 'agency-1' } },
       })),
     },
     enrollment: { findUnique: jest.fn(async () => ({ status: 'enrolled' })) },

@@ -37,6 +37,7 @@ export class LearnService {
 
   /** Throws unless the caller's LearnDifferently role is one of `allowed`. */
   assertRole(role: string | undefined, allowed: string[]): void {
+    if (role === LEARN_ROLES.systemAdmin) return
     if (!role || !allowed.includes(role)) throw new ForbiddenException('Insufficient role')
   }
 
@@ -48,7 +49,7 @@ export class LearnService {
   async workspaces(userId: string, role: string | undefined): Promise<LearnWorkspace[]> {
     const rows = await this.prisma.institution.findMany({
       where:
-        role === LEARN_ROLES.agencyAdmin
+        role === LEARN_ROLES.agencyAdmin || role === LEARN_ROLES.systemAdmin
           ? { subdomain: { not: null }, OR: [{ kind: 'agency' }, { parent: { kind: 'agency' } }] }
           : { subdomain: { not: null }, memberships: { some: { userId, cohortId: null } } },
       select: { id: true, name: true, kind: true, subdomain: true, parentId: true },

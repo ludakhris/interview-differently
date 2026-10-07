@@ -1,3 +1,4 @@
+import { withFirstTool } from './tool-test-helpers'
 import { HttpException } from '@nestjs/common'
 import type { PrismaService } from '../../prisma/prisma.service'
 import type { LearnerService } from '../../learn/learner.service'
@@ -12,7 +13,12 @@ import {
   signJwt,
   verifyJwt,
 } from '../lti-spec'
-import { platformRegistration, registeredTools } from './lti-platform-config'
+import {
+  platformRegistration,
+  registeredTools,
+  resetStoredTools,
+  setStoredTools,
+} from './lti-platform-config'
 import { MemoryLtiStore } from '../lti-store'
 import { LtiPlatformService, autoSubmitForm, escapeHtml } from './lti-platform.service'
 
@@ -28,6 +34,7 @@ const learner = { recordToolResult: jest.fn() }
 const tool = registeredTools()[0]
 const reg = platformRegistration()
 const toolKeys = generateKeyPair()
+const PROVIDER = { provider: { id: 'p1', parentId: 'a1' } }
 const PAST = new Date('2020-01-01T00:00:00Z')
 const FUTURE = new Date('2099-01-01T00:00:00Z')
 const nowS = () => Math.floor(Date.now() / 1000)
@@ -45,7 +52,12 @@ const makeService = (shared = store) =>
 beforeEach(() => {
   process.env.LTI_LEARN_URL = 'http://learn.test/'
   jest.resetAllMocks()
-  prisma.cohort.findUnique.mockResolvedValue({ courseId: 'c1', startsAt: PAST, endsAt: FUTURE })
+  prisma.cohort.findUnique.mockResolvedValue({
+    courseId: 'c1',
+    startsAt: PAST,
+    endsAt: FUTURE,
+    course: PROVIDER,
+  })
   prisma.enrollment.findUnique.mockResolvedValue({ status: 'enrolled' })
   prisma.courseItem.findUnique.mockResolvedValue({
     id: 'i1',
@@ -186,6 +198,24 @@ describe('keys and secrets', () => {
   })
 })
 
+describe('tool availability', () => {
+  const limited = (workspaceIds: string[]) =>
+    setStoredTools(withFirstTool({ enabled: true, workspaceIds }))
+  afterEach(() => resetStoredTools())
+
+  it('launches a tool limited to the provider, or to its agency', async () => {
+    limited(['p1'])
+    await expect(service.startLaunch('u1', 'k1', 'i1')).resolves.toBeDefined()
+    limited(['a1'])
+    await expect(service.startLaunch('u1', 'k1', 'i1')).resolves.toBeDefined()
+  })
+
+  it('refuses to launch a tool the program has not been approved for', async () => {
+    limited(['someone-else'])
+    await reject(service.startLaunch('u1', 'k1', 'i1'), 409, 'not available to this program')
+  })
+})
+
 describe('startLaunch', () => {
   it('returns the tool login form fields', async () => {
     const out = await service.startLaunch('u1', 'k1', 'i1')
@@ -265,9 +295,19 @@ describe('startLaunch', () => {
     prisma.enrollment.findUnique.mockResolvedValue({ status: 'withdrawn' })
     await reject(service.startLaunch('u1', 'k1', 'i1'), 404)
     prisma.enrollment.findUnique.mockResolvedValue({ status: 'enrolled' })
-    prisma.cohort.findUnique.mockResolvedValue({ courseId: 'c1', startsAt: PAST, endsAt: PAST })
+    prisma.cohort.findUnique.mockResolvedValue({
+      courseId: 'c1',
+      startsAt: PAST,
+      endsAt: PAST,
+      course: PROVIDER,
+    })
     await reject(service.startLaunch('u1', 'k1', 'i1'), 409)
-    prisma.cohort.findUnique.mockResolvedValue({ courseId: 'c1', startsAt: PAST, endsAt: FUTURE })
+    prisma.cohort.findUnique.mockResolvedValue({
+      courseId: 'c1',
+      startsAt: PAST,
+      endsAt: FUTURE,
+      course: PROVIDER,
+    })
     prisma.courseItem.findUnique.mockResolvedValue({
       type: 'lesson',
       config: {},
@@ -480,10 +520,20 @@ describe('auth', () => {
     prisma.enrollment.findUnique.mockResolvedValue(null)
     await reject(service.authenticate(params), 404)
     prisma.enrollment.findUnique.mockResolvedValue({ status: 'enrolled' })
-    prisma.cohort.findUnique.mockResolvedValue({ courseId: 'c1', startsAt: PAST, endsAt: PAST })
+    prisma.cohort.findUnique.mockResolvedValue({
+      courseId: 'c1',
+      startsAt: PAST,
+      endsAt: PAST,
+      course: PROVIDER,
+    })
     await reject(service.authenticate(params), 409)
     // the refused attempts did not burn the hint
-    prisma.cohort.findUnique.mockResolvedValue({ courseId: 'c1', startsAt: PAST, endsAt: FUTURE })
+    prisma.cohort.findUnique.mockResolvedValue({
+      courseId: 'c1',
+      startsAt: PAST,
+      endsAt: FUTURE,
+      course: PROVIDER,
+    })
     expect(await service.authenticate(params)).toContain('id_token')
   })
 
@@ -654,6 +704,16 @@ describe('token', () => {
     await service.token(body({ client_assertion: assertion({ exp: nowS() + 600 }) }))
   })
 
+  it('still gives a token to a tool that was switched off, so it can return a score for finished work', async () => {
+    setStoredTools(withFirstTool({ enabled: false, workspaceIds: [] }))
+    try {
+      const out = await service.token(body({ client_assertion: assertion() }))
+      expect(out.access_token).toBeDefined()
+    } finally {
+      resetStoredTools()
+    }
+  })
+
   it('rejects the wrong grant, assertion type and scope', async () => {
     await reject(service.token(body({ grant_type: 'password' })), 400, 'unsupported_grant_type')
     await reject(service.token(body({ client_assertion_type: 'x' })), 400, 'invalid_request')
@@ -662,6 +722,8 @@ describe('token', () => {
 })
 
 describe('scores', () => {
+  afterEach(() => resetStoredTools())
+
   const bearer = async (over: Record<string, unknown> = {}, key = service['keys']) =>
     `Bearer ${signJwt(
       {
@@ -683,6 +745,12 @@ describe('scores', () => {
     gradingProgress: 'FullyGraded',
     timestamp: new Date().toISOString(),
     ...over,
+  })
+
+  it('still records a score for work already done after the tool was switched off or limited', async () => {
+    setStoredTools(withFirstTool({ enabled: false, workspaceIds: ['someone-else'] }))
+    await service.receiveScore(await bearer(), 'k1', 'i1', score())
+    expect(learner.recordToolResult).toHaveBeenCalledTimes(1)
   })
 
   it('records a score as a percentage, with dimensions', async () => {
@@ -743,7 +811,12 @@ describe('scores', () => {
   it('rejects the wrong cohort or item', async () => {
     prisma.cohort.findUnique.mockResolvedValue(null)
     await reject(service.receiveScore(await bearer(), 'nope', 'i1', score()), 404)
-    prisma.cohort.findUnique.mockResolvedValue({ courseId: 'c1', startsAt: PAST, endsAt: FUTURE })
+    prisma.cohort.findUnique.mockResolvedValue({
+      courseId: 'c1',
+      startsAt: PAST,
+      endsAt: FUTURE,
+      course: PROVIDER,
+    })
     prisma.courseItem.findUnique.mockResolvedValue({
       type: 'tool',
       config: { toolId: 'id-interview', ref: 'x' },
@@ -789,6 +862,7 @@ describe('brand claim', () => {
       startsAt: PAST,
       endsAt: FUTURE,
       institutionId,
+      course: PROVIDER,
     })
     prisma.institution.findUnique.mockImplementation(
       async (a: { where: { id: string } }) => map[a.where.id] ?? null

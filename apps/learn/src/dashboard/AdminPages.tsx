@@ -46,6 +46,27 @@ function PermissionsIcon() {
   )
 }
 
+/** A teal plug meeting a socket: tools connected to the platform. */
+function ToolsIcon() {
+  return (
+    <svg {...ICON} width={40} height={40}>
+      <path d="M15 4v8m10-8v8" stroke="#3b4252" strokeWidth="3" strokeLinecap="round" />
+      <rect x="9" y="12" width="22" height="13" rx="4" fill="#14b8a6" />
+      <path d="M9 18h22v3a4 4 0 0 1-4 4H13a4 4 0 0 1-4-4z" fill="#0f8f82" />
+      <path
+        d="M20 25v6a5 5 0 0 0 5 5h6"
+        fill="none"
+        stroke="#3b4252"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <rect x="31" y="31" width="11" height="10" rx="3" fill="#ffc53d" stroke="#e0a100" />
+      <circle cx="36.5" cy="36" r="1.6" fill="#3b4252" />
+      <path d="m40 8 1 2.8 2.8 1-2.8 1-1 2.8-1-2.8-2.8-1 2.8-1z" fill="#ffd84d" />
+    </svg>
+  )
+}
+
 /** Friendly avatar colours (background, initials), picked from the user id. */
 const AVATARS = [
   ['#ffe0d6', '#b4380f'],
@@ -122,6 +143,19 @@ export function AdminPage() {
             <span className="dash-tool-name">User permissions</span>
             <span className="dash-tool-desc">
               Find a user and change the role they hold. Upgrade or downgrade their access.
+            </span>
+            <span className="dash-tool-open">Open tool →</span>
+          </a>
+        </li>
+        <li>
+          <a className="dash-tool" href={href('/lms/admin/tools')}>
+            <span className="dash-tool-icon">
+              <ToolsIcon />
+            </span>
+            <span className="dash-tool-name">Connected tools</span>
+            <span className="dash-tool-desc">
+              Add the tools learners are sent to, and choose which agencies and providers can use
+              each one.
             </span>
             <span className="dash-tool-open">Open tool →</span>
           </a>

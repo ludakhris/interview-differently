@@ -10,7 +10,15 @@ import type {
   CourseItemDto,
   CourseOutline,
   CourseSummary,
+  LearnToolList,
 } from './learn-types'
+import {
+  managedTools,
+  scopeOf,
+  toolAllowedFor,
+  toolById,
+} from '../lti/platform/lti-platform-config'
+import { toolView } from '../lti/platform/tool-config'
 import { PrismaService } from '../prisma/prisma.service'
 import { slugify, validateCourseFields, validateItemInput } from './course-config'
 import { imageUrl, isImageKey } from './item-image'
@@ -287,6 +295,7 @@ export class CoursesService {
   async addItem(userId: string, role: string | undefined, moduleId: string, body: unknown) {
     const mod = await this.moduleFor(userId, role, moduleId)
     const input = validateItemInput(body)
+    await this.assertToolAllowed(mod.courseId, input)
     if (input.type === 'scorm') {
       throw new BadRequestException('Upload a package file to add a SCORM item')
     }
@@ -309,7 +318,14 @@ export class CoursesService {
 
   async updateItem(userId: string, role: string | undefined, itemId: string, body: unknown) {
     const item = await this.itemFor(userId, role, itemId)
-    const input = validateItemInput(body)
+    // An item keeps working on its tool even after the tool is switched off or its access is
+    // narrowed: it can still be renamed, marked optional or re-scored. Only a change of tool is checked.
+    const currentTool = (item.config as { toolId?: unknown } | null)?.toolId
+    const keepTool =
+      item.type === 'tool' && typeof currentTool === 'string' ? currentTool : undefined
+    const input = validateItemInput(body, { keepTool })
+    if (!(input.type === 'tool' && (input.config as { toolId?: unknown }).toolId === keepTool))
+      await this.assertToolAllowed(item.module.courseId, input)
     // A SCORM item's package cannot be swapped by editing; only its title and whether it is
     // remediation content change.
     const data =
@@ -323,6 +339,45 @@ export class CoursesService {
           }
     await this.prisma.courseItem.update({ where: { id: itemId }, data })
     return this.detail(userId, role, item.module.courseId)
+  }
+
+  /** The tools an author may put in this course: enabled, and available to its provider. */
+  async toolsFor(
+    userId: string,
+    role: string | undefined,
+    courseId: string
+  ): Promise<LearnToolList> {
+    const course = await this.courseFor(userId, role, courseId)
+    const provider = await this.prisma.institution.findUnique({
+      where: { id: course.provider.id },
+      select: { id: true, parentId: true },
+    })
+    const scope = provider ? scopeOf(provider) : [course.provider.id]
+    const canManage = role === LEARN_ROLES.systemAdmin
+    return {
+      tools: managedTools()
+        .filter((t) => t.enabled && toolAllowedFor(t, scope))
+        .map((t) => toolView(t, canManage)),
+      // Connection settings are for administrators; an author only picks a tool.
+      connections: [],
+      canManage,
+    }
+  }
+
+  /** A tool item may only use a tool this course's provider (or its agency) is allowed to use. */
+  private async assertToolAllowed(
+    courseId: string,
+    input: { type: string; config: unknown }
+  ): Promise<void> {
+    if (input.type !== 'tool') return
+    const tool = toolById((input.config as { toolId?: unknown }).toolId)
+    if (!tool || tool.workspaceIds.length === 0) return
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      select: { provider: { select: { id: true, parentId: true } } },
+    })
+    if (!course || !toolAllowedFor(tool, scopeOf(course.provider)))
+      throw new BadRequestException(`${tool.name} is not available to this provider`)
   }
 
   async removeItem(userId: string, role: string | undefined, itemId: string) {

@@ -1,6 +1,8 @@
+import { withFirstTool } from '../lti/platform/tool-test-helpers'
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common'
 import type { ClerkService } from '../auth/clerk.service'
 import type { PrismaService } from '../prisma/prisma.service'
+import { resetStoredTools, setStoredTools } from '../lti/platform/lti-platform-config'
 import type { InterviewScoringService } from './interview-scoring.service'
 import {
   attemptsAllowed,
@@ -333,8 +335,13 @@ describe('completion', () => {
         position: 1,
         items: [
           { id: 'i1', type: 'lesson' },
-          { id: 'i2', type: 'tool', label: null, config: { countsAsInterview: true } },
-          { id: 'i3', type: 'tool', label: null, config: {} },
+          {
+            id: 'i2',
+            type: 'tool',
+            label: null,
+            config: { toolId: 'id-interview', countsAsInterview: true },
+          },
+          { id: 'i3', type: 'tool', label: null, config: { toolId: 'id-interview' } },
         ],
       },
     ])
@@ -442,6 +449,30 @@ describe('completion', () => {
       where: { id: 'e1' },
       data: expect.objectContaining({ status: 'completed' }),
     })
+  })
+
+  it('still requires a tool item whose tool is switched off, so a brief switch-off cannot complete a course early', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    prisma.courseModule.findMany.mockResolvedValue([
+      {
+        id: 'm1',
+        title: 'M',
+        position: 1,
+        items: [
+          { id: 'i1', type: 'lesson' },
+          { id: 'i3', type: 'tool', label: null, config: { toolId: 'id-interview' } },
+        ],
+      },
+    ])
+    setStoredTools(withFirstTool({ enabled: false, workspaceIds: [] }))
+    try {
+      finished('i1')
+      await service.completeLesson('u1', 'k1', 'i1')
+      expect(prisma.enrollment.update).not.toHaveBeenCalled()
+    } finally {
+      resetStoredTools()
+    }
   })
 
   it('stays enrolled while required items remain', async () => {
@@ -1444,6 +1475,20 @@ describe('recordToolResult', () => {
       passScore: null,
       optional: false,
     })
+  })
+
+  it('hides the tool when the course provider is not approved for it, so the item is unavailable', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(tool)
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    prisma.course.findUnique.mockResolvedValue({ provider: { id: 'p1', parentId: 'a1' } })
+    setStoredTools(withFirstTool({ enabled: true, workspaceIds: ['someone-else'] }))
+    try {
+      expect((await service.item('u1', 'k1', 'i1')).tool).toBeNull()
+      setStoredTools(withFirstTool({ enabled: true, workspaceIds: ['a1'] }))
+      expect((await service.item('u1', 'k1', 'i1')).tool).toMatchObject({ toolId: 'id-interview' })
+    } finally {
+      resetStoredTools()
+    }
   })
 
   it('an interview tool always has retries, however many attempts were made', async () => {

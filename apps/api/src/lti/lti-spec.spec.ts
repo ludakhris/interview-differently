@@ -85,6 +85,12 @@ describe('jwksKeyResolver', () => {
     resolve: (f: jest.Mock) => jwksKeyResolver('https://secret.example/jwks', f as never),
   })
 
+  it("never follows a redirect when fetching a tool's keys", async () => {
+    const { fetchImpl, resolve } = resolverOf(async () => ok(jwksOf(pair)))
+    await resolve(fetchImpl)(pair.kid)
+    expect(fetchImpl.mock.calls[0][1]).toMatchObject({ redirect: 'error' })
+  })
+
   it('does not refetch for the same unknown kid within a minute', async () => {
     const { fetchImpl, resolve } = resolverOf(async () => ok(jwksOf(pair)))
     const r = resolve(fetchImpl)
