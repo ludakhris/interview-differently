@@ -1715,6 +1715,9 @@
   background: var(--surface);
   font-size: 20px;
 }
+.dash-h2 + .dash-lesson {
+  margin-top: 16px;
+}
 .dash-ready-note {
   margin-top: 10px;
   font-size: 13px;

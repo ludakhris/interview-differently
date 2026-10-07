@@ -578,7 +578,7 @@ function ToolItem(props: {
           <span className="dash-chip dash-chip-on">Completed</span>
         </p>
       ) : (
-        <div className="dash-ready">
+        <div className="dash-ready-card">
           <h2 className="dash-ready-title">{copy.heading}</h2>
           <p className="dash-ready-intro">{copy.intro}</p>
           <ul className="dash-ready-points">
