@@ -1,8 +1,10 @@
 import type { LearnWorkspace, LearnWorkspaceSummary } from '@id/types'
+import { useState } from 'react'
 import { DashboardShell } from './DashboardShell'
 import { useApp } from './app-context'
 import { useLoad } from './api'
 import { workspaceHref } from './WorkspaceSwitcher'
+import { filterWorkspaces, type KindFilter } from './workspaceFilter'
 
 type Workspace = LearnWorkspace & Partial<LearnWorkspaceSummary>
 
@@ -81,6 +83,13 @@ const TYPES = [
   },
 ] as const
 
+const KINDS: { key: KindFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'agency', label: 'Agencies' },
+  { key: 'provider', label: 'Providers' },
+  { key: 'organization', label: 'Organizations' },
+]
+
 const typeName = (kind: string): string =>
   kind === 'agency' ? 'Agency' : kind === 'provider' ? 'Provider' : 'Organization'
 
@@ -157,6 +166,8 @@ function TypesGuide() {
 export function WorkspaceChooser() {
   const { workspaces, href } = useApp()
   const { data: summaries } = useLoad<LearnWorkspaceSummary[]>('/learn/workspaces/summary')
+  const [query, setQuery] = useState('')
+  const [kind, setKind] = useState<KindFilter>('all')
   if (!workspaces) return null
   if (workspaces.length === 1) {
     window.location.replace(workspaceHref(window.location.search, workspaces[0].subdomain))
@@ -171,48 +182,84 @@ export function WorkspaceChooser() {
   const list: Workspace[] = summaries ?? workspaces
   const rank = (w: Workspace) => CHILD_ORDER.indexOf(w.kind)
   const byOrder = (a: Workspace, b: Workspace) => rank(a) - rank(b) || a.name.localeCompare(b.name)
-  const agencies = list.filter((w) => w.kind === 'agency')
-  const agencyIds = new Set(agencies.map((a) => a.id))
-  // Anything whose agency is not in the list is shown on its own.
-  const standalone = list.filter((w) => w.kind !== 'agency' && !agencyIds.has(w.parentId ?? ''))
+  const found = filterWorkspaces(list, query, kind)
+  const searching = query.trim() !== '' || kind !== 'all'
   return (
     <DashboardShell>
       <h1 className="dash-h2">Choose a workspace</h1>
       <p className="dash-sub">
         Each agency is shown with the providers and organizations that report to it.
       </p>
+      <div className="dash-chooser-tools" role="search">
+        <input
+          type="search"
+          className="dash-chooser-search"
+          aria-label="Search workspaces"
+          placeholder="Search by name, address or type"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <div className="dash-chooser-kinds" role="group" aria-label="Show">
+          {KINDS.map((k) => (
+            <button
+              key={k.key}
+              type="button"
+              className={`dash-chip dash-chip-btn${kind === k.key ? ' dash-chip-on' : ''}`}
+              aria-pressed={kind === k.key}
+              onClick={() => setKind(k.key)}
+            >
+              {k.label}
+            </button>
+          ))}
+        </div>
+        <span className="dash-muted" aria-live="polite">
+          {searching ? `${found.shown} of ${list.length} shown` : `${list.length} workspaces`}
+        </span>
+      </div>
       <div className="dash-chooser">
         <div className="dash-chooser-list">
-          {agencies.map((a) => {
-            const kids = list.filter((w) => w.parentId === a.id).sort(byOrder)
-            return (
-              <section key={a.id} className="dash-tree">
-                <Card w={a} />
-                {kids.length > 0 && (
-                  <ul className="dash-tree-kids">
-                    {kids.map((k) => (
-                      <li key={k.id}>
-                        <Card w={k} />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            )
-          })}
-          {standalone.length > 0 && (
+          {found.trees.map(({ agency, kids }) => (
+            <section key={agency.id} className="dash-tree">
+              <Card w={agency} />
+              {kids.length > 0 && (
+                <ul className="dash-tree-kids">
+                  {[...kids].sort(byOrder).map((k) => (
+                    <li key={k.id}>
+                      <Card w={k} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          ))}
+          {found.standalone.length > 0 && (
             <section className="dash-tree">
               <h2 className="dash-group-title">
-                {agencies.length > 0 ? 'Other workspaces' : 'Your workspaces'}
+                {found.trees.length > 0 ? 'Other workspaces' : 'Your workspaces'}
               </h2>
               <ul className="dash-tree-kids dash-tree-flat">
-                {standalone.sort(byOrder).map((w) => (
+                {[...found.standalone].sort(byOrder).map((w) => (
                   <li key={w.id}>
                     <Card w={w} />
                   </li>
                 ))}
               </ul>
             </section>
+          )}
+          {found.shown === 0 && (
+            <p className="dash-empty">
+              No workspaces match.{' '}
+              <button
+                type="button"
+                className="dash-btn-quiet"
+                onClick={() => {
+                  setQuery('')
+                  setKind('all')
+                }}
+              >
+                Clear the search
+              </button>
+            </p>
           )}
         </div>
         <TypesGuide />

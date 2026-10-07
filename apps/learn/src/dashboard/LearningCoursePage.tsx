@@ -52,14 +52,16 @@ export function LearningCoursePage({ cohortId }: { cohortId: string }) {
 
       <div className="dash-learner-grid">
         <section aria-labelledby="h-outline">
-          <h2 className="dash-card-title" id="h-outline">
-            Your course
-          </h2>
-          <Meter value={c.itemsTotal ? c.itemsDone / c.itemsTotal : null} label="Progress" />
-          <p className="dash-muted" data-testid="progress-count">
-            {c.itemsDone} of {c.itemsTotal} items
-            {data.added.length > 0 ? `, including ${data.added.length} added to your plan` : ''}
-          </p>
+          <div className="dash-course-head">
+            <h2 className="dash-card-title" id="h-outline">
+              Your course progress
+            </h2>
+            <Meter value={c.itemsTotal ? c.itemsDone / c.itemsTotal : null} label="Progress" />
+            <p className="dash-muted" data-testid="progress-count">
+              {c.itemsDone} of {c.itemsTotal} items
+              {data.added.length > 0 ? `, including ${data.added.length} added to your plan` : ''}
+            </p>
+          </div>
           <ol className="dash-modules dash-learner-modules">
             {data.modules.map((m) => (
               <li key={m.id} className="dash-card">
