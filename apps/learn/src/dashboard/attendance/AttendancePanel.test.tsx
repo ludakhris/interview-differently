@@ -269,6 +269,24 @@ describe('sessions table', () => {
     confirm.mockRestore()
   })
 
+  it('Cancel in the session dialog asks only when the form was edited', async () => {
+    setup()
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    await userEvent.click(screen.getByRole('button', { name: 'Add session' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(confirm).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Add session' }))
+    await userEvent.type(screen.getByLabelText(/^Title/), ' x')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(confirm).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    confirm.mockReturnValue(true)
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    confirm.mockRestore()
+  })
+
   it('confirms before deleting a session', async () => {
     setup()
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)

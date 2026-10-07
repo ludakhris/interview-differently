@@ -18,6 +18,7 @@ import { canSeeActivity, canSeeTalent } from './roleAccess'
 import { LearnerOutcomesPage } from './outcomes/LearnerOutcomesPage'
 import { OutcomesPage } from './OutcomesPage'
 import { errorNotice, useRole } from './shared'
+import { LearnerRecordPage } from './learnerRecord/LearnerRecordPage'
 import { MyProfilePage } from './talent/MyProfilePage'
 import { TalentPage } from './talent/TalentPage'
 import { SupportQueuePage } from './talent/SupportQueuePage'
@@ -149,6 +150,7 @@ function Routes({ pathname }: { pathname: string }) {
   const course = /^\/lms\/courses\/([^/]+)\/?$/.exec(pathname)
   const cohort = /^\/lms\/dashboard\/cohorts\/([^/]+)\/?$/.exec(pathname)
   const runCohort = /^\/lms\/cohorts\/([^/]+)\/?$/.exec(pathname)
+  const learnerRecord = /^\/lms\/cohorts\/([^/]+)\/learners\/([^/]+)\/?$/.exec(pathname)
   const onCourses = pathname === '/lms/courses' || pathname.startsWith('/lms/courses/')
   const onCohorts = pathname === '/lms/cohorts' || pathname.startsWith('/lms/cohorts/')
   const talent = /^\/lms\/talent\/([^/]+)\/?$/.exec(pathname)
@@ -197,6 +199,20 @@ function Routes({ pathname }: { pathname: string }) {
             workspace={current.subdomain}
             cohortId={activity[1] ? decodeURIComponent(activity[1]) : undefined}
           />
+        </DashboardShell>
+      )
+    }
+    if (learnerRecord) {
+      return (
+        <DashboardShell>
+          {canSeeActivity(role) ? (
+            <LearnerRecordPage
+              cohortId={decodeURIComponent(learnerRecord[1])}
+              userId={decodeURIComponent(learnerRecord[2])}
+            />
+          ) : (
+            notFound
+          )}
         </DashboardShell>
       )
     }

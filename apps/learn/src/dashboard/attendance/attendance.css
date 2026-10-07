@@ -495,3 +495,64 @@
     box-shadow: none;
   }
 }
+
+.at-scroll-hint {
+  display: none;
+  margin: 4px 0;
+  font-size: 13px;
+}
+@media (max-width: 640px) {
+  .at-scroll-hint {
+    display: block;
+  }
+  /* Sessions: one stacked card per row, no sideways scroll. */
+  .at-sessions-wrap {
+    overflow-x: visible;
+  }
+  .at-sessions,
+  .at-sessions tbody,
+  .at-sessions tr,
+  .at-sessions th,
+  .at-sessions td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .at-sessions thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .at-sessions tr {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border, rgba(128, 128, 128, 0.4));
+  }
+  .at-sessions th,
+  .at-sessions td {
+    padding: 2px 0;
+    border: 0;
+    white-space: normal;
+  }
+  .at-sessions tbody th {
+    font-size: 16px;
+  }
+  .at-sessions .at-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    min-width: 0;
+    padding-top: 8px;
+  }
+  .at-sessions .at-actions button {
+    min-height: 44px;
+    width: 100%;
+    border: 1px solid var(--border, rgba(128, 128, 128, 0.5));
+    text-align: center;
+  }
+  .at-sessions .at-actions .at-primary {
+    grid-column: 1 / -1;
+    border-color: var(--navy, currentColor);
+  }
+}

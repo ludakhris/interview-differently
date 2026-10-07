@@ -18,6 +18,7 @@ import { LearnController } from './learn.controller'
 import { LearnerController } from './learner.controller'
 import { LearnerService } from './learner.service'
 import { OutcomesModule } from './outcomes/outcomes.module'
+import { RecordModule } from './record/record.module'
 import { PublicCatalogController } from './public-catalog.controller'
 import { PublicCatalogService } from './public-catalog.service'
 import { TalentModule } from './talent/talent.module'
@@ -34,6 +35,7 @@ import { ScormService } from './scorm.service'
     forwardRef(() => TalentModule),
     AttendanceModule,
     ActivityModule,
+    RecordModule,
   ],
   controllers: [
     LearnController,

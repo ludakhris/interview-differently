@@ -28,6 +28,7 @@ export function AttendanceSummaryView({
         P present, A absent (also no mark in a session that was taken), L late, E excused, · not
         counted. A corner flag means a note: hover the cell to read it.
       </p>
+      <p className="dash-muted at-scroll-hint">Scroll sideways to see every session.</p>
       {rows.length === 0 ? (
         <p className="dash-muted">No learners to show.</p>
       ) : data.sessionList.length === 0 ? (

@@ -322,7 +322,15 @@ function Cohort({
                 {cohort.roster.map((r) => (
                   <Fragment key={r.enrollmentId}>
                     <tr>
-                      <th scope="row">{r.name}</th>
+                      <th scope="row">
+                        <a
+                          href={href(
+                            `/lms/cohorts/${encodeURIComponent(cohort.id)}/learners/${encodeURIComponent(r.userId)}`
+                          )}
+                        >
+                          {r.name}
+                        </a>
+                      </th>
                       <td>{r.email ?? '—'}</td>
                       <td>{STATUS_LABEL[r.status]}</td>
                       <td>

@@ -536,6 +536,45 @@ export class TalentService {
   }
 
   /**
+   * Whether a person's profile exists, is shared with the provider, is complete and is fresh. No
+   * content and no audit row (nothing sensitive is read). NO access check: the caller must have
+   * already made sure the viewer is staff of this provider and the person is a participant.
+   */
+  async profileStatus(
+    providerId: string,
+    userId: string,
+    now: Date = new Date()
+  ): Promise<{ status: ProfileVisibility; complete: boolean | null; fresh: boolean | null }> {
+    const [share, months, p] = await Promise.all([
+      this.shareFor(providerId, userId),
+      this.refreshMonthsFor(providerId, userId),
+      this.prisma.talentProfile.findUnique({
+        where: { userId },
+        select: {
+          updatedAt: true,
+          resumeKey: true,
+          yearsExperience: true,
+          industries: true,
+          targetRoles: true,
+          _count: { select: { educations: true } },
+        },
+      }),
+    ])
+    if (!p) return { status: 'none', complete: null, fresh: null }
+    return {
+      status: share ? 'shared' : 'not_shared',
+      complete: isProfileComplete({
+        educationCount: p._count.educations,
+        hasResume: !!p.resumeKey,
+        yearsExperience: p.yearsExperience,
+        industries: p.industries,
+        targetRoles: p.targetRoles,
+      }),
+      fresh: months ? isFresh(p.updatedAt, months, now) : null,
+    }
+  }
+
+  /**
    * The profile only if the learner shared it with this provider; otherwise just whether one exists
    * and is complete and fresh. Never carries pay: only whether any exists.
    */

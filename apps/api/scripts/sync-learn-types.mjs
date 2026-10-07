@@ -7,14 +7,14 @@
 //   npm run sync:types --workspace @id/api
 //
 // learn.ts becomes learn-types.ts; outcomes, talent, attendance and activity likewise.
-// Their `from './learn'` imports are pointed at the copy (see copyOf below and learn-types.spec.ts).
+// Their imports of each other (`from './learn'`, `from './talent'`, ...) are pointed at the copies (see copyOf below and learn-types.spec.ts).
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
-export const NAMES = ['learn', 'outcomes', 'talent', 'attendance', 'activity']
+export const NAMES = ['learn', 'outcomes', 'talent', 'attendance', 'activity', 'record']
 
 export const header = (
   name
@@ -25,7 +25,8 @@ export const header = (
 `
 
 /** The text the copy of `original` must end with. */
-export const copyOf = (original) => original.replaceAll("from './learn'", "from './learn-types'")
+export const copyOf = (original) =>
+  original.replace(/from '\.\/(learn|outcomes|talent|attendance|activity)'/g, "from './$1-types'")
 
 for (const name of NAMES) {
   const source = resolve(here, `../../../packages/types/src/${name}.ts`)

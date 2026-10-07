@@ -2,7 +2,7 @@ import type { AttendanceSheet as Sheet, CohortSessionDto } from '@id/types'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useApiSend, useLoad } from '../api'
 import { AttendanceSheet } from './AttendanceSheet'
-import { Modal } from './Modal'
+import { Modal, UNSAVED_PROMPT } from './Modal'
 import {
   STATUS_LABEL,
   STATUS_LETTER,
@@ -257,7 +257,14 @@ export function SessionModal({
           <button type="submit" className="dash-btn" disabled={saving}>
             {session ? 'Save session' : 'Add session'}
           </button>
-          <button type="button" className="dash-btn-quiet" onClick={onClose}>
+          <button
+            type="button"
+            className="dash-btn-quiet"
+            onClick={() => {
+              if (dirty && !window.confirm(UNSAVED_PROMPT)) return
+              onClose()
+            }}
+          >
             Cancel
           </button>
         </div>

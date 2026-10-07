@@ -524,7 +524,7 @@ export function LearnerLog({ report, tz }: { report: LearnerActivityReport; tz: 
   )
 }
 
-function DayRows({ day, tz }: { day: LearnerActivityReport['days'][number]; tz: string }) {
+export function DayRows({ day, tz }: { day: LearnerActivityReport['days'][number]; tz: string }) {
   const [open, setOpen] = useState(false)
   const listId = `ac-sessions-${day.day}`
   return (

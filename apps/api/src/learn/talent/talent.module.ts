@@ -13,6 +13,6 @@ import { TalentService } from './talent.service'
   imports: [PrismaModule, StorageModule, LearnAccessModule, forwardRef(() => LearnModule)],
   controllers: [TalentController, ParticipantNotesController],
   providers: [TalentService, ParticipantNotesService],
-  exports: [TalentService],
+  exports: [TalentService, ParticipantNotesService],
 })
 export class TalentModule {}
