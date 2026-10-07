@@ -1715,6 +1715,55 @@
   background: var(--surface);
   font-size: 20px;
 }
+.dash-result {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin-bottom: 20px;
+}
+.dash-result-ring {
+  --pct: 0%;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  background: conic-gradient(var(--navy) var(--pct), var(--border) 0);
+}
+.dash-result-ring span {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--navy);
+  font-size: 28px;
+  font-weight: 800;
+}
+.dash-result-body {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+.dash-result-title {
+  margin: 0;
+  font-size: 24px;
+}
+.dash-result-body p {
+  margin: 0;
+}
+.dash-result-facts {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+@media (max-width: 520px) {
+  .dash-result {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
 .dash-h2 + .dash-lesson {
   margin-top: 16px;
 }

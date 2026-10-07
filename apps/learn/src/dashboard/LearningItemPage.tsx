@@ -1,12 +1,12 @@
 import type { LearnerItem, LearnerOutline, PlanAddition, QuizResult } from '@id/types'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Scorm12API, Scorm2004API } from 'scorm-again'
 import { useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { score } from './format'
 import { LEARNER_TYPE_LABEL } from './ItemEditor'
 import { errorNotice } from './shared'
-import { attemptLine, onPageRestore, readyCopy, timeLimitNote } from './toolKinds'
+import { attemptLine, onPageRestore, readyCopy, resultCopy, timeLimitNote } from './toolKinds'
 
 /** Plain text with blank-line paragraphs and "- " bullets. */
 function RichText({ text }: { text: string }) {
@@ -42,9 +42,10 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
   if (itemLoad.error) return errorNotice(itemLoad.error)
   if (itemLoad.loading || !item) return <p className="dash-loading">Loading…</p>
 
-  // The next item in the course, for "Continue".
+  // The next item in the course, named on the button that leads to it.
   const flat = outline.data?.modules.flatMap((m) => m.items) ?? []
   const next = flat[flat.findIndex((i) => i.id === item.id) + 1]
+  const nextLabel = next ? `Next: ${next.title}` : 'Back to course'
   const nextHref = next
     ? href(`/lms/learning/${cohortId}/${next.id}`)
     : href(`/lms/learning/${cohortId}`)
@@ -71,60 +72,30 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
 
       <div className="dash-player">
         {item.type === 'lesson' && (
-          <Lesson
-            item={item}
-            onChange={setItem}
-            nextHref={nextHref}
-            nextLabel={next ? 'Continue' : 'Back to course'}
-          />
+          <Lesson item={item} onChange={setItem} nextHref={nextHref} nextLabel={nextLabel} />
         )}
         {item.type === 'knowledge_check' && (
-          <Quiz
-            item={item}
-            onChange={setItem}
-            nextHref={nextHref}
-            nextLabel={next ? 'Continue' : 'Back to course'}
-          />
+          <Quiz item={item} onChange={setItem} nextHref={nextHref} nextLabel={nextLabel} />
         )}
         {item.type === 'scorm' && item.scorm && (
-          <ScormPlayer
-            item={item}
-            onChange={setItem}
-            nextHref={nextHref}
-            nextLabel={next ? 'Continue' : 'Back to course'}
-          />
+          <ScormPlayer item={item} onChange={setItem} nextHref={nextHref} nextLabel={nextLabel} />
         )}
         {item.type === 'video' && item.video && (
-          <VideoPlayer
-            item={item}
-            onChange={setItem}
-            nextHref={nextHref}
-            nextLabel={next ? 'Continue' : 'Back to course'}
-          />
+          <VideoPlayer item={item} onChange={setItem} nextHref={nextHref} nextLabel={nextLabel} />
         )}
         {item.type === 'external_link' && item.link && (
           <ExternalLinkItem
             item={item}
             onChange={setItem}
             nextHref={nextHref}
-            nextLabel={next ? 'Continue' : 'Back to course'}
+            nextLabel={nextLabel}
           />
         )}
         {item.type === 'tool' && (
-          <ToolItem
-            item={item}
-            onChange={setItem}
-            nextHref={nextHref}
-            nextLabel={next ? 'Continue' : 'Back to course'}
-          />
+          <ToolItem item={item} onChange={setItem} nextHref={nextHref} nextLabel={nextLabel} />
         )}
         {item.type === 'interview' && (
-          <Interview
-            item={item}
-            onChange={setItem}
-            nextHref={nextHref}
-            nextLabel={next ? 'Continue' : 'Back to course'}
-          />
+          <Interview item={item} onChange={setItem} nextHref={nextHref} nextLabel={nextLabel} />
         )}
       </div>
     </>
@@ -565,18 +536,31 @@ function ToolItem(props: {
 
   const completed = item.status === 'completed'
   const copy = readyCopy(tool, item.attempts)
+  const result = resultCopy(item.score)
   const limited = tool.attemptsAllowed !== null
   const limitNote = timeLimitNote(tool.timeLimitMinutes)
   return (
     <article className="dash-card dash-lesson">
       {completed ? (
-        <p className="dash-muted">
-          {item.score !== null && `Your best score: ${score(item.score)}. `}
-          {limited
-            ? `${attemptLine(item.attempts, tool.attemptsAllowed as number, true)}. `
-            : `Attempts: ${item.attempts}. `}
-          <span className="dash-chip dash-chip-on">Completed</span>
-        </p>
+        <div className="dash-result">
+          <div
+            className="dash-result-ring"
+            style={{ '--pct': `${Math.max(0, Math.min(100, item.score ?? 0))}%` } as CSSProperties}
+          >
+            <span>{score(item.score)}</span>
+          </div>
+          <div className="dash-result-body">
+            <span className="dash-chip dash-chip-on">Completed</span>
+            <h2 className="dash-result-title">{result.heading}</h2>
+            <p className="dash-muted">{result.body}</p>
+            <p className="dash-result-facts">
+              {item.score !== null && <>Best score {score(item.score)} · </>}
+              {limited
+                ? attemptLine(item.attempts, tool.attemptsAllowed as number, true)
+                : `${item.attempts} ${item.attempts === 1 ? 'attempt' : 'attempts'}`}
+            </p>
+          </div>
+        </div>
       ) : (
         <div className="dash-ready-card">
           <h2 className="dash-ready-title">{copy.heading}</h2>

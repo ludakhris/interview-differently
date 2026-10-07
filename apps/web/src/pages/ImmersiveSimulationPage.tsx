@@ -66,6 +66,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
   const [scoreSent, setScoreSent] = useState<{ courseUrl: string | null } | null>(null)
   const [recorderKey, setRecorderKey] = useState(0)
   const [finishing, setFinishing] = useState(false)
+  const [finishStage, setFinishStage] = useState<'transcribing' | 'scoring'>('transcribing')
 
   const decisionNodes: ScenarioNode[] = (scenario?.nodes ?? []).filter(
     (n) => n.type === 'decision' && n.responsePrompt
@@ -191,6 +192,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
   const finishLti = useCallback(async () => {
     if (!sessionId) return
     setLtiError(null)
+    setFinishStage('transcribing')
     setFinishing(true)
     setPageState('complete')
     try {
@@ -206,6 +208,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
         }
         await new Promise((r) => setTimeout(r, TRANSCRIPT_POLL_MS))
       }
+      setFinishStage('scoring')
       const done = await completeLtiInterview(sessionId)
       if (!done.ok) throw new Error('Score hand-back was not accepted')
       if (done.navigateTo) {
@@ -286,7 +289,16 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
           {scoreSent ? (
             <LtiScoreSent courseUrl={scoreSent.courseUrl} />
           ) : finishing || !ltiError ? (
-            <p className="font-display font-bold text-[18px] text-fg">Sending your score...</p>
+            <>
+              <p className="font-display font-bold text-[18px] text-fg mb-2">
+                {finishStage === 'transcribing'
+                  ? 'Transcribing your answers…'
+                  : 'Scoring your interview…'}
+              </p>
+              <p className="text-[14px] text-slate-mid">
+                Almost there. This can take up to a minute, and then you go back to your course.
+              </p>
+            </>
           ) : (
             <>
               <p className="font-display font-bold text-[18px] text-fg mb-2">

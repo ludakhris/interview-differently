@@ -77,6 +77,22 @@ export function readyCopy(
   }
 }
 
+/** The headline and nudge for a finished tool attempt, by how well the best score went. */
+export function resultCopy(score: number | null): { heading: string; body: string } {
+  if (score === null) return { heading: 'Attempt recorded', body: 'Your result is on its way.' }
+  if (score >= 80)
+    return { heading: 'Nailed it!', body: 'Strong work. That is a score to be proud of.' }
+  if (score >= 50)
+    return {
+      heading: 'Solid work',
+      body: 'You are on the right track. One more run could push it higher.',
+    }
+  return {
+    heading: 'Good start',
+    body: 'Every run is practice. Try again and apply what you learned: your best score counts.',
+  }
+}
+
 /** Parses the editor's text field for the attempts (1-5; blank or invalid means 1). */
 export function parseAttempts(text: string): number {
   const n = Number(text)

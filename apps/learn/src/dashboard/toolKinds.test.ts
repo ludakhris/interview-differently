@@ -7,6 +7,7 @@ import {
   timeLimitNote,
   toolConfig,
   readyCopy,
+  resultCopy,
   toolItemLabel,
   toolLabelable,
   toolRefProblem,
@@ -77,6 +78,17 @@ describe('toolKinds', () => {
     expect(attemptLine(3, 3, true)).toBe('Attempts used: 3 of 3')
     expect(timeLimitNote(30)).toBe('Time limit: 30 minutes')
     expect(timeLimitNote(null)).toBeNull()
+  })
+})
+
+describe('resultCopy', () => {
+  it('cheers by band and handles a missing score', () => {
+    expect(resultCopy(92).heading).toBe('Nailed it!')
+    expect(resultCopy(80).heading).toBe('Nailed it!')
+    expect(resultCopy(65).heading).toBe('Solid work')
+    expect(resultCopy(49).heading).toBe('Good start')
+    expect(resultCopy(0).heading).toBe('Good start')
+    expect(resultCopy(null).heading).toBe('Attempt recorded')
   })
 })
 
