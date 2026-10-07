@@ -44,9 +44,11 @@ export function filterQuery(f: Filters): string {
 const sortedUnique = (xs: string[]) =>
   [...new Set(xs)].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
 
+const PROFILE_WORD = { shared: 'Shared', not_shared: 'Not shared', none: 'None' } as const
+
 function status(r: TalentParticipantRow): string {
-  if (r.profileStatus === 'none') return 'Not started'
-  return r.complete ? 'Complete' : 'Started'
+  if (r.profileStatus === 'none') return '—'
+  return (r.complete ? 'Complete' : 'Started') + (r.fresh === false ? ', out of date' : '')
 }
 
 /** The people in a list, as a table. Exported for tests. */
@@ -66,6 +68,7 @@ export function ParticipantTable({ rows }: { rows: TalentParticipantRow[] }) {
               Years
             </th>
             <th scope="col">Profile</th>
+            <th scope="col">Status</th>
           </tr>
         </thead>
         <tbody>
@@ -79,10 +82,11 @@ export function ParticipantTable({ rows }: { rows: TalentParticipantRow[] }) {
               <td>{r.profile?.industries.join(', ') || '—'}</td>
               <td className="num">{r.profile?.yearsExperience ?? '—'}</td>
               <td>
-                <span className="dash-pill">{status(r)}</span>
+                <span className="dash-pill">{PROFILE_WORD[r.profileStatus]}</span>
                 {r.profile?.hasResume && <span className="tl-tag">Resume</span>}
                 {r.profile?.allowEmployers && <span className="tl-tag">OK to share</span>}
               </td>
+              <td>{status(r)}</td>
             </tr>
           ))}
         </tbody>
@@ -148,8 +152,8 @@ export function TalentPage({ providerId }: { providerId: string; workspace: stri
     <>
       <h1 className="dash-h2">Talent</h1>
       <p className="tl-lede">
-        The people in your programs, with the profile each one filled in. Open a person to see their
-        details, resume and notes.
+        The people in your programs. Each person chooses whether your organization can read their
+        profile; you always see whether they have one and whether it is complete.
       </p>
 
       <form
@@ -169,6 +173,10 @@ export function TalentPage({ providerId }: { providerId: string; workspace: stri
         </button>
       </form>
 
+      <p className="dash-hint tl-filterhint">
+        Industry, job, education, resume and experience filters look only at profiles people have
+        shared with your organization.
+      </p>
       <div className="tl-filters" role="group" aria-label="Filters">
         <label className="dash-field">
           <span>Cohort</span>
@@ -259,6 +267,9 @@ export function TalentPage({ providerId }: { providerId: string; workspace: stri
         >
           {exporting ? 'Preparing…' : 'Export to CSV'}
         </button>
+        <p className="dash-hint tl-exporthint">
+          Export includes shared profiles only. People who have not shared are left out.
+        </p>
         <label className="dash-check tl-pay">
           <input type="checkbox" checked={withPay} onChange={(e) => setWithPay(e.target.checked)} />
           <span>Include pay (what each person earned and hopes to earn)</span>

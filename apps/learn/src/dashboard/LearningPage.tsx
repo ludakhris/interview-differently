@@ -1,4 +1,4 @@
-import type { LearnerCohortCard } from '@id/types'
+import type { LearnerCohortCard, LearnerProfileState } from '@id/types'
 import { useState, type FormEvent } from 'react'
 import { useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
@@ -41,6 +41,8 @@ export function LearningPage() {
   const { href } = useApp()
   const { data, error, loading, reload } = useLoad<LearnerCohortCard[]>('/learn/me/learning')
   const requests = useLoad<LearnerJoinRequest[]>('/learn/me/join-requests')
+  const profile = useLoad<LearnerProfileState>('/learn/me/profile')
+  const profileDue = (profile.data?.requirements ?? []).some((r) => !r.satisfied)
   const send = useApiSend()
   const [sent, setSent] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -92,6 +94,13 @@ export function LearningPage() {
           </p>
         </div>
       </div>
+
+      {profileDue && (
+        <p className="dash-banner" data-testid="profile-due">
+          <a href={href('/lms/learning/profile')}>Your profile</a>:{' '}
+          {profile.data?.profile.complete ? 'Time to refresh your profile' : 'Finish your profile'}
+        </p>
+      )}
 
       <form className="dash-card dash-joinform" onSubmit={join}>
         <label className="dash-field">

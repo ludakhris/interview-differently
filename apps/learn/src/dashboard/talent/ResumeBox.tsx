@@ -1,5 +1,4 @@
-import type { ResumeInfo, ResumeLink } from '@id/types'
-import type { TalentProfileDto } from './legacyTypes'
+import type { ProfileDto, ResumeInfo, ResumeLink } from '@id/types'
 import { useRef, useState } from 'react'
 import { useApiFetch, useApiSend } from '../api'
 import { dateShort } from '../format'
@@ -8,12 +7,8 @@ import { fileSize, resumeProblem } from './profileForm'
 import './notes.css'
 import './talent.css'
 
-/** The learner's resume: upload, replace, open and remove. The file is private to the learner and their provider's staff. */
-export function ResumeBox(props: {
-  providerId: string
-  resume: ResumeInfo | null
-  onChange: (p: TalentProfileDto) => void
-}) {
+/** The learner's resume: upload, replace, open and remove. The file is private to the learner and the organizations they share with. */
+export function ResumeBox(props: { resume: ResumeInfo | null; onChange: (p: ProfileDto) => void }) {
   const apiFetch = useApiFetch()
   const send = useApiSend()
   const input = useRef<HTMLInputElement>(null)
@@ -22,7 +17,7 @@ export function ResumeBox(props: {
   const [blockedUrl, setBlockedUrl] = useState<string | null>(null)
   const removeBtn = useRef<HTMLButtonElement>(null)
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
-  const base = `/learn/me/talent-profiles/${props.providerId}/resume`
+  const base = '/learn/me/profile/resume'
 
   async function run(task: () => Promise<string>) {
     setBusy(true)
@@ -48,7 +43,7 @@ export function ResumeBox(props: {
       const body = new FormData()
       body.append('file', file)
       const res = await apiFetch(base, { method: 'POST', body })
-      props.onChange((await res.json()) as TalentProfileDto)
+      props.onChange((await res.json()) as ProfileDto)
       return 'Resume saved.'
     })
     if (input.current) input.current.value = ''
@@ -67,7 +62,7 @@ export function ResumeBox(props: {
 
   const remove = () =>
     run(async () => {
-      props.onChange(await send<TalentProfileDto>('DELETE', base))
+      props.onChange(await send<ProfileDto>('DELETE', base))
       setConfirming(false)
       // The Remove button is gone now; the upload control is the next sensible place.
       setTimeout(() => input.current?.focus(), 0)

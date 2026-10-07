@@ -119,6 +119,7 @@ function Cohort({
   const [copied, setCopied] = useState(false)
   const [attemptsFor, setAttemptsFor] = useState<string | null>(null)
   const [needsApproval, setNeedsApproval] = useState(!!cohort.requiresApproval)
+  const [needsProfile, setNeedsProfile] = useState(!!cohort.requiresProfile)
 
   async function run(action: () => Promise<CohortDetail>, ok?: string): Promise<boolean> {
     setBusy(true)
@@ -161,6 +162,9 @@ function Cohort({
     body.delivery = f.get('delivery')
     body.requiresApproval = needsApproval
     body.joinContact = needsApproval ? String(f.get('joinContact') ?? '').trim() : null
+    body.requiresProfile = needsProfile
+    const months = Number(f.get('profileRefreshMonths'))
+    body.profileRefreshMonths = needsProfile && months ? months : null
     await run(() => send<CohortDetail>('PUT', `/learn/cohorts/${cohort.id}`, body), 'Saved.')
   }
 
@@ -454,6 +458,39 @@ function Cohort({
               <small className="dash-muted">
                 Name and email or phone; learners see it next to their pending request.
               </small>
+            </label>
+          )}
+          <label className="dash-check">
+            <input
+              type="checkbox"
+              checked={needsProfile}
+              onChange={(e) => setNeedsProfile(e.target.checked)}
+            />{' '}
+            Learners must complete their profile first
+            <small className="dash-muted">
+              Learners choose whether your organization can read their profile.
+            </small>
+          </label>
+          {needsProfile && (
+            <label className="dash-field">
+              <span>Ask learners to refresh it</span>
+              <select
+                name="profileRefreshMonths"
+                defaultValue={String(cohort.profileRefreshMonths ?? '')}
+              >
+                <option value="">Never</option>
+                {[3, 6, 12].map((m) => (
+                  <option key={m} value={m}>
+                    Every {m} months
+                  </option>
+                ))}
+                {cohort.profileRefreshMonths &&
+                  ![3, 6, 12].includes(cohort.profileRefreshMonths) && (
+                    <option value={cohort.profileRefreshMonths}>
+                      Every {cohort.profileRefreshMonths} months
+                    </option>
+                  )}
+              </select>
             </label>
           )}
           <div className="dash-form-actions">

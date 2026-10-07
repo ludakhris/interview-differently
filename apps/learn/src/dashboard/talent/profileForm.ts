@@ -1,5 +1,10 @@
-import type { EducationLevel } from '@id/types'
-import type { TalentProfileDto, TalentProfileInput } from './legacyTypes'
+import type {
+  EducationLevel,
+  LearnerProfileState,
+  ProfileDto,
+  ProfileInput,
+  ProfileRequirement,
+} from '@id/types'
 
 export const EDUCATION_OPTIONS: { value: EducationLevel; label: string }[] = [
   { value: 'high_school', label: 'High school or equivalent' },
@@ -13,60 +18,106 @@ export const EDUCATION_OPTIONS: { value: EducationLevel; label: string }[] = [
 export const educationLabel = (v: string | null): string =>
   EDUCATION_OPTIONS.find((o) => o.value === v)?.label ?? '—'
 
+export const INDUSTRY_SUGGESTIONS = [
+  'Healthcare',
+  'Information technology',
+  'Retail',
+  'Manufacturing',
+  'Construction',
+  'Hospitality',
+  'Food service',
+  'Transportation and logistics',
+  'Education',
+  'Finance',
+  'Government',
+  'Aerospace',
+]
+export const ROLE_SUGGESTIONS = [
+  'Data analyst',
+  'Project coordinator',
+  'Administrative assistant',
+  'Customer service',
+  'Software developer',
+  'IT support',
+  'Technician',
+  'Sales',
+]
+
 export const MAX_COMPENSATION = 10_000_000
 export const MAX_RESUME_BYTES = 5 * 1024 * 1024
+export const MAX_EDUCATIONS = 8
+export const MAX_LIST = 20
 
-/** Everything the form holds, as the text in each box. */
-export interface FormValues {
-  educationLevel: string
+export interface EducationValues {
+  /** Only for React keys; never sent. */
+  key: string
+  level: string
   fieldOfStudy: string
   school: string
   graduationYear: string
-  yearsExperience: string
-  industries: string
-  targetRoles: string
-  previousCompensation: string
-  targetCompensation: string
-  availableFrom: string
-  shareWithEmployers: boolean
 }
 
-export const emptyValues: FormValues = {
-  educationLevel: '',
+export interface ShareChoice {
+  shared: boolean
+  allowEmployers: boolean
+}
+
+/** Everything the form holds. Numbers are the text in each box; lists are real arrays. */
+export interface FormValues {
+  yearsExperience: string
+  industries: string[]
+  targetRoles: string[]
+  availableFrom: string
+  previousCompensation: string
+  targetCompensation: string
+  educations: EducationValues[]
+  /** By institution id. */
+  shares: Record<string, ShareChoice>
+}
+
+let counter = 0
+export const blankEducation = (): EducationValues => ({
+  key: `edu-${++counter}`,
+  level: '',
   fieldOfStudy: '',
   school: '',
   graduationYear: '',
-  yearsExperience: '',
-  industries: '',
-  targetRoles: '',
-  previousCompensation: '',
-  targetCompensation: '',
-  availableFrom: '',
-  shareWithEmployers: false,
+})
+
+const text = (n: number | null): string => (n === null ? '' : String(n))
+
+export function toValues(state: LearnerProfileState): FormValues {
+  const p = state.profile
+  return {
+    yearsExperience: text(p.yearsExperience),
+    industries: [...p.industries],
+    targetRoles: [...p.targetRoles],
+    availableFrom: p.availableFrom ?? '',
+    previousCompensation: text(p.previousCompensation),
+    targetCompensation: text(p.targetCompensation),
+    educations: p.educations.length
+      ? p.educations.map((e) => ({
+          key: `edu-${++counter}`,
+          level: e.level,
+          fieldOfStudy: e.fieldOfStudy ?? '',
+          school: e.school ?? '',
+          graduationYear: text(e.graduationYear),
+        }))
+      : [blankEducation()],
+    shares: Object.fromEntries(
+      state.organizations.map((o) => [
+        o.institutionId,
+        { shared: o.shared, allowEmployers: o.shared && o.allowEmployers },
+      ])
+    ),
+  }
 }
 
-export const toValues = (p: TalentProfileDto | null): FormValues =>
-  p
-    ? {
-        educationLevel: p.educationLevel ?? '',
-        fieldOfStudy: p.fieldOfStudy ?? '',
-        school: p.school ?? '',
-        graduationYear: p.graduationYear === null ? '' : String(p.graduationYear),
-        yearsExperience: p.yearsExperience === null ? '' : String(p.yearsExperience),
-        industries: p.industries.join(', '),
-        targetRoles: p.targetRoles.join(', '),
-        previousCompensation: p.previousCompensation === null ? '' : String(p.previousCompensation),
-        targetCompensation: p.targetCompensation === null ? '' : String(p.targetCompensation),
-        availableFrom: p.availableFrom ?? '',
-        shareWithEmployers: p.shareWithEmployers,
-      }
-    : emptyValues
-
-/** "IT, Health care" -> ["IT", "Health care"]; blanks and repeats are dropped. */
-export function splitList(text: string): string[] {
-  const seen = new Set<string>()
-  const out: string[] = []
-  for (const part of text.split(/[,\n;]/)) {
+/** Adds typed items to a list: blanks and repeats are dropped, order is kept. */
+export function addItems(list: string[], raw: string[]): string[] {
+  const seen = new Set(list.map((x) => x.toLowerCase()))
+  const out = [...list]
+  for (const part of raw) {
     const t = part.trim()
     if (t && !seen.has(t.toLowerCase())) {
       seen.add(t.toLowerCase())
@@ -77,71 +128,127 @@ export function splitList(text: string): string[] {
 }
 
 /** "$85,000" -> 85000. Null when empty, NaN when it is not a whole number of dollars. */
-export function parseMoney(text: string): number | null {
-  const t = text.replace(/[\s$,]/g, '')
+export function parseMoney(value: string): number | null {
+  const t = value.replace(/[\s$,]/g, '')
   if (t === '') return null
   return /^\d+$/.test(t) ? Number(t) : Number.NaN
 }
 
-export type FieldErrors = Partial<Record<keyof FormValues | 'finish', string>>
-
-const whole = (text: string): number | null => {
-  const t = text.trim()
+const whole = (value: string): number | null => {
+  const t = value.trim()
   if (t === '') return null
   return /^\d+$/.test(t) ? Number(t) : Number.NaN
 }
 
-/** Errors by field, in plain words. Empty means the form can be saved. `complete` adds the finish rules. */
-export function validate(v: FormValues, complete: boolean): FieldErrors {
+/** Errors by field key (for example `yearsExperience` or `education.1.level`), in plain words. */
+export type FieldErrors = Record<string, string>
+
+const educationBlank = (e: EducationValues) =>
+  !e.level && !e.fieldOfStudy.trim() && !e.school.trim() && !e.graduationYear.trim()
+
+/** Entries the person actually filled in; a blank row is just the empty starting row. */
+export const filledEducations = (v: FormValues) => v.educations.filter((e) => !educationBlank(e))
+
+export function validate(v: FormValues): FieldErrors {
   const e: FieldErrors = {}
   const years = whole(v.yearsExperience)
   if (years !== null && !(years >= 0 && years <= 60))
     e.yearsExperience = 'Enter a whole number of years from 0 to 60.'
-  const grad = whole(v.graduationYear)
-  if (grad !== null && !(grad >= 1950 && grad <= 2100))
-    e.graduationYear = 'Enter a four-digit year, such as 2019.'
   for (const k of ['previousCompensation', 'targetCompensation'] as const) {
     const m = parseMoney(v[k])
     if (m !== null && !(m >= 0 && m <= MAX_COMPENSATION))
       e[k] = 'Enter whole dollars per year, from 0 to 10,000,000.'
   }
-  for (const k of ['fieldOfStudy', 'school'] as const)
-    if (v[k].trim().length > 200) e[k] = 'Keep this under 200 characters.'
   for (const k of ['industries', 'targetRoles'] as const) {
-    const list = splitList(v[k])
-    if (list.length > 20) e[k] = 'Add 20 or fewer, separated by commas.'
-    else if (list.some((x) => x.length > 80)) e[k] = 'Keep each one under 80 characters.'
+    if (v[k].length > MAX_LIST) e[k] = `Keep this to ${MAX_LIST} or fewer.`
+    else if (v[k].some((x) => x.length > 80)) e[k] = 'Keep each one under 80 characters.'
   }
   if (v.availableFrom && Number.isNaN(Date.parse(v.availableFrom)))
     e.availableFrom = 'Choose a real date.'
-  if (complete) {
-    const missing: string[] = []
-    if (!v.educationLevel) {
-      missing.push('your education level')
-      e.educationLevel = 'Choose your highest level of education.'
-    }
-    if (v.yearsExperience.trim() === '') missing.push('your years of experience')
-    if (splitList(v.industries).length === 0 && splitList(v.targetRoles).length === 0)
-      missing.push('at least one industry or target role')
-    if (missing.length) e.finish = `To finish, add ${missing.join(', ')}.`
-  }
+  v.educations.forEach((ed, i) => {
+    if (educationBlank(ed)) return
+    if (!ed.level) e[`education.${i}.level`] = 'Choose a level for this entry.'
+    const grad = whole(ed.graduationYear)
+    if (grad !== null && !(grad >= 1950 && grad <= 2100))
+      e[`education.${i}.graduationYear`] = 'Enter a four-digit year, such as 2019.'
+    for (const k of ['fieldOfStudy', 'school'] as const)
+      if (ed[k].trim().length > 200) e[`education.${i}.${k}`] = 'Keep this under 200 characters.'
+  })
+  if (filledEducations(v).length > MAX_EDUCATIONS)
+    e['education'] = `Add ${MAX_EDUCATIONS} or fewer.`
   return e
 }
 
-export function toInput(v: FormValues, complete: boolean): TalentProfileInput {
+export function toInput(v: FormValues): ProfileInput {
   return {
-    educationLevel: (v.educationLevel || null) as EducationLevel | null,
-    fieldOfStudy: v.fieldOfStudy.trim() || null,
-    school: v.school.trim() || null,
-    graduationYear: whole(v.graduationYear),
     yearsExperience: whole(v.yearsExperience),
-    industries: splitList(v.industries),
-    targetRoles: splitList(v.targetRoles),
+    industries: v.industries,
+    targetRoles: v.targetRoles,
+    availableFrom: v.availableFrom || null,
     previousCompensation: parseMoney(v.previousCompensation),
     targetCompensation: parseMoney(v.targetCompensation),
-    availableFrom: v.availableFrom || null,
-    shareWithEmployers: v.shareWithEmployers,
-    ...(complete ? { complete: true } : {}),
+    educations: filledEducations(v).map((e) => ({
+      level: e.level as EducationLevel,
+      fieldOfStudy: e.fieldOfStudy.trim() || null,
+      school: e.school.trim() || null,
+      graduationYear: whole(e.graduationYear),
+    })),
+    shares: Object.entries(v.shares)
+      .filter(([, c]) => c.shared)
+      .map(([institutionId, c]) => ({ institutionId, allowEmployers: c.allowEmployers })),
+  }
+}
+
+export interface Check {
+  label: string
+  done: boolean
+}
+
+/** What makes a profile complete, as the person has filled it in so far. Mirrors the server rule. */
+export function checklist(v: FormValues): Check[] {
+  return [
+    { label: 'an education entry', done: v.educations.some((e) => !!e.level) },
+    { label: 'your years of experience', done: whole(v.yearsExperience) !== null },
+    {
+      label: 'at least one industry or job you want',
+      done: v.industries.length > 0 || v.targetRoles.length > 0,
+    },
+  ]
+}
+
+/** What is missing from the SAVED profile. */
+export function missingFromSaved(p: ProfileDto): string[] {
+  const out: string[] = []
+  if (p.educations.length === 0) out.push('an education entry')
+  if (p.yearsExperience === null) out.push('your years of experience')
+  if (p.industries.length === 0 && p.targetRoles.length === 0)
+    out.push('an industry or a job you want')
+  return out
+}
+
+/** One plain sentence for a requirement card. `fmt` formats an ISO time as a date. */
+export function requirementText(
+  r: ProfileRequirement,
+  profile: ProfileDto,
+  fmt: (iso: string) => string
+): { tone: 'ok' | 'todo'; text: string } {
+  if (r.satisfied) {
+    return {
+      tone: 'ok',
+      text: r.dueBy ? `Up to date. Next refresh is due ${fmt(r.dueBy)}.` : 'Up to date.',
+    }
+  }
+  if (profile.complete) {
+    return {
+      tone: 'todo',
+      text: r.dueBy
+        ? `Time to refresh your profile: it is due ${fmt(r.dueBy)}.`
+        : 'Time to refresh your profile.',
+    }
+  }
+  return {
+    tone: 'todo',
+    text: r.dueBy ? `Finish by ${fmt(r.dueBy)}.` : 'Finish your profile.',
   }
 }
 

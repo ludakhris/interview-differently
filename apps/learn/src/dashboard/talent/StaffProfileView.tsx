@@ -1,5 +1,4 @@
-import type { TalentCompensation } from '@id/types'
-import type { TalentProfileStaffView } from './legacyTypes'
+import type { StaffProfileResult, TalentCompensation } from '@id/types'
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useApiFetch } from '../api'
 import { dateOnly } from '../format'
@@ -22,7 +21,7 @@ function Row(props: { label: string; children: ReactNode }) {
  * fetched (and audited) only when staff click Show, held in component state only, and dropped on Hide.
  */
 export function StaffProfileView(props: {
-  profile: TalentProfileStaffView | null
+  profile: StaffProfileResult | null
   /** GET path of the compensation endpoint for this participant. */
   compensationPath: string
   onOpenResume: () => void
@@ -46,7 +45,16 @@ export function StaffProfileView(props: {
     }
   }, [pay])
   const p = props.profile
-  if (!p) return <p className="dash-muted">This person has not started a profile yet.</p>
+  if (!p || p.status === 'none') return <p className="dash-muted">No profile yet.</p>
+  if (!p.shared) {
+    // Status only: the person has not shared the profile with this organization.
+    return (
+      <p className="dash-muted" data-testid="not-shared">
+        This person has not shared their profile with your organization. Complete:{' '}
+        {p.complete ? 'yes' : 'no'}. Up to date: {p.fresh === false ? 'no' : 'yes'}.
+      </p>
+    )
+  }
   async function revealPay() {
     setPayBusy(true)
     setPayError(null)
@@ -61,8 +69,10 @@ export function StaffProfileView(props: {
   return (
     <div className="tl-staff">
       <p className="dash-muted">
-        {p.completedAt ? `Completed ${dateOnly(p.completedAt)}.` : 'Not finished yet.'} This is the
-        person&apos;s own answer; staff cannot change it.
+        {p.complete ? 'Complete' : 'Not complete yet'}
+        {p.fresh === false ? ', out of date' : ''}
+        {p.updatedAt ? `. Last saved ${dateOnly(p.updatedAt)}` : ''}. Shared with your organization.
+        This is the person&apos;s own answer; staff cannot change it.
       </p>
       <dl className="tl-facts">
         <Row label="Industries">{list(p.industries)}</Row>
@@ -72,11 +82,21 @@ export function StaffProfileView(props: {
           {p.availableFrom ? dateOnly(p.availableFrom) : 'Not given'}
         </Row>
         <Row label="Education">
-          {[educationLabel(p.educationLevel), p.fieldOfStudy, p.school, p.graduationYear]
-            .filter((x) => x && x !== '—')
-            .join(', ') || 'Not given'}
+          {p.educations.length === 0 ? (
+            'Not given'
+          ) : (
+            <ul className="tl-edulist">
+              {p.educations.map((e, i) => (
+                <li key={i}>
+                  {[educationLabel(e.level), e.fieldOfStudy, e.school, e.graduationYear]
+                    .filter(Boolean)
+                    .join(', ')}
+                </li>
+              ))}
+            </ul>
+          )}
         </Row>
-        <Row label="OK to share with employers">{p.shareWithEmployers ? 'Yes' : 'No'}</Row>
+        <Row label="OK to pass to employers">{p.allowEmployers ? 'Yes' : 'No'}</Row>
         <Row label="Resume">
           {p.resume ? (
             <>

@@ -1,5 +1,4 @@
-import type { ResumeLink, TalentParticipantHeader } from '@id/types'
-import type { TalentProfileStaffView } from './legacyTypes'
+import type { ResumeLink, StaffProfileResult, TalentParticipantHeader } from '@id/types'
 import { useState } from 'react'
 import { useApiFetch, useLoad } from '../api'
 import { useApp } from '../app-context'
@@ -28,7 +27,7 @@ export function TalentParticipantPage({
   // Loading the profile is what the access log records as a view. It carries no pay. It starts with
   // the header (the server checks access itself), so "loading" is true from the first render and
   // "has not started a profile" can only mean the request really finished with no profile.
-  const profile = useLoad<TalentProfileStaffView | null>(`${base}/profile`)
+  const profile = useLoad<StaffProfileResult>(`${base}/profile`)
   const [busy, setBusy] = useState(false)
   const [resumeError, setResumeError] = useState<string | null>(null)
   const [resumeUrl, setResumeUrl] = useState<string | null>(null)

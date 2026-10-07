@@ -84,7 +84,10 @@ export function LearningCoursePage({ cohortId }: { cohortId: string }) {
                             {LEARNER_TYPE_LABEL[i.type] ?? i.type}
                             {i.label ? ` · ${i.label}` : ''}
                           </span>
-                          <span className="dash-item-title">{i.title}</span>
+                          <span className="dash-item-title">
+                            {i.title}
+                            {i.note && <span className="dash-plan-why">{i.note}</span>}
+                          </span>
                           <span
                             className={
                               i.status === 'completed'

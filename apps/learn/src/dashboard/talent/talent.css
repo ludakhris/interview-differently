@@ -8,10 +8,79 @@
 .tl-card {
   margin-bottom: 24px;
 }
-.tl-form {
-  max-width: 44em;
+.tl-page {
+  max-width: 46em;
 }
-.tl-group {
+.tl-head {
+  margin: 0 0 28px;
+}
+.tl-head .tl-lede {
+  margin-bottom: 0;
+}
+.tl-form {
+  display: grid;
+  gap: 32px;
+  max-width: 46em;
+}
+.tl-status {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--dash-radius, 0);
+  background: var(--surface-alt, var(--sky));
+}
+.tl-status-line {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.tl-status-ok::before {
+  content: '✓ ';
+}
+.tl-checks {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.tl-check-on {
+  color: var(--ink);
+  font-weight: 600;
+}
+.tl-req {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left-width: 5px;
+  border-radius: var(--dash-radius, 0);
+  background: var(--surface);
+}
+.tl-req-todo {
+  border-left-color: var(--orange-text, var(--orange));
+}
+.tl-req-ok {
+  border-left-color: var(--blue);
+}
+.tl-section {
+  display: grid;
+  gap: 18px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+.tl-section-h {
+  margin: 0;
+  font-size: 20px;
+  color: var(--navy);
+}
+.tl-section-lede {
+  margin: -10px 0 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.tl-narrow {
+  max-width: 12em;
+}
+.tl-edu {
   display: grid;
   gap: 14px;
   margin: 0;
@@ -19,18 +88,125 @@
   border: 1px solid var(--border);
   border-radius: var(--dash-radius, 0);
 }
-.tl-group > legend {
+.tl-edu > legend {
   padding: 0 6px;
   color: var(--navy);
   font-weight: 700;
 }
-.tl-note {
+.tl-moneyrow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14em, 1fr));
+  gap: 16px;
+}
+.tl-money {
+  display: flex;
+  align-items: stretch;
+}
+.tl-prefix {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--ink-soft);
+  border-right: 0;
+  border-radius: var(--dash-radius, 0) 0 0 var(--dash-radius, 0);
+  background: var(--surface-alt, var(--sky));
+}
+.tl-money input {
+  border-radius: 0 var(--dash-radius, 0) var(--dash-radius, 0) 0;
+}
+.tl-taglist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tl-tagitem {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px 2px 12px;
+  border: 1px solid var(--navy);
+  border-radius: 999px;
+  background: var(--sky);
+}
+.tl-tagx {
+  min-width: 28px;
+  min-height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.tl-tagx:hover {
+  background: var(--surface);
+}
+.tl-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+}
+.tl-suggest-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.tl-suggest-btn:hover {
+  border-color: var(--navy);
+}
+.tl-orgs {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tl-org {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--dash-radius, 0);
+}
+.tl-orgcheck {
+  font-weight: 700;
+}
+.tl-orgnote {
+  margin: 4px 0 0 28px;
   color: var(--ink-soft);
   font-size: 14px;
 }
-.tl-consent {
-  align-items: start;
+.tl-suborg {
+  margin: 10px 0 0 28px;
+}
+.tl-savebar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 0 -8px;
+  padding: 14px 8px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.tl-edulist {
+  margin: 0;
+  padding-left: 1.2em;
+}
+.tl-filterhint,
+.tl-exporthint {
+  margin: 0 0 12px;
 }
 .tl-resume .tl-actions {
   display: flex;
@@ -144,7 +320,7 @@
     grid-template-columns: 1fr;
     gap: 2px;
   }
-  .tl-group {
+  .tl-edu {
     padding: 12px;
   }
 }
@@ -160,10 +336,22 @@
     min-height: 44px;
     min-width: 44px;
   }
-  .tl-consent {
+  .tl-orgcheck,
+  .tl-suborg {
     min-height: 44px;
   }
-  .tl-consent input[type='checkbox'] {
+  .tl-tagx {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .tl-suggest-btn,
+  .tl-edu .dash-btn-quiet,
+  .tl-form .dash-btn-secondary,
+  .tl-savebar .dash-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .tl-form input[type='checkbox'] {
     width: 44px;
     height: 44px;
     margin: 0;

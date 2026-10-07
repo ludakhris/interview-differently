@@ -1,13 +1,13 @@
-import type { LearnerItem } from '@id/types'
-import type { LearnerTalentProfileEntry } from './legacyTypes'
+import type { LearnerItem, LearnerProfileState } from '@id/types'
 import { useApiFetch, useLoad } from '../api'
 import { errorNotice } from '../shared'
 import { TalentProfileForm } from './TalentProfileForm'
 import './talent.css'
 
 /**
- * #69 C: the learner page for a course item of type 'profile'. The same form as My profile; saving it
- * as finished completes the item (the server does that) and offers the way on.
+ * #69 C: the learner page for the course item 'profile'. The same form as My profile. Whether the
+ * item is done is decided by the profile itself (complete, and fresh when a refresh period applies),
+ * so after each save the item is read back.
  */
 export function TalentProfileItem(props: {
   item: LearnerItem
@@ -17,15 +17,11 @@ export function TalentProfileItem(props: {
 }) {
   const { item } = props
   const apiFetch = useApiFetch()
-  const load = useLoad<LearnerTalentProfileEntry[]>('/learn/me/talent-profiles')
+  const load = useLoad<LearnerProfileState>('/learn/me/profile')
   if (load.error) return errorNotice(load.error)
   if (load.loading || !load.data) return <p className="dash-loading">Loading…</p>
-  const entry = load.data.find((e) => e.cohorts.some((c) => c.cohortId === item.cohortId))
-  if (!entry) return <p className="dash-muted">We could not find your program for this step.</p>
 
-  // The server completes the item when the profile is finished; read it back so the page shows it.
-  async function saved(completed: boolean) {
-    if (!completed) return
+  async function saved() {
     try {
       const res = await apiFetch(`/learn/me/cohorts/${item.cohortId}/items/${item.id}`)
       props.onChange((await res.json()) as LearnerItem)
@@ -35,21 +31,23 @@ export function TalentProfileItem(props: {
   }
 
   return (
-    <article className="dash-card tl-card">
-      <p className="tl-lede">
-        Tell us a little about your work and what you are looking for. This helps{' '}
-        {entry.providerName} match you with job opportunities. It takes about five minutes, and you
-        can come back to it.
-      </p>
-      <TalentProfileForm entry={entry} mode="item" onSaved={(_p, c) => void saved(c)} />
-      {item.status === 'completed' && (
-        <p className="tl-next">
-          <span className="dash-chip dash-chip-on">Done</span>{' '}
-          <a className="dash-btn" href={props.nextHref}>
-            {props.nextLabel}
-          </a>
+    <article className="tl-page tl-itempage">
+      {item.note && (
+        <p className="dash-banner" data-testid="profile-note">
+          {item.note}
         </p>
       )}
+      <p className="tl-lede">Tell us about your work and goals once. You choose who can see it.</p>
+      <TalentProfileForm state={load.data} onSaved={() => void saved()}>
+        {item.status === 'completed' && (
+          <span className="tl-next">
+            <span className="dash-chip dash-chip-on">Done</span>{' '}
+            <a className="dash-btn-secondary" href={props.nextHref}>
+              {props.nextLabel}
+            </a>
+          </span>
+        )}
+      </TalentProfileForm>
     </article>
   )
 }
