@@ -582,7 +582,9 @@ export function TalentProfileForm(props: {
           </div>
           <p className="tl-section-lede tl-use">
             Organizations use your profile to find job openings and employer opportunities that fit
-            your education, experience and goals.
+            your education, experience and goals. When you share your profile with an organization,
+            it may also introduce you to employers it works with, for example a hiring manager at a
+            partner company.
           </p>
           {state.organizations.length === 0 ? (
             <p className="dash-muted">
@@ -600,12 +602,7 @@ export function TalentProfileForm(props: {
                         type="checkbox"
                         checked={c.shared}
                         aria-describedby={noteId}
-                        onChange={(e) =>
-                          setShare(o.institutionId, {
-                            shared: e.target.checked,
-                            allowEmployers: e.target.checked ? c.allowEmployers : false,
-                          })
-                        }
+                        onChange={(e) => setShare(o.institutionId, { shared: e.target.checked })}
                       />
                       <span>{o.name}</span>
                     </label>
@@ -615,21 +612,6 @@ export function TalentProfileForm(props: {
                         ? ' asked for this as part of your course; you decide whether they can read it.'
                         : '.'}
                     </p>
-                    {c.shared && (
-                      <label className="dash-check tl-suborg">
-                        <input
-                          type="checkbox"
-                          checked={c.allowEmployers}
-                          onChange={(e) =>
-                            setShare(o.institutionId, { allowEmployers: e.target.checked })
-                          }
-                        />
-                        <span>
-                          Also let {o.name} show my profile to employers it works with (for example
-                          a hiring manager at a partner company)
-                        </span>
-                      </label>
-                    )}
                   </li>
                 )
               })}

@@ -202,7 +202,7 @@ describe('the profile form', () => {
     )
     expect(share.textContent).not.toMatch(/including your pay|tick a box/)
     expect(share.textContent).toContain(
-      'Organizations use your profile to find job openings and employer opportunities that fit your education, experience and goals.'
+      'Organizations use your profile to find job openings and employer opportunities that fit your education, experience and goals. When you share your profile with an organization, it may also introduce you to employers it works with, for example a hiring manager at a partner company.'
     )
     expect(screen.getByText('Your choices stay in your control')).toBeTruthy()
     const callout = screen.getByRole('note')
@@ -254,7 +254,7 @@ describe('the profile form', () => {
     expect(screen.getByRole('button', { name: 'Remove education 1' })).toBeTruthy()
   })
 
-  it('share list: nothing ticked by default, employer option appears when ticked, reason and requirement shown', async () => {
+  it('share list: nothing ticked by default, no separate employer option, reason and requirement shown', async () => {
     const user = userEvent.setup()
     render(<TalentProfileForm state={state()} />)
     const tech = screen.getByRole('checkbox', { name: 'Delaware Tech' }) as HTMLInputElement
@@ -269,10 +269,7 @@ describe('the profile form', () => {
       screen.queryByLabelText(/Also let Delaware Tech show my profile to employers/)
     ).toBeNull()
     await user.click(tech)
-    const sub = screen.getByLabelText(
-      'Also let Delaware Tech show my profile to employers it works with (for example a hiring manager at a partner company)'
-    )
-    await user.click(sub)
+    expect(screen.queryByLabelText(/employers it works with/)).toBeNull()
     send.mockResolvedValue(state())
     await user.click(screen.getByRole('button', { name: 'Save' }))
     expect(send.mock.calls[0][2].shares).toEqual([{ institutionId: 'i1', allowEmployers: true }])
@@ -485,7 +482,7 @@ describe('the profile form', () => {
       educations: [
         { level: 'associate', fieldOfStudy: null, school: 'DTCC', graduationYear: 2019 },
       ],
-      shares: [{ institutionId: 'i2', allowEmployers: false }],
+      shares: [{ institutionId: 'i2', allowEmployers: true }],
     })
     expect('complete' in body).toBe(false)
     expect(await screen.findByText(/^Saved at \d{1,2}:\d{2} (am|pm)$/)).toBeTruthy()

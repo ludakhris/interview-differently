@@ -107,7 +107,7 @@ export function toValues(state: LearnerProfileState): FormValues {
     shares: Object.fromEntries(
       state.organizations.map((o) => [
         o.institutionId,
-        { shared: o.shared, allowEmployers: o.shared && o.allowEmployers },
+        { shared: o.shared, allowEmployers: o.shared },
       ])
     ),
   }
@@ -208,7 +208,7 @@ export function toInput(v: FormValues): ProfileInput {
     })),
     shares: Object.entries(v.shares)
       .filter(([, c]) => c.shared)
-      .map(([institutionId, c]) => ({ institutionId, allowEmployers: c.allowEmployers })),
+      .map(([institutionId]) => ({ institutionId, allowEmployers: true })),
   }
 }
 
