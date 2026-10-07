@@ -54,6 +54,21 @@ export class LearnCohortsController {
     return this.cohorts.addLearner(req.userId, req.userRole, id, body)
   }
 
+  @Get('cohorts/:id/join-requests')
+  joinRequests(@Req() req: LearnRequest, @Param('id') id: string) {
+    return this.cohorts.joinRequests(req.userId, req.userRole, id)
+  }
+
+  @Post('join-requests/:id/approve')
+  approveRequest(@Req() req: LearnRequest, @Param('id') id: string) {
+    return this.cohorts.approveRequest(req.userId, req.userRole, id)
+  }
+
+  @Post('join-requests/:id/decline')
+  declineRequest(@Req() req: LearnRequest, @Param('id') id: string) {
+    return this.cohorts.declineRequest(req.userId, req.userRole, id)
+  }
+
   @Post('enrollments/:id/recompute')
   recompute(@Req() req: LearnRequest, @Param('id') id: string) {
     return this.cohorts.recompute(req.userId, req.userRole, id)

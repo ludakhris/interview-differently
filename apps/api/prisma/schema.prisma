@@ -161,6 +161,7 @@ model User {
   updatedAt   DateTime     @updatedAt
   memberships Membership[]
   enrollments Enrollment[]
+  joinRequests JoinRequest[]
 
   @@unique([email, source])
   @@index([email])
@@ -217,6 +218,10 @@ model Cohort {
   endsAt        DateTime?
   // Most learners that may be enrolled (withdrawn ones do not count). Null = no limit.
   maxLearners   Int?
+  // #68: when true, entering the code creates a JoinRequest instead of an enrollment.
+  requiresApproval Boolean   @default(false)
+  // Who learners should ask (plain text, e.g. 'Dana Reyes, dana@example.org'). Required when requiresApproval.
+  joinContact   String?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   institution   Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
@@ -226,9 +231,28 @@ model Cohort {
   tools         CohortToolConfig[]
   deliveries    AssessmentDelivery[]
   enrollments   Enrollment[]
+  joinRequests  JoinRequest[]
 
   @@index([institutionId])
   @@index([courseId])
+}
+
+// #68: someone who entered the code of a cohort that needs approval. Deliberately
+// not an Enrollment status: it holds no seat and is invisible to rosters and outcomes.
+model JoinRequest {
+  id        String    @id @default(uuid())
+  cohortId  String
+  userId    String
+  status    String    @default("pending") // 'pending' | 'approved' | 'declined'
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  decidedAt DateTime?
+  decidedBy String? // user id of the staff member
+  cohort    Cohort    @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cohortId, userId])
+  @@index([cohortId, status])
 }
 
 model Membership {

@@ -34,6 +34,22 @@ export interface CohortFields {
   startsAt?: Date
   /** Most learners allowed; null clears the limit. */
   maxLearners?: number | null
+  /** #68: people who join with the code wait for staff approval. */
+  requiresApproval?: boolean
+  /** Who learners should ask while approval is on; null clears it. */
+  joinContact?: string | null
+}
+
+/** Approval needs someone for learners to ask. `current` is what is stored, `fields` what is being set. */
+export function assertApprovalContact(
+  current: { requiresApproval: boolean; joinContact: string | null },
+  fields: CohortFields
+): void {
+  const on = fields.requiresApproval ?? current.requiresApproval
+  const contact = fields.joinContact !== undefined ? fields.joinContact : current.joinContact
+  if (on && !contact) {
+    throw new BadRequestException('Add a contact (who learners should ask) to require approval')
+  }
 }
 
 /** Cohort fields from a request body; a start date is YYYY-MM-DD. `partial` allows leaving fields out. */
@@ -75,6 +91,21 @@ export function validateCohortFields(input: unknown, partial: boolean): CohortFi
     ) {
       throw new BadRequestException('Maximum learners must be a whole number from 1 to 5000')
     } else out.maxLearners = body.maxLearners
+  }
+  if (body.requiresApproval !== undefined) {
+    if (typeof body.requiresApproval !== 'boolean')
+      throw new BadRequestException('requiresApproval must be true or false')
+    out.requiresApproval = body.requiresApproval
+  }
+  if (body.joinContact !== undefined) {
+    if (body.joinContact === null) out.joinContact = null
+    else if (typeof body.joinContact !== 'string')
+      throw new BadRequestException('Contact must be text')
+    else {
+      const contact = body.joinContact.trim()
+      if (contact.length > 200) throw new BadRequestException('Contact is too long (max 200)')
+      out.joinContact = contact || null
+    }
   }
   return out
 }

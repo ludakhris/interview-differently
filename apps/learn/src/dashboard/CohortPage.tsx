@@ -1,12 +1,90 @@
 import type { CohortDetail } from '@id/types'
 import { Fragment, useEffect, useState, type FormEvent } from 'react'
-import { useApiSend, useLoad } from './api'
+import { useApiFetch, useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { AttemptsPanel } from './AttemptsPanel'
 import { Meter } from './charts'
 import { CohortStatusChip } from './CohortsPage'
 import { dateOnly, dateShort } from './format'
+import type { PendingJoinRequest } from './joinRequests'
 import { errorNotice } from './shared'
+
+/** People who joined with the code on an approval cohort, waiting for Approve or Decline. */
+export function PendingRequests({
+  cohortId,
+  onApproved,
+}: {
+  cohortId: string
+  onApproved: () => void
+}) {
+  const send = useApiSend()
+  const { data } = useLoad<PendingJoinRequest[]>(`/learn/cohorts/${cohortId}/join-requests`)
+  const [gone, setGone] = useState<string[]>([])
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null)
+  const rows = (data ?? []).filter((r) => !gone.includes(r.id))
+  if (rows.length === 0 && !message) return null
+
+  async function decide(r: PendingJoinRequest, action: 'approve' | 'decline') {
+    setBusy(true)
+    setMessage(null)
+    try {
+      await send('POST', `/learn/join-requests/${r.id}/${action}`)
+      setGone((g) => [...g, r.id])
+      setMessage({
+        kind: 'ok',
+        text: action === 'approve' ? `${r.name} approved.` : `${r.name} declined.`,
+      })
+      if (action === 'approve') onApproved()
+    } catch (err) {
+      const text = (err as Error).message
+      setMessage({ kind: 'error', text: /full/i.test(text) ? 'This cohort is full.' : text })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="dash-pending">
+      {rows.length > 0 && (
+        <>
+          <h3 className="dash-card-title">Waiting for approval ({rows.length})</h3>
+          <ul className="dash-pending-list">
+            {rows.map((r) => (
+              <li key={r.id}>
+                <span>
+                  {r.name} <span className="dash-muted">{r.email ?? ''}</span>{' '}
+                  <span className="dash-muted">requested {dateShort(r.requestedAt)}</span>
+                </span>
+                <span className="dash-pending-actions">
+                  <button
+                    type="button"
+                    className="dash-btn-secondary"
+                    disabled={busy}
+                    onClick={() => void decide(r, 'approve')}
+                  >
+                    Approve
+                  </button>{' '}
+                  <button
+                    type="button"
+                    className="dash-btn-quiet"
+                    disabled={busy}
+                    onClick={() => void decide(r, 'decline')}
+                  >
+                    Decline
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <p className={message?.kind === 'error' ? 'dash-error' : 'dash-muted'} role="status">
+        {message?.text}
+      </p>
+    </div>
+  )
+}
 
 export function CohortPage({ cohortId }: { cohortId: string }) {
   const { data, error, loading } = useLoad<CohortDetail>(`/learn/cohorts/${cohortId}`)
@@ -34,10 +112,12 @@ function Cohort({
 }) {
   const { href } = useApp()
   const send = useApiSend()
+  const apiFetch = useApiFetch()
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null)
   const [copied, setCopied] = useState(false)
   const [attemptsFor, setAttemptsFor] = useState<string | null>(null)
+  const [needsApproval, setNeedsApproval] = useState(!!cohort.requiresApproval)
 
   async function run(action: () => Promise<CohortDetail>, ok?: string): Promise<boolean> {
     setBusy(true)
@@ -77,6 +157,8 @@ function Cohort({
       maxLearners: limit ? Number(limit) : null,
     }
     if (f.get('startsAt')) body.startsAt = f.get('startsAt')
+    body.requiresApproval = needsApproval
+    body.joinContact = needsApproval ? String(f.get('joinContact') ?? '').trim() : null
     await run(() => send<CohortDetail>('PUT', `/learn/cohorts/${cohort.id}`, body), 'Saved.')
   }
 
@@ -120,6 +202,14 @@ function Cohort({
       setTimeout(() => setCopied(false), 2000)
     } catch {
       /* clipboard blocked: the code is on screen to copy by hand */
+    }
+  }
+
+  async function refetchRoster() {
+    try {
+      onChange((await (await apiFetch(`/learn/cohorts/${cohort.id}`)).json()) as CohortDetail)
+    } catch {
+      /* the roster refreshes on the next visit */
     }
   }
 
@@ -177,6 +267,8 @@ function Cohort({
             </p>
           </div>
         </div>
+
+        <PendingRequests cohortId={cohort.id} onApproved={() => void refetchRoster()} />
 
         <form className="dash-inline-form" onSubmit={addLearner}>
           <label className="dash-field">
@@ -324,6 +416,28 @@ function Cohort({
               <small className="dash-muted">Blank means no limit.</small>
             </label>
           </div>
+          <label className="dash-check">
+            <input
+              type="checkbox"
+              checked={needsApproval}
+              onChange={(e) => setNeedsApproval(e.target.checked)}
+            />{' '}
+            Ask an admin to approve people who join with the code
+          </label>
+          {needsApproval && (
+            <label className="dash-field">
+              <span>Contact for learners (shown while they wait)</span>
+              <input
+                name="joinContact"
+                required
+                maxLength={200}
+                defaultValue={cohort.joinContact ?? ''}
+              />
+              <small className="dash-muted">
+                Name and email or phone; learners see it next to their pending request.
+              </small>
+            </label>
+          )}
           <div className="dash-form-actions">
             <button type="submit" className="dash-btn" disabled={busy}>
               Save details

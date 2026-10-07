@@ -9,6 +9,8 @@ import type {
   KnowledgeCheckQuestion,
   LearnerAddedItem,
   LearnerCohortCard,
+  LearnerJoinPending,
+  LearnerJoinRequest,
   LearnerItem,
   ToolAttempt,
   LearnerOutline,
@@ -175,14 +177,15 @@ export class LearnerService {
     }
   }
 
-  async join(userId: string, code: unknown): Promise<LearnerCohortCard> {
+  /** Joins with the code. A cohort that needs approval answers with the waiting request instead of a card (#68). */
+  async join(userId: string, code: unknown): Promise<LearnerCohortCard | LearnerJoinPending> {
     const key = typeof code === 'string' ? code.trim() : ''
     if (!key) throw new NotFoundException('Enter a join code')
     const cohort = await this.prisma.cohort.findFirst({
       where: { joinKey: { equals: key, mode: 'insensitive' }, courseId: { not: null } },
       include: {
         institution: { select: { id: true, name: true } },
-        course: { select: { id: true } },
+        course: { select: { id: true, title: true } },
       },
     })
     if (!cohort)
@@ -194,6 +197,32 @@ export class LearnerService {
     const existing = await this.prisma.enrollment.findUnique({
       where: { cohortId_userId: { cohortId: cohort.id, userId } },
     })
+    if (cohort.requiresApproval && (!existing || existing.status === 'withdrawn')) {
+      // A request holds no seat and no access; staff approve it (see LearnCohortsService.approveRequest).
+      let request = await this.prisma.joinRequest.findUnique({
+        where: { cohortId_userId: { cohortId: cohort.id, userId } },
+      })
+      if (!request || request.status !== 'pending') {
+        request = await this.prisma.joinRequest.upsert({
+          where: { cohortId_userId: { cohortId: cohort.id, userId } },
+          create: { cohortId: cohort.id, userId },
+          update: { status: 'pending', createdAt: new Date(), decidedAt: null, decidedBy: null },
+        })
+      }
+      return {
+        pending: true,
+        request: {
+          id: request.id,
+          cohortId: cohort.id,
+          cohortName: cohort.name,
+          courseTitle: cohort.course?.title as string,
+          institutionName: cohort.institution.name,
+          status: 'pending',
+          requestedAt: request.createdAt.toISOString(),
+          contact: cohort.joinContact,
+        },
+      }
+    }
     // A seat is needed unless this person already holds one.
     if (typeof cohort.maxLearners === 'number' && (!existing || existing.status === 'withdrawn')) {
       const taken = await this.prisma.enrollment.count({
@@ -221,6 +250,38 @@ export class LearnerService {
       update: {},
     })
     return (await this.cards(userId)).find((c) => c.cohortId === cohort.id) as LearnerCohortCard
+  }
+
+  /** Requests still waiting or declined, newest first; approved ones are enrollments now. */
+  async joinRequests(userId: string): Promise<LearnerJoinRequest[]> {
+    const rows = await this.prisma.joinRequest.findMany({
+      where: {
+        userId,
+        status: { in: ['pending', 'declined'] },
+        cohort: { courseId: { not: null } },
+      },
+      include: {
+        cohort: {
+          select: {
+            name: true,
+            joinContact: true,
+            institution: { select: { name: true } },
+            course: { select: { title: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    return rows.map((r) => ({
+      id: r.id,
+      cohortId: r.cohortId,
+      cohortName: r.cohort.name,
+      courseTitle: r.cohort.course?.title as string,
+      institutionName: r.cohort.institution.name,
+      status: r.status as LearnerJoinRequest['status'],
+      requestedAt: r.createdAt.toISOString(),
+      contact: r.cohort.joinContact,
+    }))
   }
 
   // ── reading ───────────────────────────────────────────────────────────────

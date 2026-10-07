@@ -24,6 +24,7 @@ const prisma = {
     count: jest.fn(),
   },
   membership: { upsert: jest.fn() },
+  joinRequest: { findUnique: jest.fn(), upsert: jest.fn(), findMany: jest.fn() },
   course: { findUnique: jest.fn() },
   courseItem: { findUnique: jest.fn() },
   courseModule: { findMany: jest.fn() },
@@ -152,6 +153,159 @@ describe('join', () => {
     prisma.enrollment.findMany.mockResolvedValue([])
     await service.join('u1', 'ABCD2345').catch(() => undefined)
     expect(prisma.enrollment.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('join with approval (#68)', () => {
+  const cohort = {
+    id: 'k1',
+    name: 'Fall',
+    startsAt: PAST,
+    endsAt: FUTURE,
+    requiresApproval: true,
+    joinContact: 'Dana Reyes, dana@example.org',
+    institution: { id: 'h1', name: 'Harbor Point' },
+    course: { id: 'c1', title: 'MA' },
+  }
+  const stored = (over: object = {}) => ({
+    id: 'r1',
+    cohortId: 'k1',
+    userId: 'u1',
+    status: 'pending',
+    createdAt: new Date('2026-10-07T12:00:00Z'),
+    ...over,
+  })
+  beforeEach(() => {
+    prisma.cohort.findFirst.mockResolvedValue(cohort)
+    prisma.user.findUnique.mockResolvedValue({ id: 'u1' })
+    prisma.enrollment.findUnique.mockResolvedValue(null)
+    prisma.joinRequest.findUnique.mockResolvedValue(null)
+    prisma.joinRequest.upsert.mockResolvedValue(stored())
+  })
+
+  it('with approval off (or unset) never touches join requests and enrolls as before', async () => {
+    for (const requiresApproval of [false, undefined]) {
+      jest.clearAllMocks()
+      prisma.cohort.findFirst.mockResolvedValue({ ...cohort, requiresApproval })
+      prisma.user.findUnique.mockResolvedValue({ id: 'u1' })
+      prisma.enrollment.findUnique.mockResolvedValue(null)
+      prisma.enrollment.findMany.mockResolvedValue([])
+      const out = await service.join('u1', 'ABCD2345').catch(() => undefined)
+      expect(out && 'pending' in out).toBeFalsy()
+      expect(prisma.enrollment.create).toHaveBeenCalledWith({
+        data: { cohortId: 'k1', userId: 'u1' },
+      })
+      expect(prisma.membership.upsert).toHaveBeenCalled()
+      expect(prisma.joinRequest.findUnique).not.toHaveBeenCalled()
+      expect(prisma.joinRequest.upsert).not.toHaveBeenCalled()
+    }
+  })
+
+  it('creates a pending request, no enrollment and no membership, and returns it', async () => {
+    const out = await service.join('u1', 'ABCD2345')
+    expect(out).toEqual({
+      pending: true,
+      request: {
+        id: 'r1',
+        cohortId: 'k1',
+        cohortName: 'Fall',
+        courseTitle: 'MA',
+        institutionName: 'Harbor Point',
+        status: 'pending',
+        requestedAt: '2026-10-07T12:00:00.000Z',
+        contact: 'Dana Reyes, dana@example.org',
+      },
+    })
+    expect(prisma.joinRequest.upsert.mock.calls[0][0].create).toEqual({
+      cohortId: 'k1',
+      userId: 'u1',
+    })
+    expect(prisma.enrollment.create).not.toHaveBeenCalled()
+    expect(prisma.enrollment.update).not.toHaveBeenCalled()
+    expect(prisma.membership.upsert).not.toHaveBeenCalled()
+  })
+
+  it('keeps the place in line when the request is already pending', async () => {
+    prisma.joinRequest.findUnique.mockResolvedValue(stored())
+    const out = await service.join('u1', 'ABCD2345')
+    expect(out).toMatchObject({ pending: true, request: { id: 'r1' } })
+    expect(prisma.joinRequest.upsert).not.toHaveBeenCalled()
+  })
+
+  it('reopens a declined request', async () => {
+    prisma.joinRequest.findUnique.mockResolvedValue(stored({ status: 'declined' }))
+    await service.join('u1', 'ABCD2345')
+    const update = prisma.joinRequest.upsert.mock.calls[0][0].update
+    expect(update).toMatchObject({ status: 'pending', decidedAt: null, decidedBy: null })
+    expect(update.createdAt).toBeInstanceOf(Date)
+  })
+
+  it('does not block a request when the cohort is full', async () => {
+    prisma.cohort.findFirst.mockResolvedValue({ ...cohort, maxLearners: 1 })
+    prisma.enrollment.count.mockResolvedValue(1)
+    expect(await service.join('u1', 'ABCD2345')).toMatchObject({ pending: true })
+  })
+
+  it('still refuses an ended cohort', async () => {
+    prisma.cohort.findFirst.mockResolvedValue({ ...cohort, endsAt: PAST })
+    await expect(service.join('u1', 'ABCD2345')).rejects.toThrow(ConflictException)
+    expect(prisma.joinRequest.upsert).not.toHaveBeenCalled()
+  })
+
+  it('treats someone already in the cohort as before: no request', async () => {
+    prisma.enrollment.findUnique.mockResolvedValue({ id: 'e1', status: 'enrolled' })
+    prisma.enrollment.findMany.mockResolvedValue([])
+    await service.join('u1', 'ABCD2345').catch(() => undefined)
+    expect(prisma.joinRequest.upsert).not.toHaveBeenCalled()
+    expect(prisma.membership.upsert).toHaveBeenCalled()
+  })
+
+  it('asks again for someone who withdrew', async () => {
+    prisma.enrollment.findUnique.mockResolvedValue({ id: 'e1', status: 'withdrawn' })
+    expect(await service.join('u1', 'ABCD2345')).toMatchObject({ pending: true })
+    expect(prisma.enrollment.update).not.toHaveBeenCalled()
+  })
+
+  it('grants a pending requester no access: the course, outline and items stay closed', async () => {
+    await service.join('u1', 'ABCD2345')
+    prisma.enrollment.findUnique.mockResolvedValue(null) // still no enrollment
+    prisma.enrollment.findMany.mockResolvedValue([])
+    await expect(service.outline('u1', 'k1')).rejects.toThrow(NotFoundException)
+    await expect(service.item('u1', 'k1', 'i1')).rejects.toThrow(NotFoundException)
+    expect(await service.cards('u1')).toEqual([])
+    expect(prisma.enrollment.findMany.mock.calls.at(-1)?.[0].where).toMatchObject({
+      status: { not: 'withdrawn' },
+    })
+  })
+
+  it('lists only pending and declined requests, newest first, with the contact', async () => {
+    prisma.joinRequest.findMany.mockResolvedValue([
+      {
+        ...stored({ status: 'declined' }),
+        cohort: {
+          name: 'Fall',
+          joinContact: 'Dana',
+          institution: { name: 'Harbor Point' },
+          course: { title: 'MA' },
+        },
+      },
+    ])
+    const out = await service.joinRequests('u1')
+    const q = prisma.joinRequest.findMany.mock.calls[0][0]
+    expect(q.where).toMatchObject({ userId: 'u1', status: { in: ['pending', 'declined'] } })
+    expect(q.orderBy).toEqual({ createdAt: 'desc' })
+    expect(out).toEqual([
+      {
+        id: 'r1',
+        cohortId: 'k1',
+        cohortName: 'Fall',
+        courseTitle: 'MA',
+        institutionName: 'Harbor Point',
+        status: 'declined',
+        requestedAt: '2026-10-07T12:00:00.000Z',
+        contact: 'Dana',
+      },
+    ])
   })
 })
 

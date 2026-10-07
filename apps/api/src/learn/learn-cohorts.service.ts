@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common'
 import type {
   CohortDetail,
+  CohortJoinRequestRow,
   CohortListItem,
   CohortRosterRow,
   CourseOffers,
@@ -15,6 +16,7 @@ import type {
 } from './learn-types'
 import { PrismaService } from '../prisma/prisma.service'
 import {
+  assertApprovalContact,
   cohortStatus,
   endsAtFor,
   newJoinKey,
@@ -106,7 +108,12 @@ export class LearnCohortsService {
       where: { institutionId: ws.id, courseId: { not: null } },
       include: {
         course: { select: { id: true, title: true } },
-        _count: { select: { enrollments: { where: { status: { not: 'withdrawn' } } } } },
+        _count: {
+          select: {
+            enrollments: { where: { status: { not: 'withdrawn' } } },
+            joinRequests: { where: { status: 'pending' } },
+          },
+        },
       },
       orderBy: { startsAt: 'desc' },
     })
@@ -121,6 +128,9 @@ export class LearnCohortsService {
       enrolled: c._count.enrollments,
       joinKey: c.joinKey,
       maxLearners: c.maxLearners,
+      requiresApproval: c.requiresApproval,
+      joinContact: c.joinContact,
+      pendingRequests: c._count.joinRequests,
     }))
   }
 
@@ -153,6 +163,7 @@ export class LearnCohortsService {
     ) {
       joinKey = newJoinKey()
     }
+    assertApprovalContact({ requiresApproval: false, joinContact: null }, fields)
     const startsAt = fields.startsAt as Date
     const cohort = await this.prisma.cohort.create({
       data: {
@@ -163,6 +174,8 @@ export class LearnCohortsService {
         startsAt,
         endsAt: endsAtFor(startsAt, course.lengthWeeks),
         maxLearners: fields.maxLearners ?? null,
+        requiresApproval: fields.requiresApproval ?? false,
+        joinContact: fields.joinContact ?? null,
       },
     })
     return this.detail(userId, role, cohort.id)
@@ -171,6 +184,9 @@ export class LearnCohortsService {
   async detail(userId: string, role: string | undefined, cohortId: string): Promise<CohortDetail> {
     const c = await this.cohortFor(userId, role, cohortId)
     const itemsTotal = c.course.modules.reduce((n, m) => n + m._count.items, 0)
+    const pendingRequests = await this.prisma.joinRequest.count({
+      where: { cohortId, status: 'pending' },
+    })
     const enrollments = await this.prisma.enrollment.findMany({
       where: { cohortId },
       include: {
@@ -202,6 +218,9 @@ export class LearnCohortsService {
       enrolled: roster.filter((r) => r.status !== 'withdrawn').length,
       joinKey: c.joinKey,
       maxLearners: c.maxLearners,
+      requiresApproval: c.requiresApproval,
+      joinContact: c.joinContact,
+      pendingRequests,
       host: {
         id: c.institution.id,
         name: c.institution.name,
@@ -221,8 +240,18 @@ export class LearnCohortsService {
   ): Promise<CohortDetail> {
     const c = await this.cohortFor(userId, role, cohortId)
     const fields = validateCohortFields(body, true)
-    const data: { name?: string; startsAt?: Date; endsAt?: Date; maxLearners?: number | null } = {}
+    const data: {
+      name?: string
+      startsAt?: Date
+      endsAt?: Date
+      maxLearners?: number | null
+      requiresApproval?: boolean
+      joinContact?: string | null
+    } = {}
     if (fields.name) data.name = fields.name
+    assertApprovalContact(c, fields)
+    if (fields.requiresApproval !== undefined) data.requiresApproval = fields.requiresApproval
+    if (fields.joinContact !== undefined) data.joinContact = fields.joinContact
     if (fields.maxLearners !== undefined) {
       if (fields.maxLearners !== null) {
         const active = await this.activeCount(cohortId)
@@ -301,6 +330,103 @@ export class LearnCohortsService {
       update: {},
     })
     return this.detail(userId, role, cohortId)
+  }
+
+  // ── join requests (#68) ───────────────────────────────────────────────────
+
+  /** People waiting for approval to join with the code. They are not on the roster. */
+  async joinRequests(
+    userId: string,
+    role: string | undefined,
+    cohortId: string
+  ): Promise<CohortJoinRequestRow[]> {
+    await this.cohortFor(userId, role, cohortId)
+    const rows = await this.prisma.joinRequest.findMany({
+      where: { cohortId, status: 'pending' },
+      include: { user: { select: { displayName: true, email: true } } },
+      orderBy: { createdAt: 'asc' },
+    })
+    return rows.map((r) => ({
+      id: r.id,
+      userId: r.userId,
+      name: r.user.displayName ?? r.user.email ?? r.userId,
+      email: r.user.email,
+      requestedAt: r.createdAt.toISOString(),
+    }))
+  }
+
+  /** The request and the right to decide it: same access as adding a learner to its cohort. */
+  private async requestFor(userId: string, role: string | undefined, requestId: string) {
+    const r = await this.prisma.joinRequest.findUnique({ where: { id: requestId } })
+    if (!r) throw new NotFoundException('Join request not found')
+    const cohort = await this.cohortFor(userId, role, r.cohortId)
+    if (r.status !== 'pending') throw new ConflictException('That request was already decided.')
+    return { request: r, cohort }
+  }
+
+  /** Enrolls the person exactly as joining with the code does, in one transaction with the decision. */
+  async approveRequest(
+    userId: string,
+    role: string | undefined,
+    requestId: string
+  ): Promise<CohortDetail> {
+    const { request, cohort } = await this.requestFor(userId, role, requestId)
+    await this.prisma.$transaction(async (tx) => {
+      // Serialize approvals of one cohort so two of them cannot both take the last seat.
+      await tx.$queryRaw`SELECT "id" FROM "Cohort" WHERE "id" = ${cohort.id} FOR UPDATE`
+      const claimed = await tx.joinRequest.updateMany({
+        where: { id: request.id, status: 'pending' },
+        data: { status: 'approved', decidedAt: new Date(), decidedBy: userId },
+      })
+      if (claimed.count === 0) throw new ConflictException('That request was already decided.')
+      const existing = await tx.enrollment.findUnique({
+        where: { cohortId_userId: { cohortId: cohort.id, userId: request.userId } },
+      })
+      if (!existing || existing.status === 'withdrawn') {
+        if (typeof cohort.maxLearners === 'number') {
+          const taken = await tx.enrollment.count({
+            where: { cohortId: cohort.id, status: { not: 'withdrawn' } },
+          })
+          if (taken >= cohort.maxLearners) throw new ConflictException('This cohort is full.')
+        }
+        if (existing) {
+          await tx.enrollment.update({ where: { id: existing.id }, data: { status: 'enrolled' } })
+        } else {
+          await tx.enrollment.create({ data: { cohortId: cohort.id, userId: request.userId } })
+        }
+      }
+      await tx.membership.upsert({
+        where: {
+          userId_institutionId_cohortId: {
+            userId: request.userId,
+            institutionId: cohort.institution.id,
+            cohortId: cohort.id,
+          },
+        },
+        create: {
+          userId: request.userId,
+          institutionId: cohort.institution.id,
+          cohortId: cohort.id,
+        },
+        update: {},
+      })
+    })
+    return this.detail(userId, role, cohort.id)
+  }
+
+  /** Keeps the record, so the learner sees "not approved" and who to contact. */
+  async declineRequest(
+    userId: string,
+    role: string | undefined,
+    requestId: string
+  ): Promise<CohortDetail> {
+    const { request, cohort } = await this.requestFor(userId, role, requestId)
+    const claimed = await this.prisma.joinRequest.updateMany({
+      where: { id: request.id, status: 'pending' },
+      data: { status: 'declined', decidedAt: new Date(), decidedBy: userId },
+    })
+    if (claimed.count === 0) throw new ConflictException('That request was already decided.')
+    return this.detail(userId, role, cohort.id)
   }
 
   /** Withdraw rather than delete, so the learner's results stay for reporting. */

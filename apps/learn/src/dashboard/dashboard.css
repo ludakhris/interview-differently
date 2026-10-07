@@ -3112,3 +3112,32 @@ a.dash-tool:focus-visible {
 .dash-attempts-panel {
   max-width: 560px;
 }
+
+/* Join approval: small and calm */
+.dash-joinrequests {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.dash-joinrequests li {
+  margin: 0.25rem 0;
+}
+.dash-pending {
+  margin: 0 0 1rem;
+}
+.dash-pending-list {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+}
+.dash-pending-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+}

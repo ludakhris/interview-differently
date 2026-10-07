@@ -5,13 +5,44 @@ import { useApp } from './app-context'
 import { Meter } from './charts'
 import { CohortStatusChip } from './CohortsPage'
 import { dateOnly } from './format'
+import {
+  isPendingJoin,
+  requestContact,
+  requestSentLine,
+  requestState,
+  requestTitle,
+  type LearnerJoinRequest,
+} from './joinRequests'
 import { errorNotice } from './shared'
+
+/** Requests still waiting for an admin, or not approved: one small line each, nothing when none. */
+export function JoinRequestList({ requests }: { requests: LearnerJoinRequest[] }) {
+  if (requests.length === 0) return null
+  return (
+    <ul className="dash-joinrequests" aria-label="Join requests">
+      {requests.map((r) => {
+        const contact = requestContact(r)
+        return (
+          <li key={r.id}>
+            {requestTitle(r)} —{' '}
+            <span className={r.status === 'declined' ? 'dash-muted' : undefined}>
+              {requestState(r)}
+            </span>
+            {contact && <> · {contact}</>}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
 
 /** The learner's home: the cohorts they are in, and a box to join another with a code. */
 export function LearningPage() {
   const { href } = useApp()
   const { data, error, loading, reload } = useLoad<LearnerCohortCard[]>('/learn/me/learning')
+  const requests = useLoad<LearnerJoinRequest[]>('/learn/me/join-requests')
   const send = useApiSend()
+  const [sent, setSent] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
 
@@ -21,8 +52,21 @@ export function LearningPage() {
     const code = String(new FormData(form).get('code') ?? '')
     setBusy(true)
     setJoinError(null)
+    setSent(null)
     try {
-      const card = await send<LearnerCohortCard>('POST', '/learn/me/join', { code })
+      const out = await send<LearnerCohortCard | { pending: true; request: LearnerJoinRequest }>(
+        'POST',
+        '/learn/me/join',
+        { code }
+      )
+      if (isPendingJoin(out)) {
+        setSent(requestSentLine(out.request.contact))
+        setBusy(false)
+        form.reset()
+        requests.reload()
+        return
+      }
+      const card = out
       window.location.assign(href(`/lms/learning/${card.cohortId}`))
     } catch (err) {
       setJoinError((err as Error).message)
@@ -60,6 +104,11 @@ export function LearningPage() {
           {busy ? 'Joining…' : 'Join cohort'}
         </button>
         {joinError && <p className="dash-error dash-joinform-error">{joinError}</p>}
+        {sent && (
+          <p className="dash-muted dash-joinform-error" role="status">
+            {sent}
+          </p>
+        )}
       </form>
 
       {data.length === 0 ? (
@@ -95,6 +144,8 @@ export function LearningPage() {
           ))}
         </ul>
       )}
+
+      <JoinRequestList requests={requests.data ?? []} />
     </>
   )
 }

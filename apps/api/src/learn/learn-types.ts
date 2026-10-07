@@ -245,6 +245,21 @@ export interface CohortListItem {
   joinKey: string | null
   /** Most learners that may be enrolled. Null = no limit. */
   maxLearners: number | null
+  /** #68: entering the code creates a join request that staff approve, not an enrollment. */
+  requiresApproval: boolean
+  /** Who learners should ask while approval is on (plain text). Required when requiresApproval. */
+  joinContact: string | null
+  /** Join requests still waiting for a decision. They hold no seat and are not in `enrolled`. */
+  pendingRequests: number
+}
+
+/** A pending join request as staff see it. */
+export interface CohortJoinRequestRow {
+  id: string
+  userId: string
+  name: string
+  email: string | null
+  requestedAt: string
 }
 
 export interface CohortRosterRow {
@@ -299,6 +314,25 @@ export interface LearnerCohortCard {
   enrollmentStatus: 'enrolled' | 'completed' | 'withdrawn'
   itemsDone: number
   itemsTotal: number
+}
+
+/** A join request the learner has made that is not yet approved (#68). */
+export interface LearnerJoinRequest {
+  id: string
+  cohortId: string
+  cohortName: string
+  courseTitle: string
+  institutionName: string
+  status: 'pending' | 'declined'
+  requestedAt: string
+  /** Who to ask, as the staff wrote it. */
+  contact: string | null
+}
+
+/** What POST /learn/me/join returns when the cohort needs approval; otherwise it returns the LearnerCohortCard. */
+export interface LearnerJoinPending {
+  pending: true
+  request: LearnerJoinRequest
 }
 
 export interface LearnerOutlineItem {

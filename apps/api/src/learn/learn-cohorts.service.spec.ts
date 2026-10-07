@@ -29,6 +29,14 @@ const prisma = {
   courseItem: { findUnique: jest.fn() },
   itemProgress: { findUnique: jest.fn() },
   membership: { upsert: jest.fn() },
+  joinRequest: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    count: jest.fn(),
+    updateMany: jest.fn(),
+  },
+  $transaction: jest.fn(),
+  $queryRaw: jest.fn(),
   user: { findUnique: jest.fn() },
   courseOffer: { findMany: jest.fn(), upsert: jest.fn(), deleteMany: jest.fn() },
 }
@@ -64,6 +72,8 @@ beforeEach(() => {
   prisma.cohort.findFirst.mockResolvedValue(null) // join key free
   prisma.cohort.findUnique.mockResolvedValue(null)
   prisma.enrollment.findMany.mockResolvedValue([])
+  prisma.joinRequest.count.mockResolvedValue(0)
+  prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(prisma))
 })
 
 describe('create', () => {
@@ -297,5 +307,183 @@ describe('size limit', () => {
   it('lets the limit be cleared', async () => {
     await service.update('u', 'agency-admin', 'k1', { maxLearners: null })
     expect(prisma.cohort.update.mock.calls[0][0].data.maxLearners).toBeNull()
+  })
+})
+
+describe('join requests (#68)', () => {
+  const request = { id: 'r1', cohortId: 'k1', userId: 'l1', status: 'pending' }
+  beforeEach(() => {
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    prisma.joinRequest.findUnique.mockResolvedValue(request)
+    prisma.joinRequest.updateMany.mockResolvedValue({ count: 1 })
+    prisma.enrollment.findUnique.mockResolvedValue(null)
+    prisma.enrollment.count.mockResolvedValue(0)
+  })
+
+  it('lists pending requests only, with name and email', async () => {
+    prisma.joinRequest.findMany.mockResolvedValue([
+      {
+        id: 'r1',
+        userId: 'l1',
+        createdAt: new Date('2026-10-07T12:00:00Z'),
+        user: { displayName: 'Ann', email: 'a@b.co' },
+      },
+    ])
+    const out = await service.joinRequests('u', 'agency-admin', 'k1')
+    expect(prisma.joinRequest.findMany.mock.calls[0][0].where).toEqual({
+      cohortId: 'k1',
+      status: 'pending',
+    })
+    expect(out).toEqual([
+      {
+        id: 'r1',
+        userId: 'l1',
+        name: 'Ann',
+        email: 'a@b.co',
+        requestedAt: '2026-10-07T12:00:00.000Z',
+      },
+    ])
+  })
+
+  it('approve enrolls, adds the membership and marks the request, in one transaction', async () => {
+    await service.approveRequest('u', 'agency-admin', 'r1')
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1)
+    expect(prisma.joinRequest.updateMany).toHaveBeenCalledWith({
+      where: { id: 'r1', status: 'pending' },
+      data: { status: 'approved', decidedAt: expect.any(Date), decidedBy: 'u' },
+    })
+    expect(prisma.enrollment.create).toHaveBeenCalledWith({
+      data: { cohortId: 'k1', userId: 'l1' },
+    })
+    expect(prisma.membership.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: { userId: 'l1', institutionId: 'w1', cohortId: 'k1' },
+      })
+    )
+  })
+
+  it('approve revives a withdrawn enrollment instead of creating another', async () => {
+    prisma.enrollment.findUnique.mockResolvedValue({ id: 'e1', status: 'withdrawn' })
+    await service.approveRequest('u', 'agency-admin', 'r1')
+    expect(prisma.enrollment.update).toHaveBeenCalledWith({
+      where: { id: 'e1' },
+      data: { status: 'enrolled' },
+    })
+    expect(prisma.enrollment.create).not.toHaveBeenCalled()
+  })
+
+  it('approve fails with 409 when the cohort is full', async () => {
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow({ maxLearners: 2 }))
+    prisma.enrollment.count.mockResolvedValue(2)
+    await expect(service.approveRequest('u', 'agency-admin', 'r1')).rejects.toThrow(/full/)
+    expect(prisma.enrollment.create).not.toHaveBeenCalled()
+    expect(prisma.membership.upsert).not.toHaveBeenCalled()
+  })
+
+  it('approving twice: the second is a 409 and creates nothing', async () => {
+    // Both calls saw a pending request; only the first wins the claim.
+    prisma.joinRequest.updateMany
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 0 })
+    const [a, b] = await Promise.allSettled([
+      service.approveRequest('u', 'agency-admin', 'r1'),
+      service.approveRequest('u', 'agency-admin', 'r1'),
+    ])
+    expect(a.status).toBe('fulfilled')
+    expect(b.status).toBe('rejected')
+    expect((b as PromiseRejectedResult).reason).toBeInstanceOf(ConflictException)
+    expect(prisma.enrollment.create).toHaveBeenCalledTimes(1)
+  })
+
+  it('approve or decline of an already decided request is a 409, an unknown one a 404', async () => {
+    prisma.joinRequest.findUnique.mockResolvedValue({ ...request, status: 'declined' })
+    await expect(service.approveRequest('u', 'agency-admin', 'r1')).rejects.toThrow(
+      ConflictException
+    )
+    await expect(service.declineRequest('u', 'agency-admin', 'r1')).rejects.toThrow(
+      ConflictException
+    )
+    prisma.joinRequest.findUnique.mockResolvedValue(null)
+    await expect(service.approveRequest('u', 'agency-admin', 'nope')).rejects.toThrow(
+      NotFoundException
+    )
+  })
+
+  it('decline keeps the record and creates no enrollment', async () => {
+    await service.declineRequest('u', 'agency-admin', 'r1')
+    expect(prisma.joinRequest.updateMany).toHaveBeenCalledWith({
+      where: { id: 'r1', status: 'pending' },
+      data: { status: 'declined', decidedAt: expect.any(Date), decidedBy: 'u' },
+    })
+    expect(prisma.enrollment.create).not.toHaveBeenCalled()
+    expect(prisma.membership.upsert).not.toHaveBeenCalled()
+  })
+
+  it('refuses staff of another workspace, as for adding a learner', async () => {
+    learn.assertWorkspace.mockRejectedValue(new ForbiddenException('No access to this workspace'))
+    await expect(service.approveRequest('u', 'agency-admin', 'r1')).rejects.toThrow(
+      ForbiddenException
+    )
+    await expect(service.declineRequest('u', 'agency-admin', 'r1')).rejects.toThrow(
+      ForbiddenException
+    )
+    await expect(service.joinRequests('u', 'agency-admin', 'k1')).rejects.toThrow(
+      ForbiddenException
+    )
+    expect(prisma.joinRequest.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('pending requests are not on the roster or in the enrolled count', async () => {
+    prisma.joinRequest.count.mockResolvedValue(3)
+    const d = await service.detail('u', 'agency-admin', 'k1')
+    expect(d.pendingRequests).toBe(3)
+    expect(d.roster).toEqual([])
+    expect(d.enrolled).toBe(0)
+  })
+})
+
+describe('approval setting (#68)', () => {
+  beforeEach(() => prisma.cohort.findUnique.mockResolvedValue(cohortRow()))
+  const stored = { requiresApproval: false, joinContact: null }
+
+  it('requires a contact when approval is turned on', async () => {
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow(stored))
+    await expect(
+      service.update('u', 'agency-admin', 'k1', { requiresApproval: true })
+    ).rejects.toThrow(BadRequestException)
+    await expect(
+      service.update('u', 'agency-admin', 'k1', { requiresApproval: true, joinContact: '  ' })
+    ).rejects.toThrow(/contact/i)
+    expect(prisma.cohort.update).not.toHaveBeenCalled()
+  })
+
+  it('refuses a contact over 200 characters and clearing the contact while approval is on', async () => {
+    await expect(
+      service.update('u', 'agency-admin', 'k1', { joinContact: 'x'.repeat(201) })
+    ).rejects.toThrow(BadRequestException)
+    prisma.cohort.findUnique.mockResolvedValue(
+      cohortRow({ requiresApproval: true, joinContact: 'Dana' })
+    )
+    await expect(service.update('u', 'agency-admin', 'k1', { joinContact: null })).rejects.toThrow(
+      BadRequestException
+    )
+  })
+
+  it('saves approval with a contact, and turning approval off needs none', async () => {
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow(stored))
+    await service.update('u', 'agency-admin', 'k1', {
+      requiresApproval: true,
+      joinContact: ' Dana Reyes, dana@example.org ',
+    })
+    expect(prisma.cohort.update.mock.calls[0][0].data).toMatchObject({
+      requiresApproval: true,
+      joinContact: 'Dana Reyes, dana@example.org',
+    })
+    prisma.cohort.update.mockClear()
+    prisma.cohort.findUnique.mockResolvedValue(
+      cohortRow({ requiresApproval: true, joinContact: 'Dana' })
+    )
+    await service.update('u', 'agency-admin', 'k1', { requiresApproval: false })
+    expect(prisma.cohort.update.mock.calls[0][0].data.requiresApproval).toBe(false)
   })
 })

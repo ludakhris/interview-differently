@@ -66,6 +66,17 @@ It prints `Removed N institutions and M demo learners`. The same catalog URL sho
 
 `npm run seed:learn-demo` with `DATABASE_URL` pointing at localhost or the Railway dev database (`zephyr.proxy.rlwy.net`) needs no flags.
 
+## Approving people who join with a code
+
+By default anyone who enters a cohort's join code is enrolled immediately. A cohort can instead ask staff to approve each person first (#68).
+
+1. Open the cohort and turn on "Ask an admin to approve people who join with the code". A contact line (for example `Dana Reyes, dana@example.org`, up to 200 characters) is required; learners see it while they wait or if declined.
+2. A person who enters the code now gets a pending request: no enrollment, no seat, no access to the course. Pending people are not on the roster and not counted as enrolled.
+3. Staff of the cohort's workspace (the same people who can add a learner) see "Waiting for approval" with Approve and Decline. Approve enrolls the person and checks the seat limit then: a full cohort refuses the approval (409). Decline keeps the record; the learner sees that it was not approved, plus the contact.
+4. Entering the code again after a decline reopens the request. Adding someone by email always enrolls them directly, with or without approval.
+
+Turning approval off does not touch requests already waiting; they stay listed and can still be approved or declined. No emails are sent: learners see the state on My learning.
+
 ## Notes
 
 - Regular signed-in users (students) who visit `/builder` will see an "Access restricted" screen.

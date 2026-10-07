@@ -21,6 +21,11 @@ export class LearnerController {
     return this.learner.cards(req.userId)
   }
 
+  @Get('join-requests')
+  joinRequests(@Req() req: LearnRequest) {
+    return this.learner.joinRequests(req.userId)
+  }
+
   @Post('join')
   join(@Req() req: LearnRequest, @Body() body: { code?: unknown }) {
     return this.learner.join(req.userId, body?.code)
