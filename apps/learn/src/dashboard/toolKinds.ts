@@ -156,6 +156,7 @@ export function toolConfig(f: {
   timeLimit: string
   passScore: string
   countsAsInterview: boolean
+  optional: boolean
 }): Record<string, unknown> {
   const limit = parseTimeLimit(f.timeLimit)
   const pass = parsePassScore(f.passScore)
@@ -168,7 +169,9 @@ export function toolConfig(f: {
       ? { maxAttempts: parseAttempts(f.attempts), ...(limit ? { timeLimitMinutes: limit } : {}) }
       : f.countsAsInterview
         ? { countsAsInterview: true }
-        : {}),
+        : f.optional
+          ? { optional: true }
+          : {}),
   }
 }
 

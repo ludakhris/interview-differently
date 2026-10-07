@@ -476,6 +476,7 @@ export class LearnerService {
             attemptsAllowed: limits ? limits.maxAttempts : null,
             timeLimitMinutes: limits ? limits.timeLimitMinutes : null,
             passScore: passScoreOf(config, item.label),
+            optional: isPracticeItem(item),
           }
         : null
     return {

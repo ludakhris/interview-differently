@@ -398,6 +398,8 @@ export interface LearnerItem {
     timeLimitMinutes: number | null
     /** Score the learner must reach for the item to count as done; null means any scored attempt. */
     passScore: number | null
+    /** True when the course can be finished without this item. */
+    optional: boolean
   } | null
   status: ProgressStatus
   score: number | null

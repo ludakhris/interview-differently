@@ -312,6 +312,13 @@ function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | '
       if (flag !== undefined && typeof flag !== 'boolean')
         return bad('Counts toward interview readiness must be true or false')
       const counts = flag === true && tool.kind === 'interview' && given === null
+      // Optional means the course can be finished without it. Readiness work cannot be optional.
+      const opt = config.optional
+      if (opt !== undefined && typeof opt !== 'boolean')
+        return bad('Optional must be true or false')
+      if (opt === true && counts)
+        return bad('An item that counts toward interview readiness cannot be optional')
+      const optional = opt === true && given === null
       return {
         type,
         title,
@@ -322,6 +329,7 @@ function validateItemByType(input: unknown): Required<Pick<ItemInput, 'type' | '
           ...(skill ? { skill } : {}),
           ...rules,
           ...(counts ? { countsAsInterview: true } : {}),
+          ...(optional ? { optional: true } : {}),
         },
       }
     }

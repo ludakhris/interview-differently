@@ -563,6 +563,9 @@ function ToolItem(props: {
         </div>
       ) : (
         <div className="dash-ready-card">
+          {tool.optional && (
+            <p className="dash-muted">Optional: you can finish the course without it.</p>
+          )}
           {item.score !== null && tool.passScore !== null && (
             <p className="dash-ready-miss" role="status">
               Your best result so far is {score(item.score)}. You need {tool.passScore}% to complete

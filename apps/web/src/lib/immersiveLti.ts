@@ -14,9 +14,17 @@ export function isVoiceInterview(scenario: {
 /** What the server stores when an answer had no speech in it (matches the API's marker). */
 export const NO_SPEECH_TRANSCRIPT = '[No speech was detected in this answer.]'
 
-/** True when a finished transcription found no real answer. */
-export const heardNothing = (transcript: string | null): boolean =>
-  transcript === NO_SPEECH_TRANSCRIPT
+/** What the server stores when the transcription service failed (matches the API's marker). */
+export const TRANSCRIPTION_FAILED = '[This answer could not be transcribed.]'
+
+/** What to tell the learner when a finished transcription holds no usable answer, else null. */
+export function recordAgainMessage(transcript: string | null): string | null {
+  if (transcript === NO_SPEECH_TRANSCRIPT)
+    return 'We could not hear an answer. Check that your microphone is on and picking up your voice, then record it again.'
+  if (transcript === TRANSCRIPTION_FAILED)
+    return 'We could not process that recording. Please record your answer again.'
+  return null
+}
 
 /**
  * True once every question node has a response with a transcript (the latest response per node

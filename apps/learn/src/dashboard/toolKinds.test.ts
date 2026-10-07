@@ -121,6 +121,7 @@ describe('toolConfig', () => {
     timeLimit: '30',
     passScore: '',
     countsAsInterview: false,
+    optional: false,
   }
   it('keeps the interview flag only when ticked on a non-assessment tool', () => {
     expect(toolConfig(f)).toEqual({ toolId: 'id-interview', ref: 'voice' })
@@ -129,6 +130,19 @@ describe('toolConfig', () => {
       ref: 'voice',
       countsAsInterview: true,
     })
+  })
+  it('keeps the optional flag only on a tool that is not an interview-readiness item or assessment', () => {
+    expect(toolConfig({ ...f, optional: true })).toEqual({
+      toolId: 'id-interview',
+      ref: 'voice',
+      optional: true,
+    })
+    expect(toolConfig({ ...f, optional: true, countsAsInterview: true })).not.toHaveProperty(
+      'optional'
+    )
+    expect(toolConfig({ ...f, toolId: 'id-assessment', optional: true })).not.toHaveProperty(
+      'optional'
+    )
   })
   it('keeps a valid pass mark on any tool and drops a blank or invalid one', () => {
     expect(toolConfig({ ...f, passScore: '65' })).toEqual({

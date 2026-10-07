@@ -422,6 +422,28 @@ describe('completion', () => {
     })
   })
 
+  it('does not wait for a tool item marked optional', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
+    prisma.itemProgress.findUnique.mockResolvedValue(null)
+    prisma.courseModule.findMany.mockResolvedValue([
+      {
+        id: 'm1',
+        title: 'M',
+        position: 1,
+        items: [
+          { id: 'i1', type: 'lesson' },
+          { id: 'i2', type: 'tool', label: null, config: { optional: true } },
+        ],
+      },
+    ])
+    finished('i1')
+    await service.completeLesson('u1', 'k1', 'i1')
+    expect(prisma.enrollment.update).toHaveBeenCalledWith({
+      where: { id: 'e1' },
+      data: expect.objectContaining({ status: 'completed' }),
+    })
+  })
+
   it('stays enrolled while required items remain', async () => {
     prisma.courseItem.findUnique.mockResolvedValue(item('lesson'))
     prisma.itemProgress.findUnique.mockResolvedValue(null)
@@ -1213,6 +1235,7 @@ describe('recordToolResult', () => {
       attemptsAllowed: null,
       timeLimitMinutes: null,
       passScore: null,
+      optional: false,
     })
     expect(prisma.courseModule.findMany).toHaveBeenCalled() // plan and completion checks ran
   })
@@ -1419,6 +1442,7 @@ describe('recordToolResult', () => {
       attemptsAllowed: null,
       timeLimitMinutes: null,
       passScore: null,
+      optional: false,
     })
   })
 
@@ -1452,6 +1476,7 @@ describe('recordToolResult', () => {
         attemptsAllowed: 1,
         timeLimitMinutes: null,
         passScore: null,
+        optional: false,
       })
       prisma.itemProgress.findUnique.mockResolvedValue({
         status: 'completed',

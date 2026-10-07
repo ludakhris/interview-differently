@@ -67,3 +67,13 @@ describe('passScoreOf', () => {
     expect(passScoreOf({ passScore: 60 }, 'pre')).toBeNull()
   })
 })
+
+describe('isPracticeItem with the optional flag', () => {
+  it('treats an unlabelled tool item marked optional as practice, and nothing else', () => {
+    expect(isPracticeItem({ type: 'tool', label: null, config: { optional: true } })).toBe(true)
+    expect(isPracticeItem({ type: 'tool', label: null, config: {} })).toBe(false)
+    expect(isPracticeItem({ type: 'tool', label: 'pre', config: { optional: true } })).toBe(false)
+    expect(isPracticeItem({ type: 'tool', label: null, config: { optional: 'yes' } })).toBe(false)
+    expect(isPracticeItem({ type: 'interview', label: null })).toBe(true)
+  })
+})

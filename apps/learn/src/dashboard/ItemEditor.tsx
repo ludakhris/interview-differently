@@ -77,6 +77,7 @@ export function ItemEditor(props: {
     String(item.config.remediationFor ?? item.config.reviewFor ?? '')
   )
   const [countsAsInterview, setCountsAsInterview] = useState(item.config.countsAsInterview === true)
+  const [optional, setOptional] = useState(item.config.optional === true)
   const [problem, setProblem] = useState<string | null>(null)
   const [attempts, setAttempts] = useState(String(item.config.maxAttempts ?? 1))
   const [passScore, setPassScore] = useState(
@@ -118,6 +119,7 @@ export function ItemEditor(props: {
                     timeLimit,
                     passScore,
                     countsAsInterview,
+                    optional,
                   })
                 : {
                     role,
@@ -434,6 +436,22 @@ export function ItemEditor(props: {
                 Tick this if the learner's best score here should count as their practice interview
                 score. Leave it unticked for a simulation or other practice: the learner still sees
                 its own score beside it in the course outline, but it does not feed their readiness.
+              </small>
+            </label>
+          )}
+          {!toolLabelable(toolId) && (
+            <label className="dash-check">
+              <input
+                type="checkbox"
+                checked={optional && !countsAsInterview}
+                disabled={countsAsInterview}
+                onChange={(e) => setOptional(e.target.checked)}
+              />
+              <span>Optional</span>
+              <small className="dash-muted">
+                {countsAsInterview
+                  ? 'Not available: this item counts toward interview readiness, so the course needs it.'
+                  : 'Tick this if learners can finish the course without it. It still shows in the outline and its score is kept.'}
               </small>
             </label>
           )}

@@ -20,7 +20,7 @@ import {
 } from '@/services/immersiveService'
 import { completeLtiInterview } from '@/services/ltiService'
 import { LtiScoreSent } from '@/components/LtiScoreSent'
-import { heardNothing, transcriptsReady } from '@/lib/immersiveLti'
+import { recordAgainMessage, transcriptsReady } from '@/lib/immersiveLti'
 import { listScenarioMedia } from '@/services/scenarioMediaService'
 import type { ScenarioMediaAsset, ScenarioNode } from '@id/types'
 
@@ -33,19 +33,19 @@ const TRANSCRIPT_POLL_MS = 2_000
 /** How long one answer waits to be checked for speech before moving on (the finish step waits again). */
 const SPEECH_CHECK_MS = 20_000
 
-/** Waits briefly for this answer's transcript; true only when it was transcribed and held no answer. */
-async function answerWasSilent(sessionId: string, responseId: string): Promise<boolean> {
+/** Waits briefly for this answer's transcript; what to tell the learner if it holds no usable answer, else null. */
+async function answerProblem(sessionId: string, responseId: string): Promise<string | null> {
   const deadline = Date.now() + SPEECH_CHECK_MS
   while (Date.now() < deadline) {
     try {
       const { transcript } = await fetchImmersiveResponse(sessionId, responseId)
-      if (transcript !== null && transcript !== undefined) return heardNothing(transcript)
+      if (transcript !== null && transcript !== undefined) return recordAgainMessage(transcript)
     } catch {
-      return false
+      return null
     }
     await new Promise((r) => setTimeout(r, 1_500))
   }
-  return false
+  return null
 }
 
 const contextSectionLabel: Record<string, string> = {
@@ -180,10 +180,9 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
             durationSeconds: result.durationSeconds,
             audioBlob: result.blob,
           })
-          if (ltiMode && (await answerWasSilent(sessionId, resp.id))) {
-            setLtiError(
-              'We could not hear an answer. Check that your microphone is on and picking up your voice, then record it again.'
-            )
+          const problem = ltiMode ? await answerProblem(sessionId, resp.id) : null
+          if (problem) {
+            setLtiError(problem)
             setRecorderKey((k) => k + 1)
             setPageState('responding')
             return

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
-  heardNothing,
+  recordAgainMessage,
   isVoiceInterview,
   mediaErrorMessage,
   NO_SPEECH_TRANSCRIPT,
+  TRANSCRIPTION_FAILED,
   transcriptsReady,
 } from '../immersiveLti'
 
@@ -44,10 +45,11 @@ describe('mediaErrorMessage', () => {
   })
 })
 
-describe('heardNothing', () => {
-  it('is true only for the no-speech marker', () => {
-    expect(heardNothing(NO_SPEECH_TRANSCRIPT)).toBe(true)
-    expect(heardNothing('I would page the on-call.')).toBe(false)
-    expect(heardNothing(null)).toBe(false)
+describe('recordAgainMessage', () => {
+  it('asks for a new recording for no speech or a failed transcription, and nothing otherwise', () => {
+    expect(recordAgainMessage(NO_SPEECH_TRANSCRIPT)).toMatch(/could not hear/)
+    expect(recordAgainMessage(TRANSCRIPTION_FAILED)).toMatch(/could not process/)
+    expect(recordAgainMessage('I would page the on-call.')).toBeNull()
+    expect(recordAgainMessage(null)).toBeNull()
   })
 })

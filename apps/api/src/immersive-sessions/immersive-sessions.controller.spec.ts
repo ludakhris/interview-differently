@@ -1,6 +1,10 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import { MemoryLtiStore } from '../lti/lti-store'
-import { ImmersiveSessionsController, NO_SPEECH_TRANSCRIPT } from './immersive-sessions.controller'
+import {
+  ImmersiveSessionsController,
+  NO_SPEECH_TRANSCRIPT,
+  TRANSCRIPTION_FAILED,
+} from './immersive-sessions.controller'
 
 const lti = { ref: 'S1', jti: 'j', iat: 0, exp: 0, lineitem: 'x' }
 
@@ -116,7 +120,7 @@ describe('ImmersiveSessionsController transcripts', () => {
     expect(await upload(' Thank you. ')).toHaveBeenCalledWith('r1', NO_SPEECH_TRANSCRIPT)
   })
 
-  it('leaves the transcript unset when transcription itself failed', async () => {
-    expect(await upload(null)).not.toHaveBeenCalled()
+  it('stores a failure marker when transcription itself failed, so the player can ask again', async () => {
+    expect(await upload(null)).toHaveBeenCalledWith('r1', TRANSCRIPTION_FAILED)
   })
 })

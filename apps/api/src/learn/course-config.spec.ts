@@ -355,6 +355,26 @@ describe('tool items', () => {
     }
   })
 
+  describe('optional', () => {
+    it('is kept on an unlabelled tool item, refused with the readiness flag, and checked for type', () => {
+      expect(
+        validateItemInput({ ...base, config: { ...base.config, optional: true } }).config
+      ).toMatchObject({ optional: true })
+      expect(validateItemInput({ ...base, config: { ...base.config } }).config).not.toHaveProperty(
+        'optional'
+      )
+      expect(() =>
+        validateItemInput({
+          ...base,
+          config: { ...base.config, optional: true, countsAsInterview: true },
+        })
+      ).toThrow(/cannot be optional/)
+      expect(() =>
+        validateItemInput({ ...base, config: { ...base.config, optional: 'yes' } })
+      ).toThrow(/Optional must be/)
+    })
+  })
+
   describe('passScore', () => {
     it('keeps a whole pass mark on a tool item, drops it on a pre-assessment, and refuses nonsense', () => {
       expect(

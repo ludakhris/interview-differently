@@ -33,6 +33,12 @@ const LTI_WRITES_PER_MINUTE = 20
  */
 export const NO_SPEECH_TRANSCRIPT = '[No speech was detected in this answer.]'
 
+/**
+ * Stored when the transcription service failed outright, so the player can ask for the answer
+ * again at once instead of waiting for a transcript that will never come.
+ */
+export const TRANSCRIPTION_FAILED = '[This answer could not be transcribed.]'
+
 /** Whisper turns silence and room noise into stray words ("Bye."), so a few words is not an answer. */
 const MIN_ANSWER_WORDS = 3
 
@@ -121,10 +127,11 @@ export class ImmersiveSessionsController {
         void this.transcription
           .transcribe(file.buffer, file.originalname)
           .then((transcript) =>
-            // null means the transcription itself failed: leave it unset. '' means silence.
-            transcript === null
-              ? null
-              : this.service.updateTranscript(response.id, transcriptOrNoSpeech(transcript))
+            // null means the transcription itself failed; '' or a few stray words mean no speech.
+            this.service.updateTranscript(
+              response.id,
+              transcript === null ? TRANSCRIPTION_FAILED : transcriptOrNoSpeech(transcript)
+            )
           )
           .catch(() => {
             /* best effort */

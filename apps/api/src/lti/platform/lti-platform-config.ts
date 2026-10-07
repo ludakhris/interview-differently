@@ -69,11 +69,18 @@ export const toolById = (id: unknown): PlatformTool | undefined =>
 
 /**
  * Whether a course item is practice rather than required work (not needed for completion): a
- * native interview. Every connected tool item is required, so a course is complete only once all
- * its labs and assessments are done.
+ * native interview, or an unlabelled tool item its author marked optional. Every other connected
+ * tool item is required, so a course is complete only once all its labs and assessments are done.
  */
-export const isPracticeItem = (i: { type: string; label: string | null }): boolean =>
-  i.type === 'interview'
+export const isPracticeItem = (i: {
+  type: string
+  label: string | null
+  config?: unknown
+}): boolean =>
+  i.type === 'interview' ||
+  (i.type === 'tool' &&
+    !i.label &&
+    (i.config as { optional?: unknown } | null | undefined)?.optional === true)
 
 /**
  * Whether a course item feeds interview readiness: a native interview, or an unlabelled tool item
