@@ -123,6 +123,8 @@ export type CourseItemType =
   | 'video'
   | 'external_link'
   | 'tool'
+  /** #69: the learner fills in their talent profile (resume, education, experience, targets). */
+  | 'profile'
 export type CourseStatus = 'draft' | 'published'
 
 export interface KnowledgeCheckQuestion {
@@ -232,6 +234,9 @@ export interface CatalogEntry {
 
 export type CohortStatus = 'upcoming' | 'running' | 'completed'
 
+/** #69: how a cohort meets. Live and hybrid cohorts have sessions and attendance; online ones log activity. */
+export type CohortDelivery = 'online' | 'live' | 'hybrid'
+
 export interface CohortListItem {
   id: string
   name: string
@@ -251,6 +256,8 @@ export interface CohortListItem {
   joinContact: string | null
   /** Join requests still waiting for a decision. They hold no seat and are not in `enrolled`. */
   pendingRequests: number
+  /** How the cohort meets. */
+  delivery: CohortDelivery
 }
 
 /** A pending join request as staff see it. */

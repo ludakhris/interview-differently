@@ -86,6 +86,10 @@ export function LearningPage() {
           <p className="dash-sub">
             Your courses, your progress and your readiness record, in one place.
           </p>
+          <p className="dash-sub">
+            <a href={href('/lms/learning/outcomes')}>My outcomes</a> ·{' '}
+            <a href={href('/lms/learning/profile')}>My profile</a>
+          </p>
         </div>
       </div>
 

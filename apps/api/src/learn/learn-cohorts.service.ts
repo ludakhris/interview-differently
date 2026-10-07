@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common'
 import type {
+  CohortDelivery,
   CohortDetail,
   CohortJoinRequestRow,
   CohortListItem,
@@ -131,6 +132,7 @@ export class LearnCohortsService {
       requiresApproval: c.requiresApproval,
       joinContact: c.joinContact,
       pendingRequests: c._count.joinRequests,
+      delivery: c.delivery as CohortDelivery,
     }))
   }
 
@@ -176,6 +178,7 @@ export class LearnCohortsService {
         maxLearners: fields.maxLearners ?? null,
         requiresApproval: fields.requiresApproval ?? false,
         joinContact: fields.joinContact ?? null,
+        delivery: fields.delivery ?? 'online',
       },
     })
     return this.detail(userId, role, cohort.id)
@@ -221,6 +224,7 @@ export class LearnCohortsService {
       requiresApproval: c.requiresApproval,
       joinContact: c.joinContact,
       pendingRequests,
+      delivery: c.delivery as CohortDelivery,
       host: {
         id: c.institution.id,
         name: c.institution.name,
@@ -247,11 +251,13 @@ export class LearnCohortsService {
       maxLearners?: number | null
       requiresApproval?: boolean
       joinContact?: string | null
+      delivery?: CohortDelivery
     } = {}
     if (fields.name) data.name = fields.name
     assertApprovalContact(c, fields)
     if (fields.requiresApproval !== undefined) data.requiresApproval = fields.requiresApproval
     if (fields.joinContact !== undefined) data.joinContact = fields.joinContact
+    if (fields.delivery !== undefined) data.delivery = fields.delivery
     if (fields.maxLearners !== undefined) {
       if (fields.maxLearners !== null) {
         const active = await this.activeCount(cohortId)

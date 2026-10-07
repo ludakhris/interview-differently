@@ -21,6 +21,7 @@ export const ITEM_TYPES: CourseItemType[] = [
   'video',
   'external_link',
   'tool',
+  'profile',
 ]
 
 /** False for a stored item whose type is no longer supported (for example the retired native 'assessment'). */
@@ -217,6 +218,9 @@ function validateItemByType(
   switch (type) {
     case 'lesson':
       return { type, title, label, config: { body: text(config.body, 'Lesson text', 20000) ?? '' } }
+    case 'profile':
+      // #69: the talent profile form. Nothing to configure: the learner fills it in on their own page.
+      return { type, title, label, config: {} }
     case 'knowledge_check':
       return {
         type,

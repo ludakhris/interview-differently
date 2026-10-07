@@ -7,6 +7,7 @@ import { YourAttempts } from './AttemptsList'
 import { score } from './format'
 import { LEARNER_TYPE_LABEL } from './ItemEditor'
 import { errorNotice } from './shared'
+import { TalentProfileItem } from './talent/TalentProfileItem'
 import { attemptLine, onPageRestore, readyCopy, resultCopy, timeLimitNote } from './toolKinds'
 
 /** Plain text with blank-line paragraphs and "- " bullets. */
@@ -97,6 +98,14 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
         )}
         {item.type === 'interview' && (
           <Interview item={item} onChange={setItem} nextHref={nextHref} nextLabel={nextLabel} />
+        )}
+        {item.type === 'profile' && (
+          <TalentProfileItem
+            item={item}
+            onChange={setItem}
+            nextHref={nextHref}
+            nextLabel={nextLabel}
+          />
         )}
       </div>
     </>

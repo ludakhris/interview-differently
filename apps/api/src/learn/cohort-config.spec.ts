@@ -65,6 +65,17 @@ describe('validateCohortFields', () => {
     }
   })
 
+  it('accepts online, live or hybrid delivery and rejects anything else (#69)', () => {
+    const base = { courseId: 'c1', name: 'x', startsAt: '2026-11-03' }
+    for (const d of ['online', 'live', 'hybrid'])
+      expect(validateCohortFields({ ...base, delivery: d }, false).delivery).toBe(d)
+    expect(validateCohortFields(base, false).delivery).toBeUndefined()
+    for (const bad of ['Live', '', null, 1])
+      expect(() => validateCohortFields({ ...base, delivery: bad }, false)).toThrow(
+        BadRequestException
+      )
+  })
+
   it('lets an update leave fields out', () => {
     expect(validateCohortFields({ name: 'New name' }, true)).toEqual({ name: 'New name' })
   })

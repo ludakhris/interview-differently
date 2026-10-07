@@ -3,6 +3,7 @@ import { Fragment, useEffect, useState, type FormEvent } from 'react'
 import { useApiFetch, useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { AttemptsPanel } from './AttemptsPanel'
+import { AttendancePanel } from './attendance/AttendancePanel'
 import { Meter } from './charts'
 import { CohortStatusChip } from './CohortsPage'
 import { dateOnly, dateShort } from './format'
@@ -157,6 +158,7 @@ function Cohort({
       maxLearners: limit ? Number(limit) : null,
     }
     if (f.get('startsAt')) body.startsAt = f.get('startsAt')
+    body.delivery = f.get('delivery')
     body.requiresApproval = needsApproval
     body.joinContact = needsApproval ? String(f.get('joinContact') ?? '').trim() : null
     await run(() => send<CohortDetail>('PUT', `/learn/cohorts/${cohort.id}`, body), 'Saved.')
@@ -253,6 +255,13 @@ function Cohort({
           </button>
         </div>
       </section>
+
+      {cohort.delivery !== 'online' && <AttendancePanel cohortId={cohort.id} />}
+
+      <p className="dash-sub">
+        <a href={href(`/lms/activity/${encodeURIComponent(cohort.id)}`)}>Activity</a>
+        {' · '}time learners spent in this cohort
+      </p>
 
       <section className="dash-section" aria-labelledby="h-roster">
         <div className="dash-head">
@@ -402,6 +411,15 @@ function Cohort({
               <span>End date</span>
               <input type="text" readOnly disabled value={dateOnly(cohort.endsAt)} />
               <small className="dash-muted">Follows the start date and the course length.</small>
+            </label>
+            <label className="dash-field">
+              <span>How it meets</span>
+              <select name="delivery" defaultValue={cohort.delivery}>
+                <option value="online">Online (self-paced)</option>
+                <option value="live">Live (sessions)</option>
+                <option value="hybrid">Hybrid (both)</option>
+              </select>
+              <small className="dash-muted">Live and hybrid cohorts get attendance.</small>
             </label>
             <label className="dash-field">
               <span>Maximum learners</span>

@@ -46,6 +46,18 @@ describe('validateItemInput', () => {
     expect(() => validateItemInput({ type: 'lesson', title: ' ' })).toThrow(BadRequestException)
   })
 
+  it('accepts the talent profile item and keeps no config (#69)', () => {
+    expect(
+      validateItemInput({
+        type: 'profile',
+        title: 'Your profile',
+        config: { junk: 1 },
+        label: 'pre',
+      })
+    ).toEqual({ type: 'profile', title: 'Your profile', label: null, config: {} })
+    expect(validateItemInput({ type: 'profile', title: 'Your profile' }).config).toEqual({})
+  })
+
   it('drops the label on types that cannot carry one', () => {
     expect(validateItemInput({ type: 'lesson', title: 'x', label: 'pre' }).label).toBeNull()
   })

@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common'
 import { randomInt } from 'node:crypto'
-import type { CohortStatus } from './learn-types'
+import type { CohortDelivery, CohortStatus } from './learn-types'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -28,6 +28,8 @@ export function cohortStatus(
   return 'running'
 }
 
+export const COHORT_DELIVERIES: CohortDelivery[] = ['online', 'live', 'hybrid']
+
 export interface CohortFields {
   courseId?: string
   name?: string
@@ -38,6 +40,8 @@ export interface CohortFields {
   requiresApproval?: boolean
   /** Who learners should ask while approval is on; null clears it. */
   joinContact?: string | null
+  /** #69: how the cohort meets. Live and hybrid cohorts get sessions and attendance. */
+  delivery?: CohortDelivery
 }
 
 /** Approval needs someone for learners to ask. `current` is what is stored, `fields` what is being set. */
@@ -106,6 +110,11 @@ export function validateCohortFields(input: unknown, partial: boolean): CohortFi
       if (contact.length > 200) throw new BadRequestException('Contact is too long (max 200)')
       out.joinContact = contact || null
     }
+  }
+  if (body.delivery !== undefined) {
+    if (typeof body.delivery !== 'string' || !COHORT_DELIVERIES.includes(body.delivery as never))
+      throw new BadRequestException(`Delivery must be one of ${COHORT_DELIVERIES.join(', ')}`)
+    out.delivery = body.delivery as CohortDelivery
   }
   return out
 }

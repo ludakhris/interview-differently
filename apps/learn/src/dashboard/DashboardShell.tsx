@@ -31,18 +31,25 @@ function useWorkspaceNav(): MenuLink[] {
     ]
   }
   if (window.location.pathname.startsWith('/lms/learning')) {
-    return [{ label: 'My learning', href: href('/lms/learning') }]
+    return [
+      { label: 'My learning', href: href('/lms/learning') },
+      { label: 'My outcomes', href: href('/lms/learning/outcomes') },
+      { label: 'My profile', href: href('/lms/learning/profile') },
+    ]
   }
   if (current?.kind === 'provider') {
     return [
       { label: 'Courses', href: href('/lms/courses') },
       { label: 'Cohorts', href: href('/lms/cohorts') },
+      { label: 'Talent', href: href('/lms/talent') },
+      { label: 'Activity', href: href('/lms/activity') },
       { label: 'Outcomes', href: href('/lms/dashboard') },
     ]
   }
   if (current?.kind === 'organization' || current?.kind === 'academic') {
     return [
       { label: 'Cohorts', href: href('/lms/cohorts') },
+      { label: 'Activity', href: href('/lms/activity') },
       { label: 'Outcomes', href: href('/lms/dashboard') },
     ]
   }
@@ -92,6 +99,8 @@ function titleFor(pathname: string): string {
   if (pathname.startsWith('/lms/learning')) return 'My Learning'
   if (pathname.startsWith('/lms/courses')) return 'Course Setup'
   if (pathname.startsWith('/lms/cohorts')) return 'Cohorts'
+  if (pathname.startsWith('/lms/talent')) return 'Talent'
+  if (pathname.startsWith('/lms/activity')) return 'Activity'
   if (pathname.startsWith('/lms/admin')) return 'Admin'
   return 'Program Outcomes'
 }

@@ -59,6 +59,7 @@ function cohortRow(over: object = {}) {
     joinKey: 'ABCD2345',
     startsAt: future,
     endsAt: new Date('2099-04-23T00:00:00Z'),
+    delivery: 'online',
     institution: { id: 'w1', name: 'Harbor Point', subdomain: 'harborpoint' },
     course: { id: 'c1', title: 'MA', lengthWeeks: 16, modules: [{ _count: { items: 5 } }] },
     ...over,
@@ -107,6 +108,18 @@ describe('create', () => {
     await service.create('u', 'agency-admin', 'harborpoint', { ...body, maxLearners: 30 })
     expect(prisma.cohort.create.mock.calls[0][0].data.maxLearners).toBe(30)
     expect(prisma.cohort.findFirst.mock.calls[0][0].where.joinKey.mode).toBe('insensitive')
+  })
+
+  it('defaults delivery to online, and stores live or hybrid when asked (#69)', async () => {
+    prisma.cohort.create.mockResolvedValue({ id: 'k1' })
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    await service.create('u', 'agency-admin', 'harborpoint', body)
+    expect(prisma.cohort.create.mock.calls[0][0].data.delivery).toBe('online')
+    await service.create('u', 'agency-admin', 'harborpoint', { ...body, delivery: 'hybrid' })
+    expect(prisma.cohort.create.mock.calls[1][0].data.delivery).toBe('hybrid')
+    await expect(
+      service.create('u', 'agency-admin', 'harborpoint', { ...body, delivery: 'teleport' })
+    ).rejects.toThrow(/Delivery/)
   })
 
   it('does not let an agency run cohorts', async () => {
@@ -439,6 +452,24 @@ describe('join requests (#68)', () => {
     expect(d.pendingRequests).toBe(3)
     expect(d.roster).toEqual([])
     expect(d.enrolled).toBe(0)
+  })
+})
+
+describe('delivery (#69)', () => {
+  it('changes on update, is refused when unknown, and is carried on the detail', async () => {
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow({ delivery: 'live' }))
+    await service.update('u', 'agency-admin', 'k1', { delivery: 'live' })
+    expect(prisma.cohort.update.mock.calls[0][0].data.delivery).toBe('live')
+    await expect(service.update('u', 'agency-admin', 'k1', { delivery: 'x' })).rejects.toThrow(
+      BadRequestException
+    )
+    expect((await service.detail('u', 'agency-admin', 'k1')).delivery).toBe('live')
+  })
+
+  it('leaves delivery alone when an update does not mention it', async () => {
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    await service.update('u', 'agency-admin', 'k1', { name: 'Renamed' })
+    expect(prisma.cohort.update.mock.calls[0][0].data).not.toHaveProperty('delivery')
   })
 })
 
