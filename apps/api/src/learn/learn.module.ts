@@ -2,6 +2,8 @@ import { Module, forwardRef } from '@nestjs/common'
 import { LtiPlatformModule } from '../lti/platform/lti-platform.module'
 import { PrismaModule } from '../prisma/prisma.module'
 import { StorageModule } from '../storage/storage.module'
+import { AdminUsersController } from './admin-users.controller'
+import { AdminUsersService } from './admin-users.service'
 import { CoursesController } from './courses.controller'
 import { CoursesService } from './courses.service'
 import { InterviewScoringService } from './interview-scoring.service'
@@ -29,6 +31,7 @@ import { ScormService } from './scorm.service'
     ScormFilesController,
     ItemImageController,
     PublicCatalogController,
+    AdminUsersController,
   ],
   exports: [LearnerService],
   providers: [
@@ -40,6 +43,7 @@ import { ScormService } from './scorm.service'
     ItemImageService,
     PublicCatalogService,
     InterviewScoringService,
+    AdminUsersService,
   ],
 })
 export class LearnModule {}

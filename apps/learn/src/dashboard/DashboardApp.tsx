@@ -1,6 +1,7 @@
 import { useAuth } from '@clerk/clerk-react'
 import { authConfigured } from '../auth'
 import type { AppContext } from '../brand'
+import { AdminPage, AdminUsersPage } from './AdminPages'
 import { AppProvider, useApp, WorkspacesProvider } from './app-context'
 import { CohortPage } from './CohortPage'
 import { CohortsPage } from './CohortsPage'
@@ -76,6 +77,22 @@ function Routes({ pathname }: { pathname: string }) {
         ) : (
           <LearningPage />
         )}
+      </DashboardShell>
+    )
+  }
+
+  // Admin tools need no workspace; the API only answers system admins.
+  if (pathname === '/lms/admin' || pathname === '/lms/admin/') {
+    return (
+      <DashboardShell>
+        <AdminPage />
+      </DashboardShell>
+    )
+  }
+  if (pathname === '/lms/admin/users' || pathname === '/lms/admin/users/') {
+    return (
+      <DashboardShell>
+        <AdminUsersPage />
       </DashboardShell>
     )
   }

@@ -26,6 +26,8 @@ function page(): ReactNode {
     pathname.startsWith('/lms/courses/') ||
     pathname === '/lms/cohorts' ||
     pathname.startsWith('/lms/cohorts/') ||
+    pathname === '/lms/admin' ||
+    pathname.startsWith('/lms/admin/') ||
     pathname === '/lms/learning' ||
     pathname.startsWith('/lms/learning/')
   ) {

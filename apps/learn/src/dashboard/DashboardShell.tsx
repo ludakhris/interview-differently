@@ -5,7 +5,9 @@ import { withBrand } from '../brand'
 import '../pages/delaware.css'
 import '../pages/home.css'
 import './dashboard.css'
+import { SYSTEM_ADMIN } from './AdminPages'
 import { useApp } from './app-context'
+import { useRole } from './shared'
 import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 
 // Two skins, one set of parts. Only the header markup (logo, prototype bar,
@@ -14,6 +16,13 @@ import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 
 /** The app's navigation, defined once for both skins and the account menu. */
 function useNav(): MenuLink[] {
+  const { href } = useApp()
+  const nav = useWorkspaceNav()
+  // System admins always get the Admin toolbox.
+  return useRole() === SYSTEM_ADMIN ? [...nav, { label: 'Admin', href: href('/lms/admin') }] : nav
+}
+
+function useWorkspaceNav(): MenuLink[] {
   const { href, tenant, current } = useApp()
   if (window.location.pathname.startsWith('/lms/catalog')) {
     return [
@@ -83,6 +92,7 @@ function titleFor(pathname: string): string {
   if (pathname.startsWith('/lms/learning')) return 'My Learning'
   if (pathname.startsWith('/lms/courses')) return 'Course Setup'
   if (pathname.startsWith('/lms/cohorts')) return 'Cohorts'
+  if (pathname.startsWith('/lms/admin')) return 'Admin'
   return 'Program Outcomes'
 }
 

@@ -30,6 +30,12 @@ To remove admin access, edit the same **Public metadata** field and either delet
 {}
 ```
 
+## LearnDifferently admin toolbox (`/lms/admin`)
+
+System admins (LearnDifferently Clerk `publicMetadata.role` = `system-admin`) get an **Admin** link with system tools. Today there is one: **User permissions** (`/lms/admin/users`), which finds a user by email or name and sets their role to any value in `LEARN_ROLES` (`apps/api/src/learn/learn.service.ts`), or clears it. A user holds one role. You cannot change your own role.
+
+The first system admin must be set by hand in the **LearnDifferently** Clerk dashboard (same steps as above, with `{ "role": "system-admin" }`). After that, roles are managed in the tool.
+
 ## LearnDifferently demo data in production
 
 `apps/api/scripts/seed-learn-demo.ts` loads fictional sample data: two agencies (Delaware, Chesapeake), 8 providers, 8 courses, 24 cohorts, about 580 enrollments and 576 learners. Each course has two skills (tagged check questions, a hidden refresher lesson, and the skill's lesson set up as a review), and about 60 learners have missed a skill, so their plans include added items. That shows adaptive remediation in the gradebook and progress totals. Production was loaded on 2026-10-06 for the 2026-10-07 Delaware Department of Labor demo, and reloaded the same day once the skills and plan items existed.

@@ -15,7 +15,21 @@ export const LEARN_ROLES = {
   agencyAdmin: 'agency-admin',
   caseManager: 'case-manager',
   providerAdmin: 'provider-admin',
+  /** Runs the platform: everything an agency admin can do, plus connected tools. */
+  systemAdmin: 'system-admin',
 } as const
+
+/**
+ * LEARN_ROLES from least to most access. The admin tool lists roles by this
+ * order and labels a change as an upgrade or a downgrade. A user with no role
+ * (a learner) ranks below all of them. Add a new role here as well as above.
+ */
+export const LEARN_ROLE_ORDER: string[] = [
+  LEARN_ROLES.caseManager,
+  LEARN_ROLES.providerAdmin,
+  LEARN_ROLES.agencyAdmin,
+  LEARN_ROLES.systemAdmin,
+]
 
 @Injectable()
 export class LearnService {

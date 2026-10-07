@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { createClerkClient, verifyToken, type ClerkClient } from '@clerk/backend'
+import { createClerkClient, verifyToken, type ClerkClient, type User } from '@clerk/backend'
 import { isLearnOrigin } from './learn-origin'
 
 /** Which Clerk instance issued a user id: Interview Differently or LearnDifferently. */
@@ -155,8 +155,69 @@ export class ClerkService {
    * Sets (or clears, with null) `publicMetadata.role`. Other metadata keys
    * are preserved — Clerk merges publicMetadata on update.
    */
-  async setRole(userId: string, role: string | null): Promise<void> {
-    if (!this.client) throw new Error('CLERK_SECRET_KEY not set')
-    await this.client.users.updateUserMetadata(userId, { publicMetadata: { role } })
+  async setRole(
+    userId: string,
+    role: string | null,
+    source: UserSource = 'interview'
+  ): Promise<void> {
+    const client = this.clientFor(source)
+    if (!client) throw new Error('Clerk secret key not set')
+    await client.users.updateUserMetadata(userId, { publicMetadata: { role } })
+  }
+
+  /** One user as the admin tool shows it, or null if Clerk does not know them. */
+  async getUserSummary(
+    userId: string,
+    source: UserSource = 'interview'
+  ): Promise<ClerkUserSummary | null> {
+    const client = this.clientFor(source)
+    if (!client) return null
+    try {
+      return toSummary(await client.users.getUser(userId))
+    } catch (err) {
+      this.logger.warn(
+        `Failed to fetch Clerk user ${userId}: ${err instanceof Error ? err.message : 'unknown'}`
+      )
+      return null
+    }
+  }
+
+  /**
+   * Finds users by email, name or username (Clerk's own `query` match),
+   * newest first. An empty query lists the most recent sign-ups.
+   */
+  async searchUsers(
+    query: string,
+    source: UserSource = 'interview',
+    limit = 20
+  ): Promise<ClerkUserSummary[]> {
+    const client = this.clientFor(source)
+    if (!client) throw new Error('Clerk secret key not set')
+    const page = await client.users.getUserList({
+      query: query || undefined,
+      limit,
+      orderBy: '-created_at',
+    })
+    return page.data.map(toSummary)
+  }
+}
+
+/** A Clerk user reduced to what the admin tool needs. */
+export interface ClerkUserSummary {
+  id: string
+  email: string | null
+  displayName: string | null
+  role: string | null
+}
+
+function toSummary(user: User): ClerkUserSummary {
+  const primary = user.primaryEmailAddressId
+    ? user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)
+    : user.emailAddresses[0]
+  return {
+    id: user.id,
+    email: primary?.emailAddress ?? null,
+    displayName: [user.firstName, user.lastName].filter(Boolean).join(' ') || null,
+    role: (user.publicMetadata as { role?: string } | null)?.role ?? null,
   }
 }
