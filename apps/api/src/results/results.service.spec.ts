@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ForbiddenException } from '@nestjs/common'
 import { ResultsService } from './results.service'
 import type { CreateResultDto } from './results.types'
 
@@ -109,77 +109,8 @@ describe('ResultsService.create for an existing id', () => {
     expect(h.prisma.simulationResult.create).not.toHaveBeenCalled()
   })
 
-  it.each([[false], [true]])("403s another user's row (lti %p)", async (lti) => {
+  it("403s another user's row", async () => {
     const h = setup({ id: 'r1', userId: 'someone-else' })
-    await expect(h.svc.create(dto(), { lti })).rejects.toBeInstanceOf(ForbiddenException)
-  })
-})
-
-describe('ResultsService.create for an LTI session', () => {
-  const lti = { lti: true }
-
-  it('accepts dimensions equal to the rubric and a choice count within the decisions', async () => {
-    const h = setup()
-    await expect(h.svc.create(dto(), lti)).resolves.toBeDefined()
-    await expect(h.svc.create(dto({ id: 'r2', choiceSequence: ['a'] }), lti)).resolves.toBeDefined()
-  })
-
-  it.each([
-    ['a missing dimension', { dimensionScores: [dim({ dimension: 'Clarity' })] }],
-    [
-      'an extra dimension',
-      { dimensionScores: [dim(), dim({ dimension: 'Depth' }), dim({ dimension: 'Extra' })] },
-    ],
-    ['a renamed dimension', { dimensionScores: [dim(), dim({ dimension: 'Other' })] }],
-    ['a repeated dimension', { dimensionScores: [dim(), dim()] }],
-    ['no choices', { choiceSequence: [] }],
-    ['more choices than decision nodes', { choiceSequence: ['a', 'b', 'c'] }],
-  ])('400s %s', async (_n, over) => {
-    const h = setup()
-    await expect(h.svc.create(dto(over), lti)).rejects.toBeInstanceOf(BadRequestException)
-    expect(h.prisma.simulationResult.create).not.toHaveBeenCalled()
-  })
-
-  it('404s an unknown scenario', async () => {
-    const h = setup()
-    h.prisma.scenario.findUnique.mockResolvedValue(null)
-    await expect(h.svc.create(dto(), lti)).rejects.toBeInstanceOf(NotFoundException)
-  })
-
-  it('does not apply the scenario checks to a normal caller', async () => {
-    const h = setup()
-    await expect(h.svc.create(dto({ choiceSequence: [] }))).resolves.toBeDefined()
-    expect(h.prisma.scenario.findUnique).not.toHaveBeenCalled()
-  })
-})
-
-describe('ResultsService.create for an LTI session on a scenario with sql nodes', () => {
-  const lti = { lti: true }
-  const withNodes = (nodes: { type: string }[]) => {
-    const h = setup()
-    h.prisma.scenario.findUnique.mockResolvedValue({
-      ...scenarioRow,
-      data: { ...scenarioRow.data, nodes },
-    })
-    return h
-  }
-
-  it('counts only decision nodes, so sql and quant nodes do not raise the limit', async () => {
-    const h = withNodes([{ type: 'sql' }, { type: 'decision' }, { type: 'sql' }, { type: 'quant' }])
-    await expect(h.svc.create(dto({ choiceSequence: ['a'] }), lti)).resolves.toBeDefined()
-    await expect(
-      h.svc.create(dto({ id: 'r2', choiceSequence: ['a', 'b'] }), lti)
-    ).rejects.toBeInstanceOf(BadRequestException)
-    await expect(h.svc.create(dto({ id: 'r3', choiceSequence: [] }), lti)).rejects.toBeInstanceOf(
-      BadRequestException
-    )
-  })
-
-  it('accepts an empty choiceSequence when the scenario has no decision nodes', async () => {
-    const h = withNodes([{ type: 'sql' }, { type: 'sql' }, { type: 'feedback' }])
-    await expect(h.svc.create(dto({ choiceSequence: [] }), lti)).resolves.toBeDefined()
-    await expect(
-      h.svc.create(dto({ id: 'r2', choiceSequence: ['a'] }), lti)
-    ).rejects.toBeInstanceOf(BadRequestException)
+    await expect(h.svc.create(dto())).rejects.toBeInstanceOf(ForbiddenException)
   })
 })

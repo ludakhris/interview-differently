@@ -8,6 +8,8 @@ import { SandboxDb, type SandboxResult } from '@/lib/sql/sandboxDb'
 import { compareResults } from '@/lib/sql/compare'
 import { preferLtiToken } from '@/services/ltiSession'
 import { fetchMyDataset, type DatasetDetail } from '@/services/datasetsService'
+import { usePlayGrader } from '@/components/PlayGraderContext'
+import type { SqlGrade } from '@/services/ltiPlayService'
 
 /**
  * SQL question node for simulations (#25 Phase 4).
@@ -18,7 +20,21 @@ import { fetchMyDataset, type DatasetDetail } from '@/services/datasetsService'
  * transactions and their result sets are compared. After submitting, the
  * expected output is shown (and the reference query can be revealed) so the
  * node teaches as well as scores.
+ *
+ * In a launched (LTI) play the browser has no reference query: the submitted query goes to the
+ * server, which runs both, grades and sends back the verdict, the expected output and the
+ * reference query to show.
  */
+
+/** The server's expected rows in the shape the results grid draws. */
+const toSandboxResult = (e: SqlGrade['expected']): SandboxResult => ({
+  columns: e.columns,
+  rows: e.rows,
+  allRows: e.rows,
+  rowCount: e.rowCount,
+  command: e.command,
+  durationMs: 0,
+})
 
 export interface SqlSubmission {
   sql: string
@@ -38,6 +54,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
   // an LTI launch has no Clerk session: its session token fetches the dataset instead
   const getToken = useMemo(() => preferLtiToken(clerkToken), [clerkToken])
   const confirm = useConfirm()
+  const grader = usePlayGrader()
   const [dataset, setDataset] = useState<DatasetDetail | null>(null)
   const [db, setDb] = useState<SandboxDb | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -50,6 +67,10 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
     expected: SandboxResult
   } | null>(null)
   const [showReference, setShowReference] = useState(false)
+  // a launched play: the hint text and reference query arrive from the server when earned
+  const [hintText, setHintText] = useState<string | null>(null)
+  const [reference, setReference] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -72,6 +93,28 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
   const submit = useCallback(async () => {
     if (!db || !sql.trim() || submitting) return
     setSubmitting(true)
+    setSubmitError(null)
+    if (grader) {
+      try {
+        const graded = await grader.sql(node.nodeId, sql.trim())
+        setReference(graded.referenceSql)
+        setOutcome({
+          correct: graded.correct,
+          reason: graded.reason,
+          expected: toSandboxResult(graded.expected),
+        })
+        onSubmit({
+          sql,
+          correct: graded.correct,
+          ...(graded.reason ? { reason: graded.reason } : {}),
+        })
+      } catch (e) {
+        setSubmitError(e instanceof Error ? e.message : 'Your answer could not be checked')
+      } finally {
+        setSubmitting(false)
+      }
+      return
+    }
     try {
       let student: SandboxResult
       try {
@@ -93,7 +136,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
     } finally {
       setSubmitting(false)
     }
-  }, [db, sql, submitting, spec, onSubmit])
+  }, [db, sql, submitting, spec, onSubmit, grader, node.nodeId])
 
   return (
     <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6">
@@ -131,10 +174,10 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
       {!outcome && (
         <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
           <div>
-            {spec.hint &&
+            {(spec.hint || spec.hasHint) &&
               (hintShown ? (
                 <div className="pl-3 border-l-2 border-amber-400/50 text-amber-200/90 text-[13px] leading-relaxed max-w-xl">
-                  {spec.hint}
+                  {hintText ?? spec.hint}
                 </div>
               ) : (
                 <button
@@ -148,6 +191,16 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
                       }))
                     )
                       return
+                    if (grader) {
+                      try {
+                        setHintText((await grader.hint(node.nodeId)).hint)
+                      } catch (e) {
+                        setSubmitError(
+                          e instanceof Error ? e.message : 'The hint could not be shown'
+                        )
+                        return
+                      }
+                    }
                     setHintShown(true)
                     onHintUsed?.(node.nodeId)
                   }}
@@ -165,6 +218,11 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
             {submitting ? 'Checking…' : 'Submit answer'}
           </button>
         </div>
+      )}
+      {submitError && (
+        <p role="alert" className="mt-3 text-[13px] text-amber-300">
+          {submitError}
+        </p>
       )}
 
       {/* Outcome */}
@@ -212,7 +270,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
             </div>
             {showReference && (
               <pre className="px-4 py-3 bg-surface border-b border-edge/8 font-mono text-[12px] text-fg/85 whitespace-pre-wrap">
-                {spec.referenceSql}
+                {reference ?? spec.referenceSql}
               </pre>
             )}
             <div className="max-h-[260px] overflow-auto bg-surface">

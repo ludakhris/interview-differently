@@ -25,6 +25,7 @@ import { LTI_STORE, MemoryLtiStore } from './lti-store'
 import * as ltiSpec from './lti-spec'
 import { LtiPlatformController } from './platform/lti-platform.controller'
 import { LtiPlatformService } from './platform/lti-platform.service'
+import { LtiPlayService } from './tool/lti-play.service'
 import { LtiToolController } from './tool/lti-tool.controller'
 import { LtiToolService } from './tool/lti-tool.service'
 import { PlatformRegistryService } from './tool/platform-registry.service'
@@ -53,7 +54,37 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     status: 'published',
     institutionId: 'inst-private',
     institution: { name: 'Acme' },
-    data: { scenarioId: 'ops-001', title: 'Ops decision', nodes: [], rubric: { dimensions: [] } },
+    data: {
+      scenarioId: 'ops-001',
+      title: 'Ops decision',
+      track: 'ops',
+      rubric: { dimensions: [{ name: 'Clarity' }, { name: 'Depth' }] },
+      nodes: [
+        {
+          nodeId: 'n1',
+          type: 'decision',
+          choices: [
+            {
+              id: 'A',
+              nextNodeId: 'end',
+              qualitySignals: [
+                { dimension: 'Clarity', quality: 'strong' },
+                { dimension: 'Depth', quality: 'proficient' },
+              ],
+            },
+            {
+              id: 'B',
+              nextNodeId: 'end',
+              qualitySignals: [
+                { dimension: 'Clarity', quality: 'developing' },
+                { dimension: 'Depth', quality: 'developing' },
+              ],
+            },
+          ],
+        },
+        { nodeId: 'end', type: 'feedback' },
+      ],
+    },
   }
   const sqlScenario = {
     scenarioId: 'data-001',
@@ -63,10 +94,20 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     data: {
       scenarioId: 'data-001',
       title: 'Top customers',
+      track: 'data',
       rubric: { dimensions: [{ name: 'Technical Accuracy' }] },
       nodes: [
-        { nodeId: 'n1', type: 'sql', sql: { datasetSlug: 'sql-fundamentals' } },
-        { nodeId: 'n2', type: 'decision' },
+        {
+          nodeId: 'n1',
+          type: 'sql',
+          nextNodeId: 'end',
+          sql: {
+            datasetSlug: 'sql-fundamentals',
+            referenceSql: 'select name from customers',
+            prompt: 'Who are they?',
+          },
+        },
+        { nodeId: 'end', type: 'feedback' },
       ],
     },
   }
@@ -152,6 +193,8 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     getSessionsForUser: jest.fn(),
   }
   const scoreAnswers = jest.fn()
+  /** The server's SQL runner: [the learner's query, the reference query]. */
+  const executeMany = jest.fn()
   const institutions: Record<string, { brand: unknown; parentId: string | null }> = {
     'inst-child': { brand: null, parentId: 'inst-agency' },
     'inst-agency': { brand: null, parentId: null },
@@ -299,7 +342,14 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
       ),
     },
     dataset: { findUnique: jest.fn(async (a: Row) => datasets[a.where.slug] ?? null) },
-    simulationResult: { findUnique: jest.fn(async (a: Row) => stored[a.where.id] ?? null) },
+    simulationResult: {
+      findUnique: jest.fn(async (a: Row) => stored[a.where.id] ?? null),
+      // the play service writes the result it scored; complete() reads it back with its dimensions
+      create: jest.fn(async ({ data }: Row) => {
+        stored[data.id] = { ...data, dimensionScores: data.dimensionScores.create }
+        return stored[data.id]
+      }),
+    },
   }
 
   const unescape = (s: string) =>
@@ -377,7 +427,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         },
         DatasetsService,
         AssessmentsService,
-        { provide: SqlRunnerService, useValue: {} },
+        { provide: SqlRunnerService, useValue: { executeMany } },
         ScenariosService,
         AuthenticatedGuard,
         AdminGuard,
@@ -394,6 +444,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         LtiPlatformService,
         LtiToolService,
         PlatformRegistryService,
+        LtiPlayService,
         { provide: LTI_STORE, useValue: store },
         { provide: PrismaService, useValue: prisma },
         { provide: LearnerService, useValue: { recordToolResult } },
@@ -535,51 +586,85 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         track: 'ops',
       })
 
-      const created = await api(token, '/results', {
+      // a launched session can no longer save a result of its own: the server scores the play
+      const forged = await api(token, '/results', {
         method: 'POST',
-        body: JSON.stringify({
-          id: 'res1',
-          userId: 'attacker',
-          scenarioId: 'ops-001',
-          scenarioTitle: 'Ops decision',
-          track: 'ops',
-          completedAt: new Date().toISOString(),
-          overallScore: 81,
-          choiceSequence: [],
-          dimensionScores: [
-            { dimension: 'Clarity', score: 90, quality: 'strong', feedback: '' },
-            { dimension: 'Depth', score: 72, quality: 'proficient', feedback: '' },
-          ],
-        }),
+        body: JSON.stringify({ id: 'forged', scenarioId: 'ops-001', overallScore: 100 }),
       })
-      expect(created.status).toBe(201)
-      expect(stored.res1.userId).toBe('u1')
-      expect((await api(token, '/results/res1')).status).toBe(200)
+      expect(forged.status).toBe(403)
+      expect(stored.forged).toBeUndefined()
+
+      // an early hand-back is refused until the play is finished
+      const early = await api(token, '/lti/tool/complete', {
+        method: 'POST',
+        body: JSON.stringify({ play: 'text' }),
+      })
+      expect(early.status).toBe(400)
+
+      expect(await (await api(token, '/lti/tool/play')).json()).toMatchObject({
+        node: 'n1',
+        done: false,
+      })
+      const picked = await api(token, '/lti/tool/play/choice', {
+        method: 'POST',
+        body: JSON.stringify({ nodeId: 'n1', choiceId: 'A' }),
+      })
+      expect(picked.status).toBe(201)
+      expect(await picked.json()).toEqual({ next: 'end', done: true })
 
       const done = await api(token, '/lti/tool/complete', {
         method: 'POST',
-        body: JSON.stringify({ resultId: 'res1' }),
+        body: JSON.stringify({ play: 'text' }),
       })
       expect(done.status).toBe(201)
       expect(await done.json()).toEqual({
-        score: 81,
+        score: 78,
         returnUrl: 'http://localhost:5174/lms/learning/k1/i1',
       })
       expect(recordToolResult).toHaveBeenCalledWith('u1', 'k1', 'i1', {
         reportedAt: expect.any(String),
-        scorePct: 81,
+        scorePct: 78,
         dimensions: [
-          { dimension: 'Clarity', score: 90 },
-          { dimension: 'Depth', score: 72 },
+          { dimension: 'Clarity', score: 88 },
+          { dimension: 'Depth', score: 68 },
         ],
       })
+      expect(Object.values(stored).filter((r) => r.scenarioId === 'ops-001')).toHaveLength(1)
 
       const again = await api(token, '/lti/tool/complete', {
         method: 'POST',
-        body: JSON.stringify({ resultId: 'res1' }),
+        body: JSON.stringify({ play: 'text' }),
       })
       expect(again.status).toBe(409)
       expect(recordToolResult).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not send the learner the answer key', async () => {
+      const token = await launchText()
+      const body = await (await api(token, '/scenarios/ops-001')).text()
+      expect(body).not.toContain('"strong"')
+      expect(body).not.toContain('"proficient"')
+      expect(body).toContain('"nextNodeId":"end"')
+    })
+
+    it('refuses a client-supplied result in the hand-back and answers out of turn', async () => {
+      const token = await launchText()
+      const resultId = await api(token, '/lti/tool/complete', {
+        method: 'POST',
+        body: JSON.stringify({ resultId: 'res1' }),
+      })
+      expect(resultId.status).toBe(400)
+      const wrong = await api(token, '/lti/tool/play/choice', {
+        method: 'POST',
+        body: JSON.stringify({ nodeId: 'end', choiceId: 'A' }),
+      })
+      expect(wrong.status).toBe(409)
+      const notPlay = await api(token, '/lti/tool/play/quant', {
+        method: 'POST',
+        body: JSON.stringify({ nodeId: 'n1', answer: { value: 1 } }),
+      })
+      expect(notPlay.status).toBe(400)
+      expect(recordToolResult).not.toHaveBeenCalled()
     })
 
     describe('white-label brand', () => {
@@ -675,35 +760,43 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         expect((await api(token, '/me/datasets/sql-fundamentals')).status).toBe(403)
       })
 
-      it('plays through: scenario, dataset, result with no sql in the choices, score return', async () => {
+      it('plays through: scenario, dataset, graded query on the server, score return', async () => {
         const token = await launchSql()
-        expect((await api(token, '/scenarios/data-001')).status).toBe(200)
+        const scn = await api(token, '/scenarios/data-001')
+        expect(scn.status).toBe(200)
+        // the reference query is not sent to the browser
+        expect(JSON.stringify(await scn.json())).not.toContain('select name from customers')
         expect((await api(token, '/me/datasets/sql-fundamentals')).status).toBe(200)
-        const created = await api(token, '/results', {
+
+        const ok = {
+          ok: true,
+          result: { columns: ['name'], rows: [['Ann']], rowCount: 1, command: 'SELECT' },
+        }
+        executeMany.mockResolvedValueOnce([ok, ok])
+        const graded = await api(token, '/lti/tool/play/sql', {
           method: 'POST',
-          body: JSON.stringify({
-            id: 'sqlres',
-            scenarioId: 'data-001',
-            scenarioTitle: 'Top customers',
-            track: 'data',
-            completedAt: new Date().toISOString(),
-            overallScore: 66,
-            choiceSequence: ['c1'],
-            dimensionScores: [
-              { dimension: 'Technical Accuracy', score: 66, quality: 'proficient', feedback: '' },
-            ],
-          }),
+          body: JSON.stringify({ nodeId: 'n1', sql: 'select name from customers' }),
         })
-        expect(created.status).toBe(201)
+        expect(graded.status).toBe(201)
+        expect(await graded.json()).toMatchObject({
+          correct: true,
+          done: true,
+          referenceSql: 'select name from customers',
+        })
+        expect(executeMany).toHaveBeenLastCalledWith('create table t(x int);', [
+          'select name from customers',
+          'select name from customers',
+        ])
+
         const done = await api(token, '/lti/tool/complete', {
           method: 'POST',
-          body: JSON.stringify({ resultId: 'sqlres' }),
+          body: JSON.stringify({ play: 'text' }),
         })
         expect(done.status).toBe(201)
         expect(recordToolResult).toHaveBeenCalledWith('u1', 'k1', 'i1', {
           reportedAt: expect.any(String),
-          scorePct: 66,
-          dimensions: [{ dimension: 'Technical Accuracy', score: 66 }],
+          scorePct: 88,
+          dimensions: [{ dimension: 'Technical Accuracy', score: 88 }],
         })
       })
     })
@@ -716,7 +809,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         method: 'POST',
         body: JSON.stringify({ resultId: 'theirs' }),
       })
-      expect(done.status).toBe(404)
+      expect(done.status).toBe(400)
       expect(recordToolResult).not.toHaveBeenCalled()
     })
   })

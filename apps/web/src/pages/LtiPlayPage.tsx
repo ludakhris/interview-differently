@@ -6,6 +6,7 @@ import { ImmersiveSimulationPage } from '@/pages/ImmersiveSimulationPage'
 import { useScenario } from '@/hooks/useScenarios'
 import { isVoiceInterview } from '@/lib/immersiveLti'
 import { captureLtiSession } from '@/services/ltiSession'
+import { fetchPlay, type PlayView } from '@/services/ltiPlayService'
 import { fetchLtiToolSession } from '@/services/ltiService'
 import { applyBrand, NO_BRAND, type AppliedBrand } from '@/lib/brand'
 import { LtiBrandProvider } from '@/components/LtiBrandProvider'
@@ -72,13 +73,50 @@ function LtiPlay({ token }: { token: string | null }) {
 
   // a voice interview has its own player; every other scenario is the text simulation
   const voice = scenario ? isVoiceInterview(scenario) : false
-  return started ? (
-    voice ? (
-      <ImmersiveSimulationPage ltiMode />
-    ) : (
-      <SimulationPage ltiMode />
+  if (!started) return <BriefingPage ltiMode onBegin={() => setStarted(true)} />
+  return voice ? <ImmersiveSimulationPage ltiMode /> : <TextPlay />
+}
+
+/** A text simulation: the server remembers the play, so ask where it stands before showing it. */
+function TextPlay() {
+  const [play, setPlay] = useState<PlayView | null>(null)
+  const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    let cancelled = false
+    setFailed(false)
+    fetchPlay()
+      .then((p) => !cancelled && setPlay(p))
+      .catch(() => !cancelled && setFailed(true))
+    return () => {
+      cancelled = true
+    }
+  }, [attempt])
+
+  if (failed) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <p className="text-fg text-[15px] mb-5">
+            We could not start this simulation. Check your connection and try again, or go back to
+            your course and start again.
+          </p>
+          <button
+            onClick={() => setAttempt((n) => n + 1)}
+            className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
     )
-  ) : (
-    <BriefingPage ltiMode onBegin={() => setStarted(true)} />
-  )
+  }
+  if (!play) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <p className="text-slate-mid text-[14px]">Loading...</p>
+      </div>
+    )
+  }
+  return <SimulationPage ltiMode playInit={play} />
 }

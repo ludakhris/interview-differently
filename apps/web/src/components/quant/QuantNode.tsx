@@ -3,7 +3,9 @@
 // forward, submit-to-evaluate flow, and inline band feedback.
 //
 // State lives locally until submit; on submit we hand the answer + per-
-// dimension quality signals back to the simulation hook.
+// dimension quality signals back to the simulation hook. In a launched (LTI)
+// play the answer goes to the server instead, which grades it and sends back
+// the verdict and the answer key to show; the browser holds neither before.
 
 import { useState } from 'react'
 import type {
@@ -14,11 +16,13 @@ import type {
   QuantFieldSpec,
   QuantBandHit,
   QualitySignal,
-  ScoreQuality,
 } from '@id/types'
 import { QuantNumberInput } from './QuantNumberInput'
 import { FormulaPanel } from './FormulaPanel'
 import { classifyAnswer, evaluateFormula, formatQuantValue } from '@/lib/quant/formula'
+import { signalsFromBand, worstBand } from '@/lib/scoring'
+import { usePlayGrader } from '@/components/PlayGraderContext'
+import type { QuantReveal } from '@/services/ltiPlayService'
 
 interface Props {
   node: ScenarioNode
@@ -72,17 +76,32 @@ function HintControls({
   nodeId,
   onHintUsed,
 }: {
-  hint: string
+  /** The hint text; absent in a launched play, which asks the server for it. */
+  hint?: string
   footnote?: string
   nodeId: string
   onHintUsed?: (nodeId: string) => void
 }) {
+  const grader = usePlayGrader()
   // 'idle' = nothing showing. 'confirming' = impact dialog before reveal so
   // the candidate sees the score cap before committing. 'shown' = formula
   // revealed (and `onHintUsed` was called).
   const [stage, setStage] = useState<'idle' | 'confirming' | 'shown'>('idle')
+  const [revealed, setRevealed] = useState<{ hint: string; footnote?: string } | null>(
+    hint ? { hint, footnote } : null
+  )
+  const [error, setError] = useState<string | null>(null)
 
-  function confirmReveal() {
+  async function confirmReveal() {
+    if (grader && !revealed) {
+      try {
+        setRevealed(await grader.hint(nodeId))
+      } catch (err) {
+        setError((err as Error).message)
+        return
+      }
+    }
+    setError(null)
     setStage('shown')
     onHintUsed?.(nodeId)
   }
@@ -137,9 +156,14 @@ function HintControls({
               >
                 Cancel
               </button>
+              {error && (
+                <p role="alert" className="mr-auto self-center text-[12px] text-amber-300">
+                  {error}
+                </p>
+              )}
               <button
                 type="button"
-                onClick={confirmReveal}
+                onClick={() => void confirmReveal()}
                 className="px-4 py-2 rounded-lg text-[13px] font-display font-semibold bg-amber-500/20 border border-amber-500/40 text-amber-200 hover:bg-amber-500/30 transition-colors"
               >
                 Show hint
@@ -179,15 +203,15 @@ function HintControls({
               </button>
             </div>
             <p className="text-[15px] font-mono text-fg leading-relaxed whitespace-pre-wrap">
-              {hint}
+              {revealed?.hint}
             </p>
-            {footnote && (
+            {revealed?.footnote && (
               <div className="mt-4 pt-3 border-t border-edge/10">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40 mb-1.5">
                   Glossary
                 </p>
                 <p className="text-[12px] text-ink/65 leading-relaxed whitespace-pre-wrap">
-                  {footnote}
+                  {revealed.footnote}
                 </p>
               </div>
             )}
@@ -234,8 +258,13 @@ function NumericRangeView({
     band: QuantBandHit
     value: number
   } | null>(null)
+  const grader = usePlayGrader()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  // the field as shown after the answer: a launched play fills in the key the server sends back
+  const [shownField, setShownField] = useState<QuantFieldSpec>(spec.field)
 
-  function handleSubmit() {
+  async function handleSubmit() {
     let userValue: number | null = null
     if (spec.formula) {
       // recompute
@@ -252,25 +281,37 @@ function NumericRangeView({
       if (typeof direct !== 'number') return
       userValue = direct
     }
-    const band = classifyAnswer(userValue, spec.field.acceptedRange)
-    const result: QuantFieldResult = {
-      fieldId: spec.field.id,
-      modelAnswer: spec.field.modelAnswer,
-      userAnswer: userValue,
-      band,
+    const answer: QuantAnswer = spec.formula
+      ? { value: userValue, variables: numericVars(vars) }
+      : { value: userValue }
+    let result: QuantFieldResult
+    if (grader) {
+      setBusy(true)
+      setError(null)
+      try {
+        const graded = await grader.quant(node.nodeId, answer)
+        result = graded.results[0]
+        setShownField({ ...spec.field, ...graded.reveal[spec.field.id] })
+      } catch (err) {
+        setError((err as Error).message)
+        return
+      } finally {
+        setBusy(false)
+      }
+    } else {
+      result = {
+        fieldId: spec.field.id,
+        modelAnswer: spec.field.modelAnswer,
+        userAnswer: userValue,
+        band: classifyAnswer(userValue, spec.field.acceptedRange),
+      }
     }
-    const signals = signalsFromBand(band, node.quantSignalDimensions ?? ['Quantitative Accuracy'])
-    setSubmitted({ band, value: userValue })
-    onSubmit({
-      answer: spec.formula
-        ? {
-            value: userValue,
-            variables: numericVars(vars),
-          }
-        : { value: userValue },
-      results: [result],
-      signals,
-    })
+    // the server keeps the signals for a launched play; the browser has no key to compute them
+    const signals = grader
+      ? []
+      : signalsFromBand(result.band, node.quantSignalDimensions ?? ['Quantitative Accuracy'])
+    setSubmitted({ band: result.band, value: userValue })
+    onSubmit({ answer, results: [result], signals })
   }
 
   const ready = spec.formula
@@ -284,7 +325,7 @@ function NumericRangeView({
         context={spec.context}
         field={spec.field}
         hint={
-          spec.hint ? (
+          (spec.hint || spec.hasHint) && !(grader && submitted) ? (
             <HintControls
               hint={spec.hint}
               footnote={spec.hintFootnote}
@@ -322,7 +363,13 @@ function NumericRangeView({
       )}
 
       {submitted && (
-        <BandFeedback band={submitted.band} userValue={submitted.value} field={spec.field} />
+        <BandFeedback band={submitted.band} userValue={submitted.value} field={shownField} />
+      )}
+
+      {error && (
+        <p role="alert" className="text-[13px] text-amber-300">
+          {error}
+        </p>
       )}
 
       {/* Hide the Submit button entirely after submission — SimulationPage
@@ -332,18 +379,18 @@ function NumericRangeView({
         <div className="flex items-center justify-end">
           <button
             type="button"
-            onClick={handleSubmit}
-            disabled={!ready}
+            onClick={() => void handleSubmit()}
+            disabled={!ready || busy}
             className={`
               font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
               ${
-                ready
+                ready && !busy
                   ? 'bg-green hover:bg-green-light text-on-primary cursor-pointer'
                   : 'bg-ink/10 text-slate-light cursor-not-allowed'
               }
             `}
           >
-            Submit answer
+            {busy ? 'Checking…' : 'Submit answer'}
           </button>
         </div>
       )}
@@ -373,26 +420,53 @@ function StructuredView({
     Object.fromEntries(spec.fields.map((f) => [f.id, '']))
   )
   const [submitted, setSubmitted] = useState<QuantFieldResult[] | null>(null)
+  const grader = usePlayGrader()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  // the answer key per field, sent by the server once the answers are in (launched play only)
+  const [reveal, setReveal] = useState<Record<string, QuantReveal>>({})
 
-  function handleSubmit() {
-    const results: QuantFieldResult[] = []
+  async function handleSubmit() {
+    const typed: Record<string, number> = {}
     for (const f of spec.fields) {
       const v = fieldValues[f.id]
       if (typeof v !== 'number' || !Number.isFinite(v)) return
-      const band = classifyAnswer(v, f.acceptedRange)
-      results.push({ fieldId: f.id, modelAnswer: f.modelAnswer, userAnswer: v, band })
+      typed[f.id] = v
     }
-    const worst = worstBand(results.map((r) => r.band))
-    const signals = signalsFromBand(worst, node.quantSignalDimensions ?? ['Quantitative Accuracy'])
+    const answer: QuantAnswer = {
+      fields: typed,
+      ...(spec.formula ? { variables: numericVars(vars) } : {}),
+    }
+    let results: QuantFieldResult[]
+    if (grader) {
+      setBusy(true)
+      setError(null)
+      try {
+        const graded = await grader.quant(node.nodeId, answer)
+        results = graded.results
+        setReveal(graded.reveal)
+      } catch (err) {
+        setError((err as Error).message)
+        return
+      } finally {
+        setBusy(false)
+      }
+    } else {
+      results = spec.fields.map((f) => ({
+        fieldId: f.id,
+        modelAnswer: f.modelAnswer,
+        userAnswer: typed[f.id],
+        band: classifyAnswer(typed[f.id], f.acceptedRange),
+      }))
+    }
+    const signals = grader
+      ? []
+      : signalsFromBand(
+          worstBand(results.map((r) => r.band)),
+          node.quantSignalDimensions ?? ['Quantitative Accuracy']
+        )
     setSubmitted(results)
-    onSubmit({
-      answer: {
-        fields: Object.fromEntries(results.map((r) => [r.fieldId, r.userAnswer])),
-        ...(spec.formula ? { variables: numericVars(vars) } : {}),
-      },
-      results,
-      signals,
-    })
+    onSubmit({ answer, results, signals })
   }
 
   const ready = spec.fields.every((f) => typeof fieldValues[f.id] === 'number')
@@ -403,7 +477,7 @@ function StructuredView({
         prompt={spec.prompt}
         context={spec.context}
         hint={
-          spec.hint ? (
+          (spec.hint || spec.hasHint) && !(grader && submitted) ? (
             <HintControls
               hint={spec.hint}
               footnote={spec.hintFootnote}
@@ -443,28 +517,34 @@ function StructuredView({
       {submitted && (
         <div className="space-y-2">
           {submitted.map((r) => {
-            const f = spec.fields.find((x) => x.id === r.fieldId)!
+            const f = { ...spec.fields.find((x) => x.id === r.fieldId)!, ...reveal[r.fieldId] }
             return <BandFeedback key={r.fieldId} band={r.band} userValue={r.userAnswer} field={f} />
           })}
         </div>
+      )}
+
+      {error && (
+        <p role="alert" className="text-[13px] text-amber-300">
+          {error}
+        </p>
       )}
 
       {!submitted && (
         <div className="flex items-center justify-end">
           <button
             type="button"
-            onClick={handleSubmit}
-            disabled={!ready}
+            onClick={() => void handleSubmit()}
+            disabled={!ready || busy}
             className={`
               font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
               ${
-                ready
+                ready && !busy
                   ? 'bg-green hover:bg-green-light text-on-primary cursor-pointer'
                   : 'bg-ink/10 text-slate-light cursor-not-allowed'
               }
             `}
           >
-            Submit answers
+            {busy ? 'Checking…' : 'Submit answers'}
           </button>
         </div>
       )}
@@ -568,19 +648,6 @@ function numericVars(vars: Record<string, number | ''>): Record<string, number> 
     if (typeof v === 'number') out[k] = v
   }
   return out
-}
-
-function worstBand(bands: QuantBandHit[]): QuantBandHit {
-  if (bands.some((b) => b === 'low' || b === 'high'))
-    return bands.find((b) => b !== 'ideal' && b !== 'accepted')!
-  if (bands.some((b) => b === 'accepted')) return 'accepted'
-  return 'ideal'
-}
-
-function signalsFromBand(band: QuantBandHit, dimensions: string[]): QualitySignal[] {
-  const quality: ScoreQuality =
-    band === 'ideal' ? 'strong' : band === 'accepted' ? 'proficient' : 'developing'
-  return dimensions.map((d) => ({ dimension: d, quality }))
 }
 
 function bandPresentation(band: QuantBandHit) {

@@ -1,9 +1,8 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import type {
   Scenario,
   ScenarioResult,
-  DimensionScore,
   ScoreQuality,
   QualitySignal,
   QuantAnswer,
@@ -13,6 +12,13 @@ import type {
   PhaseScore,
 } from '@id/types'
 import { getPhaseForNode } from '@/lib/phases'
+import {
+  fetchPlay,
+  onPlayConflict,
+  type PlayGrader,
+  type PlayView,
+} from '@/services/ltiPlayService'
+import { buildDimensionScore, collectSignals, scoreDimensions, type Run } from '@/lib/scoring'
 
 interface SimulationState {
   currentNodeId: string
@@ -34,42 +40,16 @@ interface SimulationState {
   startedAt: string
 }
 
-const qualityToScore: Record<ScoreQuality, number> = {
-  strong: 88,
-  proficient: 68,
-  developing: 42,
+/**
+ * A launched (LTI) play: the server grades every answer and decides the score, and it remembers
+ * the play, so a reload resumes from `initial` instead of starting over.
+ */
+export interface RemotePlay {
+  grader: PlayGrader
+  initial: PlayView
 }
 
-// Build a DimensionScore from a list of quality signals collected for the
-// dimension. Shared by overall + per-phase aggregations so both render with
-// the same feedback voice.
-function buildDimensionScore(name: string, signals: ScoreQuality[]): DimensionScore {
-  const avgScore =
-    signals.length > 0
-      ? Math.round(signals.reduce((sum, q) => sum + qualityToScore[q], 0) / signals.length)
-      : 55
-  const quality: ScoreQuality =
-    avgScore >= 80 ? 'strong' : avgScore >= 60 ? 'proficient' : 'developing'
-  const feedbackMap: Record<ScoreQuality, string> = {
-    strong: `You demonstrated strong ${name.toLowerCase()}. Your decisions reflected clear judgment and appropriate calibration to the situation.`,
-    proficient: `Your ${name.toLowerCase()} was solid. There were moments where a sharper prioritization would have strengthened your response.`,
-    developing: `${name} is an area to develop. Your decisions here suggest an opportunity to build more structured habits around this competency.`,
-  }
-  return { dimension: name, score: avgScore, quality, feedback: feedbackMap[quality] }
-}
-
-// Coarse "worst" classifier across a list of QuantBandHits. Mirrors the
-// classifyAnswer logic inside QuantNode: any out-of-band trumps accepted,
-// any accepted trumps ideal.
-function worstBand(bands: QuantFieldResult['band'][]): QuantFieldResult['band'] {
-  if (bands.some((b) => b === 'low' || b === 'high')) {
-    return bands.find((b) => b === 'low' || b === 'high')!
-  }
-  if (bands.some((b) => b === 'accepted')) return 'accepted'
-  return 'ideal'
-}
-
-export function useSimulation(scenario: Scenario) {
+export function useSimulation(scenario: Scenario, remote?: RemotePlay) {
   const { userId } = useAuth()
   // Start at the first decision *or* quant node — both are "interactive" node
   // kinds the candidate can act on. The summary-form scenario returned to
@@ -84,16 +64,56 @@ export function useSimulation(scenario: Scenario) {
     [nodes]
   )
 
-  const [state, setState] = useState<SimulationState>({
-    currentNodeId: firstNode?.nodeId ?? '',
-    choicesMade: {},
-    quantAnswers: {},
+  const [state, setState] = useState<SimulationState>(() => ({
+    currentNodeId: remote?.initial.node ?? firstNode?.nodeId ?? '',
+    choicesMade: remote?.initial.choices ?? {},
+    quantAnswers: remote?.initial.quant ?? {},
     quantResults: {},
     quantSignals: [],
-    sqlAnswers: {},
-    hintsUsed: [],
+    // a resumed play only needs to know which nodes were answered; the server holds the verdicts
+    sqlAnswers: Object.fromEntries(
+      Object.entries(remote?.initial.sql ?? {}).map(([nodeId, a]) => [
+        nodeId,
+        { sql: a.sql, correct: false },
+      ])
+    ),
+    hintsUsed: remote?.initial.hints ?? [],
     startedAt: new Date().toISOString(),
-  })
+  }))
+  // why the server refused an answer, shown to the learner who can then try again
+  const [playError, setPlayError] = useState<string | null>(null)
+  // one decision in flight at a time: a double click must not send the answer twice
+  const sending = useRef(false)
+
+  // The server is the source of truth for where a launched play is. When it says the browser is
+  // out of step (409), take its position instead of retrying a question it will not take again.
+  useEffect(() => {
+    if (!remote) return
+    return onPlayConflict(() => {
+      fetchPlay()
+        .then((view) =>
+          setState((prev) => ({
+            ...prev,
+            currentNodeId: view.node,
+            choicesMade: view.choices,
+            quantAnswers: view.quant,
+            sqlAnswers: Object.fromEntries(
+              Object.entries(view.sql).map(([nodeId, a]) => [
+                nodeId,
+                { sql: a.sql, correct: false },
+              ])
+            ),
+            hintsUsed: view.hints,
+          }))
+        )
+        .then(() => {
+          setSelectedChoice(null)
+          setIsTransitioning(false)
+          setPlayError(null)
+        })
+        .catch(() => undefined)
+    })
+  }, [remote])
 
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null)
   const [isTransitioning, setIsTransitioning] = useState(false)
@@ -110,21 +130,38 @@ export function useSimulation(scenario: Scenario) {
 
   const submitChoice = useCallback(
     (choiceId: string) => {
-      if (!currentNode.choices) return
+      if (!currentNode.choices || sending.current) return
       const choice = currentNode.choices.find((c) => c.id === choiceId)
       if (!choice) return
+      sending.current = true
       setIsTransitioning(true)
-      setTimeout(() => {
-        setState((prev) => ({
-          ...prev,
-          currentNodeId: choice.nextNodeId,
-          choicesMade: { ...prev.choicesMade, [currentNode.nodeId]: choiceId },
-        }))
-        setSelectedChoice(null)
-        setIsTransitioning(false)
-      }, 400)
+      setPlayError(null)
+      const advance = () =>
+        setTimeout(() => {
+          setState((prev) => ({
+            ...prev,
+            currentNodeId: choice.nextNodeId,
+            choicesMade: { ...prev.choicesMade, [currentNode.nodeId]: choiceId },
+          }))
+          setSelectedChoice(null)
+          setIsTransitioning(false)
+          sending.current = false
+        }, 400)
+      if (!remote) {
+        advance()
+        return
+      }
+      // a launched play moves on only once the server has recorded the choice
+      remote.grader
+        .choose(currentNode.nodeId, choiceId)
+        .then(advance)
+        .catch((err: Error) => {
+          setPlayError(err.message)
+          setIsTransitioning(false)
+          sending.current = false
+        })
     },
-    [currentNode]
+    [currentNode, remote]
   )
 
   const advanceTransition = useCallback(() => {
@@ -222,60 +259,22 @@ export function useSimulation(scenario: Scenario) {
   )
 
   const computeResult = useCallback((): ScenarioResult => {
-    // ── Per-node signal map (used for the overall rubric) ───────────────────
-    // signalMap aggregates every QualitySignal emitted across the run, keyed
-    // by dimension name. nodeSignals tracks which node each signal came from
-    // so the per-phase breakdown can sub-aggregate without re-walking the
-    // scenario graph.
-    const signalMap: Record<string, ScoreQuality[]> = {}
-    const nodeSignals: Record<string, QualitySignal[]> = {}
-    function pushSignal(nodeId: string, sig: QualitySignal) {
-      if (!signalMap[sig.dimension]) signalMap[sig.dimension] = []
-      signalMap[sig.dimension].push(sig.quality)
-      if (!nodeSignals[nodeId]) nodeSignals[nodeId] = []
-      nodeSignals[nodeId].push(sig)
-    }
-
-    for (const [nodeId, choiceId] of Object.entries(state.choicesMade)) {
-      const node = scenario.nodes.find((n) => n.nodeId === nodeId)
-      if (!node?.choices) continue
-      const choice = node.choices.find((c) => c.id === choiceId)
-      if (!choice) continue
-      for (const signal of choice.qualitySignals) pushSignal(nodeId, signal)
-    }
-    // Quant signals are pushed by submitQuant on the same nodeId the band
-    // result was computed for. The hook tracks them alongside quantResults
-    // so we can pair the signal back to its source node here.
+    // signalMap aggregates every QualitySignal emitted across the run, keyed by dimension name.
+    // nodeSignals tracks which node each signal came from so the per-phase breakdown can
+    // sub-aggregate without re-walking the scenario graph.
     const hintsUsedSet = new Set(state.hintsUsed)
-    for (const [nodeId, results] of Object.entries(state.quantResults)) {
-      const node = scenario.nodes.find((n) => n.nodeId === nodeId)
-      if (!node) continue
-      const dims = node.quantSignalDimensions ?? ['Quantitative Accuracy']
-      const worst = worstBand(results.map((r) => r.band))
-      let quality: ScoreQuality =
-        worst === 'ideal' ? 'strong' : worst === 'accepted' ? 'proficient' : 'developing'
-      // Hint dock — candidates who needed help can't earn a Strong rating on
-      // the dimension; cap at proficient. Developing stays developing.
-      if (hintsUsedSet.has(nodeId) && quality === 'strong') quality = 'proficient'
-      for (const dim of dims) pushSignal(nodeId, { dimension: dim, quality })
+    const run: Run = {
+      choices: state.choicesMade,
+      quant: Object.fromEntries(Object.entries(state.quantResults)),
+      sql: Object.fromEntries(
+        Object.entries(state.sqlAnswers).map(([nodeId, a]) => [nodeId, a.correct])
+      ),
+      hints: state.hintsUsed,
     }
-    // SQL signals — same hint dock as quant.
-    for (const [nodeId, answer] of Object.entries(state.sqlAnswers)) {
-      const node = scenario.nodes.find((n) => n.nodeId === nodeId)
-      if (!node) continue
-      const dims = node.sqlSignalDimensions ?? ['Technical Accuracy']
-      let quality: ScoreQuality = answer.correct ? 'strong' : 'developing'
-      if (hintsUsedSet.has(nodeId) && quality === 'strong') quality = 'proficient'
-      for (const dim of dims) pushSignal(nodeId, { dimension: dim, quality })
-    }
+    const { signalMap, nodeSignals } = collectSignals(scenario, run)
 
-    // ── Overall dimension scores (existing behaviour) ───────────────────────
-    const dimensionScores: DimensionScore[] = scenario.rubric.dimensions.map((dim) =>
-      buildDimensionScore(dim.name, signalMap[dim.name] ?? [])
-    )
-    const overallScore = Math.round(
-      dimensionScores.reduce((sum, d) => sum + d.score, 0) / dimensionScores.length
-    )
+    // ── Overall dimension scores ────────────────────────────────────────────
+    const { dimensionScores, overallScore } = scoreDimensions(scenario, signalMap)
 
     // ── Quant results catalogue (top-level, for "what to work on") ──────────
     const quantResults: QuantNodeResultSummary[] = []
@@ -397,6 +396,7 @@ export function useSimulation(scenario: Scenario) {
     selectedChoice,
     setSelectedChoice,
     submitChoice,
+    playError,
     advanceTransition,
     isTransitioning,
     isComplete,

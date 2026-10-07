@@ -473,6 +473,9 @@ interface QuantNodeBase {
   // submission to at most "proficient" so candidates who needed help don't
   // earn a Strong band rating for the field.
   hint?: string
+  // Set instead of `hint` in the copy sent to a launched (LTI) player, which gets the hint text from
+  // the server when the learner asks for it.
+  hasHint?: boolean
   // Optional footnote rendered beneath the formula in the hint modal — used
   // to expand jargon (TAM, SAM, SOM, HHI, etc.) so candidates aren't expected
   // to remember every acronym mid-case.
@@ -507,6 +510,7 @@ export interface SqlSpec {
   ordered?: boolean // row order must match
   strictColumns?: boolean // column names must match
   hint?: string // optional nudge; using it docks the signal to proficient
+  hasHint?: boolean // set instead of `hint` in the copy sent to a launched (LTI) player
 }
 
 // Outcome of an sql node submission, preserved for the results page.

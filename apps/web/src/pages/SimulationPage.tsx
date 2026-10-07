@@ -14,21 +14,27 @@ import { InlineExhibits } from '@/components/InlineExhibits'
 import { KeyDataPanel, isKeyDataLayout } from '@/components/keydata/KeyDataPanel'
 import { QuantNode } from '@/components/quant/QuantNode'
 import { SqlNode } from '@/components/sql/SqlNode'
-import { saveResult, saveResultStrict, recordSimulationAttempt } from '@/services/resultsService'
-import { completeLtiAttempt } from '@/services/ltiService'
+import { saveResult, recordSimulationAttempt } from '@/services/resultsService'
+import { completeLtiPlay } from '@/services/ltiService'
+import { ltiPlayGrader, type PlayView } from '@/services/ltiPlayService'
+import { PlayGraderProvider } from '@/components/PlayGraderContext'
 import { LtiScoreSent } from '@/components/LtiScoreSent'
-import { useSimulation } from '@/hooks/useSimulation'
+import { useSimulation, type RemotePlay } from '@/hooks/useSimulation'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import { buildPhaseViews, getPhaseForNode } from '@/lib/phases'
 import type { Scenario } from '@id/types'
 import type { TrackMeta } from '@/hooks/useScenarios'
 
 /**
- * `ltiMode` (set by /lti/play/:scenarioId): the learner has no Clerk session,
- * so the page behaves as signed in for saving and attempts, hands the score
- * back to LearnDifferently on completion, and never links to other pages.
+ * `ltiMode` (set by /lti/play/:scenarioId): the learner has no Clerk session. The play runs through
+ * the API, which grades each answer and decides the score (`playInit` is where it stands, for a
+ * reload); the page asks it to hand the score back to LearnDifferently on completion and never
+ * links to other pages.
  */
-export function SimulationPage({ ltiMode = false }: { ltiMode?: boolean } = {}) {
+export function SimulationPage({
+  ltiMode = false,
+  playInit,
+}: { ltiMode?: boolean; playInit?: PlayView } = {}) {
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -94,14 +100,20 @@ export function SimulationPage({ ltiMode = false }: { ltiMode?: boolean } = {}) 
     )
   }
 
-  return (
+  const content = (
     <SimulationContent
       scenario={scenario}
       scenarioId={scenarioId!}
       trackMeta={trackMeta}
       isPreview={isPreview}
       ltiMode={ltiMode}
+      playInit={playInit}
     />
+  )
+  return ltiMode ? (
+    <PlayGraderProvider value={ltiPlayGrader}>{content}</PlayGraderProvider>
+  ) : (
+    content
   )
 }
 
@@ -121,12 +133,14 @@ function SimulationContent({
   trackMeta,
   isPreview = false,
   ltiMode = false,
+  playInit,
 }: {
   scenario: Scenario
   scenarioId: string
   trackMeta: Record<string, TrackMeta>
   isPreview?: boolean
   ltiMode?: boolean
+  playInit?: PlayView
 }) {
   const navigate = useNavigate()
   const builderPath = `/builder/${scenarioId}`
@@ -153,11 +167,18 @@ function SimulationContent({
     void recordSimulationAttempt({ userId, scenarioId, track: scenario.track })
   }, [isLoaded, isSignedIn, userId, scenarioId, scenario.track, isPreview])
 
+  const remote = useMemo<RemotePlay | undefined>(
+    () => (ltiMode && playInit ? { grader: ltiPlayGrader, initial: playInit } : undefined),
+    [ltiMode, playInit]
+  )
+
   const {
     currentNode,
     selectedChoice,
     setSelectedChoice,
     submitChoice,
+    playError,
+    isTransitioning,
     advanceTransition,
     isComplete,
     stepNumber,
@@ -172,7 +193,7 @@ function SimulationContent({
     submitSql,
     advanceSql,
     sqlAnswers,
-  } = useSimulation(scenario)
+  } = useSimulation(scenario, remote)
 
   // Gate the entire simulation for unauthenticated visitors — case content
   // (data tables, exhibits, decisions, quant prompts) is the product, and
@@ -207,18 +228,14 @@ function SimulationContent({
     ltiMode,
   ])
 
-  // LTI hand-back: save the result, then report it to LearnDifferently and
-  // return the learner there. Retry re-runs both (the API de-dupes by id).
+  // LTI hand-back: ask the API to score the play it recorded and report it to LearnDifferently,
+  // then return the learner there. Retry asks again; the API reuses the stored result.
   const [ltiStatus, setLtiStatus] = useState<'idle' | 'sending' | 'error' | 'sent'>('idle')
   const [ltiCourseUrl, setLtiCourseUrl] = useState<string | null>(null)
-  const ltiResult = useRef<ReturnType<typeof computeResult> | null>(null)
   const sendLtiScore = useCallback(async () => {
-    if (!ltiResult.current) ltiResult.current = computeResult()
-    const result = ltiResult.current
     setLtiStatus('sending')
     try {
-      await saveResultStrict({ ...result, scenarioTitle: scenario.title })
-      const done = await completeLtiAttempt(result.id)
+      const done = await completeLtiPlay()
       if (!done.ok) {
         setLtiStatus('error')
       } else if (done.navigateTo) {
@@ -231,7 +248,7 @@ function SimulationContent({
       console.warn('LTI score hand-back failed:', err)
       setLtiStatus('error')
     }
-  }, [computeResult, scenario.title])
+  }, [])
   const ltiStarted = useRef(false)
   useEffect(() => {
     if (!ltiMode || !isComplete || ltiStarted.current) return
@@ -582,13 +599,18 @@ function SimulationContent({
                     ))}
                   </div>
 
+                  {playError && (
+                    <p role="alert" className="mt-4 text-[13px] text-amber-300">
+                      {playError}
+                    </p>
+                  )}
                   <div className="mt-5 flex items-center justify-between">
                     <span className="text-[13px] text-slate-light">
                       {selectedChoice ? 'Ready to submit' : 'Select an action'}
                     </span>
                     <button
                       onClick={() => selectedChoice && submitChoice(selectedChoice)}
-                      disabled={!selectedChoice}
+                      disabled={!selectedChoice || isTransitioning}
                       className={`
                       font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
                       ${

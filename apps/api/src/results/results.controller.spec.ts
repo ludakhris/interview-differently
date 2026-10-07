@@ -14,28 +14,12 @@ const lti = (sub = 'u1') => ({ userId: sub, lti: { ref: 'S1' } }) as never
 const body = { scenarioId: 'S1', track: 't' } as never
 
 describe('ResultsController', () => {
-  it('flags LTI callers to the service', async () => {
-    const { ctrl, results } = setup()
-    await ctrl.create(lti(), body)
-    await ctrl.create({ userId: 'u1' } as never, body)
-    expect(results.create.mock.calls.map((c) => c[1])).toEqual([{ lti: true }, { lti: false }])
-  })
-
-  it.each([
-    [
-      'create',
-      (c: ResultsController, r: Parameters<ResultsController['create']>[0]) => c.create(r, body),
-    ],
-    [
-      'createAttempt',
-      (c: ResultsController, r: Parameters<ResultsController['create']>[0]) =>
-        c.createAttempt(r, body),
-    ],
-  ])('rate limits an LTI session to 20 a minute on %s, per learner', async (_n, call) => {
+  it('rate limits an LTI session to 20 a minute on createAttempt, per learner', async () => {
     const { ctrl } = setup()
-    for (let i = 0; i < 20; i++) await call(ctrl, lti())
-    await expect(call(ctrl, lti())).rejects.toMatchObject({ status: 429 })
-    await expect(call(ctrl, lti('u2'))).resolves.toBeDefined()
+    const call = (r: Parameters<ResultsController['create']>[0]) => ctrl.createAttempt(r, body)
+    for (let i = 0; i < 20; i++) await call(lti())
+    await expect(call(lti())).rejects.toMatchObject({ status: 429 })
+    await expect(call(lti('u2'))).resolves.toBeDefined()
   })
 
   it('counts the two routes separately and never limits a normal user', async () => {

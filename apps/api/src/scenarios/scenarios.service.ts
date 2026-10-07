@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { withholdAnswerKey } from './answer-key'
 import { TRACK_META } from './track-meta'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Scenario = any
@@ -62,8 +63,9 @@ export class ScenariosService {
   }
 
   /**
-   * Full scenario for an LTI session (#63), whatever its owner but only once published: the guard
-   * has already limited the session to the one scenario it was launched for.
+   * The scenario for an LTI session (#63), whatever its owner but only once published: the guard
+   * has already limited the session to the one scenario it was launched for. The answer key is
+   * withheld; a launched play is scored on the server (LtiPlayService).
    */
   async findForLti(id: string): Promise<Scenario> {
     const row = await this.prisma.scenario.findUnique({
@@ -71,7 +73,7 @@ export class ScenariosService {
       include: { institution: { select: { name: true } } },
     })
     if (!row || row.status !== 'published') throw new NotFoundException(`Scenario ${id} not found`)
-    return this.withOwner(row)
+    return withholdAnswerKey(this.withOwner(row))
   }
 
   /**

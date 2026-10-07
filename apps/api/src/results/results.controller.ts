@@ -48,8 +48,7 @@ export class ResultsController {
   @Post()
   @HttpCode(201)
   async create(@Req() req: Req, @Body() dto: CreateResultDto) {
-    await this.limit(req, 'results-create')
-    return this.resultsService.create({ ...dto, userId: req.userId }, { lti: !!req.lti })
+    return this.resultsService.create({ ...dto, userId: req.userId })
   }
 
   /**

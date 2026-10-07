@@ -100,9 +100,11 @@ export class SqlRunnerService {
   }
 
   /**
-   * Runs several queries against one fresh instance, each inside a rolled-
-   * back transaction so an earlier (student) statement can't alter the data
-   * a later one sees. Errors are captured per query, not thrown.
+   * Runs several queries against one fresh instance, in order, each inside a rolled-back
+   * transaction. That does NOT make them independent: a statement can end the transaction itself
+   * (`COMMIT; DELETE ...`) and change what every later query sees. Callers that grade a student's
+   * query against a reference must therefore run the reference queries first. Errors are captured
+   * per query, not thrown.
    */
   async executeMany(setupSql: string, queries: string[]): Promise<QueryOutcome[]> {
     const db = await this.build(setupSql)

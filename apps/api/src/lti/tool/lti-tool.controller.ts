@@ -15,6 +15,7 @@ import { LtiError } from '../lti-spec'
 import { returnUrl } from './lti-tool.config'
 import { errorPage } from './lti-tool.html'
 import { LtiOnlyGuard, type LtiRequest } from './lti-session.guard'
+import { LtiPlayService } from './lti-play.service'
 import { LtiReturnError, LtiToolService } from './lti-tool.service'
 
 type Params = Record<string, string | undefined>
@@ -39,7 +40,10 @@ function cookieValue(header: string | undefined, name: string): string | undefin
 /** Interview Differently as an LTI 1.3 tool. Pages are plain server-rendered HTML. */
 @Controller('lti/tool')
 export class LtiToolController {
-  constructor(private readonly tool: LtiToolService) {}
+  constructor(
+    private readonly tool: LtiToolService,
+    private readonly play: LtiPlayService
+  ) {}
 
   @Get('jwks')
   jwks() {
@@ -84,19 +88,69 @@ export class LtiToolController {
   }
 
   /**
-   * Posts the score of a finished play; the LTI session is the credential. `{resultId}` is a text
-   * scenario's stored result, `{sessionId}` an immersive (voice) interview scored here, `{attemptId}` a submitted assessment attempt graded server-side.
+   * Posts the score of a finished play; the LTI session is the credential, and nothing in the body
+   * is a score. `{play}` is a text simulation, scored here from the answers `/play` recorded;
+   * `{sessionId}` an immersive (voice) interview scored here; `{attemptId}` a submitted
+   * assessment attempt graded server-side.
    */
   @Post('complete')
   @UseGuards(LtiOnlyGuard)
   async complete(@Req() req: LtiRequest, @Body() b: unknown) {
-    try {
-      const session = { ...req.lti!, sub: req.userId! }
+    return this.asHttp(async () => {
+      const session = this.ltiSession(req)
       const p = strings(b)
-      if (p.attemptId !== undefined) return await this.tool.completeAssessment(session, p.attemptId)
-      return p.sessionId !== undefined
-        ? await this.tool.completeImmersive(session, p.sessionId)
-        : await this.tool.complete(session, p.resultId)
+      if (p.attemptId !== undefined) return this.tool.completeAssessment(session, p.attemptId)
+      if (p.sessionId !== undefined) return this.tool.completeImmersive(session, p.sessionId)
+      if (p.play !== undefined) return this.play.complete(session)
+      throw new LtiError('Missing attemptId, sessionId or play')
+    })
+  }
+
+  // ── A launched text simulation: the browser shows the case, the server grades each answer ──
+
+  /** Where the play is and what has been answered, so a reload picks it up again. */
+  @Get('play')
+  @UseGuards(LtiOnlyGuard)
+  playView(@Req() req: LtiRequest) {
+    return this.asHttp(() => this.play.view(this.ltiSession(req)))
+  }
+
+  @Post('play/choice')
+  @UseGuards(LtiOnlyGuard)
+  playChoice(@Req() req: LtiRequest, @Body() b: unknown) {
+    const p = strings(b)
+    return this.asHttp(() => this.play.choose(this.ltiSession(req), p.nodeId, p.choiceId))
+  }
+
+  @Post('play/quant')
+  @UseGuards(LtiOnlyGuard)
+  playQuant(@Req() req: LtiRequest, @Body() b: unknown) {
+    const body = typeof b === 'object' && b !== null ? (b as Record<string, unknown>) : {}
+    return this.asHttp(() => this.play.grantQuant(this.ltiSession(req), body.nodeId, body.answer))
+  }
+
+  @Post('play/sql')
+  @UseGuards(LtiOnlyGuard)
+  playSql(@Req() req: LtiRequest, @Body() b: unknown) {
+    const p = strings(b)
+    return this.asHttp(() => this.play.gradeSql(this.ltiSession(req), p.nodeId, p.sql))
+  }
+
+  @Post('play/hint')
+  @UseGuards(LtiOnlyGuard)
+  playHint(@Req() req: LtiRequest, @Body() b: unknown) {
+    const p = strings(b)
+    return this.asHttp(() => this.play.hint(this.ltiSession(req), p.nodeId))
+  }
+
+  private ltiSession(req: LtiRequest) {
+    return { ...req.lti!, sub: req.userId! }
+  }
+
+  /** Turns a protocol error into an HTTP error with its status. */
+  private async asHttp<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn()
     } catch (err) {
       if (err instanceof LtiError) throw new HttpException(err.message, err.status)
       throw err

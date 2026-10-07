@@ -47,6 +47,8 @@ writes. `MemoryLtiStore` is for unit tests and a single local process. Uses:
 | `lti-submission` | submission jti                | in-flight lock (5 minutes), replaced by a "consumed" entry for the token's remaining life after a successful score post, released if the post fails |
 | `lti-delivery`   | `assessmentId:cohortId:label` | short lock around find-or-create of an assessment delivery                                                                                          |
 | `lti-complete`   | session jti                   | same lock/consumed pattern for `POST /complete`, one score post per session                                                                         |
+| `lti-play`       | session jti                   | a launched text simulation: current node, answers, hints used, stored result id; kept until the session expires plus a minute                       |
+| `lti-play-lock`  | session jti                   | one request at a time per play (60 s)                                                                                                               |
 | `rl:*`           | IP, client id or learner      | rate-limit counters                                                                                                                                 |
 
 **Multiple instances are safe** provided they share the database and the required production variables
@@ -325,55 +327,47 @@ in-flight fetch between concurrent callers, times fetches out after 3 seconds an
 - The session token is `base64url(JSON).base64url(HMAC-SHA256)` (secret `LTI_TOOL_SECRET`, MAC over `lti-session.` + body, so it
   cannot be used as a submission token), claims `{sub, ref, lineitem, returnUrl?, datasets?, brand?, deliveryId?, jti, iat, exp}`, valid 2 hours. The web app sends it as
   `Authorization: Bearer lti.<token>`. It is accepted only by `lti-session.guard.ts` and only for: `GET /api/scenarios/<ref>`
-  (full scenario, any owner), `POST /api/results/attempts` and `POST /api/results` with `scenarioId === ref` (the user is always
-  the token `sub`), `GET /api/results/:id` for the learner's own result of `ref`, `GET /api/me/datasets/<slug>` for a SQL dataset slug listed in the token's `datasets` claim (the slugs of the scenario's `sql` nodes, read at launch; the dataset service re-checks the slug against the launched scenario), `GET /api/lti/tool/session`, and `POST /api/lti/tool/complete`. Everything
+  (any owner, with the answer key withheld, see "Text simulations are scored on the server"), `POST /api/results/attempts` with `scenarioId === ref` (the user is always
+  the token `sub`), `GET /api/results/:id` for the learner's own result of `ref`, `GET /api/me/datasets/<slug>` for a SQL dataset slug listed in the token's `datasets` claim (the slugs of the scenario's `sql` nodes, read at launch; the dataset service re-checks the slug against the launched scenario), `GET /api/lti/tool/session`, `GET /api/lti/tool/play`, `POST /api/lti/tool/play/(choice|quant|sql|hint)` and `POST /api/lti/tool/complete`. A session cannot save a result of its own: `POST /api/results` is refused. Everything
   else answers 403 (401 for a bad or expired token). The allowlist is by method and path in the guard.
   For a voice interview it also allows `POST /api/immersive-sessions` (body `scenarioId === ref`, the user is the token `sub`), and, only for a session owned by `sub` whose `scenarioId === ref` (checked in the controller, no admin override), `POST /api/immersive-sessions/:id/responses`, `GET /api/immersive-sessions/:id`, `GET .../responses/:responseId` and `.../media-url`. `GET /api/scenario-media/<ref>` is public and needs no token.
 - `POST /complete` also takes `{sessionId}` for a voice interview: the immersive session must be owned by `sub`, for `ref`, `active`, and created no earlier than the LTI session `iat` minus 60 s; every question node of the scenario needs a non-empty transcript (422 while transcription is pending, 400 if a question is unanswered). The tool scores the transcripts itself (questions are the scenario's own prompts for each response's `nodeId`; the latest response per node counts), posts the mean to the lineitem with the per-dimension means, marks the session `completed`, and answers `{score, returnUrl}`. Locks: `lti-complete` per LTI session and `lti-result` keyed `immersive:<sessionId>`; both are released if scoring (502) or the post (502) fails.
 - Every call the tool makes to the platform's token and scores endpoints times out after 10 s and is treated as a failed post (generic 502), which releases the in-flight and result claims so the learner can retry at once.
-- `POST /complete` (LTI session required) body `{resultId}`: the result must exist, belong to `sub` and be for `ref`. The score is
-  `overallScore` (0-100) of the stored result, `scoreMaximum` 100, with its dimension scores under `DIMENSIONS_FIELD`; posted to the
-  lineitem like `/submit`. Single use per session `jti` (409 on reuse, released if the post fails), answers JSON
-  `{score, returnUrl}`, or 502 with a generic message if the platform rejects it.
-- Assessments (`custom.tool === 'id-assessment'`; a missing `tool` means `id-interview`, any other value is refused with a 400 page). `ref` is the
-  `Assessment.slug` (fallback: its `id`); unknown answers a 404 page "Assessment not found". The tool finds or creates the
-  `AssessmentDelivery` for (assessment, cohort = the launch's context id if a `Cohort` row with that id exists, else null, label `lti:<resource link id>`
-  for attempt 1, `lti:<resource link id>#<n>` for attempt n > 1; see "Retakes and time limits" below), with no open/close dates. There is no unique index on that triple, so creation runs under a short `lti-delivery` store lock
-  (10 s, keyed on the exact label) with a re-find inside it; a launch that loses the lock polls for the winner's row (up to about 2 s, then a 503 page). The launch answers
-  `303` to `${LTI_ID_WEB_URL}/lti/assessment/<deliveryId>#session=<token>`. The session has the extra claim `deliveryId` (and `datasets` = the bank's dataset slug, if any); a session
-  with `deliveryId` can reach only the assessment routes below, `GET /me/datasets/<slug>`, `GET /lti/tool/session` (which then also answers `deliveryId`) and `POST /lti/tool/complete`; it is refused on every scenario route.
-  A session without `deliveryId` can reach no assessment route. Allowed assessment routes (through `AuthenticatedOrLtiGuard`): `POST /me/deliveries/<deliveryId>/attempts`
-  (the id must equal the session's), `GET /me/attempts/:id`, `PUT /me/attempts/:id/answers`, `POST /me/attempts/:id/submit`, `GET /me/attempts/:id/result`.
-  The attempt must belong to `sub` and to the session's delivery (404 otherwise). For an LTI caller `startAttemptForLti` skips the cohort membership / tool-enabled
-  check (LearnDifferently decides who may launch), keeps the open check, draws the paper once and resumes an existing attempt; answers are validated (object of at most 200 string values, ids at most 64 and values at most 20,000 characters).
-  The Clerk path is unchanged. One attempt exists per (delivery, learner), so one attempt number is one delivery (see below).
-- Retakes and time limits (assessments only). The custom claim is `{ref, tool, attempt?, timeLimitMinutes?}`, both extras validated strictly
-  (any other value answers a 400 page and creates nothing):
-  - `attempt`: integer 1 to 100, the 1-based attempt number for this launch; missing means 1.
-  - `timeLimitMinutes`: integer 5 to 240, optional. It is written to the delivery **only when the delivery is created**; an existing delivery keeps its limit. An assessment session lasts `max(2 hours, the delivery's stored limit + 15 minutes)`, so a long limit cannot outlive the session that posts its score.
-  - Each attempt number has its own delivery (label above), so each draws a fresh paper through `startAttemptForLti`, and the session's `deliveryId`
-    is for that attempt only (the guard allowlist is unchanged). Relaunching an attempt number whose delivery already holds the learner's attempt
-    resumes it, submitted or not. Deliveries made before retakes existed carry `lti:<link>` and are attempt 1.
-  - Skip-ahead guard: for attempt n > 1 the tool counts the learner's submitted attempts on deliveries labelled `lti:<link>` or `lti:<link>#<k>` for the
-    same assessment and cohort, and refuses (400 page) unless `n <= submitted + 1`. LD enforces the maximum number of attempts; this only stops a learner
-    from jumping ahead to collect fresh papers.
-  - The deadline is `startedAt + timeLimitMinutes` (`deadlineAt` on `GET /me/attempts/:id`; the web client auto-submits at zero). The server does not
-    reject a late `submit`: it grades and stores it with `submittedLate = true` when it arrives more than 2 minutes after the deadline (grace for
-    client timers), so `POST /complete` still posts that score. Saving answers is not blocked by the deadline either.
-  - `POST /complete` is unchanged and single use per `attemptId`, so each attempt posts its own score and per-section dimensions from its own stored scores.
-- `POST /complete` also takes `{attemptId}` for an assessment: the attempt must belong to `sub`, to the session's `deliveryId`, be submitted (graded on the server). It may have been
-  started in an earlier session: a relaunch resumes it under a new session, so there is no check against the session `iat`. Score = the overall percent of its stored section scores (correct / total, rounded), with `DIMENSIONS_FIELD`
-  = one entry per section `{dimension: section title, score: round(correct / total * 100)}`. Locks: `lti-complete` per LTI session and `lti-result` keyed `assessment:<attemptId>` (30 days); both are
-  released if the post fails (502); reuse answers 409. Rate limit as the others (10 per minute per `sub`).
-- `POST /submit` takes the `submission` token and answers, scores them with the tool's own scorer, obtains an access token from the
-  platform `tokenUrl` (client-credentials with a signed assertion; the timestamp is always sent), POSTs the score to the lineitem scores URL, and renders a result page
-  (overall score, per-dimension scores, feedback) with a primary "Back to your course" link to the launch's `return_url` (fallback `LTI_RETURN_URL`, default `http://localhost:5174`); error pages link there too. A submission token is single use: its `jti` is
-  consumed only once the score post succeeds (a failed post can be retried with the same token), and a reused token gets a 409 page.
-  A concurrent submit of the same token also gets the 409 (the in-flight lock).
-- Scoring: `LTI_TOOL_SCORING=stub` uses a deterministic offline scorer (for tests and local runs without an Anthropic key);
-  otherwise the existing `InterviewEngineService`.
-- The tool's question store: for the POC, the tool reads ID `Scenario` rows through its own service. That is acceptable because this is
-  the ID side (the tool). The platform never reads them.
+- `POST /complete` (LTI session required) body `{play: 'text'}` for a text simulation: the server scores the play it recorded (see below),
+  stores the `SimulationResult`, and posts its `overallScore` (0-100) as the score, `scoreMaximum` 100, with its dimension scores under
+  `DIMENSIONS_FIELD`, to the lineitem like `/submit`. Refused with 400 until the play has reached its feedback node. A retry after a failed
+  post reuses the stored result. Single use per session `jti` (409 on reuse, released if the post fails), answers JSON
+  `{score, returnUrl}`, or 502 with a generic message if the platform rejects it. Nothing in the body is a score, and a client-supplied
+  `resultId` is no longer accepted (400).
+
+### Text simulations are scored on the server
+
+A launched text simulation (decision, quant and SQL nodes) is played through the API so a learner cannot post a score of their own or read the
+answer key (`lti-play.service.ts`, `sim-scoring.ts`, `answer-key.ts`):
+
+- `GET /api/scenarios/<ref>` for a session returns the scenario with the key withheld: each choice's `qualitySignals` (`[]`), each quant field's
+  `acceptedRange`, `modelAnswer` and `derivation` (placeholders `{min:0,max:0}` and `0`), each SQL node's `referenceSql` (`''`), and the hint
+  texts (replaced by `hasHint: true`). The graph, prompts, formulas and everything the player draws are unchanged.
+- `GET /api/lti/tool/play` answers where the play is: `{node, done, choices, quant, sql, hints}`; a reload picks the play up from there.
+- `POST /api/lti/tool/play/choice` `{nodeId, choiceId}`, `/quant` `{nodeId, answer}`, `/sql` `{nodeId, sql}` and `/hint` `{nodeId}`. The node must be
+  the one the play is on and of the matching kind, so nodes are answered in order and **once each** (409 otherwise): a verdict cannot be used to
+  hunt for the right answer. `/quant` answers `{results, reveal, next, done}` where `reveal` is each field's accepted range, model answer and
+  derivation, sent only now. `/sql` runs the learner's query and the reference query on the server's SQL runner (the one the assessments use) and
+  answers `{correct, reason?, expected, referenceSql, next, done}`; a broken reference query is a 503 that does not use up the learner's answer.
+  `/hint` answers the hint text and records that it was used (it caps that node's rating at proficient).
+- The server keeps the play in the store under `lti-play` (key: the session `jti`, kept until the session expires plus a minute; the order of the
+  choices is kept as a list because the database's JSON does not keep key order), one request at a time per play (`lti-play-lock`, 60 s, with an
+  owner token so a request whose lock expired cannot save over, or release the lock of, the one that took it next). Transition nodes are passed over
+  on the server; the browser still shows them. Each node is answered once even if the scenario's graph leads back to it. If an author removes the
+  node a learner is on, the learner gets a 409 asking them to relaunch.
+- If the browser and the server disagree about where the play is (a lost reply, a second tab), the server answers 409 and the player re-reads
+  `GET /play` and moves to the server's position.
+- A SQL answer runs the reference query first, then the learner's, on one fresh database (the assessment grader runs all references first, then the
+  learner queries).
+- Scoring is `apps/api/src/scoring/sim-scoring.ts`: signals to dimension scores to the rounded mean. The browser's own scoring for a learner's
+  practice on the Interview Differently site is its twin, `apps/web/src/lib/scoring.ts`; `scoring.parity.test.ts` runs both on the same plays.
+  The API is built on its own, so it cannot import the shared package.
+- Rate limit: 60 requests a minute per learner (`rl:tool-play`).
 
 ## LearnDifferently learner API and UI
 

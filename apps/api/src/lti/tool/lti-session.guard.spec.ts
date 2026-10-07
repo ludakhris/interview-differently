@@ -38,9 +38,13 @@ describe('AuthenticatedOrLtiGuard with an LTI token', () => {
     ['GET', '/api/scenarios/ops-001', undefined],
     ['GET', '/api/scenarios/ops-001?x=1', undefined],
     ['POST', '/api/results/attempts', { scenarioId: 'ops-001', track: 't' }],
-    ['POST', '/api/results', { scenarioId: 'ops-001', userId: 'someone-else' }],
     ['GET', '/api/results/r1', undefined],
-    ['POST', '/api/lti/tool/complete', { resultId: 'r1' }],
+    ['POST', '/api/lti/tool/complete', { play: 'text' }],
+    ['GET', '/api/lti/tool/play', undefined],
+    ['POST', '/api/lti/tool/play/choice', { nodeId: 'n1', choiceId: 'A' }],
+    ['POST', '/api/lti/tool/play/quant', { nodeId: 'n1', answer: {} }],
+    ['POST', '/api/lti/tool/play/sql', { nodeId: 'n1', sql: 'select 1' }],
+    ['POST', '/api/lti/tool/play/hint', { nodeId: 'n1' }],
     ['GET', '/api/lti/tool/session', undefined],
     ['GET', '/api/lti/tool/session?x=1', undefined],
   ])('allows %s %s and forces the learner from the token', async (method, url, body) => {
@@ -79,6 +83,12 @@ describe('AuthenticatedOrLtiGuard with an LTI token', () => {
     ['GET', '/api/lti/tool/session/extra'],
     ['GET', '/api/lti/tool/jwks'],
     ['GET', '/api/results/attempts/x'],
+    // a launched play is scored on the server: a session can no longer save a result of its own
+    ['POST', '/api/results'],
+    ['PUT', '/api/lti/tool/play'],
+    ['GET', '/api/lti/tool/play/choice'],
+    ['POST', '/api/lti/tool/play/other'],
+    ['POST', '/api/lti/tool/play/choice/extra'],
   ])('refuses %s %s', async (method, url) => {
     await expect(guard.canActivate(ctxOf(reqOf(method, url)))).rejects.toBeInstanceOf(
       ForbiddenException
@@ -93,8 +103,6 @@ describe('AuthenticatedOrLtiGuard with an LTI token', () => {
 
   it('refuses a result or attempt for another scenario, or without a scenario', async () => {
     for (const [url, body] of [
-      ['/api/results', { scenarioId: 'other' }],
-      ['/api/results', {}],
       ['/api/results/attempts', { scenarioId: 'other' }],
       ['/api/results/attempts', undefined],
     ] as const)

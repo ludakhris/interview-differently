@@ -45,7 +45,7 @@ export function interpretHandBack(
   return { ok: true, navigateTo: fromBody, courseUrl: fromBody ?? safeHttpUrl(sessionReturnUrl) }
 }
 
-/** Posts the hand-back for one finished result, interview or assessment attempt. Safe to repeat. */
+/** Posts the hand-back for one finished play, interview or assessment attempt. Safe to repeat. */
 async function postComplete(payload: Record<string, string>): Promise<HandBack> {
   const res = await fetch(`${API_URL}/api/lti/tool/complete`, {
     method: 'POST',
@@ -56,9 +56,8 @@ async function postComplete(payload: Record<string, string>): Promise<HandBack> 
   return interpretHandBack(res.status, body, getLtiReturnUrl())
 }
 
-/** Tells the API the learner finished a text simulation; it posts the score. */
-export const completeLtiAttempt = (resultId: string): Promise<HandBack> =>
-  postComplete({ resultId })
+/** Tells the API the learner finished a text simulation; it scores the play it recorded and posts it. */
+export const completeLtiPlay = (): Promise<HandBack> => postComplete({ play: 'text' })
 
 /** Scores a finished immersive interview (from its stored transcripts, on the server) and posts it. */
 export const completeLtiInterview = (sessionId: string): Promise<HandBack> =>

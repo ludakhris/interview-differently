@@ -37,7 +37,6 @@ const bodyScenario: Allow = (s, req) => req.body?.scenarioId === s.ref
 const ALLOWED: { method: string; path: RegExp; allow?: Allow; audience?: Audience }[] = [
   { method: 'GET', path: /^\/scenarios\/[^/]+$/, allow: (s, req) => idOf(req) === s.ref },
   { method: 'POST', path: /^\/results\/attempts$/, allow: bodyScenario },
-  { method: 'POST', path: /^\/results$/, allow: bodyScenario },
   {
     // read-only, one dataset: a slug the launched scenario's sql nodes use (fixed in the token at
     // launch); the controller re-checks it against the scenario. Never the list or admin routes.
@@ -70,6 +69,9 @@ const ALLOWED: { method: string; path: RegExp; allow?: Allow; audience?: Audienc
   { method: 'POST', path: /^\/me\/attempts\/[^/]+\/submit$/, audience: 'assessment' },
   { method: 'GET', path: /^\/me\/attempts\/[^/]+\/result$/, audience: 'assessment' },
   { method: 'GET', path: /^\/lti\/tool\/session$/, audience: 'both' },
+  // a text simulation is played through the server: it grades each answer and decides the score
+  { method: 'GET', path: /^\/lti\/tool\/play$/ },
+  { method: 'POST', path: /^\/lti\/tool\/play\/(choice|quant|sql|hint)$/ },
   { method: 'POST', path: /^\/lti\/tool\/complete$/, audience: 'both' },
 ]
 

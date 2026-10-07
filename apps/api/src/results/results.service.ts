@@ -77,10 +77,8 @@ export class ResultsService {
     })
   }
 
-  /** `opts.lti`: also hold the result to the launched scenario's rubric and decision count. */
-  async create(dto: CreateResultDto, opts: { lti?: boolean } = {}) {
+  async create(dto: CreateResultDto) {
     validateResult(dto)
-    if (opts.lti) await this.assertMatchesScenario(dto)
     const existing = await this.prisma.simulationResult.findUnique({ where: { id: dto.id } })
     if (existing) {
       if (existing.userId !== dto.userId) throw new ForbiddenException()
@@ -108,27 +106,6 @@ export class ResultsService {
         },
       },
     })
-  }
-
-  private async assertMatchesScenario(dto: CreateResultDto) {
-    const row = await this.prisma.scenario.findUnique({ where: { scenarioId: dto.scenarioId } })
-    if (!row) throw new NotFoundException(`Scenario ${dto.scenarioId} not found`)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = row.data as any
-    const names: string[] = (data?.rubric?.dimensions ?? []).map((d: { name: string }) => d.name)
-    const given = dto.dimensionScores.map((d) => d.dimension)
-    if (
-      given.length !== names.length ||
-      new Set(given).size !== given.length ||
-      !names.every((n) => given.includes(n))
-    )
-      throw new BadRequestException('Invalid result: dimensions do not match the scenario rubric')
-    const decisions = (data?.nodes ?? []).filter((n: { type?: string }) => n.type === 'decision')
-    // choiceSequence holds only decision picks (quant and sql nodes answer elsewhere), so a
-    // scenario made of sql/quant nodes alone legitimately has none
-    const minChoices = decisions.length > 0 ? 1 : 0
-    if (dto.choiceSequence.length < minChoices || dto.choiceSequence.length > decisions.length)
-      throw new BadRequestException('Invalid result: choiceSequence does not fit the scenario')
   }
 
   async getById(id: string) {

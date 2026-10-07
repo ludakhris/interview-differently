@@ -758,19 +758,22 @@ export class AssessmentsService {
     const drawnIds = a.drawnQuestionIds as string[]
     const saved = (a.answers as Record<string, string>) ?? {}
 
-    // Run every SQL pair (student, reference) on one fresh instance.
+    // Run every SQL question's reference and the student's query on one fresh instance, ALL the
+    // references first: a student statement can end the runner's rolled-back transaction
+    // (`COMMIT; DELETE ...`) and change the data a later query sees, so no student query may run
+    // before a reference.
     const sqlIds = drawnIds.filter((id) => index.get(id)?.type === 'sql')
-    const queries = sqlIds.flatMap((id) => [
-      saved[id] ?? '',
-      (index.get(id) as { referenceSql: string }).referenceSql,
-    ])
+    const queries = [
+      ...sqlIds.map((id) => (index.get(id) as { referenceSql: string }).referenceSql),
+      ...sqlIds.map((id) => saved[id] ?? ''),
+    ]
     // SQL questions imply a dataset — the parser refuses a bank with SQL and no dataset.
     const outcomes = queries.length
       ? await this.runner.executeMany(a.delivery.assessment.dataset!.setupSql, queries)
       : []
     const sqlOutcome = new Map<string, { student: QueryOutcome; reference: QueryOutcome }>()
     sqlIds.forEach((id, i) =>
-      sqlOutcome.set(id, { student: outcomes[i * 2], reference: outcomes[i * 2 + 1] })
+      sqlOutcome.set(id, { student: outcomes[sqlIds.length + i], reference: outcomes[i] })
     )
 
     const sectionScores: SectionScore[] = sections

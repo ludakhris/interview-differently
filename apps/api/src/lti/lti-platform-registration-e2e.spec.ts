@@ -7,6 +7,7 @@ import { ClerkService } from '../auth/clerk.service'
 import { LearnGuard } from '../auth/learn.guard'
 import { InterviewEngineService } from '../interview-engine/interview-engine.service'
 import { PrismaService } from '../prisma/prisma.service'
+import { SqlRunnerService } from '../sql-runner/sql-runner.service'
 import { LTI_STORE, MemoryLtiStore } from './lti-store'
 import { limitRegistrationBody } from './registration-limit'
 import { RegistrationController } from './platform/registration.controller'
@@ -14,6 +15,7 @@ import { RegistrationService } from './platform/registration.service'
 import { ToolRegistryController } from './platform/tool-registry.controller'
 import { ToolRegistryService } from './platform/tool-registry.service'
 import { resetToDefaults } from './platform/tool-test-helpers'
+import { LtiPlayService } from './tool/lti-play.service'
 import { LtiToolController } from './tool/lti-tool.controller'
 import { LtiToolService } from './tool/lti-tool.service'
 import { PlatformRegistryService } from './tool/platform-registry.service'
@@ -106,6 +108,8 @@ describe('Interview Differently registers itself with a platform (end to end)', 
         ToolRegistrationService,
         PlatformRegistryService,
         LtiToolService,
+        LtiPlayService,
+        { provide: SqlRunnerService, useValue: {} },
         LearnGuard,
         AdminGuard,
         { provide: InterviewEngineService, useValue: { scoreAnswers: jest.fn() } },
