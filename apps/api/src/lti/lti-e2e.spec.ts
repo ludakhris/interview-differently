@@ -27,6 +27,7 @@ import { LtiPlatformController } from './platform/lti-platform.controller'
 import { LtiPlatformService } from './platform/lti-platform.service'
 import { LtiToolController } from './tool/lti-tool.controller'
 import { LtiToolService } from './tool/lti-tool.service'
+import { PlatformRegistryService } from './tool/platform-registry.service'
 
 /** Loose shape for hand-rolled Prisma fakes whose args the tests index freely. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -190,6 +191,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
   /** Extra custom-claim fields (attempt, timeLimitMinutes) merged into the next id_tokens. */
   let customExtra: Record<string, unknown> = {}
   const prisma = {
+    ltiPlatform: { findMany: jest.fn(async () => []) },
     assessment: {
       findUnique: jest.fn(async (a: Row) =>
         a.where.slug === 'sql-basics' || a.where.id === 'as1' ? bank : null
@@ -391,6 +393,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         },
         LtiPlatformService,
         LtiToolService,
+        PlatformRegistryService,
         { provide: LTI_STORE, useValue: store },
         { provide: PrismaService, useValue: prisma },
         { provide: LearnerService, useValue: { recordToolResult } },

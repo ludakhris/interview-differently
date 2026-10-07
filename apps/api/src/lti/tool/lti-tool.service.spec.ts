@@ -12,6 +12,7 @@ import {
 } from '../lti-spec'
 import { MemoryLtiStore } from '../lti-store'
 import { LtiToolService } from './lti-tool.service'
+import { PlatformRegistryService } from './platform-registry.service'
 import { signSession, sqlDatasetSlugs, verifySession, type LtiSession } from './lti-session'
 
 /** Loose shape for hand-rolled Prisma fakes whose args the tests index freely. */
@@ -49,7 +50,10 @@ function setup(questions = ['Tell me about a time you led.', 'Why this role?']) 
   }
   const store = new MemoryLtiStore()
   const engine = { scoreAnswers: jest.fn() }
-  const svc = new LtiToolService(prisma as never, engine as never, store)
+  const registry = new PlatformRegistryService({
+    ltiPlatform: { findMany: async () => [] },
+  } as never)
+  const svc = new LtiToolService(prisma as never, engine as never, store, registry)
   const calls: { url: string; init?: RequestInit }[] = []
   let scoreStatus = 200
   let tokenStatus = 200
@@ -64,6 +68,7 @@ function setup(questions = ['Tell me about a time you led.', 'Why this role?']) 
   return {
     svc,
     store,
+    registry,
     prisma,
     engine,
     calls,
@@ -236,10 +241,10 @@ describe('login', () => {
   it('keeps the login state in the shared store for 10 minutes', async () => {
     const h = setup()
     const { state, nonce } = await startLogin(h.svc)
-    expect(await h.store.peek('lti-login', state)).toEqual({ nonce })
+    expect(await h.store.peek('lti-login', state)).toEqual({ nonce, platformId: 'built-in' })
     const t = Date.now()
     setNow(h, t + 9 * 60_000)
-    expect(await h.store.peek('lti-login', state)).toEqual({ nonce })
+    expect(await h.store.peek('lti-login', state)).toEqual({ nonce, platformId: 'built-in' })
     setNow(h, t + 11 * 60_000)
     expect(await h.store.peek('lti-login', state)).toBeNull()
   })
@@ -488,7 +493,8 @@ describe('submit', () => {
     const other = new LtiToolService(
       h.prisma as never,
       { scoreAnswers: jest.fn() } as never,
-      h.store
+      h.store,
+      h.registry
     )
     other.fetchImpl = h.svc.fetchImpl
     const html = await launchAgain(h.svc)

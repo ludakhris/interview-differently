@@ -619,6 +619,45 @@ model LtiRegistryChange {
   @@index([createdAt])
 }
 
+// An LMS platform that launches Interview Differently as an LTI tool (#63). Registered by the platform
+// itself (LTI Dynamic Registration) and switched off until an admin approves it. Looked up by
+// (issuer, clientId) at login. The one platform in env config is a built-in fallback until it is
+// seeded here.
+model LtiPlatform {
+  id           String   @id @default(uuid())
+  name         String
+  issuer       String
+  clientId     String
+  deploymentId String
+  authUrl      String
+  tokenUrl     String
+  jwksUrl      String
+  enabled      Boolean  @default(false)
+  // Null until an admin first switches it on (so "waiting for approval" differs from "switched off").
+  approvedAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([issuer, clientId])
+}
+
+// Who changed which platform, and how (#63). One row per change, written in the same transaction as
+// the change. `userId` has no FK on purpose: a registration made by the platform itself has no user.
+model LtiPlatformChange {
+  id          String   @id @default(uuid())
+  subjectId   String
+  subjectName String
+  action      String // 'created' | 'updated' | 'enabled' | 'disabled'
+  userId      String? // null when the platform registered itself or the seed script ran
+  userName    String
+  // { field: { from, to } } for each field that changed (from is null on create)
+  changes     Json
+  createdAt   DateTime @default(now())
+
+  @@index([subjectId, createdAt])
+  @@index([createdAt])
+}
+
 // Single-use and rate-limit state shared by every API instance for LTI (#63): launch hints,
 // client-assertion ids, login state, submission tokens, request counters. One row per
 // scope + key; expired rows are ignored on read and deleted opportunistically.

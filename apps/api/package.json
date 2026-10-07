@@ -21,6 +21,7 @@
     "seed:learn-demo": "ts-node -r tsconfig-paths/register scripts/seed-learn-demo.ts",
     "mock:lti-tool": "ts-node -r tsconfig-paths/register scripts/mock-lti-tool.ts",
     "seed:lti-tools": "ts-node -r tsconfig-paths/register scripts/seed-lti-tools.ts",
+    "seed:lti-platforms": "ts-node -r tsconfig-paths/register scripts/seed-lti-platforms.ts",
     "sync:types": "node scripts/sync-learn-types.mjs",
     "railway:lti-vars": "node scripts/railway-lti-vars.mjs"
   },

@@ -37,6 +37,12 @@ import {
   returnUrl,
   useStubScoring,
 } from './lti-tool.config'
+import {
+  BUILT_IN_ID,
+  keepsBareSub,
+  PlatformRegistryService,
+  type ToolPlatform,
+} from './platform-registry.service'
 import { errorPage, interviewPage, resultPage } from './lti-tool.html'
 import {
   SESSION_TTL_S,
@@ -72,6 +78,9 @@ const DELIVERY_LOCK_WAIT_MS = 100
 
 interface SubmissionClaims {
   sub: string
+  /** See LtiSession: the launching platform, and its own `sub` when `sub` was prefixed. */
+  platformId?: string
+  platformSub?: string
   jti: string
   lineitem: string
   ref: string
@@ -92,16 +101,21 @@ export class LtiReturnError extends LtiError {
 }
 
 /**
- * The claim's return_url when it is an http(s) URL on the platform's issuer origin, the learn
- * origin or a tenant subdomain of the learn host (https); anything else (javascript:, relative, junk, another site) is ignored.
+ * The claim's return_url when it is an http(s) URL on the platform's issuer origin or, for the
+ * LearnDifferently platform only, the learn origin or a tenant subdomain of the learn host (https);
+ * anything else (javascript:, relative, junk, another site) is ignored.
  */
-export function safeReturnUrl(value: unknown): string | undefined {
+export function safeReturnUrl(value: unknown, issuer: string | undefined): string | undefined {
+  if (!issuer) return undefined
   if (typeof value !== 'string') return undefined
   try {
     const u = new URL(value)
     if (u.protocol !== 'http:' && u.protocol !== 'https:') return undefined
-    const issuerOrigin = new URL(platformRegistration().issuer).origin
-    return u.origin === issuerOrigin || isLearnOrigin(value, learnUrl()) ? u.toString() : undefined
+    const issuerOrigin = new URL(issuer).origin
+    const learn = issuerOrigin === new URL(platformRegistration().issuer).origin
+    return u.origin === issuerOrigin || (learn && isLearnOrigin(value, learnUrl()))
+      ? u.toString()
+      : undefined
   } catch {
     return undefined
   }
@@ -120,12 +134,14 @@ export class LtiToolService {
   /** The key `keys` replaced (LTI_TOOL_PREVIOUS_PRIVATE_KEY): published, never signed with. */
   private readonly previousKeys?: KeyPair
   private readonly secret: string
-  private platformKeys?: ReturnType<typeof jwksKeyResolver>
+  /** One cached key resolver per platform key-set URL. */
+  private readonly platformKeys = new Map<string, ReturnType<typeof jwksKeyResolver>>()
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly engine: InterviewEngineService,
-    @Inject(LTI_STORE) private readonly store: LtiStore
+    @Inject(LTI_STORE) private readonly store: LtiStore,
+    private readonly platforms: PlatformRegistryService
   ) {
     assertLtiProductionConfig()
     const { current, previous } = loadSigningKeys(
@@ -153,10 +169,13 @@ export class LtiToolService {
     ip = 'unknown'
   ): Promise<{ url: string; state: string }> {
     await this.limit('tool-login', ip, LOGIN_PER_MINUTE_PER_IP)
-    const reg = platformRegistration()
-    if (p.iss !== reg.issuer || p.client_id !== reg.clientId) {
-      throw new LtiError('Unknown platform or client')
-    }
+    const reg = await this.platforms.forLogin(p.iss, p.client_id)
+    if (!reg) throw new LtiError('Unknown platform or client')
+    if (!reg.enabled)
+      throw new LtiError(
+        'This platform has not been approved for Interview Differently yet. Ask its administrator to approve it.',
+        403
+      )
     if (!p.login_hint) throw new LtiError('Missing login_hint')
     if (!p.lti_message_hint) throw new LtiError('Missing lti_message_hint')
     if (p.lti_deployment_id && p.lti_deployment_id !== reg.deploymentId) {
@@ -164,7 +183,7 @@ export class LtiToolService {
     }
     const state = newId()
     const nonce = newId()
-    await this.store.put('lti-login', state, { nonce }, STATE_TTL_S)
+    await this.store.put('lti-login', state, { nonce, platformId: reg.id }, STATE_TTL_S)
     const url = new URL(reg.authUrl)
     const q = url.searchParams
     q.set('scope', 'openid')
@@ -190,18 +209,19 @@ export class LtiToolService {
     state: string | undefined,
     cookieState: string | undefined
   ): Promise<string | { redirect: string }> {
-    const reg = platformRegistration()
     if (!state || cookieState !== state)
       throw new LtiError('Login state does not match this browser')
     // single use, even if the rest fails
-    const entry = await this.store.take<{ nonce: string }>('lti-login', state)
+    const entry = await this.store.take<{ nonce: string; platformId?: string }>('lti-login', state)
     if (!entry) throw new LtiError('Unknown or expired state')
     if (!idToken) throw new LtiError('Missing id_token')
-    this.platformKeys ??= jwksKeyResolver(reg.jwksUrl, (...a) => this.fetchImpl(...a))
+    // The platform is the one the login was started for, never one the (unverified) token names.
+    const reg = await this.platforms.forLaunch(entry.platformId)
+    if (!reg || !reg.enabled) throw new LtiError('Unknown platform or client')
     const claims = await verifyJwt(idToken, {
       issuer: reg.issuer,
       audience: reg.clientId,
-      keyFor: this.platformKeys,
+      keyFor: this.keysFor(reg.jwksUrl),
       nonce: entry.nonce,
       now: () => this.now() / 1000,
     })
@@ -225,11 +245,12 @@ export class LtiToolService {
       throw new LtiError('Unsupported tool')
     // never trust the claim: the same validator the platform used, again
     const brand = sanitizeBrand(claims[BRAND_CLAIM])
-    const sessionReturn = safeReturnUrl(claims[CLAIM.launchPresentation]?.return_url)
+    const sessionReturn = safeReturnUrl(claims[CLAIM.launchPresentation]?.return_url, reg.issuer)
+    const who = identityOf(reg, claims.sub)
     if (tool === 'id-assessment') {
       return this.launchAssessment({
         ref,
-        sub: claims.sub,
+        who,
         lineitem,
         returnUrl: sessionReturn,
         brand,
@@ -243,7 +264,7 @@ export class LtiToolService {
     if (!row || row.status !== 'published') throw new LtiError('Interview not found', 404)
     if (!isTypedPlaceholder(row.data)) {
       const token = signSession({
-        sub: claims.sub,
+        ...who,
         ref,
         lineitem,
         returnUrl: sessionReturn,
@@ -258,7 +279,7 @@ export class LtiToolService {
     }
     const interview = await this.loadInterview(ref)
     const submission = this.signSubmission({
-      sub: claims.sub,
+      ...who,
       jti: newId(),
       lineitem,
       ref,
@@ -280,7 +301,7 @@ export class LtiToolService {
    */
   private async launchAssessment(l: {
     ref: string
-    sub: string
+    who: Identity
     lineitem: string
     returnUrl: string | undefined
     brand: ReturnType<typeof sanitizeBrand>
@@ -328,7 +349,7 @@ export class LtiToolService {
     // keeps the original label so deliveries created before retakes existed still match
     if (attempt > 1) {
       const submitted = await this.submittedAttempts(
-        l.sub,
+        l.who.sub,
         assessment.id,
         cohort?.id ?? null,
         baseLabel
@@ -350,7 +371,7 @@ export class LtiToolService {
       delivery.timeLimitMinutes ? delivery.timeLimitMinutes * 60 + SESSION_GRACE_S : 0
     )
     const token = signSession({
-      sub: l.sub,
+      ...l.who,
       ref: assessment.slug,
       lineitem: l.lineitem,
       returnUrl: l.returnUrl,
@@ -442,6 +463,11 @@ export class LtiToolService {
     body: Record<string, string | undefined>
   ): Promise<{ status: number; html: string }> {
     const claims = this.verifySubmission(body.submission)
+    // already sanitized when it was signed: again, against the platform it names
+    claims.returnUrl = safeReturnUrl(
+      claims.returnUrl,
+      (await this.platforms.forScore(claims.platformId))?.issuer
+    )
     try {
       return await this.submitVerified(claims, body)
     } catch (err) {
@@ -762,11 +788,13 @@ export class LtiToolService {
   }
 
   private async postScore(
-    claims: Pick<SubmissionClaims, 'sub' | 'lineitem'>,
+    claims: Pick<SubmissionClaims, 'sub' | 'lineitem' | 'platformId' | 'platformSub'>,
     score: number,
     dimensions: { dimension: string; score: number }[]
   ): Promise<void> {
-    const reg = platformRegistration()
+    // Switched on or off: the work is already done and this platform's launch is what it came from.
+    const reg = await this.platforms.forScore(claims.platformId)
+    if (!reg) throw new Error('the platform that launched this is no longer registered')
     const assertion = signJwt(
       {
         iss: reg.clientId,
@@ -796,7 +824,7 @@ export class LtiToolService {
       method: 'POST',
       headers: { 'Content-Type': SCORE_CONTENT_TYPE, Authorization: `Bearer ${access_token}` },
       body: JSON.stringify({
-        userId: claims.sub,
+        userId: claims.platformSub ?? claims.sub,
         scoreGiven: score,
         scoreMaximum: 100,
         activityProgress: 'Completed',
@@ -807,6 +835,15 @@ export class LtiToolService {
       signal: AbortSignal.timeout(this.platformTimeoutMs),
     })
     if (!scoreRes.ok) throw new Error(`platform rejected the score (${scoreRes.status})`)
+  }
+
+  private keysFor(url: string): ReturnType<typeof jwksKeyResolver> {
+    let resolver = this.platformKeys.get(url)
+    if (!resolver) {
+      resolver = jwksKeyResolver(url, (...a) => this.fetchImpl(...a))
+      this.platformKeys.set(url, resolver)
+    }
+    return resolver
   }
 
   private mac(data: string): Buffer {
@@ -838,7 +875,9 @@ export class LtiToolService {
     if (!claims.sub || !claims.jti || !claims.lineitem || !claims.ref) {
       throw new LtiError('Invalid submission token', 401)
     }
-    claims.returnUrl = safeReturnUrl(claims.returnUrl)
+    for (const f of [claims.platformId, claims.platformSub])
+      if (f !== undefined && (typeof f !== 'string' || !f))
+        throw new LtiError('Invalid submission token', 401)
     return claims
   }
 }
@@ -870,6 +909,17 @@ function promptNodes(data: unknown): { nodeId: string; prompt: string }[] {
       ? [{ nodeId: n.nodeId, prompt: n.responsePrompt.trim() }]
       : []
   )
+}
+
+type Identity = Pick<LtiSession, 'sub' | 'platformId' | 'platformSub'>
+
+/** Who a launching learner is here: see `keepsBareSub`. The built-in platform leaves tokens as they were. */
+function identityOf(platform: ToolPlatform, sub: string): Identity {
+  return {
+    sub: keepsBareSub(platform) ? sub : `lti:${platform.id}:${sub}`,
+    ...(platform.id === BUILT_IN_ID ? {} : { platformId: platform.id }),
+    ...(keepsBareSub(platform) ? {} : { platformSub: sub }),
+  }
 }
 
 function sameOrigin(url: string, issuer: string): boolean {

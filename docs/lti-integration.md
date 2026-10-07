@@ -72,6 +72,7 @@ Counted in the shared store, fixed one-minute window from the first hit; over th
 | tool `GET|POST /login` | 30 / minute | client IP (`req.ip`) | HTML error page |
 | tool `POST /submit` | 10 / minute | learner `sub` from the verified submission token | HTML error page |
 | tool `POST /complete` | 10 / minute | learner `sub` from the LTI session | JSON |
+| tool `GET /register` | 10 / minute | client IP (`req.ip`) | HTML error page |
 | platform `GET|POST /auth` | 30 / minute | client IP (`req.ip`) | JSON |
 | platform `POST /token` | 60 / minute | client id, counted only after the assertion signature verifies | JSON `{error:'rate_limited'}` |
 
@@ -157,8 +158,7 @@ for a token to return a score for work already done, which is why its client id 
 trusts one the tool sends. The platform does not yet register Deep Linking
 messages or read a tool's other message types; they are ignored.
 
-**Trying it without a real tool.** No tool we ship registers itself yet (Interview Differently has no
-registration link), so use the stand-in: with the API and the learn app running, `npm run mock:lti-tool` (from
+**Trying it without a real tool.** Interview Differently registers itself (see "Registering Interview Differently with a platform"); for a tool you do not want to touch, use the stand-in: with the API and the learn app running, `npm run mock:lti-tool` (from
 `apps/api`), then paste `http://localhost:4010/register` into the panel. It writes a switched-off connection and
 tool to whichever database the API uses, so remove them afterwards. It is local only and refuses to run with
 `NODE_ENV=production`.
@@ -176,6 +176,77 @@ tool to whichever database the API uses, so remove them afterwards. It is local 
 - Tool side config (`PlatformRegistration`): issuer, authUrl `${BASE}/lti/platform/auth`,
   tokenUrl `${BASE}/lti/platform/token`, jwksUrl `${BASE}/lti/platform/jwks`.
 - The tool side's own config (below) is static and overridable by env so it can point at another host; the platform's tool list comes from the registry.
+
+## Registering Interview Differently with a platform
+
+The other direction of Dynamic Registration: a platform (an LMS) registers Interview Differently as a tool, so an
+admin does not copy client ids and URLs by hand. Many platforms can do this; each is a row in `LtiPlatform`
+(issuer, client id, deployment id, auth/token/key-set URLs, `enabled`, `approvedAt`), with its changes in
+`LtiPlatformChange` (written in the same transaction). The platform in server settings (`LTI_PLATFORM_*`,
+`LTI_TOOL_CLIENT_ID`, `LTI_DEPLOYMENT_ID`) stays as a built-in fallback, used only while the table has no row for its
+issuer and client id.
+
+**Flow**
+
+1. The platform's admin opens `GET /api/lti/tool/register?openid_configuration=<url>&registration_token=<token>` (the
+   platform builds this link; the endpoint is public by design, as the spec requires).
+2. The tool checks `openid_configuration` is public https (`http://localhost` only outside production), fetches it (10 s
+   timeout, no redirects, 64 KB cap), and requires `issuer`, `authorization_endpoint`, `token_endpoint`, `jwks_uri` and
+   `registration_endpoint` to be public https **on the same origin as the configuration URL**. A configuration that
+   names another site (or an internal address) is refused, so a hostile one cannot aim the tool at a third party. If the
+   configuration lists `token_endpoint_auth_methods_supported` or `id_token_signing_alg_values_supported`, they must
+   include `private_key_jwt` and `RS256`.
+3. The tool posts its registration (web app, `id_token`, `implicit` + `client_credentials`, `private_key_jwt`, login URL,
+   launch URL as the only redirect URI, key-set URL, scopes `openid` and the score scope, and the tool-configuration
+   claim) to `registration_endpoint` with `Authorization: Bearer <registration_token>` (never logged or stored).
+4. From the answer it reads `client_id` and the tool-configuration `deployment_id` (both required, at most 200
+   characters), and stores the platform **switched off** (`approvedAt` null), with a history entry made by "Dynamic
+   registration (host)". Registering the same issuer and client id again changes nothing and never switches anything on.
+5. It answers an HTML page that says the registration is waiting for approval and posts
+   `{ subject: 'org.imsglobal.lti.close' }` to `window.opener || window.parent`. Errors are plain HTML pages that show only
+   fixed text and status codes, never what the platform said.
+6. An Interview Differently admin approves it (below). Until then login answers 403 "not been approved" and launches fail.
+
+**Approval (full admins only, `AdminGuard`)**
+
+- `GET /api/lti/platforms` lists platforms (`id, name, issuer, clientId, deploymentId, authUrl, tokenUrl, jwksUrl, enabled,
+approvedAt, createdAt, source`); `source: 'built-in'` (id `built-in`, read-only) appears only while no row stands in for it.
+- `PUT /api/lti/platforms/:id` with `{ enabled: boolean }` switches it on or off (404 unknown, 400 built-in or a bad body)
+  and writes history; `approvedAt` is set on the first switch-on and kept.
+- `DELETE /api/lti/platforms/:id` rejects a registration that was never approved (`enabled` false and `approvedAt` null):
+  the row is deleted and a history entry (action `rejected`, name kept, admin id and name) is written in one transaction;
+  answers `200 { ok: true }`. 404 unknown; 400 for the built-in platform, an enabled one, or one that was ever approved
+  (switch those off instead).
+- `GET /api/lti/platforms/history?subjectId=` lists changes, newest first, at most 200.
+
+**What a platform's launches may do**
+
+- Login finds the platform by `(iss, client_id)` and checks the deployment id; the launch uses the platform recorded in the
+  login state (never the id_token's own claims), then verifies issuer, audience, nonce, deployment and that the score
+  endpoint is on that platform's origin. The return link is accepted only on that platform's origin (the
+  LearnDifferently origin too, for the platform in settings only).
+- A learner from a registered platform is stored under `lti:<platform id>:<sub>` so two platforms can never share, or
+  claim, a learner's results; scores are posted for the platform's own `sub`. The platform in settings keeps bare ids.
+- The signed session and submission carry the platform id, so the score goes to that platform's token endpoint with its
+  client id. A token without one (issued before this) means the built-in platform.
+- **A switched-off platform cannot log in or launch, but work already done can still be sent back to it** (the same rule
+  as a switched-off tool on the platform side); sessions already issued last at most their own lifetime.
+
+**Limits and operations**
+
+- `GET /register` is limited to 10 requests a minute per address, and refuses new registrations (429) while 50 are
+  waiting for approval. Only never-approved rows count (`approvedAt` null and `enabled` false): a platform that was
+  approved and then switched off does not, and rejecting a registration frees its place. The per-address limit keys on
+  `req.ip`, so `TRUST_PROXY` must be the correct hop-count integer for the deployment (for example `1` behind Railway's
+  proxy); left unset behind a proxy, every client shares one bucket and ten registrations a minute lock everyone out.
+  (The platform side's own registration endpoint is separately limited to 20 a minute.) The cache of platforms refreshes
+  every 15 s and starts empty (nothing logs in until the first successful read).
+- `npm run seed:lti-platforms` (from `apps/api`; `--dry-run`, `--allow-host <host>`, dev hosts only unless allowed) adds
+  the settings platform as an enabled row; safe to run again. With `--allow-host` it refuses unless `LTI_API_BASE` is set to
+  a non-localhost URL, and the dry run prints the issuer, client id and URLs it would write. Once every environment has run it, remove the built-in
+  fallback (marked `TODO(#63)` in `platform-registry.service.ts`).
+- Known limit: every endpoint must be on the issuer's origin, so a platform that uses several hosts (for example one
+  that publishes keys on a separate domain) is refused and must be added by hand.
 
 ## Platform endpoints (`/api/lti/platform`)
 

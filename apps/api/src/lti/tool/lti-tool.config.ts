@@ -26,3 +26,8 @@ export const idWebUrl = (): string =>
 /** Where learners return to LearnDifferently from a tool (no trailing slash). */
 export const learnUrl = (): string =>
   (process.env.LTI_LEARN_URL ?? 'http://localhost:5174').replace(/\/+$/, '')
+
+/** Where a platform sends a learner to start a launch (third-party initiated login). */
+export const loginUrl = (): string => `${base()}/lti/tool/login`
+/** The tool's public key set. */
+export const jwksUrl = (): string => `${base()}/lti/tool/jwks`

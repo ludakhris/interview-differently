@@ -9,7 +9,12 @@ export const SESSION_BEARER_PREFIX = 'lti.'
 
 /** The tool's own signed LTI session: who launched, what for, and where to post the score. */
 export interface LtiSession {
+  /** The local user id: the platform's `sub`, prefixed with the platform for every platform but the built-in one. */
   sub: string
+  /** The platform that launched it (a registered platform's id). Absent (built-in or older tokens): the built-in platform. */
+  platformId?: string
+  /** The platform's own `sub`, when `sub` was prefixed: the id its score is posted for. */
+  platformSub?: string
   ref: string
   lineitem: string
   /** Where the learner returns to: the launch's return_url (http or https only), else none. */
@@ -85,6 +90,8 @@ export function verifySession(
     const clean = sanitizeBrand(claims.brand)
     if (!clean || JSON.stringify(clean) !== JSON.stringify(claims.brand)) throw invalid()
   }
+  for (const f of [claims.platformId, claims.platformSub])
+    if (f !== undefined && (typeof f !== 'string' || !f)) throw invalid()
   if (!claims.sub || !claims.jti || !claims.lineitem || !claims.ref) throw invalid()
   return claims
 }

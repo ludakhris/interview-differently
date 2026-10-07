@@ -177,7 +177,7 @@ const UNKNOWN_KID_TTL_MS = 60_000
 const MAX_UNKNOWN_KIDS = 100
 
 /** Reads a response body as text, refusing more than `max` bytes. */
-async function readCapped(res: Response, max: number): Promise<string> {
+export async function readCapped(res: Response, max: number): Promise<string> {
   const chunks: Buffer[] = []
   let size = 0
   if (!res.body) throw new Error('empty body')

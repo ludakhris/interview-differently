@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { MAX_ANSWER_CHARS } from '../../interview-engine/interview-engine'
 import type { ScoredAnswer } from '../../interview-engine/interview-engine'
 
@@ -65,4 +66,19 @@ export const errorPage = (message: string, returnUrl?: string): string =>
     'Something went wrong',
     `<h1>Something went wrong</h1><p class="err" role="alert">${esc(message)}</p>` +
       (returnUrl ? `<p><a href="${esc(returnUrl)}">Back to your course</a></p>` : '')
+  )
+
+/** Tells the platform's registration window it may close (LTI Dynamic Registration 1.0, section 3.5). */
+export const CLOSE_SCRIPT = `try{(window.opener||window.parent).postMessage({subject:'org.imsglobal.lti.close'},'*')}catch(e){}`
+/** The page's own script is the only one its CSP allows. */
+export const CLOSE_SCRIPT_CSP = `default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-${createHash('sha256').update(CLOSE_SCRIPT).digest('base64')}'`
+
+export const registeredPage = (name: string, created: boolean): string =>
+  page(
+    'Registered',
+    `<h1>Interview Differently is ${created ? 'registered' : 'already registered'}</h1>` +
+      `<p>${esc(name)} is ${created ? 'now' : 'already'} connected to Interview Differently, ` +
+      `and is waiting for approval. An administrator of Interview Differently has to approve it ` +
+      `before learners can launch from it. You can close this window.</p>` +
+      `<script>${CLOSE_SCRIPT}</script>`
   )
