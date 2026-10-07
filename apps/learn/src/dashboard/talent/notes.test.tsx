@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { SupportItemDto } from '@id/types'
 
 const send = vi.fn()
 const reload = vi.fn()
@@ -198,53 +199,85 @@ describe('NotesSection', () => {
 
 describe('SupportSection', () => {
   const items = `${P}/support-items`
-  it('shows the empty state and the reminder', () => {
+  const ymd = (offset: number) => {
+    const d = new Date()
+    d.setDate(d.getDate() + offset)
+    return todayKey(d)
+  }
+
+  it('shows the empty state, the notice, a zero count and the Add button', () => {
     loads[items] = { data: [] }
     render(<SupportSection providerId="P1" userId="U1" />)
-    expect(screen.getByText('Nothing to follow up on yet.')).toBeTruthy()
+    expect(
+      screen.getByText(
+        'No follow-ups yet. Add one when someone needs help with something like transportation or childcare.'
+      )
+    ).toBeTruthy()
     expect(screen.getByText(/Learners never can/)).toBeTruthy()
+    expect(screen.getByText('0 open')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Add follow-up' })).toBeTruthy()
+    expect(screen.queryByLabelText('What would help?')).toBeNull()
   })
 
-  it('lists items with status chips, overdue emphasis, and finished ones last', () => {
+  it('shows chips, overdue and due-soon flags, one status control, and a collapsed resolved group', async () => {
     loads[items] = {
       data: [
-        item({ id: 'a', title: 'Done thing', status: 'resolved' }),
-        item({ id: 'b', title: 'Late thing', dueDate: '2020-01-01' }),
+        item({
+          id: 'a',
+          title: 'Done thing',
+          status: 'resolved',
+          resolvedAt: '2026-10-02T10:00:00Z',
+        }),
+        item({ id: 'b', title: 'Late thing', dueDate: ymd(-3), assigneeName: 'Lee' }),
+        item({ id: 'c', title: 'Soon thing', dueDate: ymd(2), status: 'in_progress' }),
       ],
     }
     const { container } = render(<SupportSection providerId="P1" userId="U1" />)
     const rows = container.querySelectorAll('.nt-item')
+    expect(rows).toHaveLength(2)
     expect(rows[0].textContent).toContain('Late thing')
-    expect(rows[0].textContent).toContain('Overdue')
-    expect(container.querySelector('.nt-due-overdue')).toBeTruthy()
-    expect(rows[1].textContent).toContain('Done thing')
-    expect(rows[1].textContent).toContain('Resolved')
+    expect(rows[0].textContent).toContain('Overdue by 3 days')
+    expect(rows[0].textContent).toContain('Assigned to Lee')
+    expect(rows[0].textContent).toContain('Transportation')
+    expect(rows[1].textContent).toContain('Due soon')
+    expect(rows[1].textContent).toContain('Unassigned')
+    expect(rows[1].textContent).toContain('Added by Dana')
+    expect(screen.getByText('2 open')).toBeTruthy()
+    // One status control per item: no checkbox, no status chip.
+    expect(screen.queryByRole('checkbox')).toBeNull()
+    expect(screen.getAllByRole('combobox', { name: /^Status/ })).toHaveLength(2)
+    // Finished items are tucked away until asked for.
+    expect(screen.queryByText('Done thing')).toBeNull()
+    const toggle = screen.getByRole('button', { name: /Resolved \(1\)/ })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    await userEvent.click(toggle)
+    expect(screen.getAllByText('Done thing').length).toBeGreaterThan(0)
+    expect(container.textContent).toContain('Resolved Oct 2, 2026')
   })
 
-  it('changes status quickly from the checkbox and the select', async () => {
+  it('changes status from the one select, saves at once and announces it', async () => {
     loads[items] = { data: [item()] }
-    send.mockResolvedValue(item({ status: 'resolved' }))
-    render(<SupportSection providerId="P1" userId="U1" />)
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Resolved: Bus pass' }))
-    expect(send).toHaveBeenCalledWith('PUT', `${items}/i1`, { status: 'resolved' })
-    await waitFor(() =>
-      expect(screen.getByRole('status').textContent).toBe('"Bus pass" is now Resolved.')
-    )
     send.mockResolvedValue(item({ status: 'in_progress' }))
+    render(<SupportSection providerId="P1" userId="U1" />)
     await userEvent.selectOptions(screen.getByLabelText('Status of Bus pass'), 'in_progress')
-    expect(send).toHaveBeenLastCalledWith('PUT', `${items}/i1`, { status: 'in_progress' })
+    expect(send).toHaveBeenCalledWith('PUT', `${items}/i1`, { status: 'in_progress' })
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toBe('"Bus pass" is now In progress.')
+    )
   })
 
-  it('adds an item with category, due date and assignee', async () => {
+  it('adds a follow-up through the dialog with kind, date and assignee', async () => {
     loads[items] = { data: [] }
     loads['/learn/providers/P1/staff-members'] = { data: [{ id: 's2', name: 'Lee' }] }
     send.mockResolvedValue(item({ id: 'new', title: 'Laptop loan', category: 'technology' }))
     render(<SupportSection providerId="P1" userId="U1" />)
-    await userEvent.type(screen.getByLabelText('What would help?'), 'Laptop loan')
-    await userEvent.selectOptions(screen.getByLabelText('Kind of help'), 'technology')
-    await userEvent.type(screen.getByLabelText('Follow up by (optional)'), '2026-11-01')
-    await userEvent.selectOptions(screen.getByLabelText('Assigned to (optional)'), 's2')
-    await userEvent.click(screen.getByRole('button', { name: 'Add item' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add follow-up' }))
+    const dlg = within(screen.getByRole('dialog', { name: 'Add follow-up' }))
+    await userEvent.type(dlg.getByLabelText('What would help?'), 'Laptop loan')
+    await userEvent.selectOptions(dlg.getByLabelText('Kind of help'), 'technology')
+    await userEvent.type(dlg.getByLabelText('Follow up by'), '2026-11-01')
+    await userEvent.selectOptions(dlg.getByLabelText('Assigned to'), 's2')
+    await userEvent.click(dlg.getByRole('button', { name: 'Save' }))
     expect(send).toHaveBeenCalledWith('POST', items, {
       title: 'Laptop loan',
       category: 'technology',
@@ -252,20 +285,84 @@ describe('SupportSection', () => {
       dueDate: '2026-11-01',
       assigneeId: 's2',
     })
-    await waitFor(() => expect(screen.getAllByText(/Laptop loan/).length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(screen.getAllByText(/Laptop loan/).length).toBeGreaterThan(0)
     expect(screen.getByRole('status').textContent).toBe('Added "Laptop loan".')
+  })
+
+  it('needs a title before it saves, and shows a save error inside the dialog', async () => {
+    loads[items] = { data: [] }
+    send.mockRejectedValue(new Error('Nope'))
+    render(<SupportSection providerId="P1" userId="U1" />)
+    await userEvent.click(screen.getByRole('button', { name: 'Add follow-up' }))
+    const save = screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement
+    expect(save.disabled).toBe(true)
+    await userEvent.type(screen.getByLabelText('What would help?'), 'x')
+    await userEvent.click(save)
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('Nope'))
+    expect(screen.getByRole('dialog')).toBeTruthy()
+  })
+
+  it('edits through the same dialog, prefilled, and saves the change', async () => {
+    loads[items] = { data: [item({ details: 'Route 14', dueDate: '2030-01-05' })] }
+    send.mockResolvedValue(item({ title: 'Bus pass, monthly' }))
+    render(<SupportSection providerId="P1" userId="U1" />)
+    await userEvent.click(screen.getByRole('button', { name: /^Edit/ }))
+    const dlg = within(screen.getByRole('dialog', { name: 'Edit follow-up' }))
+    const title = dlg.getByLabelText('What would help?') as HTMLInputElement
+    expect(title.value).toBe('Bus pass')
+    expect((dlg.getByLabelText('Details') as HTMLTextAreaElement).value).toBe('Route 14')
+    expect((dlg.getByLabelText('Follow up by') as HTMLInputElement).value).toBe('2030-01-05')
+    await userEvent.clear(title)
+    await userEvent.type(title, 'Bus pass, monthly')
+    await userEvent.click(dlg.getByRole('button', { name: 'Save' }))
+    expect(send).toHaveBeenCalledWith(
+      'PUT',
+      `${items}/i1`,
+      expect.objectContaining({ title: 'Bus pass, monthly', details: 'Route 14' })
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toBe('Saved "Bus pass, monthly".')
+    )
+  })
+
+  it('clamps long details behind Show more', async () => {
+    loads[items] = { data: [item({ details: 'x'.repeat(300) })] }
+    const { container } = render(<SupportSection providerId="P1" userId="U1" />)
+    expect(container.querySelector('.nt-clamp')).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: 'Show more' }))
+    expect(container.querySelector('.nt-clamp')).toBeNull()
   })
 
   it('confirms before deleting', async () => {
     loads[items] = { data: [item()] }
     send.mockResolvedValue({ deleted: true })
     render(<SupportSection providerId="P1" userId="U1" />)
-    await userEvent.click(screen.getByRole('button', { name: /Delete/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Delete/ }))
     expect(send).not.toHaveBeenCalled()
     const dlg = screen.getByRole('group', { name: /Delete Bus pass/ })
     await userEvent.click(within(dlg).getByRole('button', { name: 'Yes, delete it' }))
     expect(send).toHaveBeenCalledWith('DELETE', `${items}/i1`)
     await waitFor(() => expect(screen.queryByText('Bus pass')).toBeNull())
+  })
+
+  it('embedded: uses the items it is given, loads no list, has no heading or notice of its own', () => {
+    loads[items] = { data: [] }
+    const counts: number[] = []
+    render(
+      <SupportSection
+        providerId="P1"
+        userId="U1"
+        embedded
+        initial={[item(), item({ id: 'z', title: 'Old', status: 'resolved' })] as SupportItemDto[]}
+        onOpenCount={(n) => counts.push(n)}
+      />
+    )
+    expect(loadedPaths).not.toContain(items)
+    expect(screen.getByText('1 open')).toBeTruthy()
+    expect(counts).toContain(1)
+    expect(screen.queryByText(/Learners never can/)).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Support follow-ups' })).toBeNull()
   })
 
   it('shows error and retry', async () => {

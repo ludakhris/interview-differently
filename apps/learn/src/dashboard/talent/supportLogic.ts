@@ -62,3 +62,40 @@ export function sortItems<T extends { status: SupportStatus; dueDate: string | n
     return a.dueDate < b.dueDate ? -1 : 1
   })
 }
+
+export const isDone = (s: SupportStatus): boolean => s === 'resolved' || s === 'cancelled'
+
+/** Whole days a due date is behind today (both YYYY-MM-DD); 0 when it is not behind. */
+export function daysOverdue(dueDate: string, today: string = todayKey()): number {
+  const d = (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${dueDate}T00:00:00Z`)) / 86400000
+  return d > 0 ? Math.round(d) : 0
+}
+
+/** "Oct 14", with the year only when it is not this year. */
+export function dueShort(dueDate: string, today: string = todayKey()): string {
+  const sameYear = dueDate.slice(0, 4) === today.slice(0, 4)
+  return new Date(`${dueDate}T00:00:00Z`).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' }),
+    timeZone: 'UTC',
+  })
+}
+
+/** To-do items (earliest due first, overdue on top, undated last) and finished ones (newest first). */
+export function splitItems<
+  T extends {
+    status: SupportStatus
+    dueDate: string | null
+    resolvedAt: string | null
+    updatedAt: string
+  },
+>(items: T[]): { active: T[]; done: T[] } {
+  const sorted = sortItems(items)
+  return {
+    active: sorted.filter((i) => !isDone(i.status)),
+    done: sorted
+      .filter((i) => isDone(i.status))
+      .sort((a, b) => (b.resolvedAt ?? b.updatedAt).localeCompare(a.resolvedAt ?? a.updatedAt)),
+  }
+}

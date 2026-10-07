@@ -318,8 +318,7 @@ describe('LearnerRecordPage', () => {
     loads[RECORD] = record()
     open()
     expect(screen.getByText(/Things you are tracking to help this person succeed/)).toBeTruthy()
-    expect(screen.getByLabelText('What would help?')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Add item' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Add follow-up' })).toBeTruthy()
     expect(screen.getAllByText('Bus pass').length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: /Support follow-ups/ }).textContent).toContain('1')
   })
@@ -373,7 +372,7 @@ describe('LearnerRecordPage', () => {
     open()
     expect(screen.queryByLabelText('Add a note')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Add note' })).toBeNull()
-    expect(screen.queryByLabelText('What would help?')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Add follow-up' })).toBeNull()
     expect(screen.getByText('Support follow-ups are visible to provider staff only.')).toBeTruthy()
     expect(screen.queryByText(/Profile/)).toBeNull()
     expect(screen.getByText(/only its staff can see or add them/)).toBeTruthy()
@@ -404,7 +403,7 @@ describe('LearnerRecordPage', () => {
     expect(screen.getByText(/No sessions have been held/)).toBeTruthy()
     expect(screen.getByText(/No activity was recorded/)).toBeTruthy()
     expect(screen.getByText('No notes yet.')).toBeTruthy()
-    expect(screen.getByText('Nothing to follow up on yet.')).toBeTruthy()
+    expect(screen.getByText(/No follow-ups yet/)).toBeTruthy()
   })
 
   it('shows loading, then an error with a retry', async () => {
