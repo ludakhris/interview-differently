@@ -147,7 +147,12 @@ function ToolsMenu({ tools, isAnyAdmin }: { tools: ToolKey[]; isAnyAdmin: boolea
                 { label: 'Assessments', path: '/admin/assessments' },
                 { label: 'Institutions & Cohorts', path: '/admin/institutions' },
                 // Platform-wide, so full admins only (the API enforces it too).
-                ...(isAdmin ? [{ label: 'Usage', path: '/admin/usage' }] : []),
+                ...(isAdmin
+                  ? [
+                      { label: 'Usage', path: '/admin/usage' },
+                      { label: 'Platforms', path: '/admin/platforms' },
+                    ]
+                  : []),
               ].map((item) => (
                 <button
                   key={item.path}
