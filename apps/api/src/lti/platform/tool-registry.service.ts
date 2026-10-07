@@ -8,6 +8,7 @@ import {
   type OnModuleInit,
 } from '@nestjs/common'
 import type { Prisma } from '@prisma/client'
+import { randomBytes } from 'node:crypto'
 import { ClerkService } from '../../auth/clerk.service'
 import type { LearnRegistryChange } from '../../learn/learn-types'
 import { LEARN_ROLES } from '../../learn/learn.service'
@@ -37,7 +38,7 @@ export interface Registry {
   connections: StoredConnection[]
 }
 
-interface Who {
+export interface Who {
   userId: string | null
   userName: string
 }
@@ -154,8 +155,13 @@ export class ToolRegistryService implements OnModuleInit {
 
   // ── history ────────────────────────────────────────────────────────────────
 
+  /** Whether this person is still a system administrator (their role can change after they start something). */
+  async isSystemAdmin(userId: string): Promise<boolean> {
+    return (await this.clerk.getRole(userId, 'learn')) === LEARN_ROLES.systemAdmin
+  }
+
   /** Who is making a change, as it should read in the history later. */
-  private async actor(userId: string): Promise<Who> {
+  async whoIs(userId: string): Promise<Who> {
     const p = await this.clerk.getUserProfile(userId, 'learn')
     return { userId, userName: p?.displayName?.trim() || p?.email || userId }
   }
@@ -242,7 +248,7 @@ export class ToolRegistryService implements OnModuleInit {
     await this.assertWorkspaces(tool.workspaceIds)
     if (managedTools().some((t) => t.toolId === tool.toolId))
       throw new ConflictException('A tool with that id already exists')
-    const who = await this.actor(userId)
+    const who = await this.whoIs(userId)
     return this.write('A tool with that id', [
       this.prisma.ltiTool.create({ data: toolColumns(tool) }),
       this.log('tool', tool.toolId, tool.name, 'created', who, diffTool(null, tool)),
@@ -262,7 +268,7 @@ export class ToolRegistryService implements OnModuleInit {
     this.assertConnection(tool.connectionId)
     await this.assertWorkspaces(tool.workspaceIds)
     const changes = diffTool(toolColumns(current), tool)
-    const who = await this.actor(userId)
+    const who = await this.whoIs(userId)
     return this.write('A tool with that id', [
       this.prisma.ltiTool.update({ where: { toolId }, data: toolColumns(tool) }),
       // Saving without changing anything leaves no history row.
@@ -277,11 +283,63 @@ export class ToolRegistryService implements OnModuleInit {
     this.assertManage(role)
     const current = managedTools().find((t) => t.toolId === toolId)
     if (!current) throw new NotFoundException('Tool not found')
-    const who = await this.actor(userId)
+    const who = await this.whoIs(userId)
     return this.write('A tool with that id', [
       this.prisma.ltiTool.delete({ where: { toolId } }),
       this.log('tool', toolId, current.name, 'removed', who, diffTool(toolColumns(current), null)),
     ])
+  }
+
+  // ── dynamic registration ───────────────────────────────────────────────────
+
+  /**
+   * A tool that registered itself (LTI Dynamic Registration): its connection, with a client id and
+   * deployment id the platform makes, and one tool for it, switched off until an admin has looked
+   * at it. `who` is the admin who started the registration. Nothing the tool sent is trusted for an
+   * id: ids come from its name plus a random suffix.
+   */
+  async registerFromTool(
+    who: Who,
+    reg: { name: string; loginUrl: string; launchUrl: string; jwksUrl: string }
+  ): Promise<{ connection: StoredConnection; tool: ToolRow }> {
+    const suffix = () => randomBytes(3).toString('hex')
+    const base =
+      reg.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 24) || 'tool'
+    const connection = validateConnectionInput({
+      id: `${base}-${suffix()}`,
+      name: reg.name,
+      clientId: `ld-${randomBytes(12).toString('base64url')}`,
+      deploymentId: randomBytes(6).toString('hex'),
+      loginUrl: reg.loginUrl,
+      launchUrl: reg.launchUrl,
+      jwksUrl: reg.jwksUrl,
+    })
+    const tool = validateToolInput({
+      toolId: `${base}-${suffix()}`,
+      connectionId: connection.id,
+      name: reg.name,
+      // The tool does not say whether it is a practice lab or an assessment: the admin chooses.
+      kind: 'interview',
+      enabled: false,
+    })
+    await this.write('That registration', [
+      this.prisma.ltiConnection.create({ data: connectionColumns(connection) }),
+      this.prisma.ltiTool.create({ data: toolColumns(tool) }),
+      this.log(
+        'connection',
+        connection.id,
+        connection.name,
+        'created',
+        who,
+        diffConnection(null, connection)
+      ),
+      this.log('tool', tool.toolId, tool.name, 'created', who, diffTool(null, tool)),
+    ])
+    return { connection, tool }
   }
 
   // ── connections ────────────────────────────────────────────────────────────
@@ -302,7 +360,7 @@ export class ToolRegistryService implements OnModuleInit {
     if (managedConnections().some((x) => x.id === c.id))
       throw new ConflictException('A connection with that id already exists')
     this.assertClientId(c)
-    const who = await this.actor(userId)
+    const who = await this.whoIs(userId)
     return this.write('A connection with that id or client id', [
       this.prisma.ltiConnection.create({ data: connectionColumns(c) }),
       this.log('connection', c.id, c.name, 'created', who, diffConnection(null, c)),
@@ -321,7 +379,7 @@ export class ToolRegistryService implements OnModuleInit {
     const c = validateConnectionInput(body, id)
     this.assertClientId(c)
     const changes = diffConnection(current, c)
-    const who = await this.actor(userId)
+    const who = await this.whoIs(userId)
     return this.write('A connection with that client id', [
       this.prisma.ltiConnection.update({ where: { id }, data: connectionColumns(c) }),
       ...(Object.keys(changes).length > 0
@@ -340,7 +398,7 @@ export class ToolRegistryService implements OnModuleInit {
       throw new ConflictException(
         `${using} ${using === 1 ? 'tool uses' : 'tools use'} this connection. Remove ${using === 1 ? 'it' : 'them'} first.`
       )
-    const who = await this.actor(userId)
+    const who = await this.whoIs(userId)
     return this.write('A connection with that id', [
       this.prisma.ltiConnection.delete({ where: { id } }),
       this.log('connection', id, current.name, 'removed', who, diffConnection(current, null)),

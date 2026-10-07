@@ -1,10 +1,11 @@
 import type { LearnConnection, LearnTool, LearnToolList } from '@id/types'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useApiSend, useLoad } from './api'
 import { SYSTEM_ADMIN } from './AdminPages'
 import { useApp } from './app-context'
 import { ConnectionForm, type ConnectionBody } from './ConnectionForm'
 import { Notice } from './DashboardShell'
+import { RegisterPanel } from './RegisterPanel'
 import { draftOf, ToolForm, type ToolBody, type ToolDraft } from './ToolForm'
 import { ToolsHistory } from './ToolsHistory'
 import { useRole } from './shared'
@@ -12,8 +13,13 @@ import {
   accessSummary,
   hostOf,
   KIND_LABEL,
+  newConnections,
   normalizeSelection,
   pickable,
+  registeredText,
+  toolToReview,
+  watchActive,
+  WATCH_MS,
   type PickWs,
 } from './toolsLogic'
 
@@ -36,6 +42,62 @@ export function ToolsPage() {
   const [busy, setBusy] = useState(false)
   const [changes, setChanges] = useState(0)
   const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null)
+
+  const [register, setRegister] = useState<{
+    stage: 'form' | 'waiting'
+    blockedLink: string | null
+  } | null>(null)
+  // Connections added by a registration since this page opened: marked "New" until it is closed.
+  const [fresh, setFresh] = useState<string[]>([])
+  const [announce, setAnnounce] = useState<{ id: string; name: string }[]>([])
+  const baseline = useRef<string[]>([])
+  const banner = useRef<HTMLDivElement>(null)
+  const reloadRef = useRef(reload)
+  reloadRef.current = reload
+  // While a registration may still finish in another tab: when to stop looking (epoch ms).
+  const [watchUntil, setWatchUntil] = useState<number | null>(null)
+  const [live, setLive] = useState('')
+  const watching = watchUntil !== null
+
+  // Coming back from the tool's tab: look again at what the registry holds. This does not depend
+  // on the panel, so closing it or opening another form keeps a registration in progress found.
+  useEffect(() => {
+    if (watchUntil === null) return
+    const stop = () => {
+      setWatchUntil(null)
+      setRegister((r) => (r?.stage === 'waiting' ? null : r))
+    }
+    const left = watchUntil - Date.now()
+    if (left <= 0) return stop()
+    const timer = window.setTimeout(stop, left)
+    const back = () => {
+      if (document.visibilityState === 'hidden') return
+      if (!watchActive(watchUntil, Date.now())) return stop()
+      reloadRef.current()
+    }
+    window.addEventListener('focus', back)
+    document.addEventListener('visibilitychange', back)
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('focus', back)
+      document.removeEventListener('visibilitychange', back)
+    }
+  }, [watchUntil])
+  useEffect(() => {
+    if (!watching || !data) return
+    const added = newConnections(baseline.current, data.connections)
+    if (added.length === 0) return // Nothing yet: keep waiting quietly.
+    baseline.current = [...baseline.current, ...added.map((c) => c.id)]
+    setFresh((f) => [...f, ...added.map((c) => c.id)])
+    setAnnounce((a) => [...a, ...added.map((c) => ({ id: c.id, name: c.name }))])
+    setLive(added.map((c) => registeredText(c.name)).join(' '))
+    // The one-time link is no longer needed: drop it with the "waiting" panel.
+    setRegister((r) => (r?.stage === 'waiting' ? null : r))
+    setChanges((n) => n + 1)
+  }, [watching, data])
+  useEffect(() => {
+    if (announce.length) banner.current?.scrollIntoView?.({ block: 'start' })
+  }, [announce.length])
 
   if (role !== SYSTEM_ADMIN)
     return (
@@ -100,6 +162,34 @@ export function ToolsPage() {
     else if (open) closePanel()
   }
 
+  async function startRegistration(initiationUrl: string): Promise<string | null> {
+    setBusy(true)
+    setMessage(null)
+    try {
+      const out = await send<{ url: string }>('POST', '/learn/tools/registrations', {
+        initiationUrl,
+      })
+      baseline.current = [...new Set([...baseline.current, ...connections.map((c) => c.id)])]
+      setWatchUntil(Date.now() + WATCH_MS)
+      // Not "noopener" in the features: that makes open() return null even when it worked, which
+      // would hide whether the pop-up was blocked. The opener is cut off by hand instead.
+      const tab = window.open(out.url, '_blank')
+      if (tab) tab.opener = null
+      setRegister({ stage: 'waiting', blockedLink: tab ? null : out.url })
+      return null
+    } catch (err) {
+      return (err as Error).message
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function openRegister() {
+    setMessage(null)
+    closePanel()
+    setRegister({ stage: 'form', blockedLink: null })
+  }
+
   function closePanel() {
     setPanel(null)
     setDraft(null)
@@ -107,6 +197,7 @@ export function ToolsPage() {
 
   function openTool(t: LearnTool | null, connectionId: string) {
     setMessage(null)
+    setRegister(null)
     setDraft({
       ...draftOf(t, connectionId),
       selected: normalizeSelection(t?.workspaceIds ?? [], choices),
@@ -116,6 +207,7 @@ export function ToolsPage() {
 
   function openConnection(c: LearnConnection | null) {
     setMessage(null)
+    setRegister(null)
     setDraft(null)
     setPanel({ type: 'connection', editing: c })
   }
@@ -210,8 +302,53 @@ export function ToolsPage() {
           >
             Add a connection
           </button>
+          <button
+            type="button"
+            className="dash-btn-secondary"
+            disabled={busy}
+            onClick={openRegister}
+          >
+            Register a tool from its link
+          </button>
         </div>
       </header>
+
+      <div className="dash-visually-hidden" role="status" aria-live="polite">
+        {live}
+      </div>
+      {announce.length > 0 && (
+        <div ref={banner}>
+          {announce.map((a) => {
+            const review = toolToReview(tools.filter((t) => t.connectionId === a.id))
+            const text = registeredText(a.name)
+            return (
+              <div key={a.id} className="dash-banner dash-tl-registered">
+                <span>{text}</span>
+                <span className="dash-tl-rowbtns">
+                  <button
+                    type="button"
+                    className="dash-btn-secondary dash-tl-small"
+                    onClick={() => {
+                      setAnnounce((x) => x.filter((y) => y.id !== a.id))
+                      openTool(review, a.id)
+                    }}
+                  >
+                    {review ? 'Edit' : 'Add a tool'}
+                  </button>
+                  <button
+                    type="button"
+                    className="dash-btn-quiet"
+                    aria-label={`Dismiss: Registered ${a.name}`}
+                    onClick={() => setAnnounce((x) => x.filter((y) => y.id !== a.id))}
+                  >
+                    Dismiss
+                  </button>
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {message && (
         <p
@@ -220,6 +357,16 @@ export function ToolsPage() {
         >
           {message.text}
         </p>
+      )}
+
+      {register && (
+        <RegisterPanel
+          stage={register.stage}
+          blockedLink={register.blockedLink}
+          busy={busy}
+          onStart={startRegistration}
+          onClose={() => setRegister(null)}
+        />
       )}
 
       {connPanel && (
@@ -262,6 +409,9 @@ export function ToolsPage() {
               <div className="dash-tl-main">
                 <h2 className="dash-card-title" id={`h-conn-${c.id}`}>
                   {c.name} <code className="dash-tl-code">{c.id}</code>
+                  {fresh.includes(c.id) && (
+                    <span className="dash-chip dash-chip-on dash-tl-new">New</span>
+                  )}
                 </h2>
                 <dl className="dash-tl-facts">
                   <div>

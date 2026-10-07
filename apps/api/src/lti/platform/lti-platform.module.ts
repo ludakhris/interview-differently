@@ -5,6 +5,8 @@ import { PrismaModule } from '../../prisma/prisma.module'
 import { LtiStoreModule } from '../lti-store.module'
 import { LtiPlatformController } from './lti-platform.controller'
 import { LtiPlatformService } from './lti-platform.service'
+import { RegistrationController } from './registration.controller'
+import { RegistrationService } from './registration.service'
 import { ToolRegistryController } from './tool-registry.controller'
 import { ToolRegistryService } from './tool-registry.service'
 
@@ -15,8 +17,8 @@ import { ToolRegistryService } from './tool-registry.service'
  */
 @Module({
   imports: [AuthModule, PrismaModule, LtiStoreModule, forwardRef(() => LearnModule)],
-  controllers: [LtiPlatformController, ToolRegistryController],
-  providers: [LtiPlatformService, ToolRegistryService],
+  controllers: [LtiPlatformController, RegistrationController, ToolRegistryController],
+  providers: [LtiPlatformService, ToolRegistryService, RegistrationService],
   exports: [LtiPlatformService, ToolRegistryService],
 })
 export class LtiPlatformModule {}

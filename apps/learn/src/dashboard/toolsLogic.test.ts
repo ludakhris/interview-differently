@@ -10,10 +10,16 @@ import {
   groupWorkspaces,
   hiddenIds,
   hostOf,
+  looksHttps,
+  newConnections,
+  registeredText,
   normalizeSelection,
   pickable,
   toggleWorkspace,
+  toolToReview,
   truncate,
+  watchActive,
+  WATCH_MS,
   type PickWs,
 } from './toolsLogic'
 
@@ -195,5 +201,40 @@ describe('dayLabel', () => {
     expect(dayLabel(new Date(2026, 9, 7, 1, 0).toISOString(), now)).toBe('Today')
     expect(dayLabel(new Date(2026, 9, 6, 23, 0).toISOString(), now)).toBe('Yesterday')
     expect(dayLabel(new Date(2026, 9, 1, 12, 0).toISOString(), now)).toBe('October 1, 2026')
+  })
+})
+
+describe('registering a tool from its link', () => {
+  it('finds only the connections that appeared', () => {
+    const after = [{ id: 'a' }, { id: 'b' }, { id: 'c' }]
+    expect(newConnections(['a'], after).map((c) => c.id)).toEqual(['b', 'c'])
+    expect(newConnections(['a', 'b', 'c'], after)).toEqual([])
+  })
+  it('words the banner', () => {
+    expect(registeredText('Acme Labs')).toBe(
+      'Registered Acme Labs. It is switched off: review it and turn it on.'
+    )
+  })
+  it('pre-checks for https', () => {
+    expect(looksHttps(' https://tool.example/lti/register ')).toBe(true)
+    expect(looksHttps('http://tool.example')).toBe(false)
+    expect(looksHttps('tool.example')).toBe(false)
+    expect(looksHttps('https://a b')).toBe(false)
+  })
+})
+
+describe('watching a registration', () => {
+  it('stops looking when the link has expired', () => {
+    expect(watchActive(null, 5)).toBe(false)
+    expect(watchActive(1000, 999)).toBe(true)
+    expect(watchActive(1000, 1000)).toBe(false)
+    expect(WATCH_MS).toBe(900000)
+  })
+  it('opens the first switched-off tool, else the first tool, else nothing', () => {
+    const on = { id: 1, enabled: true }
+    const off = { id: 2, enabled: false }
+    expect(toolToReview([on, off])).toBe(off)
+    expect(toolToReview([on])).toBe(on)
+    expect(toolToReview([])).toBeNull()
   })
 })

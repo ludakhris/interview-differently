@@ -124,6 +124,39 @@ Rules:
   that time. The cache starts empty and is filled by the first successful read (three tries at start-up, then every
   15 seconds), so no tool can be launched before then: a restriction is never lost to a failed read.
 
+### Dynamic Registration (LTI Dynamic Registration 1.0, platform side)
+
+A tool that supports it can register itself, so an admin does not copy client ids and URLs by hand.
+
+1. A system admin opens `/lms/admin/tools`, chooses "Register a tool from its link" and pastes the tool's
+   registration link (public https). `POST /api/learn/tools/registrations` answers with that link plus
+   `openid_configuration` (the platform's configuration URL) and `registration_token` (one-time, valid 15 minutes,
+   kept only as a hash and tied to the admin). The admin opens it in a new tab.
+2. The tool reads `GET /api/lti/platform/openid-configuration` (issuer, endpoints, key set, supported scopes) and
+   posts its own client registration to `POST /api/lti/platform/registration` with `Authorization: Bearer
+<registration_token>`.
+3. The platform checks the request, then creates a **connection** (client id and deployment id are made by the
+   platform, never taken from the tool) and one **tool** for it, **switched off**, and answers 201 with the
+   registration and its `client_id` and `deployment_id`. The admin reviews it on the page (choose practice lab or
+   graded assessment, wording, who may use it) and switches it on.
+
+What the platform accepts: a web tool (`application_type` web) that signs learners in by `id_token`, authenticates
+with a private key (`private_key_jwt`) and publishes its keys at `jwks_uri` (inline `jwks` is refused). Every URL
+(`initiate_login_uri`, each `redirect_uris` entry, `jwks_uri`) must be public https; the launch URL is the tool's
+`target_link_uri` when it is one of its redirect URIs, else the first. Scopes granted are `openid` and the score
+scope, whichever it asked for. A link works once, and stops working 15 minutes after it was made. A request the platform
+refuses (bad fields) leaves the link usable, for the time it had left, so the tool can send a corrected one. The
+endpoint has no login, so it is also limited by size (32 KB, answered 413 before the body is read), by rate (20
+requests a minute per address; set `TRUST_PROXY` to the number of proxies in front, as the rate limits key on the
+client address), and by who started it: if the admin who made the link is no longer a system administrator when
+the tool uses it, the registration is refused and the link is spent. A tool's name has control, bidirectional and
+zero-width characters removed and is limited to 80 characters. The history shows the connection
+and tool as created by the admin "(tool registration link)". Known limits: a public name that resolves to an
+internal address is not caught (the check is on the URL's host, not on DNS), and a switched-off tool can still ask
+for a token to return a score for work already done, which is why its client id is random and the platform never
+trusts one the tool sends. The platform does not yet register Deep Linking
+messages or read a tool's other message types; they are ignored.
+
 ### The connection and two tools the seed script adds
 
 - Two tools, `id-interview` (name "Interview Differently") and `id-assessment` ("Interview Differently assessment"), share

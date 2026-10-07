@@ -216,3 +216,28 @@ export function dayLabel(iso: string, now: Date = new Date()): string {
 export function timeOf(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
+
+// ── Registering a tool from its own link ───────────────────────────────────
+
+/** Connections in `after` that were not in `before`: what a tool registered while we waited. */
+export function newConnections<T extends { id: string }>(before: string[], after: T[]): T[] {
+  return after.filter((c) => !before.includes(c.id))
+}
+
+export function registeredText(name: string): string {
+  return `Registered ${name}. It is switched off: review it and turn it on.`
+}
+
+/** A quick pre-check only; the API decides what is allowed. */
+export const looksHttps = (url: string): boolean => /^https:\/\/\S+$/i.test(url.trim())
+
+/** How long a registration link lives, so how long to keep looking for what it adds. */
+export const WATCH_MS = 15 * 60 * 1000
+
+export const watchActive = (until: number | null, now: number): boolean =>
+  until !== null && now < until
+
+/** The tool a "Registered" banner opens: the first one switched off, else the first, else none. */
+export function toolToReview<T extends { enabled: boolean }>(tools: T[]): T | null {
+  return tools.find((t) => !t.enabled) ?? tools[0] ?? null
+}

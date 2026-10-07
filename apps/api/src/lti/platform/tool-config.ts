@@ -105,7 +105,7 @@ function flag(v: unknown, field: string, fallback: boolean): boolean {
 }
 
 /** An https URL, or http only for a local development host. */
-function url(v: unknown, field: string): string {
+export function publicHttpsUrl(v: unknown, field: string): string {
   const raw = text(v, field, 500)
   let u: URL
   try {
@@ -183,9 +183,9 @@ export function validateConnectionInput(input: unknown, connectionId?: string): 
     name: text(b.name, 'Name', 80),
     clientId: text(b.clientId, 'Client id', 200),
     deploymentId: text(b.deploymentId, 'Deployment id', 200),
-    loginUrl: url(b.loginUrl, 'Login URL'),
-    launchUrl: url(b.launchUrl, 'Launch URL'),
-    jwksUrl: url(b.jwksUrl, 'Key set URL'),
+    loginUrl: publicHttpsUrl(b.loginUrl, 'Login URL'),
+    launchUrl: publicHttpsUrl(b.launchUrl, 'Launch URL'),
+    jwksUrl: publicHttpsUrl(b.jwksUrl, 'Key set URL'),
   }
 }
 

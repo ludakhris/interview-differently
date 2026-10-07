@@ -13,6 +13,7 @@ import {
 import { LearnGuard } from '../../auth/learn.guard'
 import type { LearnToolList } from '../../learn/learn-types'
 import { connectionView, toolView } from './tool-config'
+import { RegistrationService } from './registration.service'
 import { ToolRegistryService, type Registry } from './tool-registry.service'
 
 interface LearnRequest {
@@ -34,7 +35,10 @@ const view = (r: Registry): LearnToolList => ({
 @Controller('learn/tools')
 @UseGuards(LearnGuard)
 export class ToolRegistryController {
-  constructor(private readonly registry: ToolRegistryService) {}
+  constructor(
+    private readonly registry: ToolRegistryService,
+    private readonly registration: RegistrationService
+  ) {}
 
   @Get()
   async list(@Req() req: LearnRequest) {
@@ -46,6 +50,16 @@ export class ToolRegistryController {
   @Get('history')
   history(@Req() req: LearnRequest, @Query('subjectId') subjectId?: string) {
     return this.registry.history(req.userRole, subjectId || undefined)
+  }
+
+  /**
+   * Starts registering a tool from its registration link: answers with the link to open, which
+   * carries the platform's configuration URL and a one-time token (LTI Dynamic Registration).
+   */
+  @Post('registrations')
+  async startRegistration(@Req() req: LearnRequest, @Body() body: { initiationUrl?: unknown }) {
+    const who = await this.registry.whoIs(req.userId)
+    return this.registration.start(req.userRole, who, body?.initiationUrl)
   }
 
   // Connection routes come before `:id` so "connections" is never read as a tool id.

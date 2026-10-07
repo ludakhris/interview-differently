@@ -3,9 +3,12 @@ import { NestFactory } from '@nestjs/core'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 import { AppModule } from './app.module'
 import { corsOrigin } from './cors'
+import { limitRegistrationBody } from './lti/registration-limit'
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
+  // The tool registration endpoint has no login: keep its body small (before the 5mb parser below).
+  limitRegistrationBody(app)
   // Express's default 100kb JSON limit rejects dataset setup scripts (#25) — a
   // few thousand INSERT rows is already ~200kb.
   app.useBodyParser('json', { limit: '5mb' })

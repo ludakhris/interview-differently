@@ -358,7 +358,7 @@ describe('ToolRegistryService', () => {
     ltiRegistryChange: { create: jest.fn(), createMany: jest.fn(), findMany: jest.fn() },
     $transaction: jest.fn(),
   }
-  const clerk = { getUserProfile: jest.fn() }
+  const clerk = { getUserProfile: jest.fn(), getRole: jest.fn() }
   const service = new ToolRegistryService(
     prisma as unknown as PrismaService,
     clerk as unknown as ClerkService
@@ -638,6 +638,75 @@ describe('ToolRegistryService', () => {
       expect(prisma.ltiRegistryChange.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ subject: 'connection', action: 'removed' }),
       })
+    })
+  })
+
+  describe('who is still an administrator', () => {
+    it('reads the role fresh from the identity service', async () => {
+      clerk.getRole.mockResolvedValue('system-admin')
+      expect(await service.isSystemAdmin('u1')).toBe(true)
+      clerk.getRole.mockResolvedValue('agency-admin')
+      expect(await service.isSystemAdmin('u1')).toBe(false)
+      clerk.getRole.mockResolvedValue(null)
+      expect(await service.isSystemAdmin('u1')).toBe(false)
+      expect(clerk.getRole).toHaveBeenCalledWith('u1', 'learn')
+    })
+  })
+
+  describe('a tool that registered itself', () => {
+    const reg = {
+      name: 'Acme Labs!',
+      loginUrl: 'https://acme.example/login',
+      launchUrl: 'https://acme.example/launch',
+      jwksUrl: 'https://acme.example/jwks',
+    }
+    const who = { userId: 'u1', userName: 'Boss Person (tool registration link)' }
+
+    it('gets a connection with ids the platform made, and one tool that is switched off', async () => {
+      const { connection, tool } = await service.registerFromTool(who, reg)
+      expect(connection).toMatchObject({
+        name: 'Acme Labs!',
+        loginUrl: reg.loginUrl,
+        launchUrl: reg.launchUrl,
+        jwksUrl: reg.jwksUrl,
+      })
+      expect(connection.id).toMatch(/^acme-labs-[0-9a-f]{6}$/)
+      expect(connection.clientId).toMatch(/^ld-[A-Za-z0-9_-]{16}$/)
+      expect(connection.deploymentId).toMatch(/^[0-9a-f]{12}$/)
+      expect(tool).toMatchObject({
+        connectionId: connection.id,
+        name: 'Acme Labs!',
+        enabled: false,
+        workspaceIds: [],
+      })
+      expect(prisma.ltiConnection.create).toHaveBeenCalledTimes(1)
+      expect(prisma.ltiTool.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ enabled: false, connectionId: connection.id }),
+      })
+    })
+
+    it('logs both rows as made by the admin who started the registration', async () => {
+      await service.registerFromTool(who, reg)
+      const rows = prisma.ltiRegistryChange.create.mock.calls.map((c) => c[0].data)
+      expect(rows.map((r) => [r.subject, r.action, r.userId, r.userName])).toEqual([
+        ['connection', 'created', 'u1', 'Boss Person (tool registration link)'],
+        ['tool', 'created', 'u1', 'Boss Person (tool registration link)'],
+      ])
+    })
+
+    it('makes different ids and client ids every time, whatever the name', async () => {
+      const a = await service.registerFromTool(who, reg)
+      const b = await service.registerFromTool(who, { ...reg, name: '***' })
+      expect(a.connection.clientId).not.toBe(b.connection.clientId)
+      expect(a.connection.id).not.toBe(b.connection.id)
+      expect(b.connection.id).toMatch(/^tool-[0-9a-f]{6}$/)
+    })
+
+    it('still refuses a URL that is not public https, writing nothing', async () => {
+      await expect(
+        service.registerFromTool(who, { ...reg, jwksUrl: 'https://10.0.0.5/jwks' })
+      ).rejects.toThrow(/public address/)
+      expect(prisma.$transaction).not.toHaveBeenCalled()
     })
   })
 
