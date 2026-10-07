@@ -2,7 +2,6 @@ import { BadRequestException, ForbiddenException, NotFoundException } from '@nes
 import type { PrismaService } from '../../prisma/prisma.service'
 import { ProviderAccessService } from '../provider-access.service'
 import { LearnService } from '../learn.service'
-import { toolLaunchTime } from './activity-rules'
 import {
   activityCsv,
   csvCell,
@@ -71,10 +70,23 @@ const prisma = {
         (x) => x.id === where.id && x.lastSeenAt.getTime() === where.lastSeenAt.getTime()
       )
       if (!r) return { count: 0 }
-      r.seconds += data.seconds.increment
+      if (typeof data.seconds === 'number') r.seconds = data.seconds
+      else r.seconds += data.seconds.increment
       r.lastSeenAt = data.lastSeenAt
       return { count: 1 }
     }),
+    findMany: jest.fn(async ({ where, take }) =>
+      rows
+        .filter(
+          (r) =>
+            r.enrollmentId === where.enrollmentId &&
+            r.itemId === where.itemId &&
+            r.kind === where.kind &&
+            r.startedAt.getTime() >= where.startedAt.gte.getTime()
+        )
+        .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
+        .slice(0, take)
+    ),
     create: jest.fn(async ({ data }) => {
       rows.push({ id: `r${nextId++}`, ...data })
       return data
@@ -257,26 +269,70 @@ describe('tool estimate', () => {
       ['2026-10-08', 600],
     ])
   })
-  it('writes estimated rows of kind tool', async () => {
-    await svc.recordToolEstimate('E1', 'learner', 'item-1', T0, at(600))
-    expect(rows).toHaveLength(1)
-    expect(rows[0]).toMatchObject({ kind: 'tool', estimated: true, seconds: 600 })
-    await svc.recordToolEstimate('E1', 'learner', 'item-1', at(600), T0)
-    expect(rows).toHaveLength(1)
+})
+
+describe('tool time (launch row, closed at score return)', () => {
+  const tool = () => rows.filter((r) => r.kind === 'tool')
+
+  it('a launch writes one open estimated row', async () => {
+    await svc.openToolLaunch('E1', 'learner', 'item-1', T0)
+    expect(tool()).toHaveLength(1)
+    expect(tool()[0]).toMatchObject({
+      kind: 'tool',
+      estimated: true,
+      seconds: 0,
+      startedAt: T0,
+      lastSeenAt: T0,
+      day: new Date('2026-10-07T00:00:00.000Z'),
+    })
   })
-  it('reads a launch time only when it is honest', () => {
-    const now = at(1000)
-    expect(toolLaunchTime(undefined, now)).toBeNull()
-    expect(toolLaunchTime({}, now)).toBeNull()
-    expect(toolLaunchTime({ launchedAt: 'junk' }, now)).toBeNull()
-    expect(toolLaunchTime({ launchedAt: at(2000).toISOString() }, now)).toBeNull()
-    // launched before the previous score came back: belongs to an earlier attempt
-    expect(
-      toolLaunchTime({ launchedAt: at(100).toISOString(), at: at(200).toISOString() }, now)
-    ).toBeNull()
-    expect(toolLaunchTime({ launchedAt: at(100).toISOString() }, now)?.toISOString()).toBe(
-      at(100).toISOString()
-    )
+  it('a relaunch reuses the open row; one older than 4 h gets a new row', async () => {
+    await svc.openToolLaunch('E1', 'learner', 'item-1', T0)
+    await svc.openToolLaunch('E1', 'learner', 'item-1', at(600))
+    expect(tool()).toHaveLength(1)
+    await svc.openToolLaunch('E1', 'learner', 'item-1', at(4 * 3600 + 1))
+    expect(tool()).toHaveLength(2)
+  })
+  it('a score closes the row with the elapsed seconds', async () => {
+    await svc.openToolLaunch('E1', 'learner', 'item-1', T0)
+    await svc.closeToolLaunch('E1', 'item-1', at(600))
+    expect(tool()).toHaveLength(1)
+    expect(tool()[0]).toMatchObject({ seconds: 600, lastSeenAt: at(600) })
+  })
+  it('caps at 4 h', async () => {
+    await svc.openToolLaunch('E1', 'learner', 'item-1', T0)
+    await svc.closeToolLaunch('E1', 'item-1', at(4 * 3600))
+    expect(tool()[0].seconds).toBe(4 * 3600)
+    // a score 5 h later finds no open launch within 4 h: writes nothing
+    await svc.openToolLaunch('E1', 'learner', 'item-1', at(10 * 3600))
+    await svc.closeToolLaunch('E1', 'item-1', at(15 * 3600))
+    expect(tool().map((r) => r.seconds)).toEqual([4 * 3600, 0])
+  })
+  it('a score with no launch row writes nothing', async () => {
+    await svc.closeToolLaunch('E1', 'item-1', at(600))
+    expect(rows).toHaveLength(0)
+  })
+  it('a repeated score does not count twice', async () => {
+    await svc.openToolLaunch('E1', 'learner', 'item-1', T0)
+    await svc.closeToolLaunch('E1', 'item-1', at(600))
+    await svc.closeToolLaunch('E1', 'item-1', at(900))
+    expect(tool()).toHaveLength(1)
+    expect(total()).toBe(600)
+  })
+  it('an instant score still closes the row', async () => {
+    await svc.openToolLaunch('E1', 'learner', 'item-1', T0)
+    await svc.closeToolLaunch('E1', 'item-1', T0)
+    await svc.closeToolLaunch('E1', 'item-1', at(900))
+    expect(total()).toBe(0)
+  })
+  it('splits at UTC midnight', async () => {
+    const start = new Date('2026-10-07T23:30:00.000Z')
+    await svc.openToolLaunch('E1', 'learner', 'item-1', start)
+    await svc.closeToolLaunch('E1', 'item-1', at(2400, start))
+    expect(tool().map((r) => [r.day.toISOString().slice(0, 10), r.seconds])).toEqual([
+      ['2026-10-07', 1800],
+      ['2026-10-08', 600],
+    ])
   })
 })
 

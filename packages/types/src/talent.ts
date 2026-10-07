@@ -218,9 +218,19 @@ export interface LearnerTalentProfileEntry {
   profile: TalentProfileDto | null
 }
 
-/** What staff see: the learner's profile including compensation. Read-only for staff. */
-export interface TalentProfileStaffView extends TalentProfileDto {
+/** What staff see on opening a profile: no pay, only whether any was given. Read-only for staff. */
+export interface TalentProfileStaffView extends Omit<
+  TalentProfileDto,
+  'previousCompensation' | 'targetCompensation'
+> {
   userId: string
+  hasCompensation: boolean
+}
+
+/** GET .../participants/:userId/compensation. Fetched only on an explicit reveal, and audited. */
+export interface TalentCompensation {
+  previousCompensation: number | null
+  targetCompensation: number | null
 }
 
 /** Short-lived link to download a resume. */

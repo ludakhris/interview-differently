@@ -130,6 +130,20 @@ export class TalentController {
     res.json(profile)
   }
 
+  @Get('providers/:providerId/participants/:userId/compensation')
+  @Header('Cache-Control', 'no-store')
+  staffCompensation(
+    @Req() req: LearnRequest,
+    @Param('providerId') providerId: string,
+    @Param('userId') userId: string
+  ) {
+    return this.service.staffCompensation(
+      { userId: req.userId, role: req.userRole },
+      providerId,
+      userId
+    )
+  }
+
   @Get('providers/:providerId/participants/:userId/resume')
   @Header('Cache-Control', 'no-store')
   staffResume(

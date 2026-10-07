@@ -22,6 +22,7 @@ import type {
   TalentParticipantHeader,
   TalentParticipantRow,
   TalentProfileDto,
+  TalentCompensation,
   TalentProfileStaffView,
 } from '../talent-types'
 import { csvRow } from './talent-csv'
@@ -333,7 +334,7 @@ export class TalentService {
     return (await this.participants(providerId, { filters })).map((r) => r.row)
   }
 
-  /** Includes compensation, so every call writes the audit rows first. */
+  /** Never carries pay: only whether any exists. Pay comes from `staffCompensation`. */
   async staffProfile(
     actor: Actor,
     providerId: string,
@@ -351,15 +352,37 @@ export class TalentService {
       action: 'read',
     })
     if (!p) return null
-    if (p.previousCompensation !== null || p.targetCompensation !== null)
-      await this.audit.record({
-        actorId: actor.userId,
-        providerId,
-        subjectUserId: userId,
-        resource: 'compensation',
-        action: 'read',
-      })
-    return { ...toProfileDto(p), userId }
+    const { previousCompensation, targetCompensation, ...rest } = toProfileDto(p)
+    return {
+      ...rest,
+      userId,
+      hasCompensation: previousCompensation !== null || targetCompensation !== null,
+    }
+  }
+
+  /** The audit row is awaited first: if it cannot be written, the amounts are never read. */
+  async staffCompensation(
+    actor: Actor,
+    providerId: string,
+    userId: string
+  ): Promise<TalentCompensation> {
+    await this.staffOf(actor, providerId, userId)
+    await this.audit.record({
+      actorId: actor.userId,
+      providerId,
+      subjectUserId: userId,
+      resource: 'compensation',
+      action: 'read',
+    })
+    const p = await this.prisma.talentProfile.findUnique({
+      where: { providerId_userId: { providerId, userId } },
+      select: { previousCompensation: true, targetCompensation: true },
+    })
+    if (!p) throw new NotFoundException('No profile')
+    return {
+      previousCompensation: p.previousCompensation,
+      targetCompensation: p.targetCompensation,
+    }
   }
 
   async staffResumeLink(actor: Actor, providerId: string, userId: string): Promise<ResumeLink> {

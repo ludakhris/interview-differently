@@ -43,7 +43,6 @@ import { isSupportedItemType } from './course-config'
 import { doneSince, parseSkills, remediationOf, reviewOf, skillResults } from './skills'
 import { isVideoId, VIDEO_COMPLETE_PCT } from './youtube'
 import { ActivityService } from './activity/activity.service'
-import { toolLaunchTime } from './activity/activity-rules'
 import { randomUUID } from 'node:crypto'
 
 /** A tool's score is still accepted this long after the cohort ends (a timed assessment begun just before). */
@@ -948,13 +947,10 @@ export class LearnerService {
         return this.item(userId, cohortId, itemId)
       throw new ConflictException(`You have used all ${cap} attempts.`)
     }
-    // #69 E: tool time, estimated from launch to score return. Only with a recorded launch time;
-    // a failure here never loses the score.
-    const launchedAt = toolLaunchTime(progress?.data, new Date())
-    if (launchedAt && this.activity)
-      await this.activity
-        .recordToolEstimate(e.id, userId, itemId, launchedAt, new Date())
-        .catch(() => undefined)
+    // #69 E: tool time, from the launch row to now. No launch row, nothing written; a failure
+    // here never loses the score.
+    if (this.activity)
+      await this.activity.closeToolLaunch(e.id, itemId, new Date()).catch(() => undefined)
     // Plan first, so a skill flagged by this result holds the course open.
     const added = await this.updatePlan(e.id, e.cohort.course, itemId)
     await this.completeIfDone(e.id, e.status, e.cohort.course.id)

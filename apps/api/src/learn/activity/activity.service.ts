@@ -14,6 +14,7 @@ import {
   decideBeat,
   eachDay,
   ENDED_GRACE_MS,
+  MAX_TOOL_ESTIMATE_S,
   parseRange,
   splitToolEstimate,
   utcDay,
@@ -29,7 +30,7 @@ const iso = (d: Date | null | undefined): string | null => (d ? d.toISOString() 
 /**
  * Time learners spent in online courses (#69 E).
  * Measured: a heartbeat from the learner pages while the page was visible and the learner active.
- * Estimated: a connected tool's time from launch to score return (`estimated` true, always reported apart).
+ * Estimated: a connected tool's time from launch (an open row) to score return (closes it) (`estimated` true, always reported apart).
  */
 @Injectable()
 export class ActivityService {
@@ -112,20 +113,76 @@ export class ActivityService {
   }
 
   /**
-   * A connected tool's time, from launch to score return. Marked `estimated`: the tool does not
-   * report its own time. Never negative, at most 4 hours, split at UTC midnight.
+   * A learner launched a connected tool: opens one `tool` row (estimated, seconds 0, lastSeenAt =
+   * startedAt, which marks it open). A repeat launch within 4 hours of an open row reuses it, so
+   * rows do not stack. Callers treat this as best effort.
    */
-  async recordToolEstimate(
+  async openToolLaunch(
     enrollmentId: string,
     userId: string,
     itemId: string,
-    startedAt: Date,
-    endedAt: Date
+    now: Date = new Date()
   ): Promise<void> {
-    for (const part of splitToolEstimate(startedAt, endedAt)) {
+    const open = await this.findOpenToolRow(enrollmentId, itemId, now)
+    if (open) return
+    await this.prisma.activitySession.create({
+      data: {
+        userId,
+        enrollmentId,
+        itemId,
+        kind: 'tool',
+        day: new Date(`${utcDay(now)}T00:00:00.000Z`),
+        startedAt: now,
+        lastSeenAt: now,
+        seconds: 0,
+        estimated: true,
+      },
+    })
+  }
+
+  /** A tool row not yet closed (lastSeenAt still equals startedAt) that started within 4 hours. */
+  private async findOpenToolRow(enrollmentId: string, itemId: string, now: Date) {
+    const rows = await this.prisma.activitySession.findMany({
+      where: {
+        enrollmentId,
+        itemId,
+        kind: 'tool',
+        estimated: true,
+        startedAt: { gte: new Date(now.getTime() - MAX_TOOL_ESTIMATE_S * 1000) },
+      },
+      orderBy: { startedAt: 'desc' },
+      take: 5,
+      select: { id: true, userId: true, startedAt: true, lastSeenAt: true },
+    })
+    return rows.find((r) => r.lastSeenAt.getTime() === r.startedAt.getTime()) ?? null
+  }
+
+  /**
+   * A score came back: closes the latest open tool row for this enrollment and item. Seconds are
+   * launch to now, never negative, at most 4 hours, split at UTC midnight (the first part stays on
+   * the row, a later part gets its own row). No open launch row means nothing is written; a
+   * repeated report finds the row closed and adds nothing.
+   */
+  async closeToolLaunch(
+    enrollmentId: string,
+    itemId: string,
+    now: Date = new Date()
+  ): Promise<void> {
+    const open = await this.findOpenToolRow(enrollmentId, itemId, now)
+    if (!open) return
+    const [first, ...rest] = splitToolEstimate(open.startedAt, now)
+    // Nothing elapsed: still mark it closed so a retried report cannot count the launch later.
+    const closedAt = first?.lastSeenAt ?? new Date(open.startedAt.getTime() + 1)
+    // Only if still open: two reports at once close it once.
+    const done = await this.prisma.activitySession.updateMany({
+      where: { id: open.id, lastSeenAt: open.lastSeenAt },
+      data: { seconds: first?.seconds ?? 0, lastSeenAt: closedAt },
+    })
+    if (done.count === 0) return
+    for (const part of rest)
       await this.prisma.activitySession.create({
         data: {
-          userId,
+          userId: open.userId,
           enrollmentId,
           itemId,
           kind: 'tool',
@@ -136,7 +193,6 @@ export class ActivityService {
           estimated: true,
         },
       })
-    }
   }
 
   // ── reports ───────────────────────────────────────────────────────────────

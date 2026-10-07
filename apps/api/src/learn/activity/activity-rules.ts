@@ -150,20 +150,3 @@ export function activityCsv(rows: CsvRow[]): string {
   )
   return [CSV_COLUMNS.join(','), ...lines].join('\r\n') + '\r\n'
 }
-
-/**
- * When the learner launched the tool, read from the item's progress data (`launchedAt`, an ISO
- * time written by the launch step). Null, so no estimate is recorded, when it is missing, invalid,
- * in the future, or not after the previous score came back (a launch that belongs to an earlier
- * attempt is not this attempt's time).
- */
-export function toolLaunchTime(data: unknown, now: Date): Date | null {
-  if (!data || typeof data !== 'object') return null
-  const d = data as { launchedAt?: unknown; at?: unknown }
-  if (typeof d.launchedAt !== 'string') return null
-  const launched = Date.parse(d.launchedAt)
-  if (Number.isNaN(launched) || launched > now.getTime()) return null
-  const previous = typeof d.at === 'string' ? Date.parse(d.at) : NaN
-  if (!Number.isNaN(previous) && launched <= previous) return null
-  return new Date(launched)
-}

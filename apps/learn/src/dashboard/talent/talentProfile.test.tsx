@@ -227,33 +227,62 @@ describe('the learner form', () => {
   })
 })
 
-const staffView = (over: Partial<TalentProfileStaffView> = {}): TalentProfileStaffView => ({
-  ...dto({ previousCompensation: 61250, targetCompensation: 88000, industries: ['Aerospace'] }),
-  userId: 'u1',
-  ...over,
+const staffView = (over: Partial<TalentProfileStaffView> = {}): TalentProfileStaffView => {
+  const { previousCompensation, targetCompensation, ...rest } = dto({ industries: ['Aerospace'] })
+  void previousCompensation
+  void targetCompensation
+  return { ...rest, userId: 'u1', hasCompensation: true, ...over }
+}
+const PAY = '/learn/providers/P1/participants/u1/compensation'
+const payResponse = () => ({
+  json: async () => ({ previousCompensation: 61250, targetCompensation: 88000 }),
 })
 
 describe('the compensation reveal', () => {
-  it('keeps pay out of the page until it is asked for, and can hide it again', async () => {
+  it('fetches pay only on click, shows a loading state, and Hide drops it', async () => {
     const user = userEvent.setup()
-    const { container } = render(<StaffProfileView profile={staffView()} onOpenResume={vi.fn()} />)
+    let release: (v: unknown) => void = () => {}
+    apiFetch.mockReturnValue(new Promise((r) => (release = r)))
+    const { container } = render(
+      <StaffProfileView profile={staffView()} compensationPath={PAY} onOpenResume={vi.fn()} />
+    )
+    expect(apiFetch).not.toHaveBeenCalled()
     expect(container.textContent).not.toMatch(/61,250|88,000/)
     expect(screen.getByRole('heading', { name: 'Compensation' })).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Show compensation' }))
-    expect(container.textContent).toMatch(/\$61,250 a year/)
+    expect(apiFetch).toHaveBeenCalledTimes(1)
+    expect(apiFetch).toHaveBeenCalledWith(PAY)
+    expect(screen.getByRole('button', { name: 'Loading…' })).toBeTruthy()
+    release(payResponse())
+    expect(await screen.findByText(/\$61,250 a year/)).toBeTruthy()
     expect(container.textContent).toMatch(/\$88,000 a year/)
     await user.click(screen.getByRole('button', { name: 'Hide compensation' }))
+    expect(container.textContent).not.toMatch(/61,250|88,000/)
+    // Never persisted outside component state.
+    expect(JSON.stringify({ ...localStorage })).not.toMatch(/61250|88000/)
+    expect(JSON.stringify({ ...sessionStorage })).not.toMatch(/61250|88000/)
+    expect(window.location.href).not.toMatch(/61250|88000/)
+  })
+  it('shows the server error when the reveal fails (for example the audit write)', async () => {
+    const user = userEvent.setup()
+    apiFetch.mockRejectedValue(new Error('db down'))
+    const { container } = render(
+      <StaffProfileView profile={staffView()} compensationPath={PAY} onOpenResume={vi.fn()} />
+    )
+    await user.click(screen.getByRole('button', { name: 'Show compensation' }))
+    expect((await screen.findByRole('alert')).textContent).toMatch(/db down/)
     expect(container.textContent).not.toMatch(/61,250|88,000/)
   })
   it('offers no reveal when no pay was given, and handles no profile', () => {
     const { rerender, container } = render(
       <StaffProfileView
-        profile={staffView({ previousCompensation: null, targetCompensation: null })}
+        profile={staffView({ hasCompensation: false })}
+        compensationPath={PAY}
         onOpenResume={vi.fn()}
       />
     )
     expect(screen.queryByRole('button', { name: 'Show compensation' })).toBeNull()
-    rerender(<StaffProfileView profile={null} onOpenResume={vi.fn()} />)
+    rerender(<StaffProfileView profile={null} compensationPath={PAY} onOpenResume={vi.fn()} />)
     expect(container.textContent).toMatch(/has not started a profile/)
   })
   it('downloads the resume on request', async () => {
@@ -261,6 +290,7 @@ describe('the compensation reveal', () => {
     const open = vi.fn()
     render(
       <StaffProfileView
+        compensationPath={PAY}
         profile={staffView({
           resume: { name: 'cv.pdf', size: 2048, uploadedAt: '2026-10-01T00:00:00Z' },
         })}

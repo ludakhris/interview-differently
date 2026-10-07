@@ -23,7 +23,7 @@ export function TalentParticipantPage({
   const apiFetch = useApiFetch()
   const base = `/learn/providers/${providerId}/participants/${userId}`
   const header = useLoad<TalentParticipantHeader>(base)
-  // Loading the profile is what the access log records as a view.
+  // Loading the profile is what the access log records as a view. It carries no pay.
   const profile = useLoad<TalentProfileStaffView | null>(header.data ? `${base}/profile` : null)
   const [busy, setBusy] = useState(false)
   const [resumeError, setResumeError] = useState<string | null>(null)
@@ -66,6 +66,7 @@ export function TalentParticipantPage({
         ) : (
           <StaffProfileView
             profile={profile.data}
+            compensationPath={`${base}/compensation`}
             onOpenResume={openResume}
             resumeBusy={busy}
             resumeError={resumeError}

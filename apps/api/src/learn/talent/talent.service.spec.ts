@@ -294,6 +294,7 @@ describe('staff access', () => {
     ['search', () => service.searchParticipants(who, 'P1', {})],
     ['header', () => service.participantHeader(who, 'P1', 'L1')],
     ['profile', () => service.staffProfile(who, 'P1', 'L1')],
+    ['compensation', () => service.staffCompensation(who, 'P1', 'L1')],
     ['resume', () => service.staffResumeLink(who, 'P1', 'L1')],
     ['export', () => service.exportCsv(who, 'P1', {}, true)],
   ]
@@ -316,6 +317,7 @@ describe('staff access', () => {
   it('404s a person who is not a participant of the provider', async () => {
     await expect(service.participantHeader(staff, 'P1', 'L2')).rejects.toThrow(NotFoundException)
     await expect(service.staffProfile(staff, 'P1', 'L2')).rejects.toThrow(NotFoundException)
+    await expect(service.staffCompensation(staff, 'P1', 'L2')).rejects.toThrow(NotFoundException)
     await expect(service.staffResumeLink(staff, 'P1', 'L2')).rejects.toThrow(NotFoundException)
     expect(state.logs).toEqual([])
   })
@@ -327,22 +329,40 @@ describe('staff access', () => {
 })
 
 describe('audit', () => {
-  it('profile view logs the read and the compensation read when an amount exists', async () => {
+  const trail = () => state.logs.map((l) => `${l.resource}/${l.action}/${l.subjectUserId}`)
+  it('opening the profile logs talent_profile/read only and carries no amount', async () => {
     const view = await service.staffProfile(staff, 'P1', 'L1')
-    expect(view?.previousCompensation).toBe(PREV)
-    expect(state.logs.map((l) => `${l.resource}/${l.action}/${l.subjectUserId}`)).toEqual([
-      'talent_profile/read/L1',
-      'compensation/read/L1',
-    ])
+    expect(view?.hasCompensation).toBe(true)
+    expect(JSON.stringify(view)).not.toMatch(/"(previous|target)Compensation"|7770001|7770002/)
+    expect(trail()).toEqual(['talent_profile/read/L1'])
   })
-  it('no compensation row when neither amount is set; null when there is no profile', async () => {
+  it('hasCompensation is false with no amounts; null when there is no profile', async () => {
     state.profiles = [base('L1', 'P1')]
-    await service.staffProfile(staff, 'P1', 'L1')
-    expect(state.logs.map((l) => l.resource)).toEqual(['talent_profile'])
+    expect((await service.staffProfile(staff, 'P1', 'L1'))?.hasCompensation).toBe(false)
+    expect(trail()).toEqual(['talent_profile/read/L1'])
     state.logs = []
     state.profiles = []
     expect(await service.staffProfile(staff, 'P1', 'L1')).toBeNull()
-    expect(state.logs.map((l) => l.resource)).toEqual(['talent_profile'])
+    expect(trail()).toEqual(['talent_profile/read/L1'])
+  })
+  it('the reveal returns the amounts and logs compensation/read once', async () => {
+    await service.staffProfile(staff, 'P1', 'L1')
+    state.logs = []
+    expect(await service.staffCompensation(staff, 'P1', 'L1')).toEqual({
+      previousCompensation: PREV,
+      targetCompensation: TARGET,
+    })
+    expect(trail()).toEqual(['compensation/read/L1'])
+  })
+  it('the reveal 404s without a profile', async () => {
+    state.profiles = []
+    await expect(service.staffCompensation(staff, 'P1', 'L1')).rejects.toThrow(NotFoundException)
+  })
+  it('a failing audit write fails the reveal before the amounts are read', async () => {
+    state.failLog = true
+    prisma.talentProfile.findUnique.mockClear()
+    await expect(service.staffCompensation(staff, 'P1', 'L1')).rejects.toThrow('db down')
+    expect(prisma.talentProfile.findUnique).not.toHaveBeenCalled()
   })
   it('a resume download is logged with the subject', async () => {
     await service.staffResumeLink(staff, 'P1', 'L1')
@@ -398,14 +418,15 @@ describe('search and filters', () => {
   })
 })
 
-describe('compensation never leaks outside the staff profile and the opted-in export', () => {
+describe('compensation never leaks outside the reveal endpoint and the opted-in export', () => {
   it('list rows, header, resume link, default export and audit rows carry no amount', async () => {
     const collected: unknown[] = []
     collected.push(await service.searchParticipants(staff, 'P1', {}))
     collected.push(await service.participantHeader(staff, 'P1', 'L1'))
     collected.push(await service.staffResumeLink(staff, 'P1', 'L1'))
     collected.push(await service.exportCsv(staff, 'P1', {}, false))
-    collected.push(await service.staffProfile(staff, 'P1', 'L1').then(() => 'viewed'))
+    // The profile view itself must carry no amount (the learner own dto and the reveal do).
+    collected.push(await service.staffProfile(staff, 'P1', 'L1'))
     collected.push(state.logs)
     // Errors from every failing path.
     for (const bad of [{ previousCompensation: PREV * 100 }, { targetCompensation: -PREV }]) {
@@ -415,6 +436,7 @@ describe('compensation never leaks outside the staff profile and the opted-in ex
     const text = JSON.stringify(collected)
     expect(text).not.toMatch(new RegExp(`${PREV}|${TARGET}|${PREV * 100}`))
     expect(text).not.toMatch(/compensation_|"previousCompensation"|"targetCompensation"/i)
+    expect(text).toContain('"hasCompensation":true')
     // The list query never even reads the columns.
     const select = prisma.talentProfile.findMany.mock.calls[0][0].select
     expect(select.previousCompensation).toBe(false)

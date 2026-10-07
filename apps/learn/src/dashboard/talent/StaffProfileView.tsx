@@ -1,5 +1,6 @@
-import type { TalentProfileStaffView } from '@id/types'
+import type { TalentCompensation, TalentProfileStaffView } from '@id/types'
 import { useId, useState, type ReactNode } from 'react'
+import { useApiFetch } from '../api'
 import { dateOnly } from '../format'
 import { educationLabel, fileSize, money } from './profileForm'
 import './talent.css'
@@ -15,18 +16,36 @@ function Row(props: { label: string; children: ReactNode }) {
   )
 }
 
-/** A participant's profile as staff see it. Read-only. Pay stays out of the page until it is asked for. */
+/**
+ * A participant's profile as staff see it. Read-only. Pay is not in the profile response: it is
+ * fetched (and audited) only when staff click Show, held in component state only, and dropped on Hide.
+ */
 export function StaffProfileView(props: {
   profile: TalentProfileStaffView | null
+  /** GET path of the compensation endpoint for this participant. */
+  compensationPath: string
   onOpenResume: () => void
   resumeBusy?: boolean
   resumeError?: string | null
 }) {
-  const [showPay, setShowPay] = useState(false)
+  const apiFetch = useApiFetch()
+  const [pay, setPay] = useState<TalentCompensation | null>(null)
+  const [payBusy, setPayBusy] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
   const payId = useId()
   const p = props.profile
   if (!p) return <p className="dash-muted">This person has not started a profile yet.</p>
-  const hasPay = p.previousCompensation !== null || p.targetCompensation !== null
+  async function revealPay() {
+    setPayBusy(true)
+    setPayError(null)
+    try {
+      setPay((await (await apiFetch(props.compensationPath)).json()) as TalentCompensation)
+    } catch (err) {
+      setPayError((err as Error).message)
+    } finally {
+      setPayBusy(false)
+    }
+  }
   return (
     <div className="tl-staff">
       <p className="dash-muted">
@@ -73,33 +92,39 @@ export function StaffProfileView(props: {
 
       <section className="tl-pay-box" aria-label="Compensation">
         <h3 className="tl-pay-h">Compensation</h3>
-        {!hasPay ? (
+        {!p.hasCompensation ? (
           <p className="dash-muted">This person did not give pay information.</p>
-        ) : showPay ? (
+        ) : pay ? (
           <>
             <dl id={payId} className="tl-facts">
-              <Row label="Earned in last job">{money(p.previousCompensation)}</Row>
-              <Row label="Hopes to earn">{money(p.targetCompensation)}</Row>
+              <Row label="Earned in last job">{money(pay.previousCompensation)}</Row>
+              <Row label="Hopes to earn">{money(pay.targetCompensation)}</Row>
             </dl>
-            <button type="button" className="dash-btn-quiet" onClick={() => setShowPay(false)}>
+            <button type="button" className="dash-btn-quiet" onClick={() => setPay(null)}>
               Hide compensation
             </button>
           </>
         ) : (
           <>
             <p className="dash-muted">
-              Private. Only staff of this provider can see it. Viewing this profile is recorded in
-              the access log.
+              Private. Only staff of this provider can see it. Showing it is recorded in the access
+              log.
             </p>
             <button
               type="button"
               className="dash-btn-secondary"
               aria-expanded={false}
               aria-controls={payId}
-              onClick={() => setShowPay(true)}
+              disabled={payBusy}
+              onClick={revealPay}
             >
-              Show compensation
+              {payBusy ? 'Loading…' : 'Show compensation'}
             </button>
+            {payError && (
+              <p className="dash-error" role="alert">
+                {payError}
+              </p>
+            )}
           </>
         )}
       </section>
