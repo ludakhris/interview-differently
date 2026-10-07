@@ -111,6 +111,11 @@ describe('ImmersiveSessionsController transcripts', () => {
     expect(await upload('')).toHaveBeenCalledWith('r1', NO_SPEECH_TRANSCRIPT)
   })
 
+  it('treats a stray word or two from room noise as no speech', async () => {
+    expect(await upload('Bye.')).toHaveBeenCalledWith('r1', NO_SPEECH_TRANSCRIPT)
+    expect(await upload(' Thank you. ')).toHaveBeenCalledWith('r1', NO_SPEECH_TRANSCRIPT)
+  })
+
   it('leaves the transcript unset when transcription itself failed', async () => {
     expect(await upload(null)).not.toHaveBeenCalled()
   })

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { isVoiceInterview, mediaErrorMessage, transcriptsReady } from '../immersiveLti'
+import {
+  heardNothing,
+  isVoiceInterview,
+  mediaErrorMessage,
+  NO_SPEECH_TRANSCRIPT,
+  transcriptsReady,
+} from '../immersiveLti'
 
 describe('isVoiceInterview', () => {
   const persona = { presenterId: 'p', voiceId: 'v' }
@@ -35,5 +41,13 @@ describe('mediaErrorMessage', () => {
     expect(mediaErrorMessage({ name: 'NotFoundError' })).toMatch(/No microphone/)
     expect(mediaErrorMessage({ name: 'NotReadableError' })).toMatch(/in use/)
     expect(mediaErrorMessage(new TypeError('x'))).toMatch(/Could not access/)
+  })
+})
+
+describe('heardNothing', () => {
+  it('is true only for the no-speech marker', () => {
+    expect(heardNothing(NO_SPEECH_TRANSCRIPT)).toBe(true)
+    expect(heardNothing('I would page the on-call.')).toBe(false)
+    expect(heardNothing(null)).toBe(false)
   })
 })

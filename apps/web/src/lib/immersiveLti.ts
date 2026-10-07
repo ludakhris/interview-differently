@@ -11,6 +11,13 @@ export function isVoiceInterview(scenario: {
   )
 }
 
+/** What the server stores when an answer had no speech in it (matches the API's marker). */
+export const NO_SPEECH_TRANSCRIPT = '[No speech was detected in this answer.]'
+
+/** True when a finished transcription found no real answer. */
+export const heardNothing = (transcript: string | null): boolean =>
+  transcript === NO_SPEECH_TRANSCRIPT
+
 /**
  * True once every question node has a response with a transcript (the latest response per node
  * counts, as on the server). Transcription runs after the upload, so this is polled.

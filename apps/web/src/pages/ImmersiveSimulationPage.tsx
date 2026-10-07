@@ -14,12 +14,13 @@ import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import { useNarration } from '@/hooks/useNarration'
 import {
   createImmersiveSession,
+  fetchImmersiveResponse,
   fetchImmersiveSession,
   submitImmersiveResponse,
 } from '@/services/immersiveService'
 import { completeLtiInterview } from '@/services/ltiService'
 import { LtiScoreSent } from '@/components/LtiScoreSent'
-import { transcriptsReady } from '@/lib/immersiveLti'
+import { heardNothing, transcriptsReady } from '@/lib/immersiveLti'
 import { listScenarioMedia } from '@/services/scenarioMediaService'
 import type { ScenarioMediaAsset, ScenarioNode } from '@id/types'
 
@@ -29,6 +30,23 @@ type PageState = 'loading' | 'narrating' | 'responding' | 'submitting' | 'comple
 /** How long to wait for the answers to be transcribed before asking the learner to retry. */
 const TRANSCRIPT_WAIT_MS = 90_000
 const TRANSCRIPT_POLL_MS = 2_000
+/** How long one answer waits to be checked for speech before moving on (the finish step waits again). */
+const SPEECH_CHECK_MS = 20_000
+
+/** Waits briefly for this answer's transcript; true only when it was transcribed and held no answer. */
+async function answerWasSilent(sessionId: string, responseId: string): Promise<boolean> {
+  const deadline = Date.now() + SPEECH_CHECK_MS
+  while (Date.now() < deadline) {
+    try {
+      const { transcript } = await fetchImmersiveResponse(sessionId, responseId)
+      if (transcript !== null && transcript !== undefined) return heardNothing(transcript)
+    } catch {
+      return false
+    }
+    await new Promise((r) => setTimeout(r, 1_500))
+  }
+  return false
+}
 
 const contextSectionLabel: Record<string, string> = {
   monitor: 'Live Metrics',
@@ -162,7 +180,14 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
             durationSeconds: result.durationSeconds,
             audioBlob: result.blob,
           })
-          void resp
+          if (ltiMode && (await answerWasSilent(sessionId, resp.id))) {
+            setLtiError(
+              'We could not hear an answer. Check that your microphone is on and picking up your voice, then record it again.'
+            )
+            setRecorderKey((k) => k + 1)
+            setPageState('responding')
+            return
+          }
         } else if (ltiMode) {
           throw new Error('no session')
         }

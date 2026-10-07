@@ -33,6 +33,16 @@ const LTI_WRITES_PER_MINUTE = 20
  */
 export const NO_SPEECH_TRANSCRIPT = '[No speech was detected in this answer.]'
 
+/** Whisper turns silence and room noise into stray words ("Bye."), so a few words is not an answer. */
+const MIN_ANSWER_WORDS = 3
+
+/** The transcript to store: what was heard, or the no-speech marker when it is not an answer. */
+export function transcriptOrNoSpeech(heard: string): string {
+  return heard.trim().split(/\s+/).filter(Boolean).length >= MIN_ANSWER_WORDS
+    ? heard.trim()
+    : NO_SPEECH_TRANSCRIPT
+}
+
 interface CreateSessionDto {
   scenarioId: string
 }
@@ -114,10 +124,7 @@ export class ImmersiveSessionsController {
             // null means the transcription itself failed: leave it unset. '' means silence.
             transcript === null
               ? null
-              : this.service.updateTranscript(
-                  response.id,
-                  transcript.trim() || NO_SPEECH_TRANSCRIPT
-                )
+              : this.service.updateTranscript(response.id, transcriptOrNoSpeech(transcript))
           )
           .catch(() => {
             /* best effort */

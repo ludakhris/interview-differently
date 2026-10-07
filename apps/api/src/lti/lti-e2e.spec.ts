@@ -367,7 +367,10 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
       ],
       providers: [
         { provide: ImmersiveSessionsService, useValue: fakeImmersive },
-        { provide: TranscriptionService, useValue: { transcribe: async () => 'spoken words' } },
+        {
+          provide: TranscriptionService,
+          useValue: { transcribe: async () => 'I would page the on-call lead first' },
+        },
         DatasetsService,
         AssessmentsService,
         { provide: SqlRunnerService, useValue: {} },
@@ -977,7 +980,10 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
       const session = (await (await api(token, `/immersive-sessions/${id}`)).json()) as {
         responses: { transcript: string }[]
       }
-      expect(session.responses.map((r) => r.transcript)).toEqual(['spoken words', 'spoken words'])
+      expect(session.responses.map((r) => r.transcript)).toEqual([
+        'I would page the on-call lead first',
+        'I would page the on-call lead first',
+      ])
 
       scoreAnswers.mockResolvedValue(
         [80, 60].map((n) => ({
@@ -1007,7 +1013,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
           { name: 'Specifics', description: 'Examples?' },
         ],
         questions: ['Tell me about yourself.', 'Why this job?'],
-        answers: ['spoken words', 'spoken words'],
+        answers: ['I would page the on-call lead first', 'I would page the on-call lead first'],
       })
       expect(recordToolResult).toHaveBeenCalledWith('u1', 'k1', 'i1', {
         reportedAt: expect.any(String),
