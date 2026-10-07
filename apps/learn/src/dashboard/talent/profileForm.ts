@@ -1,4 +1,5 @@
-import type { EducationLevel, TalentProfileDto, TalentProfileInput } from '@id/types'
+import type { EducationLevel } from '@id/types'
+import type { TalentProfileDto, TalentProfileInput } from './legacyTypes'
 
 export const EDUCATION_OPTIONS: { value: EducationLevel; label: string }[] = [
   { value: 'high_school', label: 'High school or equivalent' },

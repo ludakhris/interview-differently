@@ -67,5 +67,5 @@ export function safeResumeName(original: string, ext: string): string {
   return `${trimmed}.${ext}`
 }
 
-export const resumeKey = (providerId: string, userId: string, safeName: string): string =>
-  `talent/resumes/${providerId}/${userId}/${randomUUID()}-${safeName}`
+export const resumeKey = (userId: string, safeName: string): string =>
+  `talent/resumes/${userId}/${randomUUID()}-${safeName}`

@@ -3,12 +3,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { waitFor } from '@testing-library/react'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { TalentParticipantRow } from '@id/types'
 import type {
   LearnerTalentProfileEntry,
-  TalentParticipantRow,
   TalentProfileDto,
   TalentProfileStaffView,
-} from '@id/types'
+} from './legacyTypes'
 
 const send = vi.fn()
 const apiFetch = vi.fn()
@@ -346,15 +346,17 @@ const row = (over: Partial<TalentParticipantRow> = {}): TalentParticipantRow => 
   cohorts: [
     { cohortId: 'c1', cohortName: 'Fall', courseTitle: 'Data', enrollmentStatus: 'enrolled' },
   ],
+  profileStatus: 'shared',
+  complete: true,
+  fresh: null,
   profile: {
-    completed: true,
     hasResume: true,
-    educationLevel: 'bachelor',
+    educationLevels: ['bachelor'],
     yearsExperience: 5,
     industries: ['Aerospace', 'IT'],
     targetRoles: ['Analyst'],
     availableFrom: null,
-    shareWithEmployers: true,
+    allowEmployers: true,
   },
   openSupportItems: 0,
   noteCount: 0,
@@ -365,7 +367,16 @@ describe('the staff list', () => {
   it('shows name, cohorts, industries, years and completion, linking to the person', () => {
     render(
       <ParticipantTable
-        rows={[row(), row({ userId: 'u2', name: 'Grace Hopper', profile: null })]}
+        rows={[
+          row(),
+          row({
+            userId: 'u2',
+            name: 'Grace Hopper',
+            profile: null,
+            profileStatus: 'none',
+            complete: null,
+          }),
+        ]}
       />
     )
     const rows = screen.getAllByRole('row')

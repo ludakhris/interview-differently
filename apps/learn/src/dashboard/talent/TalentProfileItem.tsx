@@ -1,4 +1,5 @@
-import type { LearnerItem, LearnerTalentProfileEntry } from '@id/types'
+import type { LearnerItem } from '@id/types'
+import type { LearnerTalentProfileEntry } from './legacyTypes'
 import { useApiFetch, useLoad } from '../api'
 import { errorNotice } from '../shared'
 import { TalentProfileForm } from './TalentProfileForm'

@@ -45,8 +45,8 @@ const sortedUnique = (xs: string[]) =>
   [...new Set(xs)].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
 
 function status(r: TalentParticipantRow): string {
-  if (!r.profile) return 'Not started'
-  return r.profile.completed ? 'Complete' : 'Started'
+  if (r.profileStatus === 'none') return 'Not started'
+  return r.complete ? 'Complete' : 'Started'
 }
 
 /** The people in a list, as a table. Exported for tests. */
@@ -81,7 +81,7 @@ export function ParticipantTable({ rows }: { rows: TalentParticipantRow[] }) {
               <td>
                 <span className="dash-pill">{status(r)}</span>
                 {r.profile?.hasResume && <span className="tl-tag">Resume</span>}
-                {r.profile?.shareWithEmployers && <span className="tl-tag">OK to share</span>}
+                {r.profile?.allowEmployers && <span className="tl-tag">OK to share</span>}
               </td>
             </tr>
           ))}

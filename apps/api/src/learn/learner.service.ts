@@ -43,6 +43,17 @@ import { isSupportedItemType } from './course-config'
 import { doneSince, parseSkills, remediationOf, reviewOf, skillResults } from './skills'
 import { isVideoId, VIDEO_COMPLETE_PCT } from './youtube'
 import { ActivityService } from './activity/activity.service'
+import {
+  PROFILE_ITEM_ID,
+  PROFILE_ITEM_TITLE,
+  isSatisfied,
+  loadProfileFacts,
+  profileLead,
+  refreshMonthsOf,
+  requirementState,
+  stateNote,
+  type ProfileFacts,
+} from './talent/profile-requirement'
 import { randomUUID } from 'node:crypto'
 
 /** A tool's score is still accepted this long after the cohort ends (a timed assessment begun just before). */
@@ -325,29 +336,50 @@ export class LearnerService {
       },
       orderBy: { enrolledAt: 'desc' },
     })
-    const totals = new Map<string, number>()
+    // Items per course (no remediation), and which of them are the profile: those are done by the
+    // learner's profile, not by a progress row.
+    const totals = new Map<string, { n: number; profileIds: Set<string> }>()
     for (const r of rows) {
       const cid = r.cohort.course?.id as string
       if (!totals.has(cid)) {
         const modules = await this.courseItems(cid)
-        totals.set(
-          cid,
-          modules.reduce((n, m) => n + m.items.filter((i) => !remediationOf(i.config)).length, 0)
-        )
+        const items = modules.flatMap((m) => m.items).filter((i) => !remediationOf(i.config))
+        totals.set(cid, {
+          n: items.length,
+          profileIds: new Set(items.filter((i) => i.type === 'profile').map((i) => i.id)),
+        })
       }
     }
-    return rows.map((r) => ({
-      cohortId: r.cohortId,
-      cohortName: r.cohort.name,
-      courseTitle: r.cohort.course?.title as string,
-      host: r.cohort.institution.name,
-      status: cohortStatus(r.cohort.startsAt, r.cohort.endsAt),
-      startsAt: r.cohort.startsAt?.toISOString() ?? null,
-      endsAt: r.cohort.endsAt?.toISOString() ?? null,
-      enrollmentStatus: r.status as LearnerCohortCard['enrollmentStatus'],
-      itemsDone: r.progress.length,
-      itemsTotal: (totals.get(r.cohort.course?.id as string) ?? 0) + r.plan.length,
-    }))
+    let facts: ProfileFacts | null | undefined
+    const now = new Date()
+    const out: LearnerCohortCard[] = []
+    for (const r of rows) {
+      const t = totals.get(r.cohort.course?.id as string) ?? { n: 0, profileIds: new Set<string>() }
+      let itemsDone = r.progress.length
+      let itemsTotal = t.n + r.plan.length
+      if (r.cohort.requiresProfile || t.profileIds.size > 0) {
+        if (facts === undefined) facts = await loadProfileFacts(this.prisma, userId)
+        const sat = isSatisfied(facts, refreshMonthsOf(r.cohort), now)
+        const synthetic = r.cohort.requiresProfile && t.profileIds.size === 0
+        itemsDone =
+          r.progress.filter((p) => !t.profileIds.has(p.itemId)).length +
+          (sat ? t.profileIds.size + (synthetic ? 1 : 0) : 0)
+        itemsTotal += synthetic ? 1 : 0
+      }
+      out.push({
+        cohortId: r.cohortId,
+        cohortName: r.cohort.name,
+        courseTitle: r.cohort.course?.title as string,
+        host: r.cohort.institution.name,
+        status: cohortStatus(r.cohort.startsAt, r.cohort.endsAt),
+        startsAt: r.cohort.startsAt?.toISOString() ?? null,
+        endsAt: r.cohort.endsAt?.toISOString() ?? null,
+        enrollmentStatus: r.status as LearnerCohortCard['enrollmentStatus'],
+        itemsDone,
+        itemsTotal,
+      })
+    }
+    return out
   }
 
   /** The learner's enrollment in this cohort, with the cohort and its course. */
@@ -384,19 +416,23 @@ export class LearnerService {
         orderBy: { createdAt: 'asc' },
       }),
     ])
-    let progress = firstProgress
+    const progress = firstProgress
     const allItems = modules.flatMap((m) => m.items)
-    // A learner who finished the talent profile before this cohort began gets its profile item done now.
-    const pendingProfile = allItems.some(
-      (i) =>
-        i.type === 'profile' && !progress.some((p) => p.itemId === i.id && p.status === 'completed')
+    // The profile is done by the learner's profile (complete, and refreshed in time when the cohort
+    // asks), not by a progress row. A requiring cohort puts it first.
+    const requires = !!e.cohort.requiresProfile
+    const courseProfileIds = allItems
+      .filter((i) => i.type === 'profile' && !remediationOf(i.config))
+      .map((i) => i.id)
+    const profileIds = new Set(courseProfileIds)
+    const lead = profileLead(courseProfileIds, requires)
+    const pState = requirementState(
+      requires || profileIds.size > 0 ? await loadProfileFacts(this.prisma, userId) : null,
+      refreshMonthsOf(e.cohort),
+      new Date()
     )
-    if (
-      pendingProfile &&
-      !this.lockReason(e.cohort.startsAt, e.cohort.endsAt) &&
-      (await this.catchUpProfile(userId, course.providerId))
-    )
-      progress = await this.prisma.itemProgress.findMany({ where: { enrollmentId: e.id } })
+    const profileStatus: ProgressStatus =
+      pState === 'done' ? 'completed' : pState === 'missing' ? 'not_started' : 'in_progress'
     const byItem = new Map(progress.map((p) => [p.itemId, p]))
     // Remediation items are in the outline only for learners whose plan includes them.
     const items = allItems.filter((i) => !remediationOf(i.config))
@@ -431,9 +467,13 @@ export class LearnerService {
         },
       ]
     })
+    const statusOfItem = (id: string): ProgressStatus =>
+      profileIds.has(id) ? profileStatus : this.statusOf(byItem.get(id))
+    const synthetic = lead?.synthetic ? 1 : 0
     const done =
-      items.filter((i) => byItem.get(i.id)?.status === 'completed').length +
-      addedItems.filter((i) => i.status === 'completed').length
+      items.filter((i) => statusOfItem(i.id) === 'completed').length +
+      addedItems.filter((i) => i.status === 'completed').length +
+      (synthetic && profileStatus === 'completed' ? 1 : 0)
     return {
       cohort: {
         cohortId,
@@ -445,26 +485,33 @@ export class LearnerService {
         endsAt: e.cohort.endsAt?.toISOString() ?? null,
         enrollmentStatus: e.status as LearnerCohortCard['enrollmentStatus'],
         itemsDone: done,
-        itemsTotal: items.length + addedItems.length,
+        itemsTotal: items.length + addedItems.length + synthetic,
       },
       added: addedItems,
-      modules: modules.map((m) => ({
-        id: m.id,
-        title: m.title,
-        items: m.items
-          .filter((i) => !remediationOf(i.config))
-          .map(
-            (i): LearnerOutlineItem => ({
-              id: i.id,
-              type: i.type,
-              title: i.title,
-              label: i.label,
-              status: this.statusOf(byItem.get(i.id)),
-              score: byItem.get(i.id)?.score ?? null,
-              attempts: byItem.get(i.id)?.attempts ?? 0,
-            })
-          ),
-      })),
+      modules: this.outlineModules(
+        modules,
+        lead,
+        (i): LearnerOutlineItem => ({
+          id: i.id,
+          type: i.type,
+          title: i.title,
+          label: i.label,
+          status: statusOfItem(i.id),
+          score: byItem.get(i.id)?.score ?? null,
+          attempts: byItem.get(i.id)?.attempts ?? 0,
+          ...(profileIds.has(i.id) ? { note: stateNote(pState) } : {}),
+        }),
+        {
+          id: PROFILE_ITEM_ID,
+          type: 'profile',
+          title: PROFILE_ITEM_TITLE,
+          label: null,
+          status: profileStatus,
+          score: null,
+          attempts: 0,
+          note: stateNote(pState),
+        }
+      ),
       record: buildRecord(
         items.map((i) => ({
           id: i.id,
@@ -477,6 +524,35 @@ export class LearnerService {
         e.status === 'completed'
       ),
     }
+  }
+
+  /**
+   * The outline's modules. A requiring cohort gets a leading "Your profile" module holding the
+   * course's own first profile item (taken out of its module) or the synthetic one.
+   */
+  private outlineModules<I extends { id: string; config: unknown }>(
+    modules: { id: string; title: string; items: I[] }[],
+    lead: { leadId: string; synthetic: boolean } | null,
+    toItem: (i: I) => LearnerOutlineItem,
+    synthetic: LearnerOutlineItem
+  ): { id: string; title: string; items: LearnerOutlineItem[] }[] {
+    let leadItem: LearnerOutlineItem | null = null
+    const out = modules.flatMap((m) => {
+      const own = m.items.filter((i) => !remediationOf(i.config))
+      const kept = own.filter((i) => !(lead && !lead.synthetic && i.id === lead.leadId))
+      if (kept.length < own.length) {
+        const moved = own.find((i) => i.id === lead?.leadId) as I
+        leadItem = toItem(moved)
+        // A module left empty by the move goes with it.
+        if (kept.length === 0) return []
+      }
+      return [{ id: m.id, title: m.title, items: kept.map(toItem) }]
+    })
+    if (!lead) return out
+    return [
+      { id: PROFILE_ITEM_ID, title: PROFILE_ITEM_TITLE, items: [leadItem ?? synthetic] },
+      ...out,
+    ]
   }
 
   // ── doing ─────────────────────────────────────────────────────────────────
@@ -553,18 +629,10 @@ export class LearnerService {
     itemId: string,
     planAdded: PlanAddition[] = []
   ): Promise<LearnerItem> {
+    if (itemId === PROFILE_ITEM_ID) return this.syntheticProfileItem(userId, cohortId)
     const found = await this.itemOf(userId, cohortId, itemId)
     const { e, item, plan } = found
-    let progress = found.progress
-    if (
-      item.type === 'profile' &&
-      progress?.status !== 'completed' &&
-      !this.lockReason(e.cohort.startsAt, e.cohort.endsAt) &&
-      (await this.catchUpProfile(userId, e.cohort.course.providerId))
-    )
-      progress = await this.prisma.itemProgress.findUnique({
-        where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
-      })
+    const progress = found.progress
     const config = (item.config ?? {}) as Record<string, unknown>
     let interview: LearnerItem['interview'] = null
     if (item.type === 'interview') {
@@ -634,6 +702,14 @@ export class LearnerService {
       item.type === 'tool'
         ? await this.attemptLogOf(e.id, item, progress?.attempts ?? 0, progress?.score ?? null)
         : { attemptLog: [], attemptsBeforeLog: 0 }
+    const pState =
+      item.type === 'profile'
+        ? requirementState(
+            await loadProfileFacts(this.prisma, userId),
+            refreshMonthsOf(e.cohort),
+            new Date()
+          )
+        : null
     return {
       id: item.id,
       cohortId,
@@ -652,11 +728,54 @@ export class LearnerService {
       video,
       link,
       tool,
-      status: review ? 'not_started' : this.statusOf(progress ?? undefined),
+      status: pState
+        ? this.profileStatusOf(pState)
+        : review
+          ? 'not_started'
+          : this.statusOf(progress ?? undefined),
       score: progress?.score ?? null,
       attempts: progress?.attempts ?? 0,
       ...log,
       locked: this.lockReason(e.cohort.startsAt, e.cohort.endsAt),
+      ...(pState ? { note: stateNote(pState) } : {}),
+    }
+  }
+
+  private profileStatusOf(s: ReturnType<typeof requirementState>): ProgressStatus {
+    return s === 'done' ? 'completed' : s === 'missing' ? 'not_started' : 'in_progress'
+  }
+
+  /** "Your profile": the item a requiring cohort puts first when its course has no profile item of its own. */
+  private async syntheticProfileItem(userId: string, cohortId: string): Promise<LearnerItem> {
+    const e = await this.enrollmentFor(userId, cohortId)
+    if (!e.cohort.requiresProfile) throw new NotFoundException('Item not found')
+    const state = requirementState(
+      await loadProfileFacts(this.prisma, userId),
+      refreshMonthsOf(e.cohort),
+      new Date()
+    )
+    return {
+      id: PROFILE_ITEM_ID,
+      cohortId,
+      type: 'profile',
+      title: PROFILE_ITEM_TITLE,
+      label: null,
+      body: null,
+      questions: null,
+      scorm: null,
+      interview: null,
+      planAdded: [],
+      review: null,
+      video: null,
+      link: null,
+      tool: null,
+      status: this.profileStatusOf(state),
+      score: null,
+      attempts: 0,
+      attemptLog: [],
+      attemptsBeforeLog: 0,
+      locked: this.lockReason(e.cohort.startsAt, e.cohort.endsAt),
+      note: stateNote(state),
     }
   }
 
@@ -683,24 +802,31 @@ export class LearnerService {
   }
 
   /**
-   * Completing the talent profile (a complete save) finishes that provider's `profile` items in the
-   * learner's open cohorts. Cohorts that have not started or have ended stay as they are, like every
-   * other item. Returns how many items were marked.
+   * Called after the learner saves their profile. The profile counts by its state (complete, and
+   * saved within the refresh period), so nothing here decides that; this only settles what depends
+   * on it: it mirrors a finished progress row for the course's own profile items, so staff rollups
+   * that count progress rows agree, and asks whether the learner now meets the completion rule.
+   * Cohorts that have not started or have ended stay as they are, like every other item.
    */
-  async completeProfileItems(userId: string, providerId: string): Promise<number> {
+  async syncProfileState(userId: string, now: Date = new Date()): Promise<void> {
     const enrollments = await this.prisma.enrollment.findMany({
-      where: { userId, status: { not: 'withdrawn' }, cohort: { course: { providerId } } },
+      where: { userId, status: 'enrolled', cohort: { courseId: { not: null } } },
       select: {
         id: true,
         status: true,
-        cohort: { select: { startsAt: true, endsAt: true, courseId: true } },
+        cohort: {
+          select: {
+            startsAt: true,
+            endsAt: true,
+            courseId: true,
+            requiresProfile: true,
+            profileRefreshMonths: true,
+          },
+        },
       },
     })
-    const open = enrollments.filter(
-      (e) => e.cohort.courseId && !this.lockReason(e.cohort.startsAt, e.cohort.endsAt)
-    )
-    if (open.length === 0) return 0
-    // One query each for the items and the finished ones, not one per cohort.
+    const open = enrollments.filter((e) => !this.lockReason(e.cohort.startsAt, e.cohort.endsAt))
+    if (open.length === 0) return
     const items = await this.prisma.courseItem.findMany({
       where: {
         type: 'profile',
@@ -708,21 +834,23 @@ export class LearnerService {
       },
       select: { id: true, module: { select: { courseId: true } } },
     })
-    if (items.length === 0) return 0
-    const done = await this.prisma.itemProgress.findMany({
-      where: {
-        enrollmentId: { in: open.map((e) => e.id) },
-        itemId: { in: items.map((i) => i.id) },
-        status: 'completed',
-      },
-      select: { enrollmentId: true, itemId: true },
-    })
+    const facts = await loadProfileFacts(this.prisma, userId)
+    const done = items.length
+      ? await this.prisma.itemProgress.findMany({
+          where: {
+            enrollmentId: { in: open.map((e) => e.id) },
+            itemId: { in: items.map((i) => i.id) },
+            status: 'completed',
+          },
+          select: { enrollmentId: true, itemId: true },
+        })
+      : []
     const doneKeys = new Set(done.map((d) => `${d.enrollmentId}:${d.itemId}`))
-    let marked = 0
     for (const e of open) {
       const courseId = e.cohort.courseId as string
       const mine = items.filter((i) => i.module.courseId === courseId)
-      if (mine.length === 0) continue
+      if (!e.cohort.requiresProfile && mine.length === 0) continue
+      if (!isSatisfied(facts, refreshMonthsOf(e.cohort), now)) continue
       for (const item of mine) {
         if (doneKeys.has(`${e.id}:${item.id}`)) continue
         await this.prisma.itemProgress.upsert({
@@ -732,25 +860,13 @@ export class LearnerService {
             itemId: item.id,
             status: 'completed',
             attempts: 1,
-            completedAt: new Date(),
+            completedAt: now,
           },
-          update: { status: 'completed', attempts: { increment: 1 }, completedAt: new Date() },
+          update: { status: 'completed', completedAt: now },
         })
-        marked++
       }
       await this.completeIfDone(e.id, e.status, courseId)
     }
-    return marked
-  }
-
-  /** Marks the profile items done for a learner whose talent profile was already completed. Idempotent. */
-  private async catchUpProfile(userId: string, providerId: string): Promise<boolean> {
-    const p = await this.prisma.talentProfile.findUnique({
-      where: { providerId_userId: { providerId, userId } },
-      select: { completedAt: true },
-    })
-    if (!p?.completedAt) return false
-    return (await this.completeProfileItems(userId, providerId)) > 0
   }
 
   /**
@@ -1102,7 +1218,7 @@ export class LearnerService {
     enrollmentId: string,
     courseId: string
   ): Promise<{ met: boolean; at: Date | null }> {
-    const [modules, plan, course] = await Promise.all([
+    const [modules, plan, course, who] = await Promise.all([
       this.courseItems(courseId),
       this.prisma.planItem.findMany({
         where: { enrollmentId },
@@ -1111,6 +1227,13 @@ export class LearnerService {
       this.prisma.course.findUnique({
         where: { id: courseId },
         select: { readinessThreshold: true },
+      }),
+      this.prisma.enrollment.findUnique({
+        where: { id: enrollmentId },
+        select: {
+          userId: true,
+          cohort: { select: { requiresProfile: true, profileRefreshMonths: true } },
+        },
       }),
     ])
     const items = modules.flatMap((m) => m.items)
@@ -1137,16 +1260,31 @@ export class LearnerService {
         : Promise.resolve([] as { score: number | null; completedAt: Date | null }[]),
     ])
     const byItem = new Map(finished.map((p) => [p.itemId, p]))
-    const required = outline.length + plan.length
+    // The profile is done by the learner's profile, not by a progress row. A requiring cohort adds
+    // "Your profile" as one more required item when the course has none of its own.
+    const profileIds = new Set(
+      items.filter((i) => i.type === 'profile' && outline.includes(i.id)).map((i) => i.id)
+    )
+    const requires = !!who?.cohort?.requiresProfile
+    const synthetic = requires && profileIds.size === 0
+    let profileDone = false
+    let profileAt: Date | null = null
+    if (who && (profileIds.size > 0 || synthetic)) {
+      const facts = await loadProfileFacts(this.prisma, who.userId)
+      profileDone = isSatisfied(facts, refreshMonthsOf(who.cohort), new Date())
+      profileAt = profileDone ? (facts?.completedAt ?? facts?.updatedAt ?? null) : null
+    }
+    const required = outline.length + plan.length + (synthetic ? 1 : 0)
     const done =
-      outline.filter((id) => byItem.has(id)).length +
+      outline.filter((id) => (profileIds.has(id) ? profileDone : byItem.has(id))).length +
+      (synthetic && profileDone ? 1 : 0) +
       plan.filter((p) => doneSince(byItem.get(p.itemId), p.createdAt)).length
     // Anything that counts as an interview must reach the course's readiness goal.
     const goal = course?.readinessThreshold ?? 70
     const reached = scored.filter((p) => (p.score as number) >= goal)
     const ready = interviewIds.length === 0 || reached.length > 0
     if (!(required > 0 && done >= required && ready)) return { met: false, at: null }
-    const moments = [...finished, ...reached]
+    const moments = [...finished, ...reached, { completedAt: profileAt }]
       .map((p) => p.completedAt)
       .filter((d): d is Date => d instanceof Date)
     return {

@@ -1,4 +1,5 @@
-import type { ResumeLink, TalentParticipantHeader, TalentProfileStaffView } from '@id/types'
+import type { ResumeLink, TalentParticipantHeader } from '@id/types'
+import type { TalentProfileStaffView } from './legacyTypes'
 import { useState } from 'react'
 import { useApiFetch, useLoad } from '../api'
 import { useApp } from '../app-context'

@@ -1,4 +1,5 @@
-import type { TalentCompensation, TalentProfileStaffView } from '@id/types'
+import type { TalentCompensation } from '@id/types'
+import type { TalentProfileStaffView } from './legacyTypes'
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useApiFetch } from '../api'
 import { dateOnly } from '../format'

@@ -1,4 +1,5 @@
-import type { ResumeInfo, ResumeLink, TalentProfileDto } from '@id/types'
+import type { ResumeInfo, ResumeLink } from '@id/types'
+import type { TalentProfileDto } from './legacyTypes'
 import { useRef, useState } from 'react'
 import { useApiFetch, useApiSend } from '../api'
 import { dateShort } from '../format'

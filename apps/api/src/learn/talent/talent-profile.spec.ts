@@ -1,19 +1,24 @@
 import { BadRequestException } from '@nestjs/common'
 import { csvCell, csvRow } from './talent-csv'
-import { incompleteReason, parseProfileInput } from './talent-profile'
+import { parseProfileInput } from './talent-profile'
+import { isProfileComplete } from './profile-requirement'
 import { checkResume, resumeKey, safeResumeName } from './resume'
 
 describe('parseProfileInput', () => {
-  it('keeps only the fields that were sent and trims text', () => {
-    const p = parseProfileInput({ school: '  State U  ', industries: [' IT ', 'it', 'Health', ''] })
-    expect(p.data).toEqual({ school: 'State U', industries: ['IT', 'Health'] })
-    expect(p.complete).toBe(false)
+  it('keeps only the fields that were sent and trims list entries', () => {
+    const p = parseProfileInput({ industries: [' IT ', 'it', 'Health', ''] })
+    expect(p.data).toEqual({ industries: ['IT', 'Health'] })
+    expect(p.educations).toBeUndefined()
+    expect(p.shares).toBeUndefined()
   })
-  it('turns blank text into null and allows explicit nulls', () => {
-    expect(parseProfileInput({ school: '  ', previousCompensation: null }).data).toEqual({
-      school: null,
+  it('allows explicit nulls', () => {
+    expect(parseProfileInput({ previousCompensation: null }).data).toEqual({
       previousCompensation: null,
     })
+  })
+  it('takes lists as lists, never as one comma-separated text', () => {
+    expect(() => parseProfileInput({ industries: 'IT, Health' })).toThrow(BadRequestException)
+    expect(() => parseProfileInput({ targetRoles: 'a,b' })).toThrow(BadRequestException)
   })
   it.each([
     [{ previousCompensation: -1 }],
@@ -22,16 +27,23 @@ describe('parseProfileInput', () => {
     [{ previousCompensation: '50000' }],
     [{ yearsExperience: 61 }],
     [{ yearsExperience: -1 }],
-    [{ graduationYear: 1949 }],
-    [{ graduationYear: 2101 }],
-    [{ educationLevel: 'wizard' }],
     [{ availableFrom: '2026-02-30' }],
     [{ availableFrom: 'soon' }],
-    [{ shareWithEmployers: 'yes' }],
     [{ industries: Array.from({ length: 21 }, (_, i) => `i${i}`) }],
     [{ targetRoles: ['x'.repeat(81)] }],
-    [{ school: 'x'.repeat(201) }],
     [{ industries: [5] }],
+    [{ educations: [{ level: 'wizard' }] }],
+    [{ educations: [{}] }],
+    [{ educations: ['bachelor'] }],
+    [{ educations: [{ level: 'bachelor', graduationYear: 1949 }] }],
+    [{ educations: [{ level: 'bachelor', graduationYear: 2101 }] }],
+    [{ educations: [{ level: 'bachelor', school: 'x'.repeat(201) }] }],
+    [{ educations: Array.from({ length: 9 }, () => ({ level: 'bachelor' })) }],
+    [{ educations: 'bachelor' }],
+    [{ shares: 'P1' }],
+    [{ shares: [{ institutionId: 'P1' }] }],
+    [{ shares: [{ institutionId: 'P1', allowEmployers: 'yes' }] }],
+    [{ shares: [{ allowEmployers: true }] }],
   ])('rejects %j', (body) => {
     expect(() => parseProfileInput(body)).toThrow(BadRequestException)
   })
@@ -40,13 +52,43 @@ describe('parseProfileInput', () => {
       previousCompensation: 0,
       targetCompensation: 10_000_000,
       yearsExperience: 60,
-      graduationYear: 2100,
       industries: Array.from({ length: 20 }, (_, i) => `i${i}`),
       targetRoles: ['x'.repeat(80)],
       availableFrom: '2026-12-31',
+      educations: Array.from({ length: 8 }, () => ({ level: 'other', graduationYear: 2100 })),
     })
     expect(p.data.targetCompensation).toBe(10_000_000)
     expect(p.data.availableFrom?.toISOString()).toBe('2026-12-31T00:00:00.000Z')
+    expect(p.educations).toHaveLength(8)
+  })
+  it('keeps several education entries in order, trims text and fills the gaps with null', () => {
+    const p = parseProfileInput({
+      educations: [
+        { level: 'associate', school: '  Harbor CC ', graduationYear: 2015 },
+        { level: 'bachelor', fieldOfStudy: 'Biology', school: '', graduationYear: null },
+      ],
+    })
+    expect(p.educations).toEqual([
+      { level: 'associate', school: 'Harbor CC', graduationYear: 2015, fieldOfStudy: null },
+      { level: 'bachelor', fieldOfStudy: 'Biology', school: null, graduationYear: null },
+    ])
+  })
+  it('ignores a complete flag: completeness is computed, never sent', () => {
+    expect(parseProfileInput({ complete: true })).toEqual({ data: {} })
+  })
+  it('takes shares as the complete set, the last choice for an organization winning', () => {
+    expect(
+      parseProfileInput({
+        shares: [
+          { institutionId: 'P1', allowEmployers: false },
+          { institutionId: 'P2', allowEmployers: true },
+          { institutionId: 'P1', allowEmployers: true },
+        ],
+      }).shares
+    ).toEqual([
+      { institutionId: 'P1', allowEmployers: true },
+      { institutionId: 'P2', allowEmployers: true },
+    ])
   })
   it('never repeats an amount in an error message', () => {
     for (const body of [{ previousCompensation: 987654321 }, { targetCompensation: -123456 }]) {
@@ -64,21 +106,17 @@ describe('parseProfileInput', () => {
   })
 })
 
-describe('incompleteReason', () => {
-  const ok = { educationLevel: 'bachelor', yearsExperience: 0, industries: ['IT'], targetRoles: [] }
-  it('is null when enough, zero years counts', () => expect(incompleteReason(ok)).toBeNull())
-  it('names what is missing', () => {
-    expect(
-      incompleteReason({
-        educationLevel: null,
-        yearsExperience: null,
-        industries: [],
-        targetRoles: [],
-      })
-    ).toBe(
-      'To finish, add your education level, your years of experience, at least one industry or target role.'
-    )
-    expect(incompleteReason({ ...ok, industries: [], targetRoles: ['Analyst'] })).toBeNull()
+describe('isProfileComplete', () => {
+  const ok = { educationCount: 1, yearsExperience: 0, industries: ['IT'], targetRoles: [] }
+  it('is true when enough; zero years counts', () => expect(isProfileComplete(ok)).toBe(true))
+  it('needs an education entry, years of experience, and an industry or a target role', () => {
+    expect(isProfileComplete({ ...ok, educationCount: 0 })).toBe(false)
+    expect(isProfileComplete({ ...ok, yearsExperience: null })).toBe(false)
+    expect(isProfileComplete({ ...ok, industries: [] })).toBe(false)
+    expect(isProfileComplete({ ...ok, industries: [], targetRoles: ['Analyst'] })).toBe(true)
+  })
+  it('counts several education entries as one requirement, not one each', () => {
+    expect(isProfileComplete({ ...ok, educationCount: 3 })).toBe(true)
   })
 })
 
@@ -145,6 +183,6 @@ describe('resume checks', () => {
   it('builds a safe name and key', () => {
     expect(safeResumeName('../../etc/My Résumé (final).pdf', 'pdf')).toBe('My_R_sum_final_.pdf')
     expect(safeResumeName('...', 'pdf')).toBe('resume.pdf')
-    expect(resumeKey('P', 'U', 'a.pdf')).toMatch(/^talent\/resumes\/P\/U\/[0-9a-f-]{36}-a\.pdf$/)
+    expect(resumeKey('U', 'a.pdf')).toMatch(/^talent\/resumes\/U\/[0-9a-f-]{36}-a\.pdf$/)
   })
 })

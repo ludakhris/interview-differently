@@ -13,6 +13,15 @@ import { buildRecord } from '../learner.service'
 import { isInterviewLike } from '../../lti/platform/lti-platform-config'
 import { doneSince, parseSkills, remediationOf, skillResults } from '../skills'
 import { DataAccessLogService } from '../data-access-log.service'
+import {
+  PROFILE_ITEM_ID,
+  PROFILE_ITEM_TITLE,
+  loadProfileFacts,
+  profileLead,
+  refreshMonthsOf,
+  requirementState,
+  type ProfileFacts,
+} from '../talent/profile-requirement'
 import { ProviderAccessService } from '../provider-access.service'
 
 /** #69 A: a learner's own outcomes. Reads only the caller's enrollments; never staff data or compensation. */
@@ -61,6 +70,16 @@ export class OutcomesService {
         // A stored item of a type that is no longer supported is skipped, as in the outline.
         .filter((i) => isSupportedItemType(i.type))
 
+    // The profile counts by the learner's profile state, as in the course outline.
+    const needsProfile = enrollments.some(
+      (e) =>
+        e.cohort.requiresProfile ||
+        (e.cohort.course && itemsOf(e.cohort.course.id).some((i) => i.type === 'profile'))
+    )
+    const facts: ProfileFacts | null = needsProfile
+      ? await loadProfileFacts(this.prisma, userId)
+      : null
+
     const cohorts: LearnerOutcomeCohort[] = enrollments.flatMap((e) => {
       const course = e.cohort.course
       if (!course) return []
@@ -91,9 +110,28 @@ export class OutcomesService {
           preCheck: i.label === 'pre',
         }
       }
+      const profileIds = new Set(ordinary.filter((i) => i.type === 'profile').map((i) => i.id))
+      const lead = profileLead([...profileIds], !!e.cohort.requiresProfile)
+      const pState = requirementState(facts, refreshMonthsOf(e.cohort), now)
+      const profileStatus: LearnerOutcomeItem['status'] =
+        pState === 'done' ? 'completed' : pState === 'missing' ? 'not_started' : 'in_progress'
       const plain = (id: string): LearnerOutcomeItem['status'] =>
-        (byItem.get(id)?.status as LearnerOutcomeItem['status'] | undefined) ?? 'not_started'
+        profileIds.has(id)
+          ? profileStatus
+          : ((byItem.get(id)?.status as LearnerOutcomeItem['status'] | undefined) ?? 'not_started')
+      const profileRow = (): LearnerOutcomeItem => ({
+        itemId: PROFILE_ITEM_ID,
+        title: PROFILE_ITEM_TITLE,
+        type: 'profile',
+        status: profileStatus,
+        score: null,
+        attempts: 0,
+        completedAt: pState === 'done' ? (facts?.completedAt?.toISOString() ?? null) : null,
+        review: false,
+        preCheck: false,
+      })
       const items = [
+        ...(lead?.synthetic ? [profileRow()] : []),
         ...ordinary.map((i) => row(i, plain(i.id))),
         ...added.map((a) =>
           row(

@@ -473,6 +473,57 @@ describe('delivery (#69)', () => {
   })
 })
 
+describe('profile requirement (#69)', () => {
+  const body = { courseId: 'c1', name: 'MA', startsAt: '2099-01-05' }
+  it('defaults to not required with no refresh, and stores both on create', async () => {
+    prisma.cohort.create.mockResolvedValue({ id: 'k1' })
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    await service.create('u', 'agency-admin', 'harborpoint', body)
+    expect(prisma.cohort.create.mock.calls[0][0].data).toMatchObject({
+      requiresProfile: false,
+      profileRefreshMonths: null,
+    })
+    await service.create('u', 'agency-admin', 'harborpoint', {
+      ...body,
+      requiresProfile: true,
+      profileRefreshMonths: 12,
+    })
+    expect(prisma.cohort.create.mock.calls[1][0].data).toMatchObject({
+      requiresProfile: true,
+      profileRefreshMonths: 12,
+    })
+    await expect(
+      service.create('u', 'agency-admin', 'harborpoint', { ...body, profileRefreshMonths: 12 })
+    ).rejects.toThrow(/Require the profile/)
+  })
+  it('changes on update, clears the period when the requirement goes off, and is carried on the detail and list', async () => {
+    prisma.cohort.findUnique.mockResolvedValue(
+      cohortRow({ requiresProfile: true, profileRefreshMonths: 6 })
+    )
+    await service.update('u', 'agency-admin', 'k1', { profileRefreshMonths: 3 })
+    expect(prisma.cohort.update.mock.calls[0][0].data).toMatchObject({ profileRefreshMonths: 3 })
+    await service.update('u', 'agency-admin', 'k1', { requiresProfile: false })
+    expect(prisma.cohort.update.mock.calls[1][0].data).toMatchObject({
+      requiresProfile: false,
+      profileRefreshMonths: null,
+    })
+    await expect(
+      service.update('u', 'agency-admin', 'k1', { profileRefreshMonths: 99 })
+    ).rejects.toThrow(BadRequestException)
+    expect(await service.detail('u', 'agency-admin', 'k1')).toMatchObject({
+      requiresProfile: true,
+      profileRefreshMonths: 6,
+    })
+  })
+  it('leaves both alone when an update does not mention them', async () => {
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    await service.update('u', 'agency-admin', 'k1', { name: 'Renamed' })
+    const data = prisma.cohort.update.mock.calls[0][0].data
+    expect(data).not.toHaveProperty('requiresProfile')
+    expect(data).not.toHaveProperty('profileRefreshMonths')
+  })
+})
+
 describe('approval setting (#68)', () => {
   beforeEach(() => prisma.cohort.findUnique.mockResolvedValue(cohortRow()))
   const stored = { requiresApproval: false, joinContact: null }

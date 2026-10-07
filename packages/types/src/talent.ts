@@ -1,9 +1,10 @@
 // #69 parts B and C: staff notes and support items (staff-only) and the talent profile (the learner's own).
 //
-// SCOPE: all of this belongs to (providerId, userId), where providerId is the course's provider
-// (Course.providerId) of the cohort the person is in. It follows the participant across that
-// provider's cohorts and never crosses providers. See docs/talent-and-attendance-design.md for who
-// may read what. Nothing in the "staff" section below may ever be returned by a learner endpoint.
+// SCOPE: notes and support items belong to (providerId, userId), where providerId is the course's
+// provider (Course.providerId) of the cohort the person is in; they never cross providers. The
+// talent PROFILE belongs to the person alone (one per user); the learner chooses which
+// organizations may see it (ProfileShare). See docs/talent-and-attendance-design.md for who may read
+// what. Nothing in the "staff" section below may ever be returned by a learner endpoint.
 
 // ── Audit log ───────────────────────────────────────────────────────────────
 
@@ -54,22 +55,32 @@ export interface TalentParticipantCohort {
   enrollmentStatus: 'enrolled' | 'completed' | 'withdrawn'
 }
 
+/** Whether this provider may read the person's profile: the learner shared it with the provider. */
+export type ProfileVisibility = 'shared' | 'not_shared' | 'none'
+
 /** Compensation is never in a list row. */
 export interface TalentParticipantRow {
   userId: string
   name: string
   email: string | null
   cohorts: TalentParticipantCohort[]
-  /** Null when the learner has not started a profile. */
+  /** 'none' = the learner has no profile yet. */
+  profileStatus: ProfileVisibility
+  /** Whether the profile meets the rule. Visible to staff even when not shared; null when 'none'. */
+  complete: boolean | null
+  /** Within the refresh period of this provider's requiring cohorts; null when none applies. */
+  fresh: boolean | null
+  /** The profile's content. Null unless `profileStatus` is 'shared'. */
   profile: {
-    completed: boolean
     hasResume: boolean
-    educationLevel: string | null
+    /** Every education level the person listed. */
+    educationLevels: string[]
     yearsExperience: number | null
     industries: string[]
     targetRoles: string[]
     availableFrom: string | null
-    shareWithEmployers: boolean
+    /** The learner also lets this organization pass the profile to employers. */
+    allowEmployers: boolean
   } | null
   openSupportItems: number
   noteCount: number
@@ -153,7 +164,7 @@ export interface SupportItemInput {
   cohortId?: string | null
 }
 
-// ── Talent profile (the learner's own data) ─────────────────────────────────
+// ── Talent profile (the learner's own data, one per person) ─────────────────
 
 export type EducationLevel =
   | 'high_school'
@@ -170,62 +181,127 @@ export interface ResumeInfo {
   uploadedAt: string
 }
 
-/** The learner's profile as the learner sees and edits it. */
-export interface TalentProfileDto {
-  providerId: string
-  resume: ResumeInfo | null
-  educationLevel: EducationLevel | null
+/** One school or program. A person can list several. */
+export interface EducationEntry {
+  level: EducationLevel
   fieldOfStudy: string | null
   school: string | null
   graduationYear: number | null
+}
+
+/** The learner's profile as the learner sees and edits it. Not tied to any provider. */
+export interface ProfileDto {
+  /** In the order the learner entered them. */
+  educations: EducationEntry[]
   yearsExperience: number | null
   industries: string[]
-  /** Annual, whole dollars. */
-  previousCompensation: number | null
-  targetCompensation: number | null
   targetRoles: string[]
   /** YYYY-MM-DD. */
   availableFrom: string | null
-  /** Consent to share this profile with employers. Off until the learner turns it on. */
-  shareWithEmployers: boolean
+  /** Annual, whole dollars. */
+  previousCompensation: number | null
+  targetCompensation: number | null
+  resume: ResumeInfo | null
+  /**
+   * COMPUTED, never sent: at least one education entry, years of experience, and at least one
+   * industry or target role.
+   */
+  complete: boolean
+  /** When the profile first became complete; kept after that. */
   completedAt: string | null
-  updatedAt: string
+  /** Last save; null when nothing has been saved yet. */
+  updatedAt: string | null
 }
 
-/** PUT /learn/me/talent-profiles/:providerId. Every field is optional; a missing field is left as is. */
-export interface TalentProfileInput {
-  educationLevel?: EducationLevel | null
-  fieldOfStudy?: string | null
-  school?: string | null
-  graduationYear?: number | null
-  yearsExperience?: number | null
-  industries?: string[]
-  previousCompensation?: number | null
-  targetCompensation?: number | null
-  targetRoles?: string[]
-  availableFrom?: string | null
-  shareWithEmployers?: boolean
-  /** True marks the profile complete (the server checks the required fields). */
-  complete?: boolean
+/** An organization the learner can choose to show the profile to. */
+export interface ShareOption {
+  institutionId: string
+  name: string
+  kind: 'provider' | 'organization'
+  /** Why it is on the list. A provider that is also the host reads 'your program'. */
+  why: 'your program' | 'your cohort host'
+  /** A cohort of the learner's that this organization runs requires the profile. */
+  required: boolean
+  /** The learner currently lets this organization see the profile. */
+  shared: boolean
+  /** ...and pass it on to employers. Only meaningful when `shared`. */
+  allowEmployers: boolean
 }
 
-/** One provider the learner is enrolled with, and their profile for it (null until started). */
-export interface LearnerTalentProfileEntry {
-  providerId: string
+/** A cohort of the learner's that requires the profile (and maybe a periodic refresh). */
+export interface ProfileRequirement {
+  cohortId: string
+  cohortName: string
+  /** The program's provider. */
   providerName: string
-  /** The learner's cohorts with this provider, so a profile item can find its entry by cohort. */
-  cohorts: { cohortId: string; cohortName: string }[]
-  profile: TalentProfileDto | null
+  /** Null = the profile never goes stale. */
+  refreshMonths: number | null
+  /** Complete and, when a refresh period applies, saved within it. */
+  satisfied: boolean
+  /** ISO time the profile goes stale; null when it never does or nothing is saved. */
+  dueBy: string | null
 }
 
-/** What staff see on opening a profile: no pay, only whether any was given. Read-only for staff. */
-export interface TalentProfileStaffView extends Omit<
-  TalentProfileDto,
-  'previousCompensation' | 'targetCompensation'
-> {
-  userId: string
-  hasCompensation: boolean
+/** GET /learn/me/profile. `profile` is always present (empty values until the first save). */
+export interface LearnerProfileState {
+  profile: ProfileDto
+  organizations: ShareOption[]
+  requirements: ProfileRequirement[]
 }
+
+/**
+ * PUT /learn/me/profile. A full replacement of the editable fields: educations and shares are the
+ * complete lists wanted. There is no complete flag; completeness is computed.
+ */
+export interface ProfileInput {
+  yearsExperience: number | null
+  industries: string[]
+  targetRoles: string[]
+  availableFrom: string | null
+  previousCompensation: number | null
+  targetCompensation: number | null
+  /** At most 8. */
+  educations: {
+    level: EducationLevel
+    fieldOfStudy?: string | null
+    school?: string | null
+    graduationYear?: number | null
+  }[]
+  /** The organizations to show the profile to; only ids from `organizations`. One left out is not shared. */
+  shares: { institutionId: string; allowEmployers: boolean }[]
+}
+
+/** What staff see of a profile the learner shared with their provider: no pay, only whether any was given. */
+export interface TalentProfileStaffView {
+  shared: true
+  status: 'shared'
+  userId: string
+  educations: EducationEntry[]
+  yearsExperience: number | null
+  industries: string[]
+  targetRoles: string[]
+  availableFrom: string | null
+  resume: ResumeInfo | null
+  hasCompensation: boolean
+  allowEmployers: boolean
+  complete: boolean
+  fresh: boolean | null
+  completedAt: string | null
+  updatedAt: string | null
+}
+
+/** What staff get when the profile is not shared with their provider: status only, never content. */
+export interface TalentProfileUnshared {
+  shared: false
+  status: 'not_shared' | 'none'
+  userId: string
+  /** Null when there is no profile ('none'). */
+  complete: boolean | null
+  fresh: boolean | null
+}
+
+/** GET .../participants/:userId/profile. */
+export type StaffProfileResult = TalentProfileStaffView | TalentProfileUnshared
 
 /** GET .../participants/:userId/compensation. Fetched only on an explicit reveal, and audited. */
 export interface TalentCompensation {

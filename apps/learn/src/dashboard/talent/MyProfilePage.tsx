@@ -1,4 +1,4 @@
-import type { LearnerTalentProfileEntry } from '@id/types'
+import type { LearnerTalentProfileEntry } from './legacyTypes'
 import { useLoad } from '../api'
 import { errorNotice } from '../shared'
 import { TalentProfileForm } from './TalentProfileForm'

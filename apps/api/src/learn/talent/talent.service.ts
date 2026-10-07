@@ -19,22 +19,34 @@ import { DataAccessLogService } from '../data-access-log.service'
 import { LearnerService } from '../learner.service'
 import { ProviderAccessService } from '../provider-access.service'
 import type {
+  EducationEntry,
   EducationLevel,
-  LearnerTalentProfileEntry,
+  LearnerProfileState,
+  ProfileDto,
+  ProfileRequirement,
+  ProfileVisibility,
   ResumeLink,
+  ShareOption,
+  StaffProfileResult,
+  TalentCompensation,
   TalentParticipantCohort,
   TalentParticipantHeader,
   TalentParticipantRow,
-  TalentProfileDto,
-  TalentCompensation,
-  TalentProfileStaffView,
 } from '../talent-types'
 import { csvRow } from './talent-csv'
-import { incompleteReason, parseProfileInput } from './talent-profile'
+import { parseProfileInput } from './talent-profile'
+import {
+  dueByOf,
+  isFresh,
+  isProfileComplete,
+  requirementState,
+  type ProfileFacts,
+} from './profile-requirement'
 import { MAX_RESUME_BYTES, checkResume, resumeKey, safeResumeName } from './resume'
 
 export const RESUME_LINK_SECONDS = 300
 const ROW_LIMIT = 2000
+const SHAREABLE_KINDS = ['provider', 'organization']
 
 export interface Actor {
   userId: string
@@ -44,13 +56,17 @@ export interface Actor {
 export interface ParticipantFilters {
   q?: string
   cohortId?: string
+  /** The filters below look INSIDE a profile, so they only ever match profiles shared with the provider. */
   industry?: string
   role?: string
   educationLevel?: string
+  /** The learner also allows employers. */
   share?: boolean
-  completed?: boolean
   hasResume?: boolean
   minYears?: number
+  /** Status filters: staff may see whether a profile is complete or shared, never its content. */
+  completed?: boolean
+  profileStatus?: ProfileVisibility
 }
 
 export interface UploadedResume {
@@ -59,78 +75,106 @@ export interface UploadedResume {
   buffer: Buffer
 }
 
+interface EducationRow {
+  level: string
+  fieldOfStudy: string | null
+  school: string | null
+  graduationYear: number | null
+}
+
 interface ProfileRow {
-  providerId: string
   userId: string
   resumeKey: string | null
   resumeName: string | null
   resumeSize: number | null
   resumeUploadedAt: Date | null
-  educationLevel: string | null
-  fieldOfStudy: string | null
-  school: string | null
-  graduationYear: number | null
   yearsExperience: number | null
   industries: string[]
   previousCompensation: number | null
   targetCompensation: number | null
   targetRoles: string[]
   availableFrom: Date | null
-  shareWithEmployers: boolean
   completedAt: Date | null
   updatedAt: Date
+  educations: EducationRow[]
 }
 
 const day = (d: Date | null): string | null => (d ? d.toISOString().slice(0, 10) : null)
 
-/** The learner's view of their own profile. The storage key is never part of it. */
-export function toProfileDto(p: ProfileRow): TalentProfileDto {
+const educationOf = (e: EducationRow): EducationEntry => ({
+  level: e.level as EducationLevel,
+  fieldOfStudy: e.fieldOfStudy,
+  school: e.school,
+  graduationYear: e.graduationYear,
+})
+
+const completeOf = (p: {
+  yearsExperience: number | null
+  industries: string[]
+  targetRoles: string[]
+  educations: unknown[]
+}): boolean => isProfileComplete({ ...p, educationCount: p.educations.length })
+
+const resumeOf = (p: ProfileRow) =>
+  p.resumeKey && p.resumeName
+    ? {
+        name: p.resumeName,
+        size: p.resumeSize ?? 0,
+        uploadedAt: (p.resumeUploadedAt ?? p.updatedAt).toISOString(),
+      }
+    : null
+
+/** The learner's view of their own profile; empty values before the first save. The storage key is never part of it. */
+export function toProfileDto(p: ProfileRow | null): ProfileDto {
+  if (!p)
+    return {
+      educations: [],
+      yearsExperience: null,
+      industries: [],
+      targetRoles: [],
+      availableFrom: null,
+      previousCompensation: null,
+      targetCompensation: null,
+      resume: null,
+      complete: false,
+      completedAt: null,
+      updatedAt: null,
+    }
   return {
-    providerId: p.providerId,
-    resume:
-      p.resumeKey && p.resumeName
-        ? {
-            name: p.resumeName,
-            size: p.resumeSize ?? 0,
-            uploadedAt: (p.resumeUploadedAt ?? p.updatedAt).toISOString(),
-          }
-        : null,
-    educationLevel: p.educationLevel as EducationLevel | null,
-    fieldOfStudy: p.fieldOfStudy,
-    school: p.school,
-    graduationYear: p.graduationYear,
+    educations: p.educations.map(educationOf),
     yearsExperience: p.yearsExperience,
     industries: p.industries,
-    previousCompensation: p.previousCompensation,
-    targetCompensation: p.targetCompensation,
     targetRoles: p.targetRoles,
     availableFrom: day(p.availableFrom),
-    shareWithEmployers: p.shareWithEmployers,
+    previousCompensation: p.previousCompensation,
+    targetCompensation: p.targetCompensation,
+    resume: resumeOf(p),
+    complete: completeOf(p),
     completedAt: p.completedAt ? p.completedAt.toISOString() : null,
     updatedAt: p.updatedAt.toISOString(),
   }
 }
 
+const EDUCATION_SELECT = {
+  select: { level: true, fieldOfStudy: true, school: true, graduationYear: true },
+  orderBy: { position: 'asc' as const },
+}
+
 const PROFILE_SELECT = (compensation: boolean) => ({
-  providerId: true,
   userId: true,
   resumeKey: true,
   resumeName: true,
   resumeSize: true,
   resumeUploadedAt: true,
-  educationLevel: true,
-  fieldOfStudy: true,
-  school: true,
-  graduationYear: true,
   yearsExperience: true,
   industries: true,
   targetRoles: true,
   availableFrom: true,
-  shareWithEmployers: true,
   completedAt: true,
   updatedAt: true,
   previousCompensation: compensation,
   targetCompensation: compensation,
+  educations: EDUCATION_SELECT,
 })
 
 const includes = (list: string[], v: string) =>
@@ -162,102 +206,193 @@ export class TalentService {
 
   // ── the learner's own profile ─────────────────────────────────────────────
 
-  /** One entry per provider the learner has a cohort with, newest cohort first. */
-  async myProfiles(userId: string): Promise<LearnerTalentProfileEntry[]> {
+  private profileOf(userId: string): Promise<ProfileRow | null> {
+    return this.prisma.talentProfile.findUnique({
+      where: { userId },
+      select: PROFILE_SELECT(true),
+    }) as Promise<ProfileRow | null>
+  }
+
+  /** Needed for the foreign key: a learner's user row exists once they have joined a cohort. */
+  private async assertLearner(userId: string): Promise<void> {
+    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
+    if (!u) throw new ForbiddenException('Join a cohort first, then you can build your profile.')
+  }
+
+  /** The organizations the learner can show the profile to, and the cohorts that require it. */
+  private async learnerContext(userId: string) {
     const enrollments = await this.prisma.enrollment.findMany({
-      where: { userId, cohort: { course: { isNot: null } } },
+      where: { userId, cohort: { courseId: { not: null } } },
       orderBy: { enrolledAt: 'desc' },
       select: {
+        status: true,
         cohort: {
           select: {
             id: true,
             name: true,
-            course: { select: { providerId: true, provider: { select: { name: true } } } },
+            requiresProfile: true,
+            profileRefreshMonths: true,
+            institution: { select: { id: true, name: true, kind: true } },
+            course: { select: { provider: { select: { id: true, name: true, kind: true } } } },
           },
         },
       },
     })
-    const byProvider = new Map<string, LearnerTalentProfileEntry>()
-    for (const e of enrollments) {
-      const course = e.cohort.course
-      if (!course) continue
-      let entry = byProvider.get(course.providerId)
-      if (!entry) {
-        entry = {
-          providerId: course.providerId,
-          providerName: course.provider.name,
-          cohorts: [],
-          profile: null,
-        }
-        byProvider.set(course.providerId, entry)
+    const orgs = new Map<
+      string,
+      {
+        name: string
+        kind: 'provider' | 'organization'
+        why: ShareOption['why']
+        required: boolean
       }
-      entry.cohorts.push({ cohortId: e.cohort.id, cohortName: e.cohort.name })
+    >()
+    const add = (
+      inst: { id: string; name: string; kind: string },
+      why: ShareOption['why'],
+      required: boolean
+    ) => {
+      if (!SHAREABLE_KINDS.includes(inst.kind)) return
+      const cur = orgs.get(inst.id)
+      if (cur) {
+        cur.required = cur.required || required
+        if (why === 'your program') cur.why = why
+      } else orgs.set(inst.id, { name: inst.name, kind: inst.kind as never, why, required })
     }
-    if (byProvider.size === 0) return []
-    const profiles = await this.prisma.talentProfile.findMany({
-      where: { userId, providerId: { in: [...byProvider.keys()] } },
-    })
-    for (const p of profiles) {
-      const entry = byProvider.get(p.providerId)
-      if (entry) entry.profile = toProfileDto(p)
+    const requiring: {
+      cohortId: string
+      cohortName: string
+      providerName: string
+      months: number | null
+    }[] = []
+    for (const e of enrollments) {
+      const c = e.cohort
+      const live = e.status !== 'withdrawn' && c.requiresProfile
+      if (c.course) add(c.course.provider, 'your program', live)
+      add(c.institution, 'your cohort host', live)
+      if (live)
+        requiring.push({
+          cohortId: c.id,
+          cohortName: c.name,
+          providerName: c.course?.provider.name ?? c.institution.name,
+          months: c.profileRefreshMonths,
+        })
     }
-    return [...byProvider.values()]
+    return { orgs, requiring }
   }
 
-  async saveProfile(userId: string, providerId: string, body: unknown): Promise<TalentProfileDto> {
-    await this.access.assertLearnerOfProvider(userId, providerId)
+  async myProfile(userId: string, now: Date = new Date()): Promise<LearnerProfileState> {
+    const [row, ctx, shares] = await Promise.all([
+      this.profileOf(userId),
+      this.learnerContext(userId),
+      this.prisma.profileShare.findMany({
+        where: { userId },
+        select: { institutionId: true, allowEmployers: true },
+      }),
+    ])
+    const shareOf = new Map(shares.map((s) => [s.institutionId, s.allowEmployers]))
+    const organizations: ShareOption[] = [...ctx.orgs].map(([institutionId, o]) => ({
+      institutionId,
+      name: o.name,
+      kind: o.kind,
+      why: o.why,
+      required: o.required,
+      shared: shareOf.has(institutionId),
+      allowEmployers: shareOf.get(institutionId) === true,
+    }))
+    organizations.sort((a, b) => a.name.localeCompare(b.name))
+    const dto = toProfileDto(row)
+    const facts: ProfileFacts | null = row
+      ? { complete: dto.complete, completedAt: row.completedAt, updatedAt: row.updatedAt }
+      : null
+    const requirements: ProfileRequirement[] = ctx.requiring.map((r) => ({
+      cohortId: r.cohortId,
+      cohortName: r.cohortName,
+      providerName: r.providerName,
+      refreshMonths: r.months,
+      satisfied: requirementState(facts, r.months, now) === 'done',
+      dueBy: dueByOf(row?.updatedAt ?? null, r.months)?.toISOString() ?? null,
+    }))
+    return { profile: dto, organizations, requirements }
+  }
+
+  async saveProfile(userId: string, body: unknown): Promise<LearnerProfileState> {
     const patch = parseProfileInput(body)
-    const where = { providerId_userId: { providerId, userId } }
-    const existing = await this.prisma.talentProfile.findUnique({ where })
+    await this.assertLearner(userId)
+    let optionIds: string[] = []
+    if (patch.shares) {
+      optionIds = [...(await this.learnerContext(userId)).orgs.keys()]
+      if (patch.shares.some((s) => !optionIds.includes(s.institutionId)))
+        throw new BadRequestException('Choose organizations from your list.')
+    }
+    const now = new Date()
+    const existing = await this.prisma.talentProfile.findUnique({
+      where: { userId },
+      select: {
+        completedAt: true,
+        yearsExperience: true,
+        industries: true,
+        targetRoles: true,
+        _count: { select: { educations: true } },
+      },
+    })
     const d = patch.data
-    const merged = {
-      educationLevel:
-        d.educationLevel !== undefined ? d.educationLevel : (existing?.educationLevel ?? null),
+    const complete = isProfileComplete({
+      educationCount: patch.educations?.length ?? existing?._count.educations ?? 0,
       yearsExperience:
         d.yearsExperience !== undefined ? d.yearsExperience : (existing?.yearsExperience ?? null),
       industries: d.industries ?? existing?.industries ?? [],
       targetRoles: d.targetRoles ?? existing?.targetRoles ?? [],
-    }
-    let completedAt: Date | undefined
-    if (patch.complete) {
-      const reason = incompleteReason(merged)
-      if (reason) throw new BadRequestException(reason)
-      completedAt = existing?.completedAt ?? new Date()
-    }
-    const consentChanged =
-      patch.data.shareWithEmployers !== undefined &&
-      patch.data.shareWithEmployers !== (existing?.shareWithEmployers ?? false)
-    const write = {
-      ...patch.data,
-      ...(consentChanged ? { consentUpdatedAt: new Date() } : {}),
-      ...(completedAt ? { completedAt } : {}),
-    }
-    const saved = await this.prisma.talentProfile.upsert({
-      where,
-      create: { providerId, userId, ...write },
-      update: write,
     })
-    if (patch.complete) await this.learner.completeProfileItems(userId, providerId)
-    return toProfileDto(saved)
+    // First time it is complete; kept after that, even if a later edit makes it incomplete.
+    const completedAt = existing?.completedAt ?? (complete ? now : null)
+    const rows = (patch.educations ?? []).map((e, position) => ({ ...e, position }))
+    const write = { ...d, updatedAt: now, ...(completedAt ? { completedAt } : {}) }
+    const ops: unknown[] = [
+      this.prisma.talentProfile.upsert({
+        where: { userId },
+        create: { userId, ...write, ...(patch.educations ? { educations: { create: rows } } : {}) },
+        update: {
+          ...write,
+          ...(patch.educations ? { educations: { deleteMany: {}, create: rows } } : {}),
+        },
+      }),
+    ]
+    if (patch.shares) {
+      const wanted = new Set(patch.shares.map((s) => s.institutionId))
+      for (const s of patch.shares)
+        ops.push(
+          this.prisma.profileShare.upsert({
+            where: { userId_institutionId: { userId, institutionId: s.institutionId } },
+            create: { userId, institutionId: s.institutionId, allowEmployers: s.allowEmployers },
+            update: { allowEmployers: s.allowEmployers, updatedAt: now },
+          })
+        )
+      const dropped = optionIds.filter((id) => !wanted.has(id))
+      if (dropped.length)
+        ops.push(
+          this.prisma.profileShare.deleteMany({
+            where: { userId, institutionId: { in: dropped } },
+          })
+        )
+    }
+    await this.prisma.$transaction(ops as never)
+    await this.learner.syncProfileState(userId)
+    return this.myProfile(userId, now)
   }
 
-  async uploadResume(
-    userId: string,
-    providerId: string,
-    file: UploadedResume | undefined
-  ): Promise<TalentProfileDto> {
+  async uploadResume(userId: string, file: UploadedResume | undefined): Promise<ProfileDto> {
     this.assertResumeStorage()
-    await this.access.assertLearnerOfProvider(userId, providerId)
+    await this.assertLearner(userId)
     if (!file?.buffer?.length) throw new BadRequestException('Choose a resume to upload')
     if (file.buffer.length > MAX_RESUME_BYTES)
       throw new BadRequestException('The resume is too large (max 5 MB).')
     const checked = checkResume(file)
     if (!checked) throw new BadRequestException('Use a PDF, DOC or DOCX file.')
     const name = safeResumeName(file.originalname, checked.ext)
-    const key = resumeKey(providerId, userId, name)
-    const where = { providerId_userId: { providerId, userId } }
+    const key = resumeKey(userId, name)
     const existing = await this.prisma.talentProfile.findUnique({
-      where,
+      where: { userId },
       select: { resumeKey: true },
     })
     await this.storage.upload(key, file.buffer, checked.contentType)
@@ -267,11 +402,10 @@ export class TalentService {
       resumeSize: file.buffer.length,
       resumeUploadedAt: new Date(),
     }
-    let saved
     try {
-      saved = await this.prisma.talentProfile.upsert({
-        where,
-        create: { providerId, userId, ...resume },
+      await this.prisma.talentProfile.upsert({
+        where: { userId },
+        create: { userId, ...resume },
         update: resume,
       })
     } catch (err) {
@@ -279,31 +413,28 @@ export class TalentService {
       throw err
     }
     if (existing?.resumeKey && existing.resumeKey !== key) await this.dropObject(existing.resumeKey)
-    return toProfileDto(saved)
+    return toProfileDto(await this.profileOf(userId))
   }
 
-  async myResumeLink(userId: string, providerId: string): Promise<ResumeLink> {
+  async myResumeLink(userId: string): Promise<ResumeLink> {
     this.assertResumeStorage()
-    await this.access.assertLearnerOfProvider(userId, providerId)
     const p = await this.prisma.talentProfile.findUnique({
-      where: { providerId_userId: { providerId, userId } },
+      where: { userId },
       select: { resumeKey: true, resumeName: true },
     })
     return this.link(p)
   }
 
-  async deleteResume(userId: string, providerId: string): Promise<TalentProfileDto> {
-    await this.access.assertLearnerOfProvider(userId, providerId)
-    const where = { providerId_userId: { providerId, userId } }
-    const existing = await this.prisma.talentProfile.findUnique({ where })
+  async deleteResume(userId: string): Promise<ProfileDto> {
+    const existing = await this.profileOf(userId)
     if (!existing) throw new NotFoundException('You have no profile yet')
     if (!existing.resumeKey) return toProfileDto(existing)
-    const saved = await this.prisma.talentProfile.update({
-      where,
+    await this.prisma.talentProfile.update({
+      where: { userId },
       data: { resumeKey: null, resumeName: null, resumeSize: null, resumeUploadedAt: null },
     })
     await this.dropObject(existing.resumeKey)
-    return toProfileDto(saved)
+    return toProfileDto(await this.profileOf(userId))
   }
 
   /** The row no longer points at the object, so a failed delete only leaves an orphan: log it, never fail the learner. */
@@ -333,6 +464,35 @@ export class TalentService {
     if (userId) await this.access.assertParticipantOfProvider(providerId, userId)
   }
 
+  /** The learner's choice for this provider: a row means its staff may read the profile. */
+  private shareFor(providerId: string, userId: string) {
+    return this.prisma.profileShare.findUnique({
+      where: { userId_institutionId: { userId, institutionId: providerId } },
+      select: { allowEmployers: true },
+    })
+  }
+
+  private async assertShared(providerId: string, userId: string) {
+    const share = await this.shareFor(providerId, userId)
+    if (!share)
+      throw new ForbiddenException('This participant has not shared their profile with you.')
+    return share
+  }
+
+  /** The shortest refresh period among the person's requiring cohorts with this provider; null when none sets one. */
+  private async refreshMonthsFor(providerId: string, userId: string): Promise<number | null> {
+    const rows = await this.prisma.enrollment.findMany({
+      where: {
+        userId,
+        status: { not: 'withdrawn' },
+        cohort: { requiresProfile: true, course: { providerId } },
+      },
+      select: { cohort: { select: { profileRefreshMonths: true } } },
+    })
+    const months = rows.map((r) => r.cohort.profileRefreshMonths).filter((m): m is number => !!m)
+    return months.length ? Math.min(...months) : null
+  }
+
   async participantHeader(
     actor: Actor,
     providerId: string,
@@ -354,16 +514,46 @@ export class TalentService {
     return (await this.participants(providerId, { filters })).map((r) => r.row)
   }
 
-  /** Never carries pay: only whether any exists. Pay comes from `staffCompensation`. */
+  /**
+   * The profile only if the learner shared it with this provider; otherwise just whether one exists
+   * and is complete and fresh. Never carries pay: only whether any exists.
+   */
   async staffProfile(
     actor: Actor,
     providerId: string,
-    userId: string
-  ): Promise<TalentProfileStaffView | null> {
+    userId: string,
+    now: Date = new Date()
+  ): Promise<StaffProfileResult> {
     await this.staffOf(actor, providerId, userId)
-    const p = await this.prisma.talentProfile.findUnique({
-      where: { providerId_userId: { providerId, userId } },
-    })
+    const [share, months] = await Promise.all([
+      this.shareFor(providerId, userId),
+      this.refreshMonthsFor(providerId, userId),
+    ])
+    if (!share) {
+      const status = await this.prisma.talentProfile.findUnique({
+        where: { userId },
+        select: {
+          updatedAt: true,
+          yearsExperience: true,
+          industries: true,
+          targetRoles: true,
+          _count: { select: { educations: true } },
+        },
+      })
+      if (!status) return { shared: false, status: 'none', userId, complete: null, fresh: null }
+      return {
+        shared: false,
+        status: 'not_shared',
+        userId,
+        complete: isProfileComplete({ educationCount: status._count.educations, ...status }),
+        fresh: months ? isFresh(status.updatedAt, months, now) : null,
+      }
+    }
+    const p = (await this.prisma.talentProfile.findUnique({
+      where: { userId },
+      select: PROFILE_SELECT(true),
+    })) as ProfileRow | null
+    if (!p) return { shared: false, status: 'none', userId, complete: null, fresh: null }
     await this.audit.record({
       actorId: actor.userId,
       providerId,
@@ -371,12 +561,22 @@ export class TalentService {
       resource: 'talent_profile',
       action: 'read',
     })
-    if (!p) return null
-    const { previousCompensation, targetCompensation, ...rest } = toProfileDto(p)
     return {
-      ...rest,
+      shared: true,
+      status: 'shared',
       userId,
-      hasCompensation: previousCompensation !== null || targetCompensation !== null,
+      educations: p.educations.map(educationOf),
+      yearsExperience: p.yearsExperience,
+      industries: p.industries,
+      targetRoles: p.targetRoles,
+      availableFrom: day(p.availableFrom),
+      resume: resumeOf(p),
+      hasCompensation: p.previousCompensation !== null || p.targetCompensation !== null,
+      allowEmployers: share.allowEmployers,
+      complete: completeOf(p),
+      fresh: months ? isFresh(p.updatedAt, months, now) : null,
+      completedAt: p.completedAt ? p.completedAt.toISOString() : null,
+      updatedAt: p.updatedAt.toISOString(),
     }
   }
 
@@ -389,6 +589,7 @@ export class TalentService {
     await this.staffOf(actor, providerId, userId)
     if (actor.userId === userId)
       throw new ForbiddenException('You cannot view compensation about yourself.')
+    await this.assertShared(providerId, userId)
     await this.audit.record({
       actorId: actor.userId,
       providerId,
@@ -397,7 +598,7 @@ export class TalentService {
       action: 'read',
     })
     const p = await this.prisma.talentProfile.findUnique({
-      where: { providerId_userId: { providerId, userId } },
+      where: { userId },
       select: { previousCompensation: true, targetCompensation: true },
     })
     if (!p) throw new NotFoundException('No profile')
@@ -410,8 +611,9 @@ export class TalentService {
   async staffResumeLink(actor: Actor, providerId: string, userId: string): Promise<ResumeLink> {
     this.assertResumeStorage()
     await this.staffOf(actor, providerId, userId)
+    await this.assertShared(providerId, userId)
     const p = await this.prisma.talentProfile.findUnique({
-      where: { providerId_userId: { providerId, userId } },
+      where: { userId },
       select: { resumeKey: true, resumeName: true },
     })
     if (!p?.resumeKey) throw new NotFoundException('No resume uploaded')
@@ -425,6 +627,7 @@ export class TalentService {
     return this.link(p)
   }
 
+  /** Only profiles the learners shared with this provider. People who did not are left out, and the audit row says how many. */
   async exportCsv(
     actor: Actor,
     providerId: string,
@@ -432,11 +635,12 @@ export class TalentService {
     includeCompensation: boolean
   ): Promise<string> {
     await this.staffOf(actor, providerId)
-    const found = await this.participants(providerId, {
+    const all = await this.participants(providerId, {
       filters,
       compensation: includeCompensation,
       noCap: true,
     })
+    const found = all.filter((r) => r.content)
     if (found.length > ROW_LIMIT)
       throw new PayloadTooLargeException(
         `This export has more than ${ROW_LIMIT} people. Narrow the filters (for example pick a cohort) and try again.`
@@ -445,44 +649,41 @@ export class TalentService {
       'name',
       'email',
       'cohorts',
-      'education_level',
-      'field_of_study',
-      'school',
-      'graduation_year',
+      'education',
       'years_experience',
       'industries',
       'target_roles',
       'available_from',
       'has_resume',
-      'share',
+      'allow_employers',
       'completed',
       ...(includeCompensation ? ['previous_compensation', 'target_compensation'] : []),
     ]
     const lines = [csvRow(header)]
-    for (const { row, profile } of found) {
+    for (const { row, content: p } of found) {
       lines.push(
         csvRow([
           row.name,
           row.email,
           row.cohorts.map((c) => c.cohortName).join('; '),
-          profile?.educationLevel,
-          profile?.fieldOfStudy,
-          profile?.school,
-          profile?.graduationYear,
-          profile?.yearsExperience,
-          profile?.industries.join('; '),
-          profile?.targetRoles.join('; '),
-          day(profile?.availableFrom ?? null),
-          row.profile?.hasResume ? 'yes' : 'no',
-          row.profile?.shareWithEmployers ? 'yes' : 'no',
-          row.profile?.completed ? 'yes' : 'no',
-          ...(includeCompensation
-            ? [profile?.previousCompensation, profile?.targetCompensation]
-            : []),
+          p?.educations
+            .map((e) =>
+              [e.level, e.fieldOfStudy, e.school, e.graduationYear].filter((x) => x).join(' - ')
+            )
+            .join('; '),
+          p?.yearsExperience,
+          p?.industries.join('; '),
+          p?.targetRoles.join('; '),
+          day(p?.availableFrom ?? null),
+          p?.resumeKey ? 'yes' : 'no',
+          row.profile?.allowEmployers ? 'yes' : 'no',
+          row.complete ? 'yes' : 'no',
+          ...(includeCompensation ? [p?.previousCompensation, p?.targetCompensation] : []),
         ])
       )
     }
-    const detail = `csv, ${found.length} rows`
+    const left = all.length - found.length
+    const detail = `csv, ${found.length} rows, shared profiles only${left ? `, ${left} not shared left out` : ''}`
     await this.audit.record({
       actorId: actor.userId,
       providerId,
@@ -498,12 +699,14 @@ export class TalentService {
         action: 'export',
         detail,
       })
-    return '\uFEFF' + lines.join('\r\n') + '\r\n'
+    return '﻿' + lines.join('\r\n') + '\r\n'
   }
 
   /**
-   * The provider's participants with their profile. The compensation columns are not even read
-   * from the database unless the caller is the opted-in export, so a list row cannot carry them.
+   * The provider's participants with their profile STATUS. A profile's content is read, filtered on
+   * and returned only for learners who shared it with this provider; for the rest only whether it
+   * exists, is complete and is fresh. The compensation columns are not read unless the caller is
+   * the opted-in export, so a list row cannot carry them.
    */
   private async participants(
     providerId: string,
@@ -513,9 +716,11 @@ export class TalentService {
       compensation?: boolean
       /** The export must see every match so it can refuse an oversized one rather than truncate. */
       noCap?: boolean
+      now?: Date
     }
-  ): Promise<{ row: TalentParticipantRow; profile: ProfileRow | null }[]> {
+  ): Promise<{ row: TalentParticipantRow; content: ProfileRow | null }[]> {
     const f = opts.filters ?? {}
+    const now = opts.now ?? new Date()
     const q = f.q?.trim()
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
@@ -536,12 +741,25 @@ export class TalentService {
         userId: true,
         status: true,
         user: { select: { displayName: true, email: true } },
-        cohort: { select: { id: true, name: true, course: { select: { title: true } } } },
+        cohort: {
+          select: {
+            id: true,
+            name: true,
+            requiresProfile: true,
+            profileRefreshMonths: true,
+            course: { select: { title: true } },
+          },
+        },
       },
     })
     const people = new Map<
       string,
-      { name: string; email: string | null; cohorts: TalentParticipantCohort[] }
+      {
+        name: string
+        email: string | null
+        cohorts: TalentParticipantCohort[]
+        months: number | null
+      }
     >()
     for (const e of enrollments) {
       let p = people.get(e.userId)
@@ -550,6 +768,7 @@ export class TalentService {
           name: e.user.displayName ?? e.user.email ?? 'Unnamed',
           email: e.user.email,
           cohorts: [],
+          months: null,
         }
         people.set(e.userId, p)
       }
@@ -559,16 +778,31 @@ export class TalentService {
         courseTitle: e.cohort.course?.title ?? '',
         enrollmentStatus: e.status as TalentParticipantCohort['enrollmentStatus'],
       })
+      const m = e.cohort.profileRefreshMonths
+      if (e.status !== 'withdrawn' && e.cohort.requiresProfile && m)
+        p.months = p.months === null ? m : Math.min(p.months, m)
     }
     // A cohort filter keeps people in that cohort; their other cohorts still show.
     let ids = [...people.keys()]
     if (f.cohortId)
       ids = ids.filter((id) => people.get(id)!.cohorts.some((c) => c.cohortId === f.cohortId))
     if (ids.length === 0) return []
-    const [profiles, supportGroups, noteGroups] = await Promise.all([
+    const [shares, statusRows, supportGroups, noteGroups] = await Promise.all([
+      this.prisma.profileShare.findMany({
+        where: { institutionId: providerId, userId: { in: ids } },
+        select: { userId: true, allowEmployers: true },
+      }),
+      // Enough to say whether it is complete and fresh. Not output, only reduced to two booleans.
       this.prisma.talentProfile.findMany({
-        where: { providerId, userId: { in: ids } },
-        select: PROFILE_SELECT(opts.compensation === true),
+        where: { userId: { in: ids } },
+        select: {
+          userId: true,
+          updatedAt: true,
+          yearsExperience: true,
+          industries: true,
+          targetRoles: true,
+          _count: { select: { educations: true } },
+        },
       }),
       this.prisma.supportItem.groupBy({
         by: ['userId'],
@@ -581,37 +815,61 @@ export class TalentService {
         _count: { _all: true },
       }),
     ])
-    const profileOf = new Map(profiles.map((p) => [p.userId, p as unknown as ProfileRow]))
+    const allow = new Map(shares.map((s) => [s.userId, s.allowEmployers]))
+    const statusOf = new Map(statusRows.map((s) => [s.userId, s]))
+    // The content of a profile is read for the people who shared it, and only for them.
+    const sharedIds = ids.filter((id) => allow.has(id) && statusOf.has(id))
+    const contentRows = sharedIds.length
+      ? ((await this.prisma.talentProfile.findMany({
+          where: { userId: { in: sharedIds } },
+          select: PROFILE_SELECT(opts.compensation === true),
+        })) as ProfileRow[])
+      : []
+    const contentOf = new Map(contentRows.map((p) => [p.userId, p]))
     const open = new Map(supportGroups.map((g) => [g.userId, g._count._all]))
     const notes = new Map(noteGroups.map((g) => [g.userId, g._count._all]))
-    const out: { row: TalentParticipantRow; profile: ProfileRow | null }[] = []
+    const out: { row: TalentParticipantRow; content: ProfileRow | null }[] = []
     for (const id of ids) {
       const person = people.get(id)!
-      const p = profileOf.get(id) ?? null
-      if (f.industry && !(p && includes(p.industries, f.industry))) continue
-      if (f.role && !(p && includes(p.targetRoles, f.role))) continue
-      if (f.educationLevel && p?.educationLevel !== f.educationLevel) continue
-      if (f.share && !p?.shareWithEmployers) continue
-      if (f.completed && !p?.completedAt) continue
-      if (f.hasResume && !p?.resumeKey) continue
-      if (f.minYears !== undefined && !((p?.yearsExperience ?? -1) >= f.minYears)) continue
+      const st = statusOf.get(id) ?? null
+      const content = contentOf.get(id) ?? null
+      const profileStatus: ProfileVisibility = !st
+        ? 'none'
+        : allow.has(id) && content
+          ? 'shared'
+          : 'not_shared'
+      const complete = st
+        ? isProfileComplete({ educationCount: st._count.educations, ...st })
+        : null
+      if (f.profileStatus && f.profileStatus !== profileStatus) continue
+      if (f.completed && complete !== true) continue
+      // Filters that look inside the profile: an unshared profile never matches any of them.
+      if (f.industry && !(content && includes(content.industries, f.industry))) continue
+      if (f.role && !(content && includes(content.targetRoles, f.role))) continue
+      if (f.educationLevel && !content?.educations.some((e) => e.level === f.educationLevel))
+        continue
+      if (f.share && !(content && allow.get(id) === true)) continue
+      if (f.hasResume && !content?.resumeKey) continue
+      if (f.minYears !== undefined && !((content?.yearsExperience ?? -1) >= f.minYears)) continue
       out.push({
-        profile: p,
+        content,
         row: {
           userId: id,
           name: person.name,
           email: person.email,
           cohorts: person.cohorts,
-          profile: p
+          profileStatus,
+          complete,
+          fresh: st && person.months ? isFresh(st.updatedAt, person.months, now) : null,
+          profile: content
             ? {
-                completed: !!p.completedAt,
-                hasResume: !!p.resumeKey,
-                educationLevel: p.educationLevel,
-                yearsExperience: p.yearsExperience,
-                industries: p.industries,
-                targetRoles: p.targetRoles,
-                availableFrom: day(p.availableFrom),
-                shareWithEmployers: p.shareWithEmployers,
+                hasResume: !!content.resumeKey,
+                educationLevels: content.educations.map((e) => e.level),
+                yearsExperience: content.yearsExperience,
+                industries: content.industries,
+                targetRoles: content.targetRoles,
+                availableFrom: day(content.availableFrom),
+                allowEmployers: allow.get(id) === true,
               }
             : null,
           openSupportItems: open.get(id) ?? 0,

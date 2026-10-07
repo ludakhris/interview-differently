@@ -8,14 +8,12 @@ import {
   Put,
   Query,
   Req,
-  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
   Body,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
-import type { Response } from 'express'
 import { LearnGuard } from '../../auth/learn.guard'
 import { MAX_RESUME_BYTES } from './resume'
 import { TalentService, type ParticipantFilters } from './talent.service'
@@ -37,6 +35,10 @@ function filtersOf(q: Record<string, string | undefined>): ParticipantFilters {
     educationLevel: q.educationLevel || undefined,
     share: flag(q.share),
     completed: flag(q.completed),
+    profileStatus:
+      q.profileStatus === 'shared' || q.profileStatus === 'not_shared' || q.profileStatus === 'none'
+        ? q.profileStatus
+        : undefined,
     hasResume: flag(q.hasResume),
     minYears: years !== undefined && Number.isFinite(years) ? years : undefined,
   }
@@ -48,39 +50,40 @@ function filtersOf(q: Record<string, string | undefined>): ParticipantFilters {
 export class TalentController {
   constructor(private readonly service: TalentService) {}
 
-  // ── the learner's own profile ─────────────────────────────────────────────
+  // ── the learner's own profile (one per person, not per provider) ──────────
 
-  @Get('me/talent-profiles')
+  @Get('me/profile')
   @Header('Cache-Control', 'no-store')
   mine(@Req() req: LearnRequest) {
-    return this.service.myProfiles(req.userId)
+    return this.service.myProfile(req.userId)
   }
 
-  @Put('me/talent-profiles/:providerId')
+  @Put('me/profile')
   @Header('Cache-Control', 'no-store')
-  save(@Req() req: LearnRequest, @Param('providerId') providerId: string, @Body() body: unknown) {
-    return this.service.saveProfile(req.userId, providerId, body)
+  save(@Req() req: LearnRequest, @Body() body: unknown) {
+    return this.service.saveProfile(req.userId, body)
   }
 
-  @Post('me/talent-profiles/:providerId/resume')
+  @Post('me/profile/resume')
+  @Header('Cache-Control', 'no-store')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_RESUME_BYTES } }))
   uploadResume(
     @Req() req: LearnRequest,
-    @Param('providerId') providerId: string,
     @UploadedFile() file: { originalname: string; mimetype: string; buffer: Buffer } | undefined
   ) {
-    return this.service.uploadResume(req.userId, providerId, file)
+    return this.service.uploadResume(req.userId, file)
   }
 
-  @Get('me/talent-profiles/:providerId/resume')
+  @Get('me/profile/resume')
   @Header('Cache-Control', 'no-store')
-  myResume(@Req() req: LearnRequest, @Param('providerId') providerId: string) {
-    return this.service.myResumeLink(req.userId, providerId)
+  myResume(@Req() req: LearnRequest) {
+    return this.service.myResumeLink(req.userId)
   }
 
-  @Delete('me/talent-profiles/:providerId/resume')
-  removeResume(@Req() req: LearnRequest, @Param('providerId') providerId: string) {
-    return this.service.deleteResume(req.userId, providerId)
+  @Delete('me/profile/resume')
+  @Header('Cache-Control', 'no-store')
+  removeResume(@Req() req: LearnRequest) {
+    return this.service.deleteResume(req.userId)
   }
 
   // ── provider staff ────────────────────────────────────────────────────────
@@ -115,19 +118,12 @@ export class TalentController {
 
   @Get('providers/:providerId/participants/:userId/profile')
   @Header('Cache-Control', 'no-store')
-  async staffProfile(
+  staffProfile(
     @Req() req: LearnRequest,
     @Param('providerId') providerId: string,
-    @Param('userId') userId: string,
-    @Res() res: Response
+    @Param('userId') userId: string
   ) {
-    const profile = await this.service.staffProfile(
-      { userId: req.userId, role: req.userRole },
-      providerId,
-      userId
-    )
-    // A participant with no profile yet is a literal `null`; Nest would send an empty body for it.
-    res.json(profile)
+    return this.service.staffProfile({ userId: req.userId, role: req.userRole }, providerId, userId)
   }
 
   @Get('providers/:providerId/participants/:userId/compensation')

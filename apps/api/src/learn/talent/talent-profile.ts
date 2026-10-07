@@ -16,25 +16,34 @@ export const MAX_TEXT = 200
 export const MAX_LIST = 20
 export const MAX_LIST_ENTRY = 80
 
+export const MAX_EDUCATIONS = 8
+export const MAX_SHARES = 100
+
+export interface EducationWrite {
+  level: EducationLevel
+  fieldOfStudy: string | null
+  school: string | null
+  graduationYear: number | null
+}
+
 /**
- * What a valid save changes, ready for the database. Only the fields the request named are present.
- * Error messages never repeat what was typed, so an amount cannot leak through a message.
+ * What a valid save changes, ready for the database. Only what the request named is present: a
+ * field left out is left as is. Error messages never repeat what was typed, so an amount cannot
+ * leak through a message.
  */
-export interface ProfilePatch {
+export interface ProfileWrite {
   data: {
-    educationLevel?: EducationLevel | null
-    fieldOfStudy?: string | null
-    school?: string | null
-    graduationYear?: number | null
     yearsExperience?: number | null
     industries?: string[]
     previousCompensation?: number | null
     targetCompensation?: number | null
     targetRoles?: string[]
     availableFrom?: Date | null
-    shareWithEmployers?: boolean
   }
-  complete: boolean
+  /** The complete list wanted, in order. */
+  educations?: EducationWrite[]
+  /** The complete set of organizations to show the profile to. */
+  shares?: { institutionId: string; allowEmployers: boolean }[]
 }
 
 const has = (o: Record<string, unknown>, k: string) => Object.prototype.hasOwnProperty.call(o, k)
@@ -89,21 +98,49 @@ export function parseDay(v: unknown, label: string): Date | null {
   return d
 }
 
-export function parseProfileInput(body: unknown): ProfilePatch {
+function educations(v: unknown): EducationWrite[] {
+  if (!Array.isArray(v)) throw new BadRequestException('Education must be a list')
+  if (v.length > MAX_EDUCATIONS)
+    throw new BadRequestException(`You can list at most ${MAX_EDUCATIONS} schools or programs`)
+  return v.map((raw) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw))
+      throw new BadRequestException('Each education entry must be an object')
+    const e = raw as Record<string, unknown>
+    if (!EDUCATION_LEVELS.includes(e.level as EducationLevel))
+      throw new BadRequestException('Choose an education level for each entry')
+    return {
+      level: e.level as EducationLevel,
+      fieldOfStudy: has(e, 'fieldOfStudy') ? text(e.fieldOfStudy, 'Field of study') : null,
+      school: has(e, 'school') ? text(e.school, 'School') : null,
+      graduationYear: has(e, 'graduationYear')
+        ? integer(e.graduationYear, 'Graduation year', 1950, 2100)
+        : null,
+    }
+  })
+}
+
+function shares(v: unknown): { institutionId: string; allowEmployers: boolean }[] {
+  if (!Array.isArray(v)) throw new BadRequestException('Sharing must be a list')
+  if (v.length > MAX_SHARES) throw new BadRequestException('Too many organizations')
+  const out = new Map<string, boolean>()
+  for (const raw of v) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw))
+      throw new BadRequestException('Each sharing choice must be an object')
+    const s = raw as Record<string, unknown>
+    if (typeof s.institutionId !== 'string' || !s.institutionId)
+      throw new BadRequestException('Each sharing choice needs an organization')
+    if (typeof s.allowEmployers !== 'boolean')
+      throw new BadRequestException('Sharing with employers must be yes or no')
+    out.set(s.institutionId, s.allowEmployers)
+  }
+  return [...out].map(([institutionId, allowEmployers]) => ({ institutionId, allowEmployers }))
+}
+
+export function parseProfileInput(body: unknown): ProfileWrite {
   if (!body || typeof body !== 'object' || Array.isArray(body))
     throw new BadRequestException('Send your profile as a JSON object')
   const b = body as Record<string, unknown>
-  const data: ProfilePatch['data'] = {}
-  if (has(b, 'educationLevel')) {
-    const v = b.educationLevel
-    if (v !== null && !EDUCATION_LEVELS.includes(v as EducationLevel))
-      throw new BadRequestException('Choose an education level from the list')
-    data.educationLevel = v as EducationLevel | null
-  }
-  if (has(b, 'fieldOfStudy')) data.fieldOfStudy = text(b.fieldOfStudy, 'Field of study')
-  if (has(b, 'school')) data.school = text(b.school, 'School')
-  if (has(b, 'graduationYear'))
-    data.graduationYear = integer(b.graduationYear, 'Graduation year', 1950, 2100)
+  const data: ProfileWrite['data'] = {}
   if (has(b, 'yearsExperience'))
     data.yearsExperience = integer(b.yearsExperience, 'Years of experience', 0, MAX_YEARS)
   if (has(b, 'industries')) data.industries = list(b.industries, 'Industries')
@@ -123,27 +160,9 @@ export function parseProfileInput(body: unknown): ProfilePatch {
       MAX_COMPENSATION
     )
   if (has(b, 'availableFrom')) data.availableFrom = parseDay(b.availableFrom, 'Available from')
-  if (has(b, 'shareWithEmployers')) {
-    if (typeof b.shareWithEmployers !== 'boolean')
-      throw new BadRequestException('Sharing must be yes or no')
-    data.shareWithEmployers = b.shareWithEmployers
+  return {
+    data,
+    ...(has(b, 'educations') ? { educations: educations(b.educations) } : {}),
+    ...(has(b, 'shares') ? { shares: shares(b.shares) } : {}),
   }
-  if (has(b, 'complete') && typeof b.complete !== 'boolean')
-    throw new BadRequestException('complete must be true or false')
-  return { data, complete: b.complete === true }
-}
-
-/** What a profile needs before it can be marked complete. Returns the reason, or null when it is enough. */
-export function incompleteReason(p: {
-  educationLevel: string | null
-  yearsExperience: number | null
-  industries: string[]
-  targetRoles: string[]
-}): string | null {
-  const missing: string[] = []
-  if (!p.educationLevel) missing.push('your education level')
-  if (p.yearsExperience === null) missing.push('your years of experience')
-  if (p.industries.length === 0 && p.targetRoles.length === 0)
-    missing.push('at least one industry or target role')
-  return missing.length ? `To finish, add ${missing.join(', ')}.` : null
 }

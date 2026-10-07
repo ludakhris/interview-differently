@@ -1,4 +1,4 @@
-import type { LearnerTalentProfileEntry, TalentProfileDto } from '@id/types'
+import type { LearnerTalentProfileEntry, TalentProfileDto } from './legacyTypes'
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useApiSend } from '../api'
 import { ResumeBox } from './ResumeBox'

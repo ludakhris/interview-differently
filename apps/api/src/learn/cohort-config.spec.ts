@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common'
 import {
+  assertProfileRefresh,
   cohortStatus,
   endsAtFor,
   newJoinKey,
@@ -76,6 +77,29 @@ describe('validateCohortFields', () => {
       )
   })
 
+  it('accepts requiresProfile and a refresh of 1 to 60 months, or null for never', () => {
+    const base = { courseId: 'c1', name: 'x', startsAt: '2026-11-03' }
+    expect(validateCohortFields({ ...base, requiresProfile: true }, false).requiresProfile).toBe(
+      true
+    )
+    expect(validateCohortFields(base, false).requiresProfile).toBeUndefined()
+    for (const m of [1, 6, 60])
+      expect(
+        validateCohortFields({ ...base, profileRefreshMonths: m }, false).profileRefreshMonths
+      ).toBe(m)
+    expect(
+      validateCohortFields({ profileRefreshMonths: null }, true).profileRefreshMonths
+    ).toBeNull()
+    for (const bad of [0, 61, -1, 1.5, '6', true])
+      expect(() => validateCohortFields({ ...base, profileRefreshMonths: bad }, false)).toThrow(
+        BadRequestException
+      )
+    for (const bad of ['yes', 1, null])
+      expect(() => validateCohortFields({ ...base, requiresProfile: bad }, false)).toThrow(
+        BadRequestException
+      )
+  })
+
   it('lets an update leave fields out', () => {
     expect(validateCohortFields({ name: 'New name' }, true)).toEqual({ name: 'New name' })
   })
@@ -86,5 +110,40 @@ describe('validateEmail', () => {
     expect(validateEmail('  Ann@Example.COM ')).toBe('ann@example.com')
     expect(() => validateEmail('not an email')).toThrow(BadRequestException)
     expect(() => validateEmail(undefined)).toThrow(BadRequestException)
+  })
+})
+
+describe('assertProfileRefresh', () => {
+  const off = { requiresProfile: false, profileRefreshMonths: null }
+  it('refuses a refresh period while the profile is not required', () => {
+    expect(() => assertProfileRefresh(off, { profileRefreshMonths: 6 })).toThrow(
+      BadRequestException
+    )
+    expect(() =>
+      assertProfileRefresh(off, { requiresProfile: false, profileRefreshMonths: 6 })
+    ).toThrow(BadRequestException)
+  })
+  it('allows it with the requirement, set together or already stored', () => {
+    expect(() =>
+      assertProfileRefresh(off, { requiresProfile: true, profileRefreshMonths: 6 })
+    ).not.toThrow()
+    expect(() =>
+      assertProfileRefresh(
+        { requiresProfile: true, profileRefreshMonths: 3 },
+        { profileRefreshMonths: 6 }
+      )
+    ).not.toThrow()
+  })
+  it('turning the requirement off while a period is stored is fine: the period is cleared', () => {
+    expect(() =>
+      assertProfileRefresh(
+        { requiresProfile: true, profileRefreshMonths: 3 },
+        { requiresProfile: false }
+      )
+    ).not.toThrow()
+  })
+  it('allows null and leaving it alone', () => {
+    expect(() => assertProfileRefresh(off, { profileRefreshMonths: null })).not.toThrow()
+    expect(() => assertProfileRefresh(off, { name: 'x' })).not.toThrow()
   })
 })

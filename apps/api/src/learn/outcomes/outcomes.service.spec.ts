@@ -196,3 +196,103 @@ describe('OutcomesService.mine', () => {
     expect(c1.items.filter((i) => i.itemId === 'q1')).toHaveLength(2)
   })
 })
+
+describe('the profile requirement (#69)', () => {
+  const monthsAgo = (n: number) => new Date(Date.now() - n * 30.5 * 86_400_000)
+  const lesson = { id: 'l1', type: 'lesson', title: 'Lesson', label: null, config: {} }
+  const own = { id: 'pi', type: 'profile', title: 'Talent profile', label: null, config: {} }
+
+  function make(opts: {
+    cohort?: Record<string, unknown>
+    items: unknown[]
+    profile?: Record<string, unknown> | null
+    progress?: Record<string, unknown>[]
+  }) {
+    const talentProfile = {
+      findUnique: jest.fn(async () =>
+        opts.profile === undefined || opts.profile === null
+          ? null
+          : {
+              completedAt: monthsAgo(1),
+              updatedAt: monthsAgo(1),
+              yearsExperience: 1,
+              industries: ['x'],
+              targetRoles: [],
+              _count: { educations: 1 },
+              ...opts.profile,
+            }
+      ),
+    }
+    const prisma = {
+      enrollment: {
+        findMany: jest.fn(async () => [
+          {
+            id: 'e1',
+            userId: 'me',
+            cohortId: 'k1',
+            status: 'enrolled',
+            completedAt: null,
+            progress: opts.progress ?? [],
+            plan: [],
+            cohort: {
+              name: 'Cohort',
+              startsAt: PAST,
+              endsAt: FUTURE,
+              requiresProfile: false,
+              profileRefreshMonths: null,
+              institution: { name: 'Harbor' },
+              course: course('c9'),
+              ...opts.cohort,
+            },
+          },
+        ]),
+      },
+      courseModule: { findMany: jest.fn(async () => [{ courseId: 'c9', items: opts.items }]) },
+      talentProfile,
+    } as unknown as PrismaService
+    return {
+      service: new OutcomesService(prisma, {} as ProviderAccessService, {} as DataAccessLogService),
+      talentProfile,
+    }
+  }
+  const REQUIRE = { requiresProfile: true, profileRefreshMonths: 6 }
+
+  it('is unchanged when the profile is not required: no lookup, no extra row', async () => {
+    const { service, talentProfile } = make({ items: [lesson] })
+    const c = (await service.mine('me')).cohorts[0]
+    expect(c.items.map((i) => i.itemId)).toEqual(['l1'])
+    expect(c).toMatchObject({ itemsDone: 0, itemsTotal: 1 })
+    expect(talentProfile.findUnique).not.toHaveBeenCalled()
+  })
+  it('counts "Your profile" as a first item, done only while the profile satisfies the rule', async () => {
+    let r = make({ cohort: REQUIRE, items: [lesson], profile: null })
+    let c = (await r.service.mine('me')).cohorts[0]
+    expect(c.items[0]).toMatchObject({ itemId: 'profile', type: 'profile', status: 'not_started' })
+    expect(c).toMatchObject({ itemsDone: 0, itemsTotal: 2 })
+
+    r = make({ cohort: REQUIRE, items: [lesson], profile: {} })
+    c = (await r.service.mine('me')).cohorts[0]
+    expect(c.items[0].status).toBe('completed')
+    expect(c).toMatchObject({ itemsDone: 1, itemsTotal: 2 })
+
+    r = make({ cohort: REQUIRE, items: [lesson], profile: { updatedAt: monthsAgo(8) } })
+    c = (await r.service.mine('me')).cohorts[0]
+    expect(c.items[0].status).toBe('in_progress')
+    expect(c.itemsDone).toBe(0)
+
+    r = make({ cohort: REQUIRE, items: [lesson], profile: { _count: { educations: 0 } } })
+    expect((await r.service.mine('me')).cohorts[0].items[0].status).toBe('in_progress')
+  })
+  it('uses the course profile item by state, not a progress row, and adds nothing extra', async () => {
+    const r = make({
+      cohort: REQUIRE,
+      items: [lesson, own],
+      profile: null,
+      progress: [done('pi', null)],
+    })
+    const c = (await r.service.mine('me')).cohorts[0]
+    expect(c.items.find((i) => i.itemId === 'pi')?.status).toBe('not_started')
+    expect(c.items.map((i) => i.itemId)).toEqual(['l1', 'pi'])
+    expect(c.itemsTotal).toBe(2)
+  })
+})

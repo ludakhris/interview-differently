@@ -18,6 +18,7 @@ import type {
 import { PrismaService } from '../prisma/prisma.service'
 import {
   assertApprovalContact,
+  assertProfileRefresh,
   cohortStatus,
   endsAtFor,
   newJoinKey,
@@ -133,6 +134,8 @@ export class LearnCohortsService {
       joinContact: c.joinContact,
       pendingRequests: c._count.joinRequests,
       delivery: c.delivery as CohortDelivery,
+      requiresProfile: c.requiresProfile,
+      profileRefreshMonths: c.profileRefreshMonths,
     }))
   }
 
@@ -166,6 +169,7 @@ export class LearnCohortsService {
       joinKey = newJoinKey()
     }
     assertApprovalContact({ requiresApproval: false, joinContact: null }, fields)
+    assertProfileRefresh({ requiresProfile: false, profileRefreshMonths: null }, fields)
     const startsAt = fields.startsAt as Date
     const cohort = await this.prisma.cohort.create({
       data: {
@@ -179,6 +183,8 @@ export class LearnCohortsService {
         requiresApproval: fields.requiresApproval ?? false,
         joinContact: fields.joinContact ?? null,
         delivery: fields.delivery ?? 'online',
+        requiresProfile: fields.requiresProfile ?? false,
+        profileRefreshMonths: fields.profileRefreshMonths ?? null,
       },
     })
     return this.detail(userId, role, cohort.id)
@@ -225,6 +231,8 @@ export class LearnCohortsService {
       joinContact: c.joinContact,
       pendingRequests,
       delivery: c.delivery as CohortDelivery,
+      requiresProfile: c.requiresProfile,
+      profileRefreshMonths: c.profileRefreshMonths,
       host: {
         id: c.institution.id,
         name: c.institution.name,
@@ -252,12 +260,23 @@ export class LearnCohortsService {
       requiresApproval?: boolean
       joinContact?: string | null
       delivery?: CohortDelivery
+      requiresProfile?: boolean
+      profileRefreshMonths?: number | null
     } = {}
     if (fields.name) data.name = fields.name
     assertApprovalContact(c, fields)
     if (fields.requiresApproval !== undefined) data.requiresApproval = fields.requiresApproval
     if (fields.joinContact !== undefined) data.joinContact = fields.joinContact
     if (fields.delivery !== undefined) data.delivery = fields.delivery
+    assertProfileRefresh(c, fields)
+    if (fields.requiresProfile !== undefined) {
+      data.requiresProfile = fields.requiresProfile
+      // Turning the requirement off drops its refresh period unless one is set in the same request.
+      if (!fields.requiresProfile && fields.profileRefreshMonths === undefined)
+        data.profileRefreshMonths = null
+    }
+    if (fields.profileRefreshMonths !== undefined)
+      data.profileRefreshMonths = fields.profileRefreshMonths
     if (fields.maxLearners !== undefined) {
       if (fields.maxLearners !== null) {
         const active = await this.activeCount(cohortId)
