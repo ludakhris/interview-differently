@@ -1,7 +1,7 @@
 import { useAuth } from '@clerk/clerk-react'
 import { useCallback, useEffect, useState } from 'react'
 
-const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api'
+export const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api'
 
 export class ApiError extends Error {
   constructor(

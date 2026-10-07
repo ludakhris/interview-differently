@@ -8,6 +8,7 @@ export function RegisterPanel({
   busy,
   onStart,
   onClose,
+  onShowInfo,
 }: {
   stage: 'form' | 'waiting'
   /** The link to open by hand when the browser blocked the new tab. */
@@ -16,6 +17,8 @@ export function RegisterPanel({
   /** Resolves to an error message, or null once the registration page was opened or its link shown. */
   onStart: (initiationUrl: string) => Promise<string | null>
   onClose: () => void
+  /** Opens the explanation of how registration works. */
+  onShowInfo: () => void
 }) {
   const [url, setUrl] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -67,7 +70,10 @@ export function RegisterPanel({
       <form className="dash-tl-form" onSubmit={(e) => void submit(e)}>
         <p className="dash-muted dash-tl-help">
           Some tools can register themselves. Paste the registration link the tool gives you; we add
-          the tool and its connection, switched off, for you to review.
+          the tool and its connection, switched off, for you to review.{' '}
+          <button type="button" className="dash-linkbtn" onClick={onShowInfo}>
+            How does this work?
+          </button>
         </p>
         <label className="dash-field">
           <span>The tool's registration link</span>

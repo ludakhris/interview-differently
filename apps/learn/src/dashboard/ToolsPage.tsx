@@ -6,6 +6,7 @@ import { useApp } from './app-context'
 import { ConnectionForm, type ConnectionBody } from './ConnectionForm'
 import { Notice } from './DashboardShell'
 import { RegisterPanel } from './RegisterPanel'
+import { InfoIcon, ToolsInfoDialog } from './ToolsInfo'
 import { draftOf, ToolForm, type ToolBody, type ToolDraft } from './ToolForm'
 import { ToolsHistory } from './ToolsHistory'
 import { useRole } from './shared'
@@ -30,6 +31,7 @@ type Panel =
 /** The connected tools a course item can send a learner to. A system administrator manages them. */
 export function ToolsPage() {
   const role = useRole()
+  const [infoOpen, setInfoOpen] = useState(false)
   const { workspaces, href } = useApp()
   const { data: loaded, error, loading, reload } = useLoad<LearnToolList>('/learn/tools')
   // A failed refresh after a save must not blank the page and hide that the save went through.
@@ -310,8 +312,16 @@ export function ToolsPage() {
           >
             Register a tool from its link
           </button>
+          <button
+            type="button"
+            className="dash-btn-quiet dash-tl-infobtn"
+            onClick={() => setInfoOpen(true)}
+          >
+            <InfoIcon /> How this works
+          </button>
         </div>
       </header>
+      <ToolsInfoDialog open={infoOpen} onClose={() => setInfoOpen(false)} />
 
       <div className="dash-visually-hidden" role="status" aria-live="polite">
         {live}
@@ -361,6 +371,7 @@ export function ToolsPage() {
 
       {register && (
         <RegisterPanel
+          onShowInfo={() => setInfoOpen(true)}
           stage={register.stage}
           blockedLink={register.blockedLink}
           busy={busy}

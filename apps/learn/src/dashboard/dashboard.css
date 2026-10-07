@@ -2721,3 +2721,75 @@ a.dash-tool:focus-visible {
   margin-left: 8px;
   vertical-align: middle;
 }
+
+/* Connected tools: the "How this works" dialog. */
+.dash-tl-infobtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dash-tl-info {
+  width: min(44rem, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--dash-radius, 0);
+  background: var(--surface);
+  color: var(--ink);
+}
+.dash-tl-info::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+.dash-tl-info-box {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+}
+.dash-tl-info-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.dash-tl-info-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.dash-tl-info-body {
+  overflow-y: auto;
+  padding: 8px 20px 24px;
+}
+.dash-tl-info-body section {
+  margin-top: 20px;
+}
+.dash-tl-info-body h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.dash-tl-info-body p,
+.dash-tl-info-body li {
+  line-height: 1.55;
+}
+.dash-tl-info-body p {
+  margin: 0 0 10px;
+}
+.dash-tl-info-body ul,
+.dash-tl-info-body ol {
+  margin: 0 0 10px;
+  padding-left: 1.3em;
+}
+.dash-tl-info-body li {
+  margin-bottom: 6px;
+}
+.dash-tl-info-body pre {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  background: var(--surface-alt, var(--surface));
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
