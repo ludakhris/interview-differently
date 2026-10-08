@@ -469,9 +469,10 @@ async function load(prisma: PrismaClient) {
   await prisma.institution.create({
     data: {
       id: AGENCY_ID,
-      name: 'Delaware Department of Labor (demonstration)',
+      name: 'Delaware Department of Labor',
       kind: 'agency',
       subdomain: 'delaware',
+      featuredDemo: true,
       brand,
     },
   })
@@ -489,9 +490,10 @@ async function load(prisma: PrismaClient) {
   await prisma.institution.create({
     data: {
       id: CHESAPEAKE_ID,
-      name: 'Chesapeake Region Workforce Board (demonstration)',
+      name: 'Chesapeake Region Workforce Board',
       kind: 'agency',
       subdomain: 'chesapeake',
+      featuredDemo: true,
       brand: {
         primary: '#1f4e3d',
         accent: '#c9822b',

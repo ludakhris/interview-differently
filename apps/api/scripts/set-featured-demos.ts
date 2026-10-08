@@ -1,7 +1,7 @@
 /**
  * Marks the demo providers that have full sample data (attendance, talent, activity, notes) as
- * featured, so the workspace chooser stars them: Cedar Mill Trades Institute and Lantern Hill
- * Tech Academy. Safe to run again: it only changes a row that is not yet marked.
+ * featured, so the workspace chooser stars them: the two demo agencies, Cedar Mill Trades Institute
+ * and Lantern Hill Tech Academy. Safe to run again: it only changes a row that is not yet marked.
  *
  * Usage (from apps/api):
  *   npm run set:featured-demos -- --dry-run              # show what would change
@@ -16,7 +16,12 @@ import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
 
 const DEV_HOSTS = ['localhost', '127.0.0.1', 'zephyr.proxy.rlwy.net']
-const FEATURED_IDS = ['demo-inst-cedar-mill', 'demo-inst-lantern-hill']
+const FEATURED_IDS = [
+  'demo-inst-delaware-dol',
+  'demo-inst-chesapeake-workforce',
+  'demo-inst-cedar-mill',
+  'demo-inst-lantern-hill',
+]
 
 function targetHost(allowHost: string | undefined): string {
   const url = process.env.DATABASE_URL
