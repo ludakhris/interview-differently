@@ -1083,6 +1083,8 @@ async function main() {
   const i = argv.indexOf('--allow-host')
   const host = guard(i >= 0 ? argv[i + 1] : undefined)
   console.log(`Database host: ${host}`)
+  // Check the environment before removing anything, so a bad setting never leaves the database empty.
+  if (!argv.includes('--remove')) resolveLearnOrigin(process.env.LTI_LEARN_URL, dbHost())
   const prisma = new PrismaClient()
   try {
     await removeDemo(prisma)
