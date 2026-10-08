@@ -552,6 +552,28 @@
   color: var(--ink-soft);
 }
 
+.dash-promo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  border: 1px solid var(--line, #dfe6ec);
+  border-left: 4px solid var(--teal, #056a99);
+  border-radius: 12px;
+  background: #ffffff;
+}
+.dash-promo strong {
+  font-size: 16px;
+}
+.dash-promo p {
+  max-width: 62ch;
+  margin: 4px 0 0;
+  color: var(--muted, #4a5d6c);
+  font-size: 14px;
+}
 .dash-workspace {
   display: flex;
   align-items: center;

@@ -1,7 +1,9 @@
 import type { LearnWorkspace, LearnWorkspaceSummary } from '@id/types'
 import { useState } from 'react'
 import { DashboardShell } from './DashboardShell'
+import { DelawareSkinPromo } from './DelawareSkinPromo'
 import { useApp } from './app-context'
+import { withBrand } from '../brand'
 import { useLoad } from './api'
 import { workspaceHref } from './WorkspaceSwitcher'
 import { filterWorkspaces, type KindFilter } from './workspaceFilter'
@@ -175,7 +177,7 @@ function TypesGuide() {
 
 /** No workspace picked yet: open the only one, or let the person choose. */
 export function WorkspaceChooser() {
-  const { workspaces, href } = useApp()
+  const { workspaces, href, brand } = useApp()
   const { data: summaries } = useLoad<LearnWorkspaceSummary[]>('/learn/workspaces/summary')
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState<KindFilter>('all')
@@ -200,6 +202,9 @@ export function WorkspaceChooser() {
   const searching = query.trim() !== '' || kind !== 'all'
   return (
     <DashboardShell>
+      {brand === 'learn' && workspaces.some((w) => w.subdomain === 'delaware') && (
+        <DelawareSkinPromo href={withBrand(`?site=delaware`, '/lms/dashboard', 'delaware')} />
+      )}
       <h1 className="dash-h2">Choose a workspace</h1>
       <p className="dash-sub">
         Each agency is shown with the providers and organizations that report to it.

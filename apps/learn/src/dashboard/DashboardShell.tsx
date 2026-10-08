@@ -8,6 +8,7 @@ import '../pages/home.css'
 import './dashboard.css'
 import { SYSTEM_ADMIN } from './AdminPages'
 import { useApp } from './app-context'
+import { DelawareSkinPromo } from './DelawareSkinPromo'
 import { buildNav } from './navModel'
 import { canSeeActivity, canSeeTalent } from './roleAccess'
 import { useRole } from './shared'
@@ -236,9 +237,14 @@ function LearnFrame({ children }: { children: ReactNode }) {
 
 /** Shared page body: workspace bar, content, skin switch. */
 function Body({ wrap, children }: { wrap: string; children: ReactNode }) {
+  const { brand, tenant } = useApp()
+  const { pathname, search } = window.location
+  // On Delaware's dashboard in the LearnDifferently look, remind people the white-labeled version exists.
+  const promo = brand === 'learn' && tenant === 'delaware' && pathname.startsWith('/lms/dashboard')
   return (
     <>
       <main className={`${wrap} dash-main`}>
+        {promo && <DelawareSkinPromo href={withBrand(search, pathname, 'delaware')} />}
         <WorkspaceSwitcher />
         {children}
       </main>
