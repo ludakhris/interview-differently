@@ -6,8 +6,10 @@
 
 interface Node {
   label: string
-  /** How it was proved without a lesson; absent means learned in the loop. */
-  proved?: string
+  /** When it happened; shown under the label. */
+  when?: string
+  /** Proved without a lesson (checked node); otherwise learned in the loop. */
+  proved?: boolean
   /** Position along the track, as a percentage of its length. */
   at: number
 }
@@ -25,14 +27,11 @@ const LEARNERS: Learner[] = [
     score: '80%',
     weeks: 6,
     nodes: [
-      {
-        label: 'Password resets · Caller verification · DNS basics',
-        proved: 'proved day 1 · skills assessment',
-        at: 10,
-      },
-      { label: 'Ticket triage', proved: 'proved day 3 · simulation', at: 42 },
-      { label: 'Escalation', at: 66 },
-      { label: 'Phishing response', at: 88 },
+      { label: 'Password resets · Caller verification', when: 'proved day 1', proved: true, at: 6 },
+      { label: 'DNS basics', when: 'day 2', at: 30 },
+      { label: 'Ticket triage', when: 'proved day 3', proved: true, at: 52 },
+      { label: 'Escalation', at: 72 },
+      { label: 'Phishing response', at: 90 },
     ],
   },
   {
@@ -91,7 +90,7 @@ export function PaceTracks() {
                     <i>{n.proved && <Check />}</i>
                     <em>
                       {n.label}
-                      {n.proved && <b>{n.proved}</b>}
+                      {n.when && <b>{n.when}</b>}
                     </em>
                   </span>
                 ))}
@@ -113,7 +112,7 @@ export function PaceTracks() {
           <i>
             <Check />
           </i>{' '}
-          proved without a lesson, in the day-1 skills assessment or a simulation
+          proved without a lesson: day 1 in the skills assessment, day 3 in a simulation
         </span>
         <span className="c-pace-key">
           <i /> learned in the loop
