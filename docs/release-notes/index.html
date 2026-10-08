@@ -496,6 +496,66 @@
 
     <main id="entries">
       <p class="empty-note" id="none" hidden>No updates match. Clear the search or choose All.</p>
+      <!-- ======================= IN REVIEW (outcomes drill-downs) ======================= -->
+
+      <article
+        class="entry"
+        id="outcomes-drilldowns"
+        data-status="review"
+        data-short="Outcomes drill-downs"
+        data-summary="Open a provider, organization or cohort straight from the outcomes page."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Outcomes: open a provider, organization or cohort from the dashboard</h2>
+        <p>
+          On the outcomes page, which agencies, providers and organizations all share, names are now
+          links. A provider or the organization that runs a cohort opens that workspace's own
+          outcomes, and a cohort opens its gradebook. This works in both charts, the provider table,
+          the cohort chart and the cohort table. The chart text now says each row is a training
+          provider with its program underneath, and the cohorts section is called "Cohort
+          performance".
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              A provider or organization is a link only if you can open its workspace; otherwise it
+              is plain text. A cohort's gradebook is always a link, since it is in the same
+              workspace.
+            </li>
+            <li>
+              On the branded Delaware dashboard these names stay plain text, because that page is
+              the agency's own and has no way to switch workspaces.
+            </li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/outcomes-drilldowns/02-by-provider.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/outcomes-drilldowns/02-by-provider.jpg"
+                alt="Outcomes by provider"
+            /></a>
+            <figcaption>Each row is a provider; its name opens its outcomes.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/outcomes-drilldowns/01-cohort-performance.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/outcomes-drilldowns/01-cohort-performance.jpg"
+                alt="Cohort performance"
+            /></a>
+            <figcaption>Cohort performance: cohorts and providers are links.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/72">Issue #72</a>
+        </div>
+      </article>
+
       <!-- ======================= SHIPPED (nav and organization access) ======================= -->
 
       <article
@@ -526,8 +586,9 @@
               joined with a code.
             </li>
             <li>
-              The dashboard now has a note at the top reminding agencies that a white-labeled
-              version exists, with a link to the Delaware Department of Labor's.
+              A note reminds agencies that a white-labeled dashboard exists. On Delaware's own
+              dashboard it sits at the top and links to the Delaware version; on the workspaces page
+              it sits at the bottom and invites agencies to contact us.
             </li>
           </ul>
         </div>
