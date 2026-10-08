@@ -1,0 +1,535 @@
+/* Design C: Design A's visual system (home.css) with Design B's buyer-first content.
+   Only the sections that do not exist in A are styled here. */
+
+.c-hero-title {
+  font-size: clamp(48px, 6.6vw, 88px);
+}
+.c-hero-title .ld-orange {
+  white-space: nowrap;
+}
+
+/* Three anchors under the hero */
+.c-anchors {
+  list-style: none;
+  margin: -16px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.c-anchors li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 24px;
+  border-radius: 20px;
+  background: var(--white);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* Two learners, two tracks, one endpoint */
+.c-pace {
+  display: grid;
+  grid-template-columns: 1fr 240px;
+  gap: 12px 20px;
+  align-items: stretch;
+  padding: 28px;
+  border-radius: 24px;
+  background: var(--white);
+}
+.c-pace-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  /* Room on the right for the "Week N" flag past the end of the longest track. */
+  padding: 12px 112px 28px 0;
+}
+.c-pace-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 20px;
+  align-items: center;
+}
+.c-pace-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.c-pace-who strong {
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.c-pace-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: #e3eaf0;
+}
+.c-pace-line {
+  position: relative;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--sky);
+  animation: c-grow 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transform-origin: left center;
+}
+.c-pace-row:nth-child(2) .c-pace-line {
+  background: var(--orange);
+  animation-duration: 2.2s;
+}
+@keyframes c-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.c-pace-node {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.c-pace-node i {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 3px solid var(--ink);
+}
+.c-pace-node em {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--faint);
+}
+.c-pace-row:nth-child(2) .c-pace-node:nth-child(odd) em {
+  top: auto;
+  bottom: 18px;
+}
+.c-pace-flag {
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translate(100%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.c-pace-flag svg {
+  color: var(--orange);
+}
+.c-pace-end {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 22px;
+  border-radius: 18px;
+  background: var(--ink);
+  color: var(--white);
+}
+.c-pace-end .ld-mono {
+  color: var(--sky);
+}
+.c-pace-end strong {
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.c-pace-end .ld-small {
+  color: var(--steel);
+}
+.c-pace-notes {
+  grid-column: 1 / -1;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* The loop in three */
+.c-loop {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.c-loop-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 26px 28px;
+  border-radius: 20px;
+  background: var(--white);
+}
+.c-loop-step p {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.c-loop-n {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--white);
+  font-weight: 800;
+}
+.c-loop-learn .c-loop-n {
+  background: var(--teal);
+}
+.c-loop-practice .c-loop-n {
+  background: var(--orange);
+  color: var(--ink);
+}
+
+/* Traditional training models, what changes */
+.c-trad {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+.c-trad-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.c-trad-list li {
+  display: grid;
+  grid-template-columns: 1fr 40px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 24px;
+  border-radius: 14px;
+  background: var(--white);
+  font-size: 16px;
+}
+.c-trad-from {
+  color: var(--muted);
+}
+.c-trad-arrow {
+  text-align: center;
+  color: var(--steel);
+}
+.c-trad-to {
+  font-weight: 700;
+}
+
+/* For your team: the segmented control */
+.c-team-section {
+  padding-top: 96px;
+  padding-bottom: 136px;
+}
+.c-team {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.c-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  align-self: flex-start;
+}
+.c-seg-btn {
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--white);
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.c-seg-on {
+  background: var(--white);
+  color: var(--ink);
+}
+.c-team-panel {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 24px;
+  padding: 36px;
+  border-radius: 24px;
+  background: var(--white);
+  color: var(--ink);
+}
+.c-team-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.c-team-copy .ld-btn {
+  align-self: flex-start;
+}
+.c-points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 16px;
+}
+.c-points li {
+  position: relative;
+  padding-left: 20px;
+}
+.c-points li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--orange);
+}
+.c-stops {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 28px;
+  border-radius: 18px;
+  background: var(--ink);
+  color: var(--white);
+}
+.c-stops strong {
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+/* One application, five components */
+.c-components {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+.c-component {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px;
+  border-radius: 20px;
+  background: var(--white);
+}
+.c-component-name {
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-decoration: none;
+}
+.c-component-replaces {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.c-component-replaces em {
+  font-style: normal;
+  color: var(--ink);
+}
+.c-component .ld-piece-status {
+  margin-top: auto;
+  align-self: flex-start;
+  border-color: var(--faint);
+  color: var(--faint);
+}
+.c-component .ld-piece-live {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+/* Outcomes: the three measures */
+.c-measures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.c-measure {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 28px;
+  border-radius: 24px;
+  background: var(--white);
+}
+.c-measure-def {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.c-measure-how {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.c-measure-how .ld-mono {
+  display: block;
+  margin-bottom: 4px;
+}
+.c-shot {
+  margin-top: 12px;
+}
+
+/* Pathways, compact */
+.c-pathways {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+.c-pathway {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px;
+  border-radius: 20px;
+  background: var(--white);
+}
+.c-pathway strong {
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.c-pathway-sim {
+  font-size: 14px;
+  color: var(--muted);
+}
+.c-pathway-roles {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--orange-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .c-pace-line {
+    animation: none;
+  }
+}
+
+/* Tablet */
+@media (max-width: 960px) {
+  .c-pace,
+  .c-team-panel {
+    grid-template-columns: 1fr;
+  }
+  .c-pace-end {
+    order: -1;
+  }
+  .c-loop,
+  .c-measures {
+    grid-template-columns: 1fr;
+  }
+  .c-components,
+  .c-pathways {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .c-components .c-component:last-child,
+  .c-pathways .c-pathway:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Phone */
+@media (max-width: 640px) {
+  .c-anchors,
+  .c-components,
+  .c-pathways {
+    grid-template-columns: 1fr;
+  }
+  .c-anchors {
+    margin-top: 8px;
+  }
+  .c-pace {
+    padding: 20px;
+  }
+  .c-pace-rows {
+    padding-right: 0;
+  }
+  .c-pace-row {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .c-pace-node em {
+    display: none;
+  }
+  .c-pace-flag {
+    right: 0;
+    top: auto;
+    bottom: 16px;
+    transform: none;
+  }
+  .c-trad-list li {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .c-trad-arrow {
+    display: none;
+  }
+  .c-trad-from::before {
+    content: 'From: ';
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+  .c-team-section {
+    padding-top: 64px;
+    padding-bottom: 104px;
+  }
+  .c-seg {
+    width: 100%;
+    border-radius: 18px;
+  }
+  .c-seg-btn {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+  .c-team-panel {
+    padding: 22px;
+  }
+}

@@ -1,27 +1,31 @@
 import './design-switch.css'
 
+export type Design = 'a' | 'b' | 'c'
+
+const DESIGNS: { key: Design; href: string; label: string }[] = [
+  { key: 'a', href: '/?design=a', label: 'Design A' },
+  { key: 'b', href: '/', label: 'Design B' },
+  { key: 'c', href: '/?design=c', label: 'Design C' },
+]
+
 /**
- * Review-only toggle between the two candidate homepages (site-alt branch). The same
- * deployment serves Design B at / and Design A at /?design=a; this makes that visible.
+ * Review-only toggle between the candidate homepages (site-alt and site-c branches). The same
+ * deployment serves Design B at /, Design A at /?design=a and Design C at /?design=c.
  */
-export function DesignSwitch({ current }: { current: 'a' | 'b' }) {
+export function DesignSwitch({ current }: { current: Design }) {
   return (
     <nav className="dsw" aria-label="Design under review">
       <span className="dsw-label">Reviewing</span>
-      <a
-        href="/?design=a"
-        className={current === 'a' ? 'dsw-on' : undefined}
-        aria-current={current === 'a' ? 'page' : undefined}
-      >
-        Design A
-      </a>
-      <a
-        href="/"
-        className={current === 'b' ? 'dsw-on' : undefined}
-        aria-current={current === 'b' ? 'page' : undefined}
-      >
-        Design B
-      </a>
+      {DESIGNS.map((d) => (
+        <a
+          key={d.key}
+          href={d.href}
+          className={current === d.key ? 'dsw-on' : undefined}
+          aria-current={current === d.key ? 'page' : undefined}
+        >
+          {d.label}
+        </a>
+      ))}
     </nav>
   )
 }

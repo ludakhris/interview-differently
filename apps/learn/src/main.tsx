@@ -5,7 +5,8 @@ import { resolveSite } from './site'
 import { AuthProvider } from './auth'
 import { HomePage } from './pages/HomePage'
 import { AltHomePage } from './pages/alt/AltHomePage'
-import { DesignSwitch } from './pages/DesignSwitch'
+import { DesignSwitch, type Design } from './pages/DesignSwitch'
+import { CHomePage } from './pages/c/CHomePage'
 import { DelawarePage } from './pages/DelawarePage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { SignInPage } from './pages/SignInPage'
@@ -57,11 +58,12 @@ function page(): ReactNode {
     document.title = 'Career Readiness Tool — Delaware Department of Labor (demonstration)'
     return <DelawarePage />
   }
-  // Two candidate homepages are under review: ?design=a shows the first, the default is the second.
-  const design = new URLSearchParams(search).get('design') === 'a' ? 'a' : 'b'
+  // Candidate homepages under review: ?design=a and ?design=c pick one; the default is Design B.
+  const wanted = new URLSearchParams(search).get('design')
+  const design: Design = wanted === 'a' ? 'a' : wanted === 'c' ? 'c' : 'b'
   return (
     <>
-      {design === 'a' ? <HomePage /> : <AltHomePage />}
+      {design === 'a' ? <HomePage /> : design === 'c' ? <CHomePage /> : <AltHomePage />}
       <DesignSwitch current={design} />
     </>
   )
