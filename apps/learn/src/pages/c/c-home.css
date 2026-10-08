@@ -203,11 +203,16 @@
 .c-pace-key i {
   display: grid;
   place-items: center;
-  width: 16px;
-  height: 16px;
+  flex: none;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  border: 3px solid var(--ink);
+  border: 2.5px solid var(--ink);
   background: var(--white);
+}
+.c-pace-key i svg {
+  width: 12px;
+  height: 12px;
 }
 .c-pace-key-proved i {
   background: var(--ink);
