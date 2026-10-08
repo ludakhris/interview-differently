@@ -353,8 +353,8 @@ export function HomePage() {
             <div>
               <p className="ld-mono ld-eyebrow">WHERE TRAINING BREAKS</p>
               <h2 className="ld-h2">
-                Training still runs at one speed, grades at the finish line, then struggles to land
-                the job.
+                Training still runs at one speed, grades at the finish line, then learners struggle
+                to land the job.
               </h2>
             </div>
             <p className="ld-sub">
