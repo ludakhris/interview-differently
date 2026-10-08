@@ -111,12 +111,14 @@ export function providerRows(rows: EnrollmentRow[], now: Date): OutcomesProvider
   return [...groupBy(rows, (r) => r.providerId).values()]
     .map((g) => {
       const f = g[0]
+      const programs = new Set(g.map((r) => r.courseId)).size
       return {
         ...measures(g, now),
         providerId: f.providerId,
         provider: f.providerName,
-        program: f.program,
-        credential: f.credential,
+        // Program and credential belong to one course, so several courses get a count instead.
+        program: programs > 1 ? `${programs} programs` : f.program,
+        credential: programs > 1 ? null : f.credential,
         cohorts: new Set(g.map((r) => r.cohortId)).size,
       }
     })

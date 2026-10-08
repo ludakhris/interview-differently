@@ -121,6 +121,36 @@ describe('agencyOutcomes', () => {
   })
 })
 
+describe('agencyOutcomes provider program', () => {
+  const provider = (rows: EnrollmentRow[]) =>
+    agencyOutcomes({ id: 'ag', name: 'DoL' }, rows, NOW).providers[0]
+
+  it('shows the program name and credential for a single program', () => {
+    const p = provider([row({ enrollmentId: 'a' }), row({ enrollmentId: 'b', cohortId: 'c2' })])
+    expect(p.program).toBe('Medical Assistant')
+    expect(p.credential).toBe('CCMA')
+  })
+
+  it('shows a count and no credential for two programs', () => {
+    const p = provider([
+      row({ enrollmentId: 'a' }),
+      row({ enrollmentId: 'b', courseId: 'co2', program: 'Pharmacy Tech', credential: 'CPhT' }),
+    ])
+    expect(p.program).toBe('2 programs')
+    expect(p.credential).toBeNull()
+  })
+
+  it('counts three programs', () => {
+    const p = provider([
+      row({ enrollmentId: 'a' }),
+      row({ enrollmentId: 'b', courseId: 'co2', program: 'Pharmacy Tech' }),
+      row({ enrollmentId: 'c', courseId: 'co3', program: 'Phlebotomy' }),
+      row({ enrollmentId: 'd', courseId: 'co3', program: 'Phlebotomy' }),
+    ])
+    expect(p.program).toBe('3 programs')
+  })
+})
+
 describe('gradebook', () => {
   it('lists learners with gain and readiness, sorted by name, and is null for an unknown cohort', () => {
     const rows = [
