@@ -113,10 +113,10 @@ const prisma = {
       async ({
         where,
       }: {
-        where: { userId: string; cohort: { course: { providerId: string } } }
+        where: { userId: string; cohort: { OR: { course: { providerId: string } }[] } }
       }) =>
         enrollments.find(
-          (e) => e.userId === where.userId && e.providerId === where.cohort.course.providerId
+          (e) => e.userId === where.userId && e.providerId === where.cohort.OR[0].course.providerId
         )
           ? { id: 'e' }
           : null
@@ -127,8 +127,8 @@ const prisma = {
   },
   cohort: {
     findFirst: jest.fn(
-      async ({ where }: { where: { id: string; course: { providerId: string } } }) =>
-        cohorts.find((c) => c.id === where.id && c.providerId === where.course.providerId)
+      async ({ where }: { where: { id: string; OR: { course: { providerId: string } }[] } }) =>
+        cohorts.find((c) => c.id === where.id && c.providerId === where.OR[0].course.providerId)
           ? { id: where.id }
           : null
     ),

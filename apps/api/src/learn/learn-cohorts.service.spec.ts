@@ -48,7 +48,7 @@ const prisma = {
 }
 const learn = { assertRole: jest.fn(), assertWorkspace: jest.fn() }
 const learner = { recomputeCompletion: jest.fn(), attemptLogOf: jest.fn() }
-const access = { assertProviderStaff: jest.fn() }
+const access = { assertProviderStaff: jest.fn(), scopeForCohort: jest.fn() }
 const service = new LearnCohortsService(
   prisma as unknown as PrismaService,
   learn as unknown as LearnService,
@@ -598,6 +598,17 @@ describe('roster note indicators', () => {
     progress: [],
   })
   beforeEach(() => {
+    // The scope is the course's provider when the caller is its staff (as the real service decides it).
+    access.scopeForCohort.mockImplementation(
+      async (u: string, r: string, ctx: { providerId: string }) => {
+        try {
+          await access.assertProviderStaff(u, r, ctx.providerId)
+          return ctx.providerId
+        } catch {
+          return null
+        }
+      }
+    )
     prisma.cohort.findUnique.mockResolvedValue(cohortRow())
     prisma.joinRequest.count.mockResolvedValue(0)
     prisma.enrollment.findMany.mockResolvedValue([

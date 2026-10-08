@@ -39,6 +39,21 @@ export function switchHref(
   return `/lms/${section[1]}?${params.toString()}`
 }
 
+/** The workspaces with each one under the agency or organization it reports to, and its depth for indenting. */
+export function workspaceTree<T extends { id: string; parentId: string | null }>(
+  list: T[]
+): { w: T; depth: number }[] {
+  const ids = new Set(list.map((w) => w.id))
+  const out: { w: T; depth: number }[] = []
+  const add = (w: T, depth: number) => {
+    out.push({ w, depth })
+    for (const c of list.filter((x) => x.parentId === w.id)) add(c, depth + 1)
+  }
+  // A workspace whose parent is not in the list (not visible to this person) stands at the top.
+  for (const w of list.filter((x) => !x.parentId || !ids.has(x.parentId))) add(w, 0)
+  return out
+}
+
 /** Workspace bar at the top of the page. Hidden on a tenant host, where the host fixes the workspace. */
 export function WorkspaceSwitcher() {
   const { fixedTenant, tenant, workspaces: data } = useApp()
@@ -65,8 +80,9 @@ export function WorkspaceSwitcher() {
           }}
         >
           {!tenant && <option value="">Choose…</option>}
-          {data.map((w) => (
+          {workspaceTree(data).map(({ w, depth }) => (
             <option key={w.id} value={w.subdomain}>
+              {'\u2003'.repeat(depth * 2)}
               {w.featuredDemo ? '⭐ ' : ''}
               {w.name}
               {w.kind === 'agency' ? '' : ` (${KIND_LABEL[w.kind] ?? w.kind})`}

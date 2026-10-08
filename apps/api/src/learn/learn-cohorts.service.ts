@@ -210,7 +210,7 @@ export class LearnCohortsService {
     const summaries = await this.notes.rosterNoteSummaries(
       userId,
       role,
-      c.course.providerId,
+      { providerId: c.course.providerId, hostId: c.institution.id },
       cohortId,
       enrollments.map((e) => e.userId)
     )

@@ -56,12 +56,7 @@ const prisma = {
   },
   membership: {
     findFirst: jest.fn(async ({ where }: { where: { userId: string; institutionId: string } }) =>
-      memberships.find(
-        (m) =>
-          m.userId === where.userId &&
-          m.institutionId === where.institutionId &&
-          m.kind === 'provider'
-      )
+      memberships.find((m) => m.userId === where.userId && m.institutionId === where.institutionId)
         ? { id: 'm' }
         : null
     ),
@@ -115,8 +110,9 @@ const prisma = {
     ]),
   },
   participantNote: {
-    findMany: jest.fn(async ({ where }: { where: { userId: string } }) =>
-      where.userId === 'learner-1'
+    // Each institution keeps its own notes: the provider's (P1) and the host organization's (ORG1).
+    findMany: jest.fn(async ({ where }: { where: { userId: string; providerId: string } }) =>
+      where.userId === 'learner-1' && where.providerId === 'P1'
         ? [
             {
               ...NOTE,
@@ -126,12 +122,25 @@ const prisma = {
               updatedAt: stamp,
             },
           ]
-        : []
+        : where.userId === 'learner-1' && where.providerId === 'ORG1'
+          ? [
+              {
+                ...NOTE,
+                id: 'n-org',
+                providerId: 'ORG1',
+                body: 'Hosts: parking permit sorted',
+                authorId: 'staff-o1',
+                authorName: 'Olu Org',
+                createdAt: stamp,
+                updatedAt: stamp,
+              },
+            ]
+          : []
     ),
   },
   supportItem: {
-    findMany: jest.fn(async ({ where }: { where: { userId: string } }) =>
-      where.userId === 'learner-1'
+    findMany: jest.fn(async ({ where }: { where: { userId: string; providerId: string } }) =>
+      where.userId === 'learner-1' && where.providerId === 'P1'
         ? [
             {
               ...ITEM,
@@ -274,7 +283,6 @@ describe('restricted callers (cohort staff who are not staff of the provider)', 
   const restricted: [string, string, string][] = [
     ['an agency admin', 'agency-1', 'agency-admin'],
     ['staff of another provider', 'staff-p2', 'provider-admin'],
-    ['organization staff', 'staff-o1', 'provider-admin'],
   ]
   for (const [who, userId, role] of restricted) {
     it(`${who}: gets attendance and activity, no participant notes, no audit rows`, async () => {
@@ -293,6 +301,25 @@ describe('restricted callers (cohort staff who are not staff of the provider)', 
       expect(JSON.stringify(r)).not.toContain('Bus pass')
     })
   }
+})
+
+describe('staff of the hosting organization', () => {
+  it('gets the organization own notes, never the provider notes, and the audit rows say ORG1', async () => {
+    const r = await ask('staff-o1', 'provider-admin')
+    expect(r.notes.restricted).toBe(false)
+    expect(r.header.providerId).toBe('ORG1')
+    expect(r.notes.participant?.map((n) => n.body)).toEqual(['Hosts: parking permit sorted'])
+    expect(JSON.stringify(r)).not.toContain('Needs a laptop')
+    expect(JSON.stringify(r)).not.toContain('Bus pass')
+    expect(audit.length).toBeGreaterThan(0)
+    expect(audit.every((a) => a.subjectUserId === 'learner-1' && a.providerId === 'ORG1')).toBe(
+      true
+    )
+  })
+  it('staff of the provider do not get the organization notes', async () => {
+    const r = await ask('staff-p1', 'provider-admin')
+    expect(JSON.stringify(r)).not.toContain('parking permit')
+  })
 })
 
 describe('staff of the provider', () => {

@@ -1,0 +1,88 @@
+/* Header dropdowns ("Learner tools", "Staff tools") in the LearnDifferently skin. Blue like the nav links. */
+.nd {
+  position: relative;
+  z-index: 24;
+}
+.nd-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--teal, #056a99);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.nd-caret {
+  width: 7px;
+  height: 7px;
+  margin-bottom: 3px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+.nd-trigger[aria-expanded='true'] .nd-caret {
+  margin-bottom: -3px;
+  transform: rotate(-135deg);
+}
+.nd-panel {
+  position: absolute;
+  top: calc(100% + 14px);
+  left: 0;
+  min-width: 230px;
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  border: 1px solid var(--line, #dfe6ec);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 16px 40px rgba(11, 31, 46, 0.14);
+}
+.ld .nd-panel a {
+  display: block;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: var(--ink, #0b1f2e);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ld .nd-panel a:hover,
+.ld .nd-panel a:focus-visible {
+  background: var(--paper, #f6f7f4);
+}
+.ld .nd-heading ~ li > a {
+  padding-left: 28px;
+}
+.nd-heading {
+  padding: 8px 12px 4px;
+  color: var(--muted, #4a5d6c);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.nd-divider {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--line, #dfe6ec);
+}
+
+/* Narrow screens: the nav wraps under the logo, so a panel anchored to its button can run off the
+   right edge. Anchor it to the header instead and stretch it across the page gutter. */
+@media (max-width: 640px) {
+  .ld-header {
+    position: relative;
+  }
+  .nd {
+    position: static;
+  }
+  .nd-panel {
+    top: auto;
+    right: 16px;
+    left: 16px;
+    margin-top: 10px;
+  }
+}

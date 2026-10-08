@@ -33,14 +33,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export interface MenuLink {
   label: string
   href: string
+  /** 'security' opens the account screen (password, email, sessions) instead of navigating. */
+  action?: 'security'
 }
 
-export function AccountMenu({ signedOut, links }: { signedOut: ReactNode; links?: MenuLink[] }) {
+/** A titled block of links in the account menu. */
+export interface MenuGroup {
+  heading: string
+  links: MenuLink[]
+}
+
+interface AccountMenuProps {
+  signedOut: ReactNode
+  links?: MenuLink[]
+  /** Grouped links; when given they replace `links` and the single Profile entry. */
+  groups?: MenuGroup[]
+}
+
+export function AccountMenu({ signedOut, links, groups }: AccountMenuProps) {
   if (!authConfigured) return <>{signedOut}</>
-  return <ClerkAccountMenu signedOut={signedOut} links={links} />
+  return <ClerkAccountMenu signedOut={signedOut} links={links} groups={groups} />
 }
 
-function ClerkAccountMenu({ signedOut, links }: { signedOut: ReactNode; links?: MenuLink[] }) {
+function ClerkAccountMenu({ signedOut, links, groups }: AccountMenuProps) {
   const { isLoaded, isSignedIn, user } = useUser()
   // Most visitors are signed out, so show their links while Clerk loads.
   if (!isLoaded || !isSignedIn) return <>{signedOut}</>
@@ -52,6 +67,7 @@ function ClerkAccountMenu({ signedOut, links }: { signedOut: ReactNode; links?: 
       email={email}
       imageUrl={user.hasImage ? user.imageUrl : undefined}
       links={links}
+      groups={groups}
     />
   )
 }
@@ -62,6 +78,7 @@ function SignedInMenu(props: {
   email: string
   imageUrl?: string
   links?: MenuLink[]
+  groups?: MenuGroup[]
 }) {
   const { openUserProfile, signOut } = useClerk()
   const [open, setOpen] = useState(false)
@@ -108,23 +125,52 @@ function SignedInMenu(props: {
             <strong>{props.fullName}</strong>
             <span>{props.email}</span>
           </div>
-          <ul>
-            {props.links?.map((l) => (
-              <li key={l.label}>
-                <a href={l.href}>{l.label}</a>
+          {props.groups ? (
+            props.groups.map((g) => (
+              <div key={g.heading} className="ld-account-group">
+                <p className="ld-account-heading">{g.heading}</p>
+                <ul>
+                  {g.links.map((l) => (
+                    <li key={l.label}>
+                      {l.action === 'security' ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpen(false)
+                            openUserProfile()
+                          }}
+                        >
+                          {l.label}
+                        </button>
+                      ) : (
+                        <a href={l.href}>{l.label}</a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))
+          ) : (
+            <ul>
+              {props.links?.map((l) => (
+                <li key={l.label}>
+                  <a href={l.href}>{l.label}</a>
+                </li>
+              ))}
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false)
+                    openUserProfile()
+                  }}
+                >
+                  Profile
+                </button>
               </li>
-            ))}
-            <li>
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false)
-                  openUserProfile()
-                }}
-              >
-                Profile
-              </button>
-            </li>
+            </ul>
+          )}
+          <ul className="ld-account-out">
             <li>
               <button type="button" onClick={() => signOut({ redirectUrl: '/' })}>
                 Sign out

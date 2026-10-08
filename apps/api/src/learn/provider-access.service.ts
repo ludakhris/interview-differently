@@ -3,14 +3,29 @@ import { PrismaService } from '../prisma/prisma.service'
 import { LEARN_ROLES, LearnService } from './learn.service'
 
 /**
- * Staff roles that may read a provider's participant records (notes, support items, compensation,
- * resumes), as long as they also hold a membership in that provider's workspace. Agency admins and
+ * Staff roles that may read an institution's participant records (notes, support items, compensation,
+ * resumes), as long as they also hold a membership in that institution's workspace. "Institution"
+ * means a provider or an organization that hosts cohorts; the code keeps the older name `providerId`. Agency admins and
  * case managers are deliberately not here; system admins pass every role check (LearnService.assertRole).
  */
 export const PROVIDER_STAFF_ROLES: string[] = [LEARN_ROLES.providerAdmin]
 
 /** Roles that may manage a cohort: the same as the roster (see LearnCohortsService). */
 export const COHORT_STAFF_ROLES: string[] = [LEARN_ROLES.agencyAdmin, LEARN_ROLES.providerAdmin]
+
+/**
+ * The cohorts whose people an institution may see: a provider's are those of its own courses; an
+ * organization's are the cohorts it hosts. (A provider that hosts a cohort of someone else's course
+ * does not gain its people; only organizations match on hosting.)
+ */
+export function institutionCohortWhere(institutionId: string) {
+  return {
+    OR: [
+      { course: { providerId: institutionId } },
+      { institutionId, institution: { kind: 'organization' } },
+    ],
+  }
+}
 
 export interface CohortContext {
   cohortId: string
@@ -58,9 +73,9 @@ export class ProviderAccessService {
   }
 
   /**
-   * Throws unless the caller is staff of this provider: a system admin, or a provider admin with a
-   * workspace-level membership (cohortId null) in the provider institution. Organization staff,
-   * agency admins, other providers' staff and learners are refused.
+   * Throws unless the caller is staff of this provider or organization: a system admin, or a
+   * provider-admin with a workspace-level membership (cohortId null) in that institution. Agency
+   * admins, other institutions' staff and learners are refused.
    */
   async assertProviderStaff(
     userId: string,
@@ -74,11 +89,31 @@ export class ProviderAccessService {
         userId,
         institutionId: providerId,
         cohortId: null,
-        institution: { kind: 'provider' },
+        institution: { kind: { in: ['provider', 'organization'] } },
       },
       select: { id: true },
     })
     if (!member) throw new ForbiddenException('No access to this provider')
+  }
+
+  /**
+   * Which institution's records the caller works with on a cohort: the course's provider if they are
+   * its staff, else the hosting organization if they are its staff, else null (restricted).
+   */
+  async scopeForCohort(
+    userId: string,
+    role: string | undefined,
+    ctx: Pick<CohortContext, 'providerId' | 'hostId'>
+  ): Promise<string | null> {
+    for (const id of [ctx.providerId, ctx.hostId]) {
+      try {
+        await this.assertProviderStaff(userId, role, id)
+        return id
+      } catch (err) {
+        if (!(err instanceof ForbiddenException)) throw err
+      }
+    }
+    return null
   }
 
   /**
@@ -97,10 +132,10 @@ export class ProviderAccessService {
     return ctx
   }
 
-  /** Throws NotFound unless the person is (or was) enrolled in a cohort of one of this provider's courses. */
+  /** Throws NotFound unless the person is (or was) enrolled in a cohort in this institution's scope. */
   async assertParticipantOfProvider(providerId: string, userId: string): Promise<void> {
     const found = await this.prisma.enrollment.findFirst({
-      where: { userId, cohort: { course: { providerId } } },
+      where: { userId, cohort: institutionCohortWhere(providerId) },
       select: { id: true },
     })
     if (!found) throw new NotFoundException('Participant not found')
@@ -109,7 +144,7 @@ export class ProviderAccessService {
   /** Throws unless the learner is (or was) enrolled with this provider: a learner may only touch their own record. */
   async assertLearnerOfProvider(userId: string, providerId: string): Promise<void> {
     const found = await this.prisma.enrollment.findFirst({
-      where: { userId, cohort: { course: { providerId } } },
+      where: { userId, cohort: institutionCohortWhere(providerId) },
       select: { id: true },
     })
     if (!found) throw new ForbiddenException('You are not enrolled with this provider')

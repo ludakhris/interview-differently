@@ -790,6 +790,25 @@
   background: var(--surface-alt);
   color: var(--ink);
 }
+.ld-account-group + .ld-account-group,
+.ld-account-out {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line, #dfe6ec);
+}
+.dash .ld-account-menu .ld-account-group a,
+.ld-account-menu .ld-account-group button {
+  padding-left: 28px;
+}
+.ld-account-heading {
+  margin: 0;
+  padding: 6px 12px 2px;
+  color: var(--muted, #4a5d6c);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 .dash-brand-delaware {
   --white: #ffffff;
   --line: var(--border);

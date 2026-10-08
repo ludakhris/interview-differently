@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { ActivityService } from '../activity/activity.service'
 import { parseTz } from '../activity/activity-rules'
@@ -48,7 +48,10 @@ export class RecordService {
     if ('error' in zone) throw new BadRequestException(zone.error) // before any work
 
     const actor = { userId, role }
-    const canSeeNotes = userId !== learnerId && (await this.isProviderStaff(actor, ctx.providerId))
+    // The institution whose staff-only records the caller may open: the course's provider, else the
+    // hosting organization. Null means restricted (no notes, support items or profile status).
+    const scope = await this.access.scopeForCohort(userId, role, ctx)
+    const canSeeNotes = userId !== learnerId && scope !== null
 
     const [enrollment, summary, activity, marksWithNotes, rows] = await Promise.all([
       this.prisma.enrollment.findUnique({
@@ -107,9 +110,9 @@ export class RecordService {
     // Staff-only records of the provider: through the notes service, so the audit rows are written.
     const [participant, support, profile] = canSeeNotes
       ? await Promise.all([
-          this.notes.listNotes(actor, ctx.providerId, learnerId),
-          this.notes.listItems(actor, ctx.providerId, learnerId),
-          this.talent.profileStatus(ctx.providerId, learnerId),
+          this.notes.listNotes(actor, scope as string, learnerId),
+          this.notes.listItems(actor, scope as string, learnerId),
+          this.talent.profileStatus(scope as string, learnerId),
         ])
       : [null, null, null]
     // Which cohort each participant note is about, by name (the notes service only holds ids).
@@ -132,7 +135,7 @@ export class RecordService {
         joinedAt: e.enrolledAt.toISOString(),
         courseTitle: e.cohort.course?.title ?? '',
         cohortName: e.cohort.name,
-        providerId: ctx.providerId,
+        providerId: scope ?? ctx.providerId,
         progress: { itemsDone: row?.itemsDone ?? 0, itemsTotal: row?.itemsTotal ?? 0 },
         readiness: {
           goal: row?.readinessThreshold ?? 70,
@@ -163,20 +166,6 @@ export class RecordService {
         support,
         restricted: !canSeeNotes,
       },
-    }
-  }
-
-  /** True for staff of the provider; false for any other caller (they are restricted, not refused). */
-  private async isProviderStaff(
-    actor: { userId: string; role: string | undefined },
-    providerId: string
-  ): Promise<boolean> {
-    try {
-      await this.access.assertProviderStaff(actor.userId, actor.role, providerId)
-      return true
-    } catch (err) {
-      if (err instanceof ForbiddenException) return false
-      throw err
     }
   }
 }

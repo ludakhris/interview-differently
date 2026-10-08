@@ -9,6 +9,7 @@ import { CohortPage } from './CohortPage'
 import { CohortsPage } from './CohortsPage'
 import { CourseEditorPage } from './CourseEditorPage'
 import { CoursesPage } from './CoursesPage'
+import { OfferedCoursesPage } from './OfferedCoursesPage'
 import { DashboardShell, Notice } from './DashboardShell'
 import { GradebookPage } from './GradebookPage'
 import { LearningCoursePage } from './LearningCoursePage'
@@ -175,8 +176,10 @@ function Routes({ pathname }: { pathname: string }) {
         </DashboardShell>
       )
     }
-    // Staff notes, support items and talent profiles belong to a provider, so only its workspace has them.
-    if (isProvider && onTalent && canSeeTalent(role)) {
+    // Staff notes, support items and talent profiles belong to the institution that keeps them: a
+    // provider, or an organization for the people in cohorts it hosts. Agencies and academic institutions have none.
+    const hasTalent = isProvider || current.kind === 'organization'
+    if (hasTalent && onTalent && canSeeTalent(role)) {
       return (
         <DashboardShell>
           {/^\/lms\/talent\/support\/?$/.test(pathname) ? (
@@ -193,7 +196,7 @@ function Routes({ pathname }: { pathname: string }) {
         </DashboardShell>
       )
     }
-    if ((onTalent && isProvider) || (activity && !canSeeActivity(role))) {
+    if (onTalent || (activity && !canSeeActivity(role))) {
       return <DashboardShell>{notFound}</DashboardShell>
     }
     if (activity) {
@@ -231,10 +234,12 @@ function Routes({ pathname }: { pathname: string }) {
         </DashboardShell>
       )
     }
-    if (isProvider && onCourses) {
+    if (onCourses) {
       return (
         <DashboardShell>
-          {course ? (
+          {!isProvider ? (
+            <OfferedCoursesPage workspace={current.subdomain} />
+          ) : course ? (
             <CourseEditorPage courseId={decodeURIComponent(course[1])} />
           ) : (
             <CoursesPage workspace={current.subdomain} />

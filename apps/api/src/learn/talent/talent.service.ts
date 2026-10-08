@@ -17,7 +17,7 @@ import {
 import { LocalDiskPrivateStorage } from '../../storage/local-disk-storage'
 import { DataAccessLogService } from '../data-access-log.service'
 import { LearnerService } from '../learner.service'
-import { ProviderAccessService } from '../provider-access.service'
+import { institutionCohortWhere, ProviderAccessService } from '../provider-access.service'
 import type {
   EducationEntry,
   EducationLevel,
@@ -506,7 +506,7 @@ export class TalentService {
       where: {
         userId,
         status: { not: 'withdrawn' },
-        cohort: { requiresProfile: true, course: { providerId } },
+        cohort: { requiresProfile: true, ...institutionCohortWhere(providerId) },
       },
       select: { cohort: { select: { profileRefreshMonths: true } } },
     })
@@ -789,7 +789,7 @@ export class TalentService {
     const q = f.q?.trim()
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
-        cohort: { course: { providerId } },
+        cohort: institutionCohortWhere(providerId),
         ...(opts.userIds ? { userId: { in: opts.userIds } } : {}),
         ...(q
           ? {

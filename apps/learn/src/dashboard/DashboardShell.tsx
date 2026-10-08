@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { AccountMenu, type MenuLink } from '../auth'
+import { AccountMenu, type MenuGroup, type MenuLink } from '../auth'
+import { NavDropdown } from '../components/NavDropdown'
 import { ProductsMenu } from '../components/ProductsMenu'
 import { withBrand } from '../brand'
 import '../pages/delaware.css'
@@ -7,6 +8,7 @@ import '../pages/home.css'
 import './dashboard.css'
 import { SYSTEM_ADMIN } from './AdminPages'
 import { useApp } from './app-context'
+import { buildNav } from './navModel'
 import { canSeeActivity, canSeeTalent } from './roleAccess'
 import { useRole } from './shared'
 import { WorkspaceSwitcher } from './WorkspaceSwitcher'
@@ -82,21 +84,64 @@ function NavLinks({ className, leading }: { className: string; leading?: ReactNo
   )
 }
 
-/** Avatar menu: the app's links, plus a way back to the workspace list where it applies. */
+/** What the navigation offers this person, from the workspaces and learning they have. */
+function useNavModel() {
+  const { href, workspaces, current, hasLearning } = useApp()
+  const role = useRole()
+  const params = new URLSearchParams(window.location.search)
+  params.delete('site')
+  const query = params.toString()
+  return buildNav({
+    role,
+    workspaces,
+    current,
+    hasLearning,
+    pathname: window.location.pathname,
+    href,
+    workspacesHref: `/lms/dashboard${query ? `?${query}` : ''}`,
+  })
+}
+
+/** Avatar menu: the person's learner and staff links, then Sign out. */
 function AccountControl() {
-  const nav = useNav()
   const { fixedTenant } = useApp()
-  const links = [...nav]
-  if (!fixedTenant) {
-    const params = new URLSearchParams(window.location.search)
-    params.delete('site')
-    const query = params.toString()
-    // The learner pages' own nav already lists it
-    if (!links.some((l) => l.label === 'My learning'))
-      links.push({ label: 'My learning', href: `/lms/learning${query ? `?${query}` : ''}` })
-    links.push({ label: 'All workspaces', href: `/lms/dashboard${query ? `?${query}` : ''}` })
-  }
-  return <AccountMenu signedOut={null} links={links} />
+  const model = useNavModel()
+  const flat = useNav()
+  // A tenant host fixes the workspace and keeps the older flat list.
+  if (fixedTenant) return <AccountMenu signedOut={null} links={flat} />
+  const groups: MenuGroup[] = [
+    ...(model.account.learner ? [{ heading: "I'm a learner", links: model.account.learner }] : []),
+    ...(model.account.staff ? [{ heading: "I'm a staff member", links: model.account.staff }] : []),
+  ]
+  return <AccountMenu signedOut={null} groups={groups.length > 0 ? groups : undefined} />
+}
+
+/** Top bar of the LearnDifferently skin: Products, then the learner and staff menus the person has. */
+function LearnNav({ productsMenu }: { productsMenu: ReactNode }) {
+  const model = useNavModel()
+  const onCatalog = window.location.pathname.startsWith('/lms/catalog')
+  const { href } = useApp()
+  return (
+    <ul className="ld-nav">
+      <li>{productsMenu}</li>
+      {model.learner && (
+        <li>
+          <NavDropdown
+            label="Learner tools"
+            items={[
+              ...(onCatalog ? [{ label: 'Training catalog', href: href('/lms/catalog') }] : []),
+              ...model.learner,
+            ]}
+          />
+        </li>
+      )}
+      {model.staff && (
+        <li>
+          <NavDropdown label="Staff tools" items={model.staff} />
+        </li>
+      )}
+    </ul>
+  )
 }
 
 /** The Delaware title bar names the area the visitor is in. */
@@ -171,9 +216,8 @@ function LearnFrame({ children }: { children: ReactNode }) {
           </span>
         </a>
         <nav aria-label="Main">
-          <NavLinks
-            className="ld-nav"
-            leading={
+          <LearnNav
+            productsMenu={
               <ProductsMenu
                 hrefFor={(p) =>
                   p.status === 'available' && p.href

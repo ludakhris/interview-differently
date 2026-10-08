@@ -42,6 +42,16 @@ const COHORTS: Record<
   C2: { providerId: 'P2', hostId: 'H1', requires: false, months: null },
   C3: { providerId: 'P1', hostId: 'A1', requires: false, months: null },
 }
+/** Evaluates institutionCohortWhere against a fixture enrollment: a provider's course, or a hosting organization. */
+const inScope = (
+  e: { providerId: string; hostId: string },
+  cohort: { OR: ({ course: { providerId: string } } | { institutionId: string })[] }
+) =>
+  cohort.OR.some((c) =>
+    'course' in c
+      ? e.providerId === c.course.providerId
+      : e.hostId === c.institutionId && INSTITUTIONS[e.hostId]?.kind === 'organization'
+  )
 const INSTITUTIONS: Record<string, { name: string; kind: string }> = {
   P1: { name: 'Prov P1', kind: 'provider' },
   P2: { name: 'Prov P2', kind: 'provider' },
@@ -106,16 +116,13 @@ const prisma = {
   },
   enrollment: {
     findFirst: jest.fn(async ({ where }) =>
-      state.enrolled.find(
-        (e) => e.userId === where.userId && e.providerId === where.cohort.course.providerId
-      )
+      state.enrolled.find((e) => e.userId === where.userId && inScope(e, where.cohort))
         ? { id: 'e' }
         : null
     ),
     findMany: jest.fn(async ({ where }) => {
       let rows = state.enrolled
-      const provider = where.cohort?.course?.providerId
-      if (provider) rows = rows.filter((e) => e.providerId === provider)
+      if (where.cohort?.OR) rows = rows.filter((e) => inScope(e, where.cohort))
       if (where.cohort?.requiresProfile) rows = rows.filter((e) => COHORTS[e.cohortId].requires)
       if (typeof where.userId === 'string') rows = rows.filter((e) => e.userId === where.userId)
       if (where.userId?.in) rows = rows.filter((e) => where.userId.in.includes(e.userId))
@@ -151,7 +158,9 @@ const prisma = {
   },
   membership: {
     findFirst: jest.fn(async ({ where }) =>
-      where.userId === 'staff-p1' && where.institutionId === 'P1' && where.cohortId === null
+      where.cohortId === null &&
+      ((where.userId === 'staff-p1' && where.institutionId === 'P1') ||
+        (where.userId === 'staff-h1' && where.institutionId === 'H1'))
         ? { id: 'm' }
         : null
     ),
@@ -691,6 +700,27 @@ describe('staff access', () => {
     await expect(
       service.searchParticipants({ userId: 'root', role: 'system-admin' }, 'P1', {})
     ).resolves.toHaveLength(4)
+  })
+})
+
+describe('an organization sees the people in the cohorts it hosts', () => {
+  const org = { userId: 'staff-h1', role: 'provider-admin' }
+  it('lists everyone enrolled in cohorts hosted by the organization, and no one else', async () => {
+    const rows = await service.searchParticipants(org, 'H1', {})
+    // C1 and C2 are hosted by H1; C3 is hosted by an agency, so L5 is not in H1's scope.
+    expect(rows.map((r) => r.userId).sort()).toEqual(['L1', 'L2', 'L3', 'L4'])
+  })
+  it('shows a person only if they are in a hosted cohort', async () => {
+    await expect(service.participantHeader(org, 'H1', 'L5')).rejects.toThrow(NotFoundException)
+  })
+  it('refuses staff of the provider on the organization, and organization staff on the provider', async () => {
+    await expect(service.searchParticipants(staff, 'H1', {})).rejects.toThrow(ForbiddenException)
+    await expect(service.searchParticipants(org, 'P1', {})).rejects.toThrow(ForbiddenException)
+  })
+  it('an organization does not gain people just because its host runs a provider course elsewhere', async () => {
+    // P1 has L5 (host A1, an agency). Staff of P1 still see L5; H1 does not.
+    const p1 = await service.searchParticipants(staff, 'P1', {})
+    expect(p1.map((r) => r.userId)).toContain('L5')
   })
 })
 

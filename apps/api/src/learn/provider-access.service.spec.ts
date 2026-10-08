@@ -47,7 +47,9 @@ const prisma = {
             m.userId === where.userId &&
             m.institutionId === where.institutionId &&
             m.cohortId === where.cohortId &&
-            institutions.find((i) => i.id === m.institutionId)?.kind === where.institution.kind
+            where.institution.kind.in.includes(
+              institutions.find((i) => i.id === m.institutionId)?.kind
+            )
         ) ?? null
     ),
   },
@@ -58,7 +60,14 @@ const prisma = {
     findFirst: jest.fn(
       async ({ where }) =>
         enrollments.find(
-          (e) => e.userId === where.userId && e.providerId === where.cohort.course.providerId
+          (e) =>
+            e.userId === where.userId &&
+            where.cohort.OR.some(
+              (c: { course?: { providerId: string }; institutionId?: string }) =>
+                c.course
+                  ? e.providerId === c.course.providerId
+                  : cohorts.find((k) => k.id === e.cohortId)?.institution.id === c.institutionId
+            )
         ) ?? null
     ),
     findUnique: jest.fn(
@@ -97,8 +106,16 @@ describe('assertProviderStaff', () => {
       ForbiddenException
     )
   })
-  it('refuses organization staff, even one whose organization runs the provider course', async () => {
+  it('lets organization staff in on their own organization, and refuses them on the provider whose course they run', async () => {
+    await expect(
+      access.assertProviderStaff('staff-o1', 'provider-admin', 'O1')
+    ).resolves.toBeUndefined()
     await expect(access.assertProviderStaff('staff-o1', 'provider-admin', 'P1')).rejects.toThrow(
+      ForbiddenException
+    )
+  })
+  it('refuses provider staff on an organization they run a course for', async () => {
+    await expect(access.assertProviderStaff('staff-p1', 'provider-admin', 'O1')).rejects.toThrow(
       ForbiddenException
     )
   })
@@ -134,10 +151,12 @@ describe('assertProviderStaff', () => {
     )
     memberships.pop()
   })
-  it('does not accept a membership on an institution that is not a provider', async () => {
-    await expect(access.assertProviderStaff('staff-o1', 'provider-admin', 'O1')).rejects.toThrow(
+  it('does not accept a membership on an agency', async () => {
+    memberships.push({ userId: 'staff-a1', institutionId: 'A1', cohortId: null })
+    await expect(access.assertProviderStaff('staff-a1', 'provider-admin', 'A1')).rejects.toThrow(
       ForbiddenException
     )
+    memberships.pop()
   })
 })
 
@@ -153,6 +172,20 @@ describe('providerOfCohort', () => {
   it('is not found for an unknown cohort or one with no course', async () => {
     await expect(access.providerOfCohort('nope')).rejects.toThrow(NotFoundException)
     await expect(access.providerOfCohort('C0')).rejects.toThrow(NotFoundException)
+  })
+})
+
+describe('scopeForCohort', () => {
+  const ctx = { providerId: 'P1', hostId: 'O1' }
+  it('is the provider for provider staff, the host for organization staff, and null for others', async () => {
+    await expect(access.scopeForCohort('staff-p1', 'provider-admin', ctx)).resolves.toBe('P1')
+    await expect(access.scopeForCohort('staff-o1', 'provider-admin', ctx)).resolves.toBe('O1')
+    await expect(access.scopeForCohort('staff-p2', 'provider-admin', ctx)).resolves.toBeNull()
+    await expect(access.scopeForCohort('learner-1', undefined, ctx)).resolves.toBeNull()
+    await expect(access.scopeForCohort('agency-1', 'agency-admin', ctx)).resolves.toBeNull()
+  })
+  it('gives a system admin the provider', async () => {
+    await expect(access.scopeForCohort('root', 'system-admin', ctx)).resolves.toBe('P1')
   })
 })
 
@@ -189,6 +222,10 @@ describe('learner checks', () => {
     await expect(access.assertParticipantOfProvider('P2', 'learner-1')).rejects.toThrow(
       NotFoundException
     )
+  })
+  it('counts the hosting organization of a cohort as an institution the learner is enrolled with', async () => {
+    await expect(access.assertParticipantOfProvider('O1', 'learner-1')).resolves.toBeUndefined()
+    await expect(access.assertLearnerOfProvider('learner-1', 'O1')).resolves.toBeUndefined()
   })
   it('lets a learner act only for providers they are enrolled with', async () => {
     await expect(access.assertLearnerOfProvider('learner-1', 'P1')).resolves.toBeUndefined()

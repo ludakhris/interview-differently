@@ -7,7 +7,7 @@ import {
 import { LEARN_ROLES } from '../learn.service'
 import { PrismaService } from '../../prisma/prisma.service'
 import { DataAccessLogService } from '../data-access-log.service'
-import { ProviderAccessService } from '../provider-access.service'
+import { institutionCohortWhere, ProviderAccessService } from '../provider-access.service'
 import type {
   NoteInput,
   ParticipantNoteDto,
@@ -129,22 +129,19 @@ export class ParticipantNotesService {
 
   /**
    * How many notes and open follow-ups exist for each person: counts only, never content, so no
-   * audit row (same as the Talent list). Null unless the caller is staff of the cohort's provider;
+   * audit row (same as the Talent list). Null unless the caller is staff of the cohort's provider or host organization;
    * a person never gets a count about themselves. One grouped query per kind for the whole roster.
    */
   async rosterNoteSummaries(
     actorId: string,
     role: string | undefined,
-    providerId: string,
+    cohort: { providerId: string; hostId: string },
     cohortId: string,
     userIds: string[]
   ): Promise<Map<string, { notes: number; openFollowUps: number }> | null> {
-    try {
-      await this.access.assertProviderStaff(actorId, role, providerId)
-    } catch (e) {
-      if (e instanceof ForbiddenException) return null
-      throw e
-    }
+    // The counts come from the institution the caller is staff of: the course's provider, else the host.
+    const providerId = await this.access.scopeForCohort(actorId, role, cohort)
+    if (!providerId) return null
     const ids = userIds.filter((id) => id !== actorId)
     const out = new Map<string, { notes: number; openFollowUps: number }>()
     if (ids.length === 0) return out
@@ -196,10 +193,10 @@ export class ParticipantNotesService {
     if (cohortId === undefined || cohortId === null || cohortId === '') return null
     if (typeof cohortId !== 'string') throw new BadRequestException('cohortId is not valid')
     const c = await this.prisma.cohort.findFirst({
-      where: { id: cohortId, course: { providerId } },
+      where: { id: cohortId, ...institutionCohortWhere(providerId) },
       select: { id: true },
     })
-    if (!c) throw new BadRequestException('That cohort does not belong to this provider')
+    if (!c) throw new BadRequestException('That cohort does not belong to this institution')
     return c.id
   }
 

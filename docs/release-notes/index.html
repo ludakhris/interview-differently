@@ -496,6 +496,119 @@
 
     <main id="entries">
       <p class="empty-note" id="none" hidden>No updates match. Clear the search or choose All.</p>
+      <!-- ======================= IN REVIEW (nav and organization access) ======================= -->
+
+      <article
+        class="entry"
+        id="navigation"
+        data-status="review"
+        data-short="Learner and staff menus"
+        data-summary="One account menu and two top-bar menus, shown by what the person has."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Navigation: learner and staff menus</h2>
+        <p>
+          The top bar is now Products, then a Learner tools menu (My learning, My outcomes, My
+          profile) and a Staff tools menu, each shown only if the person has that kind of access.
+          Staff tools lists My workspaces and the current workspace's pages: Outcomes, Cohorts and
+          Courses, then Talent, Learner activity and Learner support. The account menu is grouped
+          into "I'm a learner" (including Login &amp; security) and "I'm a staff member" (My
+          workspaces, and the Admin toolbox for system admins), then Sign out. In the workspace
+          list, providers and organizations are indented under their agency.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              A new account with no workspace and no course still sees Learner tools, so it can join
+              a cohort with a code.
+            </li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/navigation/01-staff-tools-menu.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/navigation/01-staff-tools-menu.jpg"
+                alt="Staff tools menu"
+            /></a>
+            <figcaption>Staff tools for a workspace.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/navigation/04-staff-tools-phone.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/navigation/04-staff-tools-phone.jpg"
+                alt="Staff tools menu on a phone"
+            /></a>
+            <figcaption>The same menu on a phone.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/72">Issue #72</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="organization-access"
+        data-status="review"
+        data-short="Organizations: Talent, Support, Courses"
+        data-summary="Organization staff get Talent, Support and a read-only Courses page."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+        </div>
+        <h2>Organizations get Talent, Support and a read-only Courses page</h2>
+        <p>
+          Staff of an organization that hosts cohorts can now open Talent, notes and support
+          follow-ups for the people in those cohorts, plus the support queue. Learners can already
+          share their profile with the organization that hosts their cohort; until now its staff had
+          no way to see it. Organizations also get a Courses page that lists the courses providers
+          have offered them, with a note that only providers create and edit courses.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              An organization sees only the people in cohorts it hosts. Its notes and support items
+              belong to the organization: a provider's staff do not see them, and the organization
+              does not see the provider's.
+            </li>
+            <li>
+              The same rules apply as for providers: staff need the provider admin role and a
+              membership in the organization, learners never see notes, and every read is logged.
+            </li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/navigation/03-organization-courses.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/navigation/03-organization-courses.jpg"
+                alt="Read-only Courses page for an organization"
+            /></a>
+            <figcaption>The read-only Courses page.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/navigation/05-organization-talent.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/navigation/05-organization-talent.jpg"
+                alt="Talent for an organization"
+            /></a>
+            <figcaption>Talent for an organization.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/72">Issue #72</a>
+        </div>
+      </article>
+
       <!-- ======================= SHIPPED (PR #70) ======================= -->
 
       <article

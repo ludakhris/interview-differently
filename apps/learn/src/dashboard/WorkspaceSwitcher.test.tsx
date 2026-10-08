@@ -2,7 +2,7 @@
 import { render, screen } from '@testing-library/react'
 import { cleanup } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { WorkspaceSwitcher, switchHref } from './WorkspaceSwitcher'
+import { WorkspaceSwitcher, switchHref, workspaceTree } from './WorkspaceSwitcher'
 
 vi.mock('./app-context', () => ({
   useApp: () => ({
@@ -39,5 +39,20 @@ describe('WorkspaceSwitcher', () => {
     expect(switchHref('/lms/talent', '', agency)).toBe('/lms/dashboard?site=de')
     expect(switchHref('/lms/cohorts/c1', '', agency)).toBe('/lms/cohorts?site=de')
     expect(switchHref('/lms/dashboard/cohorts/c1', '', agency)).toBe('/lms/dashboard?site=de')
+  })
+
+  it('lists each workspace under the one it reports to, indented', () => {
+    const list = [
+      { id: 'p', parentId: 'a' },
+      { id: 'a', parentId: null },
+      { id: 'o', parentId: 'p' },
+      { id: 'x', parentId: 'gone' },
+    ]
+    expect(workspaceTree(list).map((t) => `${t.depth}:${t.w.id}`)).toEqual([
+      '0:a',
+      '1:p',
+      '2:o',
+      '0:x',
+    ])
   })
 })
