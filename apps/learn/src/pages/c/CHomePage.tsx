@@ -6,6 +6,7 @@ import { productPagePath, PRODUCTS } from '../../products'
 import { PATHWAYS } from '../homeContent'
 import { PaceTracks } from './PaceTracks'
 import { FloatingCta } from './FloatingCta'
+import { TourVideo } from './TourVideo'
 import {
   ANCHORS,
   COMPONENTS,
@@ -416,16 +417,10 @@ export function CHomePage() {
               </p>
             </div>
             <figure className="ld-state-shot c-shot">
-              <img
-                src="/site/agency-dashboard.jpg"
-                width="1280"
-                height="860"
-                loading="lazy"
-                alt="A state workforce board's outcomes dashboard: participants enrolled, completion rate, learners who reached the target score and interview-ready count, then assessment scores before and after training for each provider"
-              />
+              <TourVideo />
               <figcaption className="ld-small ld-faint">
-                The real product: what a state sees across the providers it funds, the same measures
-                side by side. Fictional providers and sample data.
+                The real product, in thirty seconds: a state’s view across providers, one provider,
+                one cohort’s gradebook, the export. Fictional providers and sample data.
               </figcaption>
             </figure>
             <div className="c-report">
