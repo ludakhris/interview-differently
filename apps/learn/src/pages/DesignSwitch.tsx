@@ -4,13 +4,13 @@ export type Design = 'a' | 'b' | 'c'
 
 const DESIGNS: { key: Design; href: string; label: string }[] = [
   { key: 'a', href: '/?design=a', label: 'Design A' },
-  { key: 'b', href: '/', label: 'Design B' },
-  { key: 'c', href: '/?design=c', label: 'Design C' },
+  { key: 'b', href: '/?design=b', label: 'Design B' },
+  { key: 'c', href: '/', label: 'Design C' },
 ]
 
 /**
- * Review-only toggle between the candidate homepages (site-alt and site-c branches). The same
- * deployment serves Design B at /, Design A at /?design=a and Design C at /?design=c.
+ * Review-only toggle between the candidate homepages (site-c branch). The same deployment
+ * serves Design C at /, Design A at /?design=a and Design B at /?design=b.
  */
 export function DesignSwitch({ current }: { current: Design }) {
   return (

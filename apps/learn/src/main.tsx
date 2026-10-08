@@ -58,9 +58,9 @@ function page(): ReactNode {
     document.title = 'Career Readiness Tool — Delaware Department of Labor (demonstration)'
     return <DelawarePage />
   }
-  // Candidate homepages under review: ?design=a and ?design=c pick one; the default is Design B.
+  // Candidate homepages under review: ?design=a and ?design=b pick one; the default is Design C.
   const wanted = new URLSearchParams(search).get('design')
-  const design: Design = wanted === 'a' ? 'a' : wanted === 'c' ? 'c' : 'b'
+  const design: Design = wanted === 'a' ? 'a' : wanted === 'b' ? 'b' : 'c'
   return (
     <>
       {design === 'a' ? <HomePage /> : design === 'c' ? <CHomePage /> : <AltHomePage />}
