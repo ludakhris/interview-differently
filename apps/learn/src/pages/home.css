@@ -488,6 +488,47 @@
   color: var(--muted);
 }
 
+/* The bet each side makes under the old model, and the loop's answer */
+.ld-bet {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+.ld-bet-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 28px;
+  border-radius: 20px;
+  background: var(--white);
+}
+.ld-bet-card p {
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.ld-bet-answer {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 24px;
+  align-items: center;
+  padding: 24px 28px;
+  border-radius: 20px;
+  background: var(--ink);
+  color: var(--white);
+}
+.ld-bet-answer .ld-mono {
+  color: var(--sky);
+}
+.ld-bet-answer p {
+  font-size: 18px;
+  line-height: 1.5;
+  color: #e8eef3;
+}
+
 .ld-breaks {
   position: relative;
   list-style: none;
@@ -1594,7 +1635,9 @@
   .ld-licenses,
   .ld-pilot,
   .ld-pathway-tabs,
-  .ld-start {
+  .ld-start,
+  .ld-bet,
+  .ld-bet-answer {
     grid-template-columns: 1fr;
   }
   .ld-start-card {
