@@ -139,7 +139,7 @@ export const MEASURES_MORE = [
 ]
 
 export const PROVENANCE =
-  'Four of the five come straight from the platform. Employment and earnings after exit come from your state’s wage-record match, and we export the exit records it needs.'
+  'Pull it any day of the grant, and every number traces back to a learner’s record.'
 
 export const WALKTHROUGH = [
   {
