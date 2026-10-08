@@ -262,7 +262,9 @@ function StudentCard({
   const [expanded, setExpanded] = useState(false)
   const ref = useRef<HTMLDetailsElement>(null)
   useEffect(() => {
-    if (bulk && ref.current) ref.current.open = bulk.open
+    if (!bulk) return
+    if (ref.current) ref.current.open = bulk.open
+    if (!bulk.open) setExpanded(false)
   }, [bulk])
   const hidden = s.queries.length - limit
   const shown = expanded ? s.queries : s.queries.slice(0, limit)
