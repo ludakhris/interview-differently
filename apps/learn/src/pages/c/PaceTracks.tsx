@@ -5,7 +5,8 @@
  */
 
 interface Node {
-  label: string
+  /** One line, or several lines stacked under the node on wide screens. */
+  label: string | string[]
   /** When it happened; shown under the label. */
   when?: string
   /** Proved without a lesson (checked node); otherwise learned in the loop. */
@@ -27,7 +28,12 @@ const LEARNERS: Learner[] = [
     score: '80%',
     weeks: 6,
     nodes: [
-      { label: 'Password resets · Caller verification', when: 'proved day 1', proved: true, at: 6 },
+      {
+        label: ['Password resets', 'Caller verification'],
+        when: 'proved day 1',
+        proved: true,
+        at: 6,
+      },
       { label: 'DNS basics', when: 'day 2', at: 30 },
       { label: 'Ticket triage', when: 'proved day 3', proved: true, at: 52 },
       { label: 'Escalation', at: 72 },
@@ -79,7 +85,7 @@ export function PaceTracks() {
               <div className="c-pace-line" style={{ width: `${(l.weeks / LONGEST) * 100}%` }}>
                 {l.nodes.map((n, i) => (
                   <span
-                    key={n.label}
+                    key={[n.label].flat().join()}
                     className={[
                       'c-pace-node',
                       n.proved ? 'c-pace-node-proved' : '',
@@ -89,7 +95,9 @@ export function PaceTracks() {
                   >
                     <i>{n.proved && <Check />}</i>
                     <em>
-                      {n.label}
+                      {[n.label].flat().map((line) => (
+                        <span key={line}>{line}</span>
+                      ))}
                       {n.when && <b>{n.when}</b>}
                     </em>
                   </span>
@@ -102,9 +110,12 @@ export function PaceTracks() {
             {/* Narrow screens: the same nodes as a list, since labels cannot sit on the track. */}
             <ol className="c-pace-list">
               {l.nodes.map((n) => (
-                <li key={n.label} className={n.proved ? 'c-pace-list-proved' : undefined}>
+                <li
+                  key={[n.label].flat().join()}
+                  className={n.proved ? 'c-pace-list-proved' : undefined}
+                >
                   <i>{n.proved && <Check />}</i>
-                  <span>{n.label}</span>
+                  <span>{[n.label].flat().join(' · ')}</span>
                   {n.when && <b>{n.when}</b>}
                 </li>
               ))}
