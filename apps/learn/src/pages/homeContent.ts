@@ -39,6 +39,20 @@ export const SAME_START = [
   },
 ] as const
 
+/** The bet the old model asks each side to make, and the loop's answer. */
+export const BET = [
+  {
+    who: 'FOR THE LEARNER',
+    body: 'Sit in a class. Learn a thing. Invest the money and the months. Then find out whether it got you the job. If it did not: more class? More training? A different career?',
+  },
+  {
+    who: 'FOR THE EMPLOYER',
+    body: 'Invest in training and retaining people, then hope it shows up as measurable improvement or business impact. If it does not work out: a new hire, and the whole investment again.',
+  },
+]
+export const BET_ANSWER =
+  'The loop makes the bet small. A verified skill in week one, not a verdict at the end. A plan that changes the moment it is not working. A record that carries when the person or the job changes.'
+
 /** The three moves a learner repeats with every lesson. */
 export const LOOP = [
   {

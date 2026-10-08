@@ -5,6 +5,8 @@ import { ProductsMenu } from '../components/ProductsMenu'
 import { PRODUCTS, productPagePath } from '../products'
 import {
   AUDIENCES,
+  BET,
+  BET_ANSWER,
   BREAKS,
   JOURNEY,
   LICENSING,
@@ -365,7 +367,7 @@ export function HomePage() {
               <article key={s.name} className={`ld-start-card ld-start-${s.tone}`}>
                 <div className="ld-start-score">
                   <span className="ld-start-figure">{s.score}</span>
-                  <span className="ld-mono ld-steel">PRETEST</span>
+                  <span className="ld-mono ld-steel">SKILLS ASSESSMENT</span>
                 </div>
                 <p className="ld-start-body">
                   <strong>{s.name}</strong> {s.body}
@@ -373,8 +375,9 @@ export function HomePage() {
               </article>
             ))}
             <p className="ld-start-foot">
-              Same start line, same pace. Both finish with the same certificate, and neither has
-              shown an employer what they can do. (Maya and Theo are illustrative.)
+              The opening skills assessment is a simulation of the job, not a quiz. Same start line,
+              same pace. Both finish with the same certificate, and neither has shown an employer
+              what they can do. (Maya and Theo are illustrative.)
             </p>
           </div>
           <ol className="ld-breaks">
@@ -386,6 +389,18 @@ export function HomePage() {
               </li>
             ))}
           </ol>
+          <div className="ld-bet">
+            {BET.map((b) => (
+              <article key={b.who} className="ld-bet-card">
+                <span className="ld-mono ld-eyebrow">{b.who}</span>
+                <p>{b.body}</p>
+              </article>
+            ))}
+            <div className="ld-bet-answer">
+              <span className="ld-mono">THE LOOP’S ANSWER</span>
+              <p>{BET_ANSWER}</p>
+            </div>
+          </div>
         </section>
 
         <section id="loop" className="ld-wrap ld-section">
