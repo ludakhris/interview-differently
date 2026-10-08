@@ -169,6 +169,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
 function DelawareFrame({ children }: { children: ReactNode }) {
   const { href } = useApp()
+  // The branded dashboard is the agency's own page: no workspace bar and no tool links, only the report.
+  const onDashboard = window.location.pathname.startsWith('/lms/dashboard')
   return (
     <div className="de dash dash-brand-delaware">
       <div className="de-proto-bar" role="note">
@@ -183,9 +185,11 @@ function DelawareFrame({ children }: { children: ReactNode }) {
             className="de-logo"
           />
         </a>
-        <nav aria-label="Main">
-          <NavLinks className="de-nav" />
-        </nav>
+        {!onDashboard && (
+          <nav aria-label="Main">
+            <NavLinks className="de-nav" />
+          </nav>
+        )}
         <AccountControl />
       </header>
       <div className="de-titlebar">
@@ -240,12 +244,13 @@ function Body({ wrap, children }: { wrap: string; children: ReactNode }) {
   const { brand, tenant } = useApp()
   const { pathname, search } = window.location
   // On Delaware's dashboard in the LearnDifferently look, remind people the white-labeled version exists.
-  const promo = brand === 'learn' && tenant === 'delaware' && pathname.startsWith('/lms/dashboard')
+  const onDashboard = pathname.startsWith('/lms/dashboard')
+  const promo = brand === 'learn' && tenant === 'delaware' && onDashboard
   return (
     <>
       <main className={`${wrap} dash-main`}>
         {promo && <DelawareSkinPromo href={withBrand(search, pathname, 'delaware')} />}
-        <WorkspaceSwitcher />
+        {!(brand === 'delaware' && onDashboard) && <WorkspaceSwitcher />}
         {children}
       </main>
       <BrandSwitch />
