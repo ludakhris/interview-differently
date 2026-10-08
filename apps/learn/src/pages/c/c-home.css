@@ -406,6 +406,17 @@
   display: block;
   margin-bottom: 4px;
 }
+.c-measures-more-label {
+  margin-top: 8px;
+}
+.c-measures-more {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: -28px;
+}
+.c-measure .ld-piece-status {
+  border-color: var(--faint);
+  color: var(--faint);
+}
 .c-shot {
   margin-top: 12px;
 }
@@ -462,7 +473,8 @@
     order: -1;
   }
   .c-loop,
-  .c-measures {
+  .c-measures,
+  .c-measures-more {
     grid-template-columns: 1fr;
   }
   .c-components,

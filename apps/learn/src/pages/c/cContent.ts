@@ -188,6 +188,23 @@ export const MEASURES = [
   },
 ]
 
+/** Two more a grant agreement asks for. Placement arrives with Talent Match; say so. */
+export const MEASURES_MORE = [
+  {
+    name: 'Enrollment Target Fulfillment',
+    abbr: '% ENROLLED',
+    def: 'Grant agreements set a number to serve (“the grantee will enroll 100 participants”). The metric: actual enrolled ÷ target enrollment contracted.',
+    how: 'Enrollment is counted the moment someone joins by cohort code or is added by email. Put the contracted target on the cohort and the rate is on the dashboard every day of the grant, not at the close-out.',
+  },
+  {
+    name: 'Initial Job Placement',
+    abbr: 'DAY-1 EMPLOYMENT',
+    def: 'A job offer secured, or work started, on the first official day after completing a training program, apprenticeship, or pre-release and reentry track.',
+    how: 'Offers and start dates land on the learner’s record from Talent Match, so day-one employment is a count on the cohort, not a survey after the fact.',
+    soon: 'With Talent Match',
+  },
+]
+
 export const PROVENANCE =
   'Skill gains, credentials and completion come from the platform. Employment and earnings after exit come from your state’s wage-record match; the exit file exports in the shape it needs.'
 

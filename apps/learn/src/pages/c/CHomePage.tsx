@@ -9,6 +9,7 @@ import {
   COMPONENTS,
   LOOP,
   MEASURES,
+  MEASURES_MORE,
   PACE,
   PERSONAS,
   PROVENANCE,
@@ -436,6 +437,23 @@ export function CHomePage() {
             {MEASURES.map((m) => (
               <article key={m.abbr} className="c-measure">
                 <span className="ld-mono ld-eyebrow">{m.abbr}</span>
+                <h3 className="ld-h3 ld-h3-lg">{m.name}</h3>
+                <p className="c-measure-def">{m.def}</p>
+                <p className="c-measure-how">
+                  <span className="ld-mono ld-faint">HOW IT’S TRACKED </span>
+                  {m.how}
+                </p>
+              </article>
+            ))}
+          </div>
+          <p className="ld-mono ld-faint c-measures-more-label">TWO MORE YOUR GRANT WILL ASK FOR</p>
+          <div className="c-measures c-measures-more">
+            {MEASURES_MORE.map((m) => (
+              <article key={m.abbr} className="c-measure">
+                <div className="ld-row-between">
+                  <span className="ld-mono ld-eyebrow">{m.abbr}</span>
+                  {m.soon && <span className="ld-piece-status">{m.soon}</span>}
+                </div>
                 <h3 className="ld-h3 ld-h3-lg">{m.name}</h3>
                 <p className="c-measure-def">{m.def}</p>
                 <p className="c-measure-how">
