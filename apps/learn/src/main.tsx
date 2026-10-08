@@ -1,5 +1,6 @@
 import React, { type ReactNode } from 'react'
 import ReactDOM from 'react-dom/client'
+import { Analytics } from '@vercel/analytics/react'
 import { resolveContext } from './brand'
 import { resolveSite } from './site'
 import { AuthProvider } from './auth'
@@ -60,6 +61,9 @@ function page(): ReactNode {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AuthProvider>{page()}</AuthProvider>
+    <AuthProvider>
+      {page()}
+      <Analytics />
+    </AuthProvider>
   </React.StrictMode>
 )
