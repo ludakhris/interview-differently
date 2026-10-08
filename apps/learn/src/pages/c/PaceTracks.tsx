@@ -99,6 +99,16 @@ export function PaceTracks() {
                 </span>
               </div>
             </div>
+            {/* Narrow screens: the same nodes as a list, since labels cannot sit on the track. */}
+            <ol className="c-pace-list">
+              {l.nodes.map((n) => (
+                <li key={n.label} className={n.proved ? 'c-pace-list-proved' : undefined}>
+                  <i>{n.proved && <Check />}</i>
+                  <span>{n.label}</span>
+                  {n.when && <b>{n.when}</b>}
+                </li>
+              ))}
+            </ol>
           </div>
         ))}
       </div>

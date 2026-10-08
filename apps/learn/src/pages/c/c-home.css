@@ -187,6 +187,9 @@
 .c-pace-end .ld-small {
   color: var(--steel);
 }
+.c-pace-list {
+  display: none;
+}
 .c-pace-legend {
   grid-column: 1 / -1;
   display: flex;
@@ -553,6 +556,23 @@
 
 /* Tablet */
 @media (max-width: 960px) {
+  /* The hero cluster is capped at 460px by home.css; centre it rather than leave it left. */
+  .c .ld-hero-cards {
+    width: min(460px, 100%);
+    margin: 0 auto;
+  }
+  .c .ld-card-match {
+    width: 290px;
+    right: 0;
+  }
+  .c .ld-match-strength {
+    align-items: flex-start;
+    font-size: 12px;
+  }
+  .c .ld-match-dot {
+    flex: none;
+    margin-top: 4px;
+  }
   .c-team-panel,
   .c-pace,
   .c-loopgrid {
@@ -560,6 +580,59 @@
   }
   .c-pace-end {
     order: -1;
+  }
+  /* The tracks keep their lengths and flags; the labels move to a list under each. */
+  .c-pace-rows {
+    gap: 32px;
+    padding: 8px 168px 8px 0;
+  }
+  .c-pace-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .c-pace-node em {
+    display: none;
+  }
+  .c-pace-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .c-pace-list li {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .c-pace-list i {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 3px solid var(--ink);
+    background: var(--white);
+    transform: translateY(2px);
+  }
+  .c-pace-list-proved i {
+    background: var(--ink);
+    color: var(--white);
+  }
+  .c-pace-list-proved span {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .c-pace-list b {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--orange-text);
   }
   .c-loop-figure {
     max-width: 460px;
@@ -596,15 +669,18 @@
     padding: 20px;
   }
   .c-pace-rows {
-    gap: 36px;
-    padding: 8px 0 24px;
+    padding-right: 0;
   }
-  .c-pace-row {
-    grid-template-columns: 1fr;
-    gap: 28px;
+  .c-pace-track {
+    margin-top: 28px;
   }
-  .c-pace-node em {
-    display: none;
+  /* A long label wraps; its day tag then sits on its own line under it. */
+  .c-pace-list li {
+    flex-wrap: wrap;
+  }
+  .c-pace-list b {
+    flex-basis: 100%;
+    padding-left: 24px;
   }
   .c-pace-flag {
     right: 0;
