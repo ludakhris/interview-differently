@@ -977,6 +977,66 @@ async function load(prisma: PrismaClient) {
   })
   counts.enrollments += alsoRows.length
 
+  // One live cohort with attendance (Cedar Mill's current cohort): weekly sessions, the first five
+  // already held and marked, two still to come. Withdrawn learners are not marked.
+  const liveCohortId = 'demo-cohort-cedar-mill-c'
+  const liveCohort = await prisma.cohort.findUnique({
+    where: { id: liveCohortId },
+    select: { startsAt: true },
+  })
+  if (liveCohort?.startsAt) {
+    await prisma.cohort.update({ where: { id: liveCohortId }, data: { delivery: 'live' } })
+    const topics = [
+      'Orientation and shop safety',
+      'Reading blueprints',
+      'Measuring and layout',
+      'Hand and power tools',
+      'Mid-course skills check',
+      'Wiring basics',
+      'Project day',
+    ]
+    const sessions = topics.map((title, k) => {
+      const startsAt = new Date(liveCohort.startsAt!.getTime() + k * WEEK)
+      return {
+        id: `demo-session-cedar-mill-c-${k + 1}`,
+        cohortId: liveCohortId,
+        title,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 2 * 60 * 60 * 1000),
+        location: 'Cedar Mill shop floor',
+        createdBy: 'demo-staff',
+      }
+    })
+    await prisma.cohortSession.createMany({ data: sessions })
+    const roster = await prisma.enrollment.findMany({
+      where: { cohortId: liveCohortId, status: { not: 'withdrawn' } },
+      select: { userId: true },
+      orderBy: { userId: 'asc' },
+    })
+    const r = rng('attendance-cedar-mill-c')
+    const marks = sessions
+      .filter((x) => x.endsAt.getTime() <= TODAY.getTime())
+      .flatMap((x) =>
+        roster.map((e) => {
+          const v = r.next()
+          const status = v < 0.78 ? 'present' : v < 0.86 ? 'late' : v < 0.94 ? 'absent' : 'excused'
+          return {
+            sessionId: x.id,
+            userId: e.userId,
+            status,
+            note:
+              status === 'absent' && r.next() < 0.4 ? 'Transport problem; will catch up.' : null,
+            markedBy: 'demo-staff',
+            markedAt: new Date(x.endsAt.getTime() + 30 * 60 * 1000),
+          }
+        })
+      )
+    await prisma.attendanceMark.createMany({ data: marks })
+    console.log(
+      `Attendance: ${sessions.length} sessions, ${marks.length} marks (Cedar Mill, live).`
+    )
+  }
+
   // A hidden "Practice labs" course for showing Interview Differently from LearnDifferently: a
   // decision simulation, a SQL simulation, a voice interview and a timed assessment, all launched
   // through the connected-tool item. It is a draft, so the public catalog does not list it, but a
