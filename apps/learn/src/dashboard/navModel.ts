@@ -8,7 +8,7 @@ export interface NavLink {
   action?: 'security'
 }
 /** A dropdown row: a link, a section heading, or a line break. */
-export type NavItem = NavLink | { heading: string } | { divider: true }
+export type NavItem = NavLink | { heading: string; caption?: string } | { divider: true }
 
 export interface NavModel {
   /** Top bar: the "Learner tools" menu. Everyone signed in has it: My learning is where a code is entered to join a cohort. */
@@ -37,7 +37,7 @@ function staffItems(i: NavInput): NavItem[] {
   const { current, role, href } = i
   const items: NavItem[] = [{ label: 'My workspaces', href: i.workspacesHref }]
   if (!current) return items
-  items.push({ heading: current.name })
+  items.push({ heading: current.name, caption: 'Currently selected' })
   if (current.kind === 'agency') {
     items.push({ label: 'Outcomes dashboard', href: href('/lms/dashboard') })
     if (current.subdomain === 'delaware') {

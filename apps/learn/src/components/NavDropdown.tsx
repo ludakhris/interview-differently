@@ -42,7 +42,8 @@ export function NavDropdown({ label, items }: { label: string; items: NavItem[] 
             'divider' in item ? (
               <li key={`d${n}`} className="nd-divider" role="separator" />
             ) : 'heading' in item ? (
-              <li key={`h${n}`} className="nd-heading">
+              <li key={`h${n}`} className={item.caption ? 'nd-heading nd-current' : 'nd-heading'}>
+                {item.caption && <span className="nd-current-label">{item.caption}</span>}
                 {item.heading}
               </li>
             ) : (

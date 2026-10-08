@@ -64,6 +64,11 @@ describe('buildNav', () => {
     expect(l?.at(-1)?.action).toBe('security')
   })
 
+  it('marks the current workspace as currently selected', () => {
+    const h = buildNav(input({})).staff?.find((i) => 'heading' in i)
+    expect(h).toEqual({ heading: 'Cedar Mill', caption: 'Currently selected' })
+  })
+
   it('a provider-admin of a provider gets outcomes, cohorts, courses, then talent, activity and support', () => {
     expect(labels(buildNav(input({})).staff)).toEqual([
       'My workspaces',
