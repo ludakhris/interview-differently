@@ -430,10 +430,8 @@ export function CHomePage() {
             </figure>
             <div className="c-report">
               <div className="c-report-head">
-                <span className="ld-mono">
-                  OUTCOMES REPORT <span className="c-report-dim">· 5 MEASURES, ONE RECORD</span>
-                </span>
-                <span className="ld-mono c-report-dim">EXPORTED AS CSV · ANY DAY OF THE GRANT</span>
+                <span className="ld-mono">THE MEASURES YOUR GRANT IS HELD TO</span>
+                <span className="ld-mono c-report-dim">ONE RECORD · EXPORTED WHEN YOU NEED IT</span>
               </div>
               <div className="c-measure-strip">
                 <h3 className="c-measure-heading">Automatically track and report on</h3>
@@ -444,11 +442,11 @@ export function CHomePage() {
                         <CheckIcon />
                       </i>
                       <div>
+                        <strong>{m.name}</strong>
                         <span className="ld-mono c-measure-when">
                           <span className="ld-faint">TRACKED · </span>
                           {m.when.toUpperCase()}
                         </span>
-                        <strong>{m.name}</strong>
                         <span className="c-measure-how">{m.how}</span>
                       </div>
                     </li>
@@ -464,11 +462,11 @@ export function CHomePage() {
                         <CheckIcon />
                       </i>
                       <div>
+                        <strong>{m.name}</strong>
                         <span className="ld-mono c-measure-when">
                           <span className="ld-faint">TRACKED · </span>
                           {m.when.toUpperCase()}
                         </span>
-                        <strong>{m.name}</strong>
                         <span className="c-measure-how">{m.how}</span>
                       </div>
                     </li>
