@@ -512,6 +512,67 @@
 
     <main id="entries">
       <p class="empty-note" id="none" hidden>No updates match. Clear the search or choose All.</p>
+      <!-- ======================= SHIPPED (analytics and link preview) ======================= -->
+
+      <article
+        class="entry"
+        id="web-analytics"
+        data-status="shipped"
+        data-short="Visitor analytics"
+        data-summary="Page-view counts for the Learn Differently site, with learner identifiers removed before anything is sent."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-08">Oct 8, 2026</time>
+        </div>
+        <h2>Visitor analytics, without learner identifiers</h2>
+        <p>
+          We can now see which pages of the Learn Differently site are visited and how often, so we
+          know what is used and what is not. It counts page views only. It does not use cookies and
+          does not follow people from site to site.
+        </p>
+        <p>
+          Before a page view leaves the browser, the address is cleaned: anything after a "?" is
+          dropped, and a learner's identifier in the address (on a learner's record or a talent
+          profile) is replaced with a placeholder. The counts show that those pages were opened, not
+          whose.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>It covers the Learn Differently site and its Delaware demonstration site.</li>
+            <li>
+              This release notes page is not counted, and neither is the Interview Differently app.
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="release-notes-preview"
+        data-status="shipped"
+        data-short="Release notes link preview"
+        data-summary="Sharing the release notes link now shows its own preview card instead of a random screenshot."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-08">Oct 8, 2026</time>
+        </div>
+        <h2>The release notes link has its own preview</h2>
+        <p>
+          Pasting the release notes link into a chat or an email used to show an arbitrary
+          screenshot from the page. It now shows a card that says "Release notes".
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              Some apps remember the old preview for a while, so a link shared earlier may look the
+              same until their cache expires.
+            </li>
+          </ul>
+        </div>
+      </article>
+
       <!-- ======================= IN REVIEW (needs your attention) ======================= -->
 
       <article
