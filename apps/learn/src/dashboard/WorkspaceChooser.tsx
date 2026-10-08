@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { DashboardShell } from './DashboardShell'
 import { DelawareSkinPromo } from './DelawareSkinPromo'
 import { useApp } from './app-context'
-import { withBrand } from '../brand'
 import { useLoad } from './api'
 import { workspaceHref } from './WorkspaceSwitcher'
 import { filterWorkspaces, type KindFilter } from './workspaceFilter'
@@ -202,9 +201,6 @@ export function WorkspaceChooser() {
   const searching = query.trim() !== '' || kind !== 'all'
   return (
     <DashboardShell>
-      {brand === 'learn' && workspaces.some((w) => w.subdomain === 'delaware') && (
-        <DelawareSkinPromo href={withBrand(`?site=delaware`, '/lms/dashboard', 'delaware')} />
-      )}
       <h1 className="dash-h2">Choose a workspace</h1>
       <p className="dash-sub">
         Each agency is shown with the providers and organizations that report to it.
@@ -283,6 +279,7 @@ export function WorkspaceChooser() {
         </div>
         <TypesGuide />
       </div>
+      {brand === 'learn' && <DelawareSkinPromo />}
     </DashboardShell>
   )
 }

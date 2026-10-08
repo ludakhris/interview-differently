@@ -562,6 +562,9 @@
   background: #0b1f2e;
   color: #ffffff;
 }
+.dash-promo-contact {
+  margin: 32px 0 0;
+}
 .dash-promo-text {
   flex: 1;
   min-width: 0;

@@ -14,4 +14,12 @@ describe('DelawareSkinPromo', () => {
       screen.getByRole('link', { name: /See the Delaware version/ }).getAttribute('href')
     ).toBe('/lms/dashboard?site=delaware&brand=delaware')
   })
+
+  it('without a link, invites agencies to get in touch by email instead', () => {
+    render(<DelawareSkinPromo />)
+    expect(screen.getByText('Your agency, your brand.')).toBeTruthy()
+    const cta = screen.getByRole('link', { name: /Contact us about white-labeling/ })
+    expect(cta.getAttribute('href')).toMatch(/^mailto:info@learndifferently\.tech/)
+    expect(screen.queryByRole('link', { name: /Delaware version/ })).toBeNull()
+  })
 })
