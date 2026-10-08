@@ -1,7 +1,7 @@
 /* Review-only toggle between the two candidate homepages. */
 .dsw {
   position: fixed;
-  right: 16px;
+  left: 16px;
   bottom: 16px;
   z-index: 50;
   display: flex;
@@ -38,22 +38,21 @@
   outline: 2px solid #ffffff;
   outline-offset: 2px;
 }
-/* Phones: centred, compact, clear of the edges and the browser's bottom bar. */
+/* Phones: compact, bottom-left, clear of the browser's bottom bar; the walkthrough button sits bottom-right. */
 @media (max-width: 640px) {
   .dsw {
-    left: 50%;
-    right: auto;
+    left: 12px;
     bottom: max(12px, env(safe-area-inset-bottom));
-    transform: translateX(-50%);
     padding: 4px;
     gap: 2px;
     white-space: nowrap;
   }
-  .dsw-label {
+  .dsw-label,
+  .dsw-full {
     display: none;
   }
   .dsw a {
-    padding: 8px 10px;
+    padding: 8px 11px;
     font-size: 12px;
   }
 }

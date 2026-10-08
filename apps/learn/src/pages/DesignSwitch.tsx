@@ -3,9 +3,9 @@ import './design-switch.css'
 export type Design = 'a' | 'b' | 'c'
 
 const DESIGNS: { key: Design; href: string; label: string }[] = [
-  { key: 'a', href: '/?design=a', label: 'Design A' },
-  { key: 'b', href: '/?design=b', label: 'Design B' },
-  { key: 'c', href: '/', label: 'Design C' },
+  { key: 'a', href: '/?design=a', label: 'A' },
+  { key: 'b', href: '/?design=b', label: 'B' },
+  { key: 'c', href: '/', label: 'C' },
 ]
 
 /**
@@ -23,6 +23,7 @@ export function DesignSwitch({ current }: { current: Design }) {
           className={current === d.key ? 'dsw-on' : undefined}
           aria-current={current === d.key ? 'page' : undefined}
         >
+          <span className="dsw-full">Design </span>
           {d.label}
         </a>
       ))}

@@ -5,6 +5,7 @@ import { ProductsMenu } from '../../components/ProductsMenu'
 import { productPagePath, PRODUCTS } from '../../products'
 import { PATHWAYS } from '../homeContent'
 import { PaceTracks } from './PaceTracks'
+import { FloatingCta } from './FloatingCta'
 import {
   ANCHORS,
   COMPONENTS,
@@ -617,6 +618,7 @@ export function CHomePage() {
           </div>
         </section>
       </main>
+      <FloatingCta />
     </div>
   )
 }
