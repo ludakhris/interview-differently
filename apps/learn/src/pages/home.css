@@ -21,6 +21,8 @@
   font-size: 17px;
   line-height: 1.55;
   overflow-x: hidden;
+  /* `hidden` turns y into a scroll container too, which clips dropdowns on short pages. */
+  overflow-x: clip;
 }
 .ld *,
 .ld *::before,
