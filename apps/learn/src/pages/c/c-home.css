@@ -42,7 +42,7 @@
 .c-pace-rows {
   display: flex;
   flex-direction: column;
-  gap: 52px;
+  gap: 64px;
   /* Room on the right for the "Job ready" flag past the end of the longest track. */
   padding: 24px 150px 40px 0;
 }
@@ -135,6 +135,16 @@
   top: auto;
   bottom: 18px;
   flex-direction: column-reverse;
+}
+/* A grouped first label is long; it starts at its node, wraps at a fixed width, and leaves
+   room for the next label. (The node is its containing block, so it needs a real width.) */
+.c-pace-node-first.c-pace-node-proved em {
+  left: -10px;
+  transform: none;
+  align-items: flex-start;
+  width: 180px;
+  white-space: normal;
+  text-align: left;
 }
 .c-pace-flag {
   position: absolute;

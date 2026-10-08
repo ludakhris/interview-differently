@@ -4,23 +4,19 @@
  * 6; Theo learns all six and is job ready at week 10. Illustrative.
  */
 
-const SKILLS = [
-  'Password resets',
-  'Caller verification',
-  'DNS basics',
-  'Ticket triage',
-  'Escalation',
-  'Phishing response',
-]
+interface Node {
+  label: string
+  /** How it was proved without a lesson; absent means learned in the loop. */
+  proved?: string
+  /** Position along the track, as a percentage of its length. */
+  at: number
+}
 
 interface Learner {
   name: string
   score: string
   weeks: number
-  /** Skill index to the day it was proved without a lesson; absent means learned in the loop. */
-  proved: Record<number, number>
-  /** Where each skill sits along the track, as a percentage of its length. */
-  at: number[]
+  nodes: Node[]
 }
 
 const LEARNERS: Learner[] = [
@@ -28,15 +24,29 @@ const LEARNERS: Learner[] = [
     name: 'Maya',
     score: '80%',
     weeks: 6,
-    proved: { 0: 1, 1: 1, 2: 1, 3: 3 },
-    at: [8, 24, 40, 56, 72, 88],
+    nodes: [
+      {
+        label: 'Password resets · Caller verification · DNS basics',
+        proved: 'proved day 1 · skills assessment',
+        at: 10,
+      },
+      { label: 'Ticket triage', proved: 'proved day 3 · simulation', at: 42 },
+      { label: 'Escalation', at: 66 },
+      { label: 'Phishing response', at: 88 },
+    ],
   },
   {
     name: 'Theo',
     score: '34%',
     weeks: 10,
-    proved: {},
-    at: [10, 26, 42, 58, 74, 90],
+    nodes: [
+      { label: 'Password resets', at: 10 },
+      { label: 'Caller verification', at: 26 },
+      { label: 'DNS basics', at: 42 },
+      { label: 'Ticket triage', at: 58 },
+      { label: 'Escalation', at: 74 },
+      { label: 'Phishing response', at: 90 },
+    ],
   },
 ]
 const LONGEST = Math.max(...LEARNERS.map((l) => l.weeks))
@@ -68,22 +78,23 @@ export function PaceTracks() {
             </div>
             <div className="c-pace-track">
               <div className="c-pace-line" style={{ width: `${(l.weeks / LONGEST) * 100}%` }}>
-                {SKILLS.map((s, i) => {
-                  const day = l.proved[i]
-                  return (
-                    <span
-                      key={s}
-                      className={day ? 'c-pace-node c-pace-node-proved' : 'c-pace-node'}
-                      style={{ left: `${l.at[i]}%` }}
-                    >
-                      <i>{day && <Check />}</i>
-                      <em>
-                        {s}
-                        {day && <b>proved day {day}</b>}
-                      </em>
-                    </span>
-                  )
-                })}
+                {l.nodes.map((n, i) => (
+                  <span
+                    key={n.label}
+                    className={[
+                      'c-pace-node',
+                      n.proved ? 'c-pace-node-proved' : '',
+                      i === 0 ? 'c-pace-node-first' : '',
+                    ].join(' ')}
+                    style={{ left: `${n.at}%` }}
+                  >
+                    <i>{n.proved && <Check />}</i>
+                    <em>
+                      {n.label}
+                      {n.proved && <b>{n.proved}</b>}
+                    </em>
+                  </span>
+                ))}
                 <span className="c-pace-flag">
                   <Check /> Job ready @ week {l.weeks}
                 </span>
@@ -102,7 +113,7 @@ export function PaceTracks() {
           <i>
             <Check />
           </i>{' '}
-          proved without a lesson: day 1 in the skills assessment, day 3 in a simulation
+          proved without a lesson, in the day-1 skills assessment or a simulation
         </span>
         <span className="c-pace-key">
           <i /> learned in the loop
