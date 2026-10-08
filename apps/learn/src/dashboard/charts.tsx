@@ -109,10 +109,10 @@ export function Legend({ items }: { items: { swatch: string; label: string }[] }
   )
 }
 
-function RowLabel({ label, sub }: { label: string; sub?: string }) {
+function RowLabel({ label, sub, href }: { label: string; sub?: string; href?: string }) {
   return (
     <div className="dash-rowlabel">
-      <span className="dash-rowlabel-main">{label}</span>
+      <span className="dash-rowlabel-main">{href ? <a href={href}>{label}</a> : label}</span>
       {sub && <span className="dash-rowlabel-sub">{sub}</span>}
     </div>
   )
@@ -136,7 +136,11 @@ export interface DumbbellRow {
   key: string
   label: string
   sub?: string
+  /** Opens what the row is about (a provider's or cohort's page), when the viewer may open it. */
+  href?: string
   group?: string
+  /** Opens the group the row sits under, when the viewer may open it. */
+  groupHref?: string
   pre: number | null
   post: number | null
   /** Text for the right-hand column (e.g. share who reached the target). */
@@ -164,7 +168,11 @@ export function Dumbbell({ rows, valueLabel }: { rows: DumbbellRow[]; valueLabel
         )
         return (
           <div key={r.key}>
-            {heading && <div className="dash-group">{heading}</div>}
+            {heading && (
+              <div className="dash-group">
+                {r.groupHref ? <a href={r.groupHref}>{heading}</a> : heading}
+              </div>
+            )}
             <div
               className="dash-row"
               role="listitem"
@@ -172,7 +180,7 @@ export function Dumbbell({ rows, valueLabel }: { rows: DumbbellRow[]; valueLabel
               aria-label={`${r.label}: pre ${score(r.pre)}, post ${score(r.post)}${r.value ? `, ${valueLabel ?? ''} ${r.value}` : ''}`}
               {...bind(tip)}
             >
-              <RowLabel label={r.label} sub={r.sub} />
+              <RowLabel label={r.label} sub={r.sub} href={r.href} />
               <div className="dash-plot-wrap">
                 <div className="dash-plot">
                   <Grid ticks={ticks} lo={lo} />
@@ -209,6 +217,7 @@ export interface PairRow {
   key: string
   label: string
   sub?: string
+  href?: string
   a: number | null // 0-1
   b: number | null // 0-1
 }
@@ -239,7 +248,7 @@ export function PairedBars(props: {
             aria-label={`${r.label}: ${props.a.label} ${pct(r.a)}, ${props.b.label} ${pct(r.b)}`}
             {...bind(tip)}
           >
-            <RowLabel label={r.label} sub={r.sub} />
+            <RowLabel label={r.label} sub={r.sub} href={r.href} />
             <div className="dash-plot-wrap">
               <div className="dash-plot dash-plot-bars">
                 <Grid />

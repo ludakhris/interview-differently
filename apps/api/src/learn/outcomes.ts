@@ -95,6 +95,7 @@ export function cohortRows(rows: EnrollmentRow[], now: Date): OutcomesCohortRow[
         providerId: f.providerId,
         provider: f.providerName,
         host: f.hostName,
+        hostId: f.hostId,
         program: f.program,
         startsAt: f.startsAt?.toISOString() ?? null,
         endsAt: f.endsAt?.toISOString() ?? null,

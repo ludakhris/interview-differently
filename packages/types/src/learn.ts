@@ -38,6 +38,7 @@ export interface OutcomesCohortRow extends LearnMeasures {
   provider: string
   /** Institution that runs the cohort (a provider, or a member organization). */
   host: string
+  hostId: string
   program: string
   startsAt: string | null
   endsAt: string | null

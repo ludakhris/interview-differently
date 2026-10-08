@@ -5,6 +5,7 @@ import { Dumbbell, Funnel, Legend, Meter, PairedBars, StatTile } from './charts'
 import { dateOnly, dateShort, pct, points, score } from './format'
 import { useApp } from './app-context'
 import { errorNotice, useRole } from './shared'
+import { workspaceHref } from './WorkspaceSwitcher'
 
 export function OutcomesPage({ tenant }: { tenant: string }) {
   const { data, error, loading } = useLoad<AgencyOutcomes>(
@@ -16,7 +17,16 @@ export function OutcomesPage({ tenant }: { tenant: string }) {
 }
 
 export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: string }) {
-  const { href } = useApp()
+  const { href, workspaces, fixedTenant, brand } = useApp()
+  // A provider or host name opens that workspace's own outcomes, when this person may open it. Not on a
+  // tenant host or in the branded Delaware view, which are the agency's own page with no way to switch.
+  const canJump = !fixedTenant && brand !== 'delaware'
+  const workspaceLink = (id: string): string | undefined => {
+    const w = canJump ? workspaces?.find((x) => x.id === id) : undefined
+    return w ? workspaceHref(window.location.search, w.subdomain) : undefined
+  }
+  const gradebookLink = (cohortId: string) =>
+    href(`/lms/dashboard/cohorts/${encodeURIComponent(cohortId)}`)
   const t = data.totals
   const role = useRole()
   const apiFetch = useApiFetch()
@@ -76,8 +86,9 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
           Assessment scores before and after training, by provider
         </h2>
         <p className="dash-sub">
-          Average assessment score before and after training. The figure on the right is the share
-          of learners who reached the course&apos;s target score.
+          Each row is a training provider, with its program underneath. The dots are the average
+          assessment score before and after training; the figure on the right is the share of
+          learners who reached the course&apos;s target score.
         </p>
         <Legend
           items={[
@@ -91,6 +102,7 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
             key: p.providerId,
             label: p.provider,
             sub: p.program,
+            href: workspaceLink(p.providerId),
             pre: p.avgPre,
             post: p.avgPost,
             value: pct(p.targetRate),
@@ -119,6 +131,7 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
             key: p.providerId,
             label: p.provider,
             sub: p.program,
+            href: workspaceLink(p.providerId),
             a: p.completionRate,
             b: p.readyRate,
           }))}
@@ -153,7 +166,13 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
               <tbody>
                 {providers.map((p) => (
                   <tr key={p.providerId}>
-                    <th scope="row">{p.provider}</th>
+                    <th scope="row">
+                      {workspaceLink(p.providerId) ? (
+                        <a href={workspaceLink(p.providerId)}>{p.provider}</a>
+                      ) : (
+                        p.provider
+                      )}
+                    </th>
                     <td className="num">{p.enrolled}</td>
                     <td className="num">{pct(p.completionRate)}</td>
                     <td className="num">{score(p.avgPre)}</td>
@@ -181,11 +200,11 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
 
       <section className="dash-section" aria-labelledby="h-cohorts">
         <h2 className="dash-h2" id="h-cohorts">
-          Cohorts
+          Cohort performance
         </h2>
         <p className="dash-sub">
           Assessment scores before and after training for each cohort, grouped by provider. Open a
-          cohort for its gradebook.
+          cohort for its gradebook, or a provider for its own outcomes.
         </p>
         {(role === 'agency-admin' || role === 'system-admin') && (
           <p className="dash-sub">
@@ -212,8 +231,10 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
             .map((c) => ({
               key: c.cohortId,
               label: c.cohort,
+              href: gradebookLink(c.cohortId),
               sub: c.status === 'running' ? 'In progress' : `Ended ${dateOnly(c.endsAt)}`,
               group: c.provider,
+              groupHref: workspaceLink(c.providerId),
               pre: c.avgPre,
               post: c.avgPost,
               value: pct(c.targetRate),
@@ -244,8 +265,16 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
             <tbody>
               {data.cohorts.map((c) => (
                 <tr key={c.cohortId}>
-                  <th scope="row">{c.cohort}</th>
-                  <td>{c.host}</td>
+                  <th scope="row">
+                    <a href={gradebookLink(c.cohortId)}>{c.cohort}</a>
+                  </th>
+                  <td>
+                    {workspaceLink(c.hostId) ? (
+                      <a href={workspaceLink(c.hostId)}>{c.host}</a>
+                    ) : (
+                      c.host
+                    )}
+                  </td>
                   <td className="dash-nowrap">
                     {c.status === 'running' ? 'In progress' : 'Completed'}
                   </td>
@@ -256,7 +285,7 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
                   <td className="num">{points(c.avgGain)}</td>
                   <td className="num">{c.interviewReady}</td>
                   <td>
-                    <a href={href(`/lms/dashboard/cohorts/${encodeURIComponent(c.cohortId)}`)}>
+                    <a href={gradebookLink(c.cohortId)}>
                       Gradebook<span className="dash-visually-hidden"> for {c.cohort}</span>
                     </a>
                   </td>
