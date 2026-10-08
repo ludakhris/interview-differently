@@ -139,7 +139,7 @@ export const MEASURES_MORE = [
 ]
 
 export const PROVENANCE =
-  'Pull it any day of the grant, and every number traces back to a learner’s record.'
+  'Pull it the day of the grant meeting, or quickly during an audit. Every number traces back to a learner’s record.'
 
 export const WALKTHROUGH = [
   {
