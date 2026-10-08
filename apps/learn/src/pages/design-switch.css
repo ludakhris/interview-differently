@@ -1,0 +1,40 @@
+/* Review-only toggle between the two candidate homepages. */
+.dsw {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 12px;
+  border-radius: 999px;
+  background: #15181d;
+  color: #ffffff;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  font:
+    600 13px/1 system-ui,
+    sans-serif;
+}
+.dsw-label {
+  margin-right: 6px;
+  opacity: 0.7;
+  font-weight: 500;
+}
+.dsw a {
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: #ffffff;
+  text-decoration: none;
+}
+.dsw a:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.dsw a.dsw-on {
+  background: #ffffff;
+  color: #15181d;
+}
+.dsw a:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}

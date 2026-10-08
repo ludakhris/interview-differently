@@ -5,6 +5,7 @@ import { resolveSite } from './site'
 import { AuthProvider } from './auth'
 import { HomePage } from './pages/HomePage'
 import { AltHomePage } from './pages/alt/AltHomePage'
+import { DesignSwitch } from './pages/DesignSwitch'
 import { DelawarePage } from './pages/DelawarePage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { SignInPage } from './pages/SignInPage'
@@ -57,7 +58,13 @@ function page(): ReactNode {
     return <DelawarePage />
   }
   // Two candidate homepages are under review: ?design=a shows the first, the default is the second.
-  return new URLSearchParams(search).get('design') === 'a' ? <HomePage /> : <AltHomePage />
+  const design = new URLSearchParams(search).get('design') === 'a' ? 'a' : 'b'
+  return (
+    <>
+      {design === 'a' ? <HomePage /> : <AltHomePage />}
+      <DesignSwitch current={design} />
+    </>
+  )
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
