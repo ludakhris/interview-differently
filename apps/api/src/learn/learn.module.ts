@@ -7,6 +7,8 @@ import { AdminUsersService } from './admin-users.service'
 import { CoursesController } from './courses.controller'
 import { CoursesService } from './courses.service'
 import { ActivityModule } from './activity/activity.module'
+import { AttentionController } from './attention.controller'
+import { AttentionService } from './attention.service'
 import { AttendanceModule } from './attendance/attendance.module'
 import { InterviewScoringService } from './interview-scoring.service'
 import { ItemImageController } from './item-image.controller'
@@ -42,6 +44,7 @@ import { ScormService } from './scorm.service'
     CoursesController,
     LearnCohortsController,
     LearnerController,
+    AttentionController,
     ScormController,
     ScormFilesController,
     ItemImageController,
@@ -53,6 +56,7 @@ import { ScormService } from './scorm.service'
     CoursesService,
     LearnCohortsService,
     LearnerService,
+    AttentionService,
     ScormService,
     ItemImageService,
     PublicCatalogService,

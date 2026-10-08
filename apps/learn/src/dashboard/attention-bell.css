@@ -1,0 +1,129 @@
+/* The header bell and its popover (#74). Colors come from currentColor so both skins can use it. */
+.attn-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.attn {
+  position: relative;
+  z-index: 21;
+}
+.attn-trigger {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink, #0b1f2e);
+  cursor: pointer;
+}
+.attn-trigger:hover,
+.attn-trigger[aria-expanded='true'] {
+  background: #ffffff;
+}
+.attn-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #b42318;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+}
+.attn-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+  border: 1px solid var(--line, #dfe6ec);
+  border-radius: 16px;
+  background: #ffffff;
+  color: var(--ink, #0b1f2e);
+  box-shadow: 0 16px 40px rgba(11, 31, 46, 0.14);
+}
+.attn-title {
+  margin: 0;
+  padding: 8px 12px 6px;
+  color: var(--muted, #4a5d6c);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.attn-empty {
+  margin: 0;
+  padding: 8px 12px 12px;
+  font-size: 15px;
+}
+.attn-panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.attn-panel a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.attn-panel a:hover,
+.attn-panel a:focus-visible {
+  background: var(--paper, #f6f7f4);
+}
+.attn-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.attn-detail {
+  color: var(--muted, #4a5d6c);
+  font-size: 13px;
+  font-weight: 500;
+}
+.attn-count {
+  flex: none;
+  min-width: 26px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--ink, #0b1f2e);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* Narrow screens: stretch the popover across the header instead of hanging it off the bell. */
+@media (max-width: 640px) {
+  .attn {
+    position: static;
+  }
+  .ld-header,
+  .de-header {
+    position: relative;
+  }
+  .attn-panel {
+    top: 100%;
+    right: 16px;
+    left: 16px;
+    width: auto;
+    max-width: none;
+    margin-top: 6px;
+  }
+}

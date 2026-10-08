@@ -14,7 +14,15 @@ import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
-export const NAMES = ['learn', 'outcomes', 'talent', 'attendance', 'activity', 'record']
+export const NAMES = [
+  'learn',
+  'outcomes',
+  'talent',
+  'attendance',
+  'activity',
+  'record',
+  'attention',
+]
 
 export const header = (
   name

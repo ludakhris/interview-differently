@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { AccountMenu, type MenuGroup, type MenuLink } from '../auth'
+import { AccountMenu, authConfigured, type MenuGroup, type MenuLink } from '../auth'
 import { NavDropdown } from '../components/NavDropdown'
 import { ProductsMenu } from '../components/ProductsMenu'
 import { withBrand } from '../brand'
@@ -8,6 +8,7 @@ import '../pages/home.css'
 import './dashboard.css'
 import { SYSTEM_ADMIN } from './AdminPages'
 import { useApp } from './app-context'
+import { AttentionBell } from './AttentionBell'
 import { DelawareSkinPromo } from './DelawareSkinPromo'
 import { buildNav } from './navModel'
 import { canSeeActivity, canSeeTalent } from './roleAccess'
@@ -116,6 +117,16 @@ function AccountControl() {
   return <AccountMenu signedOut={null} groups={groups.length > 0 ? groups : undefined} />
 }
 
+/** The bell (what needs the person's attention) beside the avatar menu. */
+function HeaderAccount() {
+  return (
+    <div className="attn-account">
+      {authConfigured && <AttentionBell />}
+      <AccountControl />
+    </div>
+  )
+}
+
 /** Top bar of the LearnDifferently skin: Products, then the learner and staff menus the person has. */
 function LearnNav({ productsMenu }: { productsMenu: ReactNode }) {
   const model = useNavModel()
@@ -190,7 +201,7 @@ function DelawareFrame({ children }: { children: ReactNode }) {
             <NavLinks className="de-nav" />
           </nav>
         )}
-        <AccountControl />
+        <HeaderAccount />
       </header>
       <div className="de-titlebar">
         <div className="de-wrap de-titlebar-inner">
@@ -232,7 +243,7 @@ function LearnFrame({ children }: { children: ReactNode }) {
             }
           />
         </nav>
-        <AccountControl />
+        <HeaderAccount />
       </header>
       <Body wrap="ld-wrap">{children}</Body>
     </div>
