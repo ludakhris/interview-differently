@@ -429,27 +429,25 @@ export function CHomePage() {
               </figcaption>
             </figure>
             <div className="c-measure-strip">
-              <p className="ld-mono ld-faint">THE THREE YOU’RE HELD TO</p>
+              <h3 className="c-measure-heading">Automatically track and report on</h3>
               <ul>
                 {MEASURES.map((m) => (
-                  <li key={m.abbr}>
-                    <span className="c-measure-name">
-                      <strong>{m.name}</strong>
-                      <span className="ld-mono ld-eyebrow">{m.abbr}</span>
-                    </span>
+                  <li key={m.name}>
+                    <strong>{m.name}</strong>
                     <span className="c-measure-how">{m.how}</span>
                   </li>
                 ))}
               </ul>
-              <p className="ld-mono ld-faint">TWO MORE YOUR GRANT WILL ASK FOR</p>
+              <h3 className="c-measure-heading">
+                Plus the two others the grant will ask for during an audit.
+              </h3>
               <ul>
                 {MEASURES_MORE.map((m) => (
-                  <li key={m.abbr}>
-                    <span className="c-measure-name">
-                      <strong>{m.name}</strong>
-                      <span className="ld-mono ld-eyebrow">{m.abbr}</span>
+                  <li key={m.name}>
+                    <strong>
+                      {m.name}
                       {m.soon && <span className="ld-piece-status">{m.soon}</span>}
-                    </span>
+                    </strong>
                     <span className="c-measure-how">{m.how}</span>
                   </li>
                 ))}

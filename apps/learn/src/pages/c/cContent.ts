@@ -108,17 +108,14 @@ export const COMPONENTS: { name: string; icon: ManualIcon; manual: string; now: 
 export const MEASURES = [
   {
     name: 'Measurable Skill Gains',
-    abbr: 'MSG',
     how: 'Every scored exercise and simulation is documented progress, on the record the day it happens.',
   },
   {
     name: 'Credential Attainment Rate',
-    abbr: 'CAR',
     how: 'The credential each program leads to is on the record; attainment exports with the cohort.',
   },
   {
     name: 'Program Completion Rate',
-    abbr: 'PCR',
     how: 'Tracked per module and per learner, so who is at risk shows before the end date.',
   },
 ]
@@ -127,12 +124,10 @@ export const MEASURES = [
 export const MEASURES_MORE = [
   {
     name: 'Enrollment Target Fulfillment',
-    abbr: '% ENROLLED',
     how: 'Put the contracted target on the cohort; the rate is on the dashboard every day of the grant.',
   },
   {
     name: 'Initial Job Placement',
-    abbr: 'DAY-1 EMPLOYMENT',
     how: 'Offers and start dates land on the record from Talent Match: a count, not a survey.',
     soon: 'With Talent Match',
   },

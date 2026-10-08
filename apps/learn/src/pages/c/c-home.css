@@ -390,44 +390,47 @@
 .c-measure-strip {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  margin-top: -16px;
+}
+.c-measure-heading {
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-top: 20px;
 }
 .c-measure-strip ul {
   list-style: none;
-  margin: 0 0 14px;
+  margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  border-top: 1.5px solid var(--ink);
 }
 .c-measure-strip li {
   display: grid;
   grid-template-columns: 300px 1fr;
-  gap: 8px 24px;
+  gap: 6px 24px;
   align-items: baseline;
-  padding: 14px 24px;
-  border-radius: 14px;
-  background: var(--white);
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
 }
-.c-measure-name {
+.c-measure-strip strong {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 6px 10px;
-}
-.c-measure-name strong {
   font-weight: 800;
   font-size: 17px;
   letter-spacing: -0.01em;
 }
-.c-measure-name .ld-piece-status {
+.c-measure-strip .ld-piece-status {
   border-color: var(--faint);
   color: var(--faint);
 }
 .c-measure-how {
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.5;
-  color: var(--muted);
+  color: var(--teal);
 }
 
 /* Career pathways, compact */
@@ -663,7 +666,6 @@
   .c-measure-strip li {
     grid-template-columns: 1fr;
     gap: 4px;
-    padding: 14px 18px;
   }
   .c-float-cta {
     right: 12px;
