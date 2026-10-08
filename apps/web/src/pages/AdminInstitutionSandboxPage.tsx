@@ -36,6 +36,8 @@ export function AdminInstitutionSandboxPage() {
   const [auto, setAuto] = useState(false)
   const [autoSec, setAutoSec] = useState(AUTO_REFRESH_DEFAULT)
   const [visibleQueries, setVisibleQueries] = useState(VISIBLE_QUERIES_DEFAULT)
+  // Bumped by Expand all / Collapse all; each card applies it once per change.
+  const [bulk, setBulk] = useState<{ open: boolean; seq: number } | null>(null)
   const inFlight = useRef(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -184,6 +186,18 @@ export function AdminInstitutionSandboxPage() {
               ))}
             </select>
           </label>
+          <button
+            onClick={() => setBulk((b) => ({ open: true, seq: (b?.seq ?? 0) + 1 }))}
+            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-[#f5f3ee] transition-colors"
+          >
+            Expand all
+          </button>
+          <button
+            onClick={() => setBulk((b) => ({ open: false, seq: (b?.seq ?? 0) + 1 }))}
+            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-[#f5f3ee] transition-colors"
+          >
+            Collapse all
+          </button>
         </div>
 
         {error && (
@@ -206,7 +220,7 @@ export function AdminInstitutionSandboxPage() {
             </p>
             <div className="space-y-3">
               {data.students.map((s) => (
-                <StudentCard key={s.userId} s={s} limit={visibleQueries} />
+                <StudentCard key={s.userId} s={s} limit={visibleQueries} bulk={bulk} />
               ))}
               {data.students.length === 0 && (
                 <p className="text-[13px] text-slate-mid">No students in this cohort.</p>
@@ -223,7 +237,7 @@ export function AdminInstitutionSandboxPage() {
                 </p>
                 <div className="space-y-3">
                   {data.unassigned.map((s) => (
-                    <StudentCard key={s.userId} s={s} limit={visibleQueries} />
+                    <StudentCard key={s.userId} s={s} limit={visibleQueries} bulk={bulk} />
                   ))}
                 </div>
               </div>
@@ -235,13 +249,29 @@ export function AdminInstitutionSandboxPage() {
   )
 }
 
-function StudentCard({ s, limit }: { s: SandboxStudent; limit: number }) {
+function StudentCard({
+  s,
+  limit,
+  bulk,
+}: {
+  s: SandboxStudent
+  limit: number
+  bulk: { open: boolean; seq: number } | null
+}) {
   // Local state, so it survives Refresh (cards are keyed by userId).
   const [expanded, setExpanded] = useState(false)
+  const ref = useRef<HTMLDetailsElement>(null)
+  useEffect(() => {
+    if (bulk && ref.current) ref.current.open = bulk.open
+  }, [bulk])
   const hidden = s.queries.length - limit
   const shown = expanded ? s.queries : s.queries.slice(0, limit)
   return (
-    <details open={s.queryCount > 0} className="bg-[#111111] rounded-xl border border-white/10">
+    <details
+      ref={ref}
+      open={s.queryCount > 0}
+      className="bg-[#111111] rounded-xl border border-white/10"
+    >
       <summary className="cursor-pointer px-5 py-3 flex items-center justify-between gap-4">
         <span className="text-[14px] font-semibold text-[#f5f3ee]">
           {s.name}
