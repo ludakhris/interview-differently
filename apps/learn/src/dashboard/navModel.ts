@@ -11,11 +11,11 @@ export interface NavLink {
 export type NavItem = NavLink | { heading: string } | { divider: true }
 
 export interface NavModel {
-  /** Top bar: the "Learner tools" menu. Null when the person has no learning. */
+  /** Top bar: the "Learner tools" menu. Everyone signed in has it: My learning is where a code is entered to join a cohort. */
   learner: NavLink[] | null
   /** Top bar: the "Staff tools" menu. Null when the person has no workspace. */
   staff: NavItem[] | null
-  /** Avatar menu groups. Null when the group does not apply. */
+  /** Avatar menu groups. The staff group is null when the person has no workspace and is not a system admin. */
   account: { learner: NavLink[] | null; staff: NavLink[] | null }
 }
 
@@ -24,8 +24,6 @@ export interface NavInput {
   /** null until loaded */
   workspaces: LearnWorkspace[] | null
   current: LearnWorkspace | null
-  /** Whether the person is enrolled in anything; null until loaded. */
-  hasLearning: boolean | null
   pathname: string
   /** Builds a link that keeps ?site= and ?brand=. */
   href: (path: string) => string
@@ -63,15 +61,14 @@ function staffItems(i: NavInput): NavItem[] {
 }
 
 /**
- * What the navigation shows, from what the person has: learner links when they are enrolled in
- * something (or have nothing else, so a new account can join a cohort), staff links when they have
- * a workspace, and the Admin toolbox for system admins.
+ * What the navigation shows: learner links for everyone (a staff member can also be a learner, and
+ * joins a cohort from My learning), staff links when the person has a workspace, and the Admin
+ * toolbox for system admins.
  */
 export function buildNav(i: NavInput): NavModel {
   const none: NavModel = { learner: null, staff: null, account: { learner: null, staff: null } }
-  if (!i.workspaces || i.hasLearning === null) return none
+  if (!i.workspaces) return none
   const isStaff = i.workspaces.length > 0
-  const showLearner = i.hasLearning || !isStaff
   const learner: NavLink[] = [
     { label: 'My learning', href: i.href('/lms/learning') },
     { label: 'My outcomes', href: i.href('/lms/learning/outcomes') },
@@ -84,12 +81,10 @@ export function buildNav(i: NavInput): NavModel {
     ...admin,
   ]
   return {
-    learner: showLearner ? learner : null,
+    learner,
     staff: isStaff ? staffItems(i) : null,
     account: {
-      learner: showLearner
-        ? [...learner, { label: 'Login & security', href: '#', action: 'security' }]
-        : null,
+      learner: [...learner, { label: 'Login & security', href: '#', action: 'security' }],
       staff: staffAccount.length > 0 ? staffAccount : null,
     },
   }

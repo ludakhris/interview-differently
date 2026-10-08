@@ -19,7 +19,6 @@ const input = (over: Partial<NavInput>): NavInput => ({
   role: 'provider-admin',
   workspaces: [provider],
   current: provider,
-  hasLearning: false,
   pathname: '/lms/dashboard',
   href: (p) => p,
   workspacesHref: '/lms/dashboard',
@@ -29,41 +28,33 @@ const labels = (items: NavItem[] | null) =>
   (items ?? []).map((i) => ('divider' in i ? '—' : 'heading' in i ? `# ${i.heading}` : i.label))
 
 describe('buildNav', () => {
-  it('shows nothing until the workspaces and learning are known', () => {
-    expect(buildNav(input({ workspaces: null })).staff).toBeNull()
-    expect(buildNav(input({ hasLearning: null })).learner).toBeNull()
-  })
-
-  it('gives a staff member who is not enrolled only staff tools', () => {
-    const n = buildNav(input({}))
+  it('shows nothing until the workspaces are known', () => {
+    const n = buildNav(input({ workspaces: null }))
+    expect(n.staff).toBeNull()
     expect(n.learner).toBeNull()
-    expect(n.account.learner).toBeNull()
-    expect(n.staff).not.toBeNull()
   })
 
-  it('gives a learner with no workspace only learner tools', () => {
-    const n = buildNav(input({ workspaces: [], current: null, hasLearning: true }))
-    expect(n.staff).toBeNull()
-    expect(n.account.staff).toBeNull()
-    expect(n.learner?.map((l) => l.label)).toEqual(['My learning', 'My outcomes', 'My profile'])
+  it('gives everyone Learner tools, because My learning is where a cohort is joined with a code', () => {
+    for (const over of [
+      {},
+      { workspaces: [], current: null, role: undefined },
+      { role: 'system-admin' },
+      { role: 'agency-admin', workspaces: [agency], current: agency },
+    ] as Partial<NavInput>[]) {
+      const n = buildNav(input(over))
+      expect(n.learner?.map((l) => l.label)).toEqual(['My learning', 'My outcomes', 'My profile'])
+      expect(n.account.learner?.[0].label).toBe('My learning')
+    }
   })
 
-  it('gives a brand-new account (no workspace, nothing enrolled) learner tools so it can join a cohort', () => {
-    const n = buildNav(
-      input({ workspaces: [], current: null, hasLearning: false, role: undefined })
-    )
-    expect(n.learner).not.toBeNull()
-    expect(n.staff).toBeNull()
-  })
-
-  it('gives someone who is both staff and a learner both menus', () => {
-    const n = buildNav(input({ hasLearning: true }))
-    expect(n.learner).not.toBeNull()
-    expect(n.staff).not.toBeNull()
+  it('gives staff tools only to someone with a workspace', () => {
+    expect(buildNav(input({})).staff).not.toBeNull()
+    expect(buildNav(input({ workspaces: [], current: null })).staff).toBeNull()
+    expect(buildNav(input({ workspaces: [], current: null })).account.staff).toBeNull()
   })
 
   it('the account menu lists Login & security last in the learner group', () => {
-    const l = buildNav(input({ hasLearning: true })).account.learner
+    const l = buildNav(input({})).account.learner
     expect(l?.map((x) => x.label)).toEqual([
       'My learning',
       'My outcomes',

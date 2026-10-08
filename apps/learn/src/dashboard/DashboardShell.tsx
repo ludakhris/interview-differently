@@ -86,7 +86,7 @@ function NavLinks({ className, leading }: { className: string; leading?: ReactNo
 
 /** What the navigation offers this person, from the workspaces and learning they have. */
 function useNavModel() {
-  const { href, workspaces, current, hasLearning } = useApp()
+  const { href, workspaces, current } = useApp()
   const role = useRole()
   const params = new URLSearchParams(window.location.search)
   params.delete('site')
@@ -95,7 +95,6 @@ function useNavModel() {
     role,
     workspaces,
     current,
-    hasLearning,
     pathname: window.location.pathname,
     href,
     workspacesHref: `/lms/dashboard${query ? `?${query}` : ''}`,
