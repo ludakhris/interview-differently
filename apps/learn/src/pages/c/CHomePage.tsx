@@ -4,7 +4,7 @@ import { AccountMenu } from '../../auth'
 import { ProductsMenu } from '../../components/ProductsMenu'
 import { productPagePath, PRODUCTS } from '../../products'
 import { PATHWAYS } from '../homeContent'
-import { PaceVisual } from './PaceOptions'
+import { PaceTracks } from './PaceTracks'
 import {
   ANCHORS,
   COMPONENTS,
@@ -162,6 +162,61 @@ function ManualGlyph({ icon }: { icon: ManualIcon }) {
   )
 }
 
+/** Design A's loop: micro-learning, then practice, then prove, then back around on the gap. */
+function LoopDiagram() {
+  return (
+    <svg
+      className="ld-loop-svg"
+      viewBox="0 0 420 420"
+      role="img"
+      aria-label="The loop: micro-learning, then practice, then prove, then back to micro-learning on the gap"
+    >
+      <defs>
+        <marker
+          id="c-loop-arrow"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path d="M0 0 10 5 0 10z" fill="currentColor" />
+        </marker>
+      </defs>
+      <g className="ld-loop-ring" fill="none" strokeWidth="3" strokeLinecap="round">
+        <path d="M 255 76 A 150 150 0 0 1 355 246" markerEnd="url(#c-loop-arrow)" />
+        <path d="M 300 334 A 150 150 0 0 1 120 334" markerEnd="url(#c-loop-arrow)" />
+        <path d="M 100 310 A 150 150 0 0 1 165 76" markerEnd="url(#c-loop-arrow)" />
+      </g>
+      <g className="ld-loop-node ld-loop-learn" transform="translate(210 60)">
+        <circle r="44" />
+        <text y="-2">Micro-</text>
+        <text y="14">Learning</text>
+      </g>
+      <g className="ld-loop-node ld-loop-practice" transform="translate(340 285)">
+        <circle r="40" />
+        <text y="6">Practice</text>
+      </g>
+      <g className="ld-loop-node ld-loop-prove" transform="translate(80 285)">
+        <circle r="40" />
+        <text y="6">Prove</text>
+      </g>
+      <g className="ld-loop-center">
+        <text x="210" y="186" textAnchor="middle">
+          +1 verified skill
+        </text>
+        <text x="210" y="210" textAnchor="middle" className="ld-loop-center-sub">
+          every pass
+        </text>
+        <text x="210" y="243" textAnchor="middle" className="ld-loop-center-gap">
+          gap found → targeted lesson
+        </text>
+      </g>
+    </svg>
+  )
+}
+
 /** The persona switch: what your team stops doing, from each seat. */
 function ForYourTeam() {
   const [key, setKey] = useState(PERSONAS[0].key)
@@ -294,7 +349,7 @@ export function CHomePage() {
               <a href="#demo" className="ld-btn ld-btn-orange ld-btn-lg">
                 Book a walkthrough
               </a>
-              <a href="#path" className="ld-btn ld-btn-outline ld-btn-lg">
+              <a href="#path" className="ld-btn ld-btn-ink ld-btn-lg">
                 Follow one learner ↓
               </a>
             </div>
@@ -333,25 +388,36 @@ export function CHomePage() {
               team sees where each person is without asking.
             </p>
           </div>
-          <PaceVisual />
-          <div className="c-loop-wrap">
+          <PaceTracks />
+          <div className="c-loopgrid">
+            <div className="c-loop-figure">
+              <LoopDiagram />
+            </div>
             <ol className="c-loop">
               {LOOP.map((s, i) => (
                 <li key={s.key} className={`c-loop-step c-loop-${s.key}`}>
                   <span className="c-loop-n" aria-hidden="true">
                     {i + 1}
                   </span>
-                  <h3 className="ld-h3">{s.title}</h3>
-                  <p>{s.body}</p>
+                  <div>
+                    <h3 className="ld-h3">{s.title}</h3>
+                    <p>{s.body}</p>
+                  </div>
                 </li>
               ))}
+              <li className="c-loop-step c-loop-again">
+                <span className="c-loop-n" aria-hidden="true">
+                  ↺
+                </span>
+                <div>
+                  <h3 className="ld-h3">Again, on the gap</h3>
+                  <p>
+                    A miss adds the next lesson, not a retake of the course. Every pass adds a
+                    verified skill to the record.
+                  </p>
+                </div>
+              </li>
             </ol>
-            <div className="c-loop-return" aria-hidden="true">
-              <span className="c-loop-return-label">
-                <strong>+1 verified skill every pass.</strong> A miss adds the next lesson, not a
-                retake, and the loop goes around again.
-              </span>
-            </div>
           </div>
           <div className="c-trad">
             <p className="ld-mono ld-faint">TRADITIONAL TRAINING MODELS · WHAT CHANGES</p>

@@ -40,7 +40,7 @@ export const PACE = [
 export const LOOP = [
   {
     key: 'learn',
-    title: 'Learn',
+    title: 'Micro-Learning',
     body: 'A three-minute lesson on one skill, then straight into an exercise. Learners do it on a phone between shifts; your instructors see who did.',
   },
   {
@@ -153,7 +153,7 @@ export type ManualIcon = 'sheet' | 'video' | 'quiz' | 'list' | 'pile'
 /** The five components, each tied to the manual work it replaces. */
 export const COMPONENTS: { name: string; icon: ManualIcon; manual: string; now: string }[] = [
   {
-    name: 'Learning Management',
+    name: 'Learner Management',
     icon: 'sheet',
     manual: 'The gradebook, the attendance sheet and the roster, kept by hand in three files',
     now: 'One record per learner that the report is built from',

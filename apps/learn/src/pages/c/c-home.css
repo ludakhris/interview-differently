@@ -29,7 +29,7 @@
   color: var(--muted);
 }
 
-/* Pace options under review (?pace=1|2|3): two learners, the same six skills, different weeks */
+/* Two learners, the same six skills, different weeks */
 .c-pace {
   display: grid;
   grid-template-columns: 1fr 240px;
@@ -42,9 +42,9 @@
 .c-pace-rows {
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: 52px;
   /* Room on the right for the "Job ready" flag past the end of the longest track. */
-  padding: 16px 150px 36px 0;
+  padding: 24px 150px 40px 0;
 }
 .c-pace-row {
   display: grid;
@@ -113,27 +113,28 @@
   top: 18px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   white-space: nowrap;
   font-style: normal;
   font-size: 11px;
   font-weight: 600;
+  line-height: 1.3;
   color: var(--faint);
 }
-.c-pace-node-hidden {
-  display: none;
+.c-pace-node em b {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--orange-text);
 }
 /* Labels alternate above and below the track so neighbours never collide. */
 .c-pace-node:nth-child(even) em {
   top: auto;
   bottom: 18px;
-}
-.c-pace-proved-label {
-  position: absolute;
-  top: 20px;
-  white-space: nowrap;
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--ink);
+  flex-direction: column-reverse;
 }
 .c-pace-flag {
   position: absolute;
@@ -203,155 +204,57 @@
   color: var(--white);
 }
 
-/* Option 2: a day-one column, then the track */
-.c-pace-2 .c-pace-row {
-  grid-template-columns: 110px 250px 1fr;
-}
-.c-pace-row-head {
-  align-items: end;
-}
-.c-pace-day1 {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.c-pace-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--ink);
-  color: var(--white);
-  font-size: 12px;
-  font-weight: 700;
-}
-.c-pace-day1-none {
-  font-size: 13px;
-  color: var(--faint);
-}
-
-/* Option 3: skills by week */
-.c-pace-3 .c-pace-grid {
+/* The loop: Design A's circle on the left, the moves stacked on the right */
+.c-loopgrid {
   display: grid;
-  gap: 6px 0;
+  grid-template-columns: 5fr 7fr;
+  gap: 32px;
   align-items: center;
-  min-width: 720px;
 }
-.c-pace-3 > .c-pace-grid {
-  overflow-x: auto;
-}
-.c-pace-grid-rowwrap {
-  display: contents;
-}
-.c-pace-grid-week {
-  text-align: center;
-  font-size: 11px;
-}
-.c-pace-grid-skill {
-  font-size: 14px;
-  font-weight: 600;
-  padding: 8px 0;
-}
-.c-pace-grid-cell {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 3px;
-  height: 34px;
-  margin: 0 2px;
-  border-radius: 6px;
-  background: var(--paper);
-}
-.c-pace-mark {
+.c-loop-figure {
   display: grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--sky);
-  color: var(--white);
-}
-.c-pace-mark-theo {
-  background: var(--orange);
-}
-.c-pace-mark-proved {
-  background: var(--ink);
-}
-.c-pace-grid-ready .c-pace-grid-skill {
-  font-weight: 800;
-}
-.c-pace-ready {
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: var(--sky);
-  color: var(--ink);
-  font-size: 11px;
-  font-weight: 800;
-}
-.c-pace-ready.c-pace-mark-theo {
-  background: var(--orange);
-}
-.c-pace-3 .c-pace-key i {
-  border: 0;
-}
-.c-pace-3 .c-pace-key .c-pace-mark-maya {
-  background: var(--sky);
-}
-.c-pace-3 .c-pace-key .c-pace-mark-theo {
-  background: var(--orange);
-}
-.c-pace-3 .c-pace-key .c-pace-mark-proved {
-  background: var(--ink);
-}
-
-/* The loop: three cards across, a return path underneath back to Learn */
-.c-loop-wrap {
-  position: relative;
-  padding-bottom: 76px;
+  padding: 24px;
+  border-radius: 28px;
+  background: var(--white);
 }
 .c-loop {
-  position: relative;
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 44px;
-}
-.c-loop-step {
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 26px 28px;
-  border-radius: 20px;
+  gap: 12px;
+}
+.c-loop-step {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 16px;
+  align-items: start;
+  padding: 20px 24px;
+  border-radius: 18px;
   background: var(--white);
 }
-.c-loop-step + .c-loop-step::before {
-  content: '→';
-  position: absolute;
-  left: -34px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-weight: 800;
-  font-size: 26px;
-  color: var(--ink);
+.c-loop-step > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .c-loop-step p {
   font-size: 15px;
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--muted);
 }
 .c-loop-n {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: var(--ink);
   color: var(--white);
   font-weight: 800;
+  font-size: 17px;
 }
 .c-loop-learn .c-loop-n {
   background: var(--teal);
@@ -360,40 +263,15 @@
   background: var(--orange);
   color: var(--ink);
 }
-/* The U-shaped return: down from Prove, across, up into Learn, with an arrowhead. */
-.c-loop-return {
-  position: absolute;
-  left: calc(16.666% - 1.5px);
-  right: calc(16.666% - 1.5px);
-  top: calc(100% - 76px);
-  height: 52px;
-  border: 3px solid var(--ink);
-  border-top: 0;
-  border-radius: 0 0 28px 28px;
+.c-loop-again {
+  background: transparent;
+  border: 1.5px dashed var(--steel);
 }
-.c-loop-return::before {
-  content: '';
-  position: absolute;
-  left: -9px;
-  top: -4px;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-bottom: 12px solid var(--ink);
-}
-.c-loop-return-label {
-  position: absolute;
-  left: 50%;
-  bottom: -14px;
-  transform: translateX(-50%);
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: var(--ink);
-  color: var(--white);
-  font-size: 14px;
-  white-space: nowrap;
-}
-.c-loop-return-label strong {
-  color: var(--orange);
+.c-loop-again .c-loop-n {
+  background: transparent;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  font-size: 20px;
 }
 
 /* Traditional training models, what changes */
@@ -552,6 +430,8 @@
   color: var(--faint);
 }
 .c-component-manual {
+  /* Fixed heights keep the five arrows on one line across the row. */
+  min-height: 5.8em;
   font-size: 14px;
   line-height: 1.45;
   color: var(--muted);
@@ -562,6 +442,7 @@
   color: var(--orange);
 }
 .c-component-name {
+  min-height: 2.2em;
   font-weight: 800;
   font-size: 19px;
   letter-spacing: -0.02em;
@@ -664,47 +545,16 @@
 @media (max-width: 960px) {
   .c-team-panel,
   .c-pace,
-  .c-pace-2 .c-pace-row {
+  .c-loopgrid {
     grid-template-columns: 1fr;
   }
   .c-pace-end {
     order: -1;
   }
-  .c-loop {
-    grid-template-columns: 1fr;
-    gap: 16px;
+  .c-loop-figure {
+    max-width: 460px;
   }
-  .c-loop-step + .c-loop-step::before {
-    content: '↓';
-    left: 28px;
-    top: -22px;
-    transform: none;
-    font-size: 20px;
-  }
-  .c-loop-wrap {
-    padding-bottom: 0;
-  }
-  .c-loop-return {
-    position: static;
-    height: auto;
-    margin-top: 16px;
-    border: 0;
-    border-radius: 0;
-  }
-  .c-loop-return::before {
-    display: none;
-  }
-  .c-loop-return-label {
-    position: static;
-    display: block;
-    transform: none;
-    white-space: normal;
-    border-radius: 16px;
-    padding: 12px 16px;
-  }
-  .c-measures {
-    grid-template-columns: 1fr;
-  }
+  .c-measures,
   .c-measures-more {
     grid-template-columns: 1fr;
   }
@@ -715,6 +565,10 @@
   .c-components .c-component:last-child,
   .c-pathways .c-pathway:last-child {
     grid-column: 1 / -1;
+  }
+  .c-component-manual,
+  .c-component-name {
+    min-height: 0;
   }
 }
 
@@ -732,14 +586,14 @@
     padding: 20px;
   }
   .c-pace-rows {
-    padding-right: 0;
+    gap: 36px;
+    padding: 8px 0 24px;
   }
   .c-pace-row {
     grid-template-columns: 1fr;
     gap: 28px;
   }
-  .c-pace-node em,
-  .c-pace-proved-label {
+  .c-pace-node em {
     display: none;
   }
   .c-pace-flag {
