@@ -46,7 +46,7 @@ export function ProductsMenu({
       {open && (
         <div id="dash-products-panel" className="dash-products-panel">
           <p className="dash-products-head">
-            Five connected workforce development apps for the agentic era
+            Everything your team does by hand today, in one application
           </p>
           <ol className="dash-products-list">
             {PRODUCTS.map((p, i) => {

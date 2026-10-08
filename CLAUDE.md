@@ -12,6 +12,10 @@
 
 Prefix every GitHub issue title with its main component: `[LMS]`, `[Train]`, `[ID]`, `[MicroLearning]` or `[Matching]` (for example `[LMS] Talent search: skills field`). Areas such as Talent, Attendance or Support belong under their component.
 
+## Product boundaries
+
+Learn Differently is five products on one learner record: LMS (Structure), Micro Learning (Spark), Skill Simulator (Practice), Job Board Match (Opportunity), Talent Match (Placement). Before scoping a non-trivial feature, read `docs/product-boundaries.md` and name the product it belongs to. If a request crosses products, say so and propose the split before building; never let one product grow another's features (for example job matching or employer search inside the LMS).
+
 ## Release notes
 
 `docs/release-notes/index.html` is the checked-in, plain-words changelog, published at `/release-notes/` on the LearnDifferently site (the learn build copies it and the screenshots it links; it is public and marked noindex). Open it in a browser (newest first, with a timeline, screenshots and an in-page screenshot viewer). When a feature is finished or ships, add an entry at the top: copy an `<article class="entry">` block, keeping its `data-short` and `data-summary` (the timeline reads them); the how-to is in the comment at the top of the file and reference screenshots from `docs/screenshots/<feature>/`. The repo is public: fictional data only, no production configuration, contacts or funding details.

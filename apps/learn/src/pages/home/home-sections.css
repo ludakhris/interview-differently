@@ -1,0 +1,936 @@
+/* Homepage sections. home.css holds the shared tokens, header, buttons and the pieces the
+   secondary pages and the dashboard reuse; everything specific to the homepage is here. */
+
+.c-hero-title {
+  font-size: clamp(48px, 6.6vw, 88px);
+}
+.c-hero-title .ld-orange {
+  white-space: nowrap;
+}
+
+/* Three anchors under the hero */
+.c-anchors {
+  list-style: none;
+  margin: -16px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.c-anchors li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 24px;
+  border-radius: 20px;
+  background: var(--white);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* Two learners, the same six skills, different weeks */
+.c-pace {
+  display: grid;
+  grid-template-columns: 1fr 240px;
+  gap: 12px 20px;
+  align-items: stretch;
+  padding: 28px;
+  border-radius: 24px;
+  background: var(--white);
+}
+.c-pace-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 64px;
+  /* Room on the right for the "Job ready" flag past the end of the longest track. */
+  padding: 24px 150px 40px 0;
+}
+.c-pace-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 20px;
+  align-items: center;
+}
+.c-pace-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.c-pace-who strong {
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.c-pace-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: #e3eaf0;
+}
+.c-pace-line {
+  position: relative;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--sky);
+  animation: c-grow 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transform-origin: left center;
+}
+.c-pace-row:last-child .c-pace-line {
+  background: var(--orange);
+  animation-duration: 2.2s;
+}
+@keyframes c-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.c-pace-node {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.c-pace-node i {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 3px solid var(--ink);
+}
+.c-pace-node-proved i {
+  width: 20px;
+  height: 20px;
+  background: var(--ink);
+  color: var(--white);
+}
+.c-pace-node em {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  white-space: nowrap;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--faint);
+}
+.c-pace-node em b {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--orange-text);
+}
+/* Labels alternate above and below the track so neighbours never collide. */
+.c-pace-node:nth-child(even) em {
+  top: auto;
+  bottom: 18px;
+  flex-direction: column-reverse;
+}
+/* A grouped first label stacks its lines and starts at its node instead of centring on it. */
+.c-pace-node-first.c-pace-node-proved em {
+  left: -10px;
+  transform: none;
+  align-items: flex-start;
+  text-align: left;
+}
+.c-pace-flag {
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translate(100%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.c-pace-flag svg {
+  color: var(--orange);
+}
+.c-pace-end {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 22px;
+  border-radius: 18px;
+  background: var(--ink);
+  color: var(--white);
+}
+.c-pace-end .ld-mono {
+  color: var(--sky);
+}
+.c-pace-end strong {
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.c-pace-end .ld-small {
+  color: var(--steel);
+}
+.c-pace-list {
+  display: none;
+}
+.c-pace-legend {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.c-pace-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.c-pace-key i {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2.5px solid var(--ink);
+  background: var(--white);
+}
+.c-pace-key i svg {
+  width: 12px;
+  height: 12px;
+}
+.c-pace-key-proved i {
+  background: var(--ink);
+  color: var(--white);
+}
+
+/* The loop: Design A's circle on the left, the moves stacked on the right */
+.c-loopgrid {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: 32px;
+  align-items: center;
+}
+.c-loop-figure {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  border-radius: 28px;
+  background: var(--white);
+}
+.c-loop {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.c-loop-step {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 16px;
+  align-items: start;
+  padding: 20px 24px;
+  border-radius: 18px;
+  background: var(--white);
+}
+.c-loop-step > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.c-loop-step p {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.c-loop-n {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--white);
+  font-weight: 800;
+  font-size: 17px;
+}
+.c-loop-learn .c-loop-n {
+  background: var(--teal);
+}
+.c-loop-practice .c-loop-n {
+  background: var(--orange);
+  color: var(--ink);
+}
+.c-loop-again {
+  background: transparent;
+  border: 1.5px dashed var(--steel);
+}
+.c-loop-again .c-loop-n {
+  background: transparent;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  font-size: 20px;
+}
+
+/* Traditional training models, what changes */
+.c-trad {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+.c-trad-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.c-trad-list li {
+  display: grid;
+  grid-template-columns: 1fr 40px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 24px;
+  border-radius: 14px;
+  background: var(--white);
+  font-size: 16px;
+}
+.c-trad-from {
+  color: var(--muted);
+}
+.c-trad-arrow {
+  text-align: center;
+  color: var(--steel);
+}
+.c-trad-to {
+  font-weight: 700;
+}
+
+/* For your team: the dark band and the five by-hand cards */
+.c-team-section {
+  padding-top: 96px;
+  padding-bottom: 136px;
+}
+/* One seamless application: by hand today, then the component */
+.c-components {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+.c-component {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px;
+  border-radius: 20px;
+  background: var(--white);
+}
+.c-component-glyph {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 6px;
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--faint);
+}
+.c-component-manual {
+  /* Fixed heights keep the five arrows on one line across the row. */
+  min-height: 5.8em;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.c-component-arrow {
+  margin: 6px 0 2px;
+  font-weight: 800;
+  color: var(--orange);
+}
+/* The cards are white inside the dark band; keep their text ink (the band sets white). */
+.c-component,
+.c .ld-dark .c-component-name {
+  color: var(--ink);
+}
+.c-component-name {
+  min-height: 2.2em;
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-decoration: none;
+}
+.c-component-now {
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+/* Outcomes: the dashboard, then a compact strip of the measures */
+.c-shot {
+  margin-top: 0;
+}
+.c-tour {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 60px rgba(11, 31, 46, 0.14);
+  background: var(--white);
+}
+.c-tour-video {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* Poster state: a light dim and one play control in the middle. */
+.c-tour-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border: 0;
+  background: rgba(11, 31, 46, 0.16);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.c-tour-play:hover {
+  background: rgba(11, 31, 46, 0.26);
+}
+.c-tour-play:focus-visible {
+  outline: 3px solid var(--orange);
+  outline-offset: -3px;
+}
+.c-tour-play-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--orange);
+  box-shadow: 0 12px 30px rgba(11, 31, 46, 0.3);
+  transition: transform 0.15s ease;
+}
+.c-tour-play:hover .c-tour-play-icon {
+  transform: scale(1.06);
+}
+.c-tour-play-icon svg {
+  margin-left: 3px;
+}
+
+.c-report {
+  margin-top: -8px;
+  border-radius: 20px;
+  background: var(--white);
+  box-shadow: 0 1px 0 var(--line);
+  overflow: hidden;
+}
+.c-report-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 24px;
+  padding: 12px 24px;
+  background: var(--ink);
+  color: var(--white);
+}
+.c-report-dim {
+  color: var(--steel);
+}
+.c-measure-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 24px 24px;
+}
+.c-measure-heading {
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-top: 16px;
+}
+.c-measure-when {
+  color: var(--teal);
+}
+.c-measure-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.c-measure-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.c-measure-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.c-measure-grid li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: var(--paper);
+}
+.c-measure-grid li > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.c-measure-grid i {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--orange);
+}
+.c-measure-grid strong {
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.c-measure-how {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--teal);
+}
+
+/* Career pathways, compact */
+.c-pathways {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+.c-pathway {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px;
+  border-radius: 20px;
+  background: var(--white);
+}
+.c-pathway strong {
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.c-pathway-sim {
+  font-size: 14px;
+  color: var(--muted);
+}
+.c-pathway-roles {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--orange-text);
+}
+
+/* Floating "Book a walkthrough": off until the hero scrolls away, off again near the form */
+.c-float-cta {
+  position: fixed;
+  right: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 40;
+  display: inline-block;
+  padding: 14px 22px;
+  border-radius: 999px;
+  background: var(--orange);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 15px;
+  text-decoration: none;
+  box-shadow: 0 16px 40px rgba(11, 31, 46, 0.22);
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+.c .c-float-cta {
+  color: var(--ink);
+}
+.c-float-cta-on {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .c-pace-line {
+    animation: none;
+  }
+  .c-float-cta {
+    transition: none;
+  }
+}
+
+/* Tablet */
+@media (max-width: 960px) {
+  /* The hero cluster is capped at 460px by home.css; centre it rather than leave it left. */
+  .c .ld-hero-cards {
+    width: min(460px, 100%);
+    margin: 0 auto;
+  }
+  .c .ld-card-match {
+    width: 290px;
+    right: 0;
+  }
+  .c .ld-match-strength {
+    align-items: flex-start;
+    font-size: 12px;
+  }
+  .c .ld-match-dot {
+    flex: none;
+    margin-top: 4px;
+  }
+  .c-pace,
+  .c-loopgrid {
+    grid-template-columns: 1fr;
+  }
+  .c-pace-end {
+    order: -1;
+  }
+  /* The tracks keep their lengths and flags; the labels move to a list under each. */
+  .c-pace-rows {
+    gap: 32px;
+    padding: 8px 168px 8px 0;
+  }
+  .c-pace-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .c-pace-node em {
+    display: none;
+  }
+  .c-pace-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .c-pace-list li {
+    display: flex;
+    gap: 8px;
+  }
+  .c-pace-list li {
+    align-items: flex-start;
+  }
+  .c-pace-list i {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 20px;
+    height: 20px;
+    margin-top: 1px;
+    border-radius: 50%;
+    border: 2.5px solid var(--ink);
+    background: var(--white);
+  }
+  .c-pace-list i svg {
+    width: 12px;
+    height: 12px;
+  }
+  .c-pace-list-proved i {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--white);
+  }
+  .c-pace-list-proved span {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .c-pace-list b {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--orange-text);
+  }
+  .c-loop-figure {
+    width: min(460px, 100%);
+    margin: 0 auto;
+  }
+  .c-components,
+  .c-pathways {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .c-measure-grid-3,
+  .c-measure-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .c-components .c-component:last-child,
+  .c-pathways .c-pathway:last-child {
+    grid-column: 1 / -1;
+  }
+  .c-component-manual,
+  .c-component-name {
+    min-height: 0;
+  }
+}
+
+/* Phone */
+@media (max-width: 640px) {
+  .c-anchors,
+  .c-components,
+  .c-pathways {
+    grid-template-columns: 1fr;
+  }
+  .c-anchors {
+    margin-top: 8px;
+  }
+  .c-pace {
+    padding: 20px;
+  }
+  .c-pace-rows {
+    padding-right: 0;
+  }
+  .c-pace-track {
+    margin-top: 28px;
+  }
+  /* A long label wraps; its day tag then sits on its own line under it. */
+  .c-pace-list li {
+    flex-wrap: wrap;
+  }
+  .c-pace-list b {
+    flex-basis: 100%;
+    padding-left: 24px;
+  }
+  .c-pace-flag {
+    right: 0;
+    top: auto;
+    bottom: 16px;
+    transform: none;
+  }
+  .c-trad-list li {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .c-trad-arrow {
+    display: none;
+  }
+  .c-trad-from::before {
+    content: 'From: ';
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+  .c-team-section {
+    padding-top: 64px;
+    padding-bottom: 104px;
+  }
+
+  .c-float-cta {
+    right: 12px;
+    padding: 11px 16px;
+    font-size: 14px;
+  }
+  .c-tour-play-icon {
+    width: 44px;
+    height: 44px;
+  }
+  .c-report-head {
+    padding: 12px 16px;
+  }
+  .c-measure-strip {
+    padding: 4px 12px 12px;
+  }
+}
+
+/* Product pages: the same language as the homepage, one component at a time */
+.pp-hero {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 40px;
+  align-items: center;
+  padding-top: 16px;
+}
+.pp-hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.pp-title {
+  font-size: clamp(40px, 5.4vw, 72px);
+}
+.pp-swap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pp-swap-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px 24px;
+  border-radius: 20px;
+  background: var(--white);
+}
+.pp-swap-card p {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.pp-swap-arrow {
+  align-self: center;
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--orange);
+}
+.pp-swap-after {
+  background: var(--ink);
+  color: var(--white);
+}
+.pp-swap-after .ld-mono {
+  color: var(--sky);
+}
+.pp-swap-after p {
+  color: #e8eef3;
+  font-weight: 600;
+}
+.pp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 40px;
+  border-top: 1px solid var(--line);
+}
+.pp-features li {
+  background: var(--white);
+}
+.pp-learner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px 28px;
+  border-radius: 20px;
+  background: var(--ink);
+  color: var(--white);
+}
+.pp-learner p {
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.pp-five-head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 44em;
+}
+.pp-five-head a {
+  font-weight: 700;
+}
+.pp-five {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+.pp-five a {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1.5px solid var(--line);
+  background: var(--white);
+  text-decoration: none;
+  color: var(--ink);
+}
+.pp-five a:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.pp-five .ld-mono {
+  font-size: 11px;
+  color: var(--faint);
+}
+.pp-five strong {
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.pp-five-tag {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.pp-five-on a {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--white);
+}
+.pp-five-on a:hover {
+  color: var(--white);
+}
+.pp-five-on .ld-mono {
+  color: var(--sky);
+}
+.pp-five-on .pp-five-tag {
+  color: var(--steel);
+}
+
+@media (max-width: 960px) {
+  .pp-hero {
+    grid-template-columns: 1fr;
+  }
+  .pp-five {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pp-five li:last-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 640px) {
+  .pp-five {
+    grid-template-columns: 1fr;
+  }
+}
