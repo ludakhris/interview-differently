@@ -1,145 +1,261 @@
-import { type FormEvent } from 'react'
+import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import { CONTACT_EMAIL } from '../contact'
 import { AccountMenu } from '../auth'
 import { ProductsMenu } from '../components/ProductsMenu'
-import { productPagePath } from '../products'
+import { PRODUCTS, productPagePath } from '../products'
+import {
+  AUDIENCES,
+  BREAKS,
+  JOURNEY,
+  LICENSING,
+  LOOP,
+  PATHWAYS,
+  PILOT_STEPS,
+  RULES,
+  SAME_START,
+  SHIFTS,
+  STACK,
+  TRACKED,
+  WHY_NOW,
+} from './homeContent'
 import './home.css'
 
 // Walkthrough requests open the visitor's mail app; there is no backend form yet.
-
-const STEPS = [
-  { n: '01', title: 'Enroll', body: 'A cohort, with intake and a baseline assessment.' },
-  {
-    n: '02',
-    title: 'Teach',
-    body: 'Recorded micro-lessons with knowledge checks. No SCORM packaging required.',
-  },
-  { n: '03', title: 'Assess', body: 'Pre and post, timestamped, per learner.' },
-  {
-    n: '04',
-    title: 'Demonstrate',
-    body: 'A scored, recorded, structured interview against the role trained for.',
-    highlight: true,
-  },
-  {
-    n: '05',
-    title: 'Report',
-    body: 'Progress documentation and completion records shaped the way WIOA counts them.',
-  },
-]
-
-const STACK = [
-  {
-    label: 'LMS',
-    title: 'Sits beside Canvas, not in place of it',
-    body: 'Launch from inside your LMS or run standalone for cohorts that live outside it. Grades and completions pass back on request.',
-  },
-  {
-    label: 'SIS',
-    title: 'Enrollment stays in your SIS',
-    body: "Import rosters by CSV. Export completions and skill-gain documentation back to your registration system or your state's case-management system.",
-  },
-  {
-    label: 'CONTENT',
-    title: 'Bring your SCORM and Articulate content',
-    body: 'Upload existing content in minutes: the SCORM packages and Rise and Storyline output your designers already built. Nothing has to be rebuilt.',
-  },
-  {
-    label: 'SECURITY AND PRIVACY',
-    title: 'You own the data. We never train on it.',
-    body: 'SSO through your identity provider. FERPA school-official terms. Learner recordings are never used to train models and are deleted on your schedule. Security documentation on request.',
-    dark: true,
-  },
-  {
-    label: 'ACCESSIBILITY',
-    title: 'Captioned lessons. Spoken or typed interviews.',
-    body: 'Every recorded lesson is captioned. Learners answer interview questions by voice or by typing.',
-  },
-  {
-    label: 'WORKFORCE PELL AND WIOA',
-    title: 'We produce the completion and skill-gain records',
-    body: "Placement comes from your state's wage match. We give you the exit file it needs, with the identifiers your reporting system expects.",
-  },
-]
-
-const PRICING_POINTS = [
-  "A cohort is one offering, one roster, one start date, for the program's published length. Six learners or sixty, same price. Rolling-enrollment programs are one cohort per start.",
-  'Everything in: lessons, knowledge checks, pre and post assessments, scored interviews, completion and skill-gain records.',
-  'No per-seat license, no authoring tool, no campus contract. Onboarding included.',
-  'Running dozens of cohorts a year? An annual license sized by learners, with SSO and SIS integration scoped in writing.',
-]
-
-const UNIVERSITY_STACK = [
-  {
-    title: 'By the campus',
-    body: "The LMS is an annual license sized to the whole institution's enrollment. A 24-person cohort pays the campus price, or borrows a seat on someone else's contract.",
-  },
-  {
-    title: 'By the seat, for the people who build the course',
-    body: 'Authoring is a separate tool, licensed per author per year, so a ten-minute lesson can be packaged as SCORM before the LMS will play it.',
-  },
-  {
-    title: 'By the enrollment, through a second system',
-    body: 'Non-credit learners are registered in a separate platform with its own license and integration fees. Even a flagship with enterprise contracts for both pays two vendors and a help desk on every enrollment.',
-  },
-  {
-    title: 'And the evidence is still assembled by hand',
-    body: 'Completion, skill gains and exit records are pulled from three systems into a spreadsheet each quarter, by whoever has time.',
-  },
-]
-
-const EVIDENCE = [
-  {
-    figure: '2.67×',
-    claim: 'the odds of employment',
-    body: 'for job seekers in structured job-search interventions that pair skill practice with motivation, across 47 controlled studies.',
-    source: 'LIU, HUANG AND WANG · PSYCHOLOGICAL BULLETIN, 2014',
-  },
-  {
-    figure: (
-      <>
-        82<span className="ld-evidence-vs"> vs </span>69
-      </>
-    ),
-    claim: 'percent employed at six months',
-    body: 'in a randomized trial of simulated interview practice with returning citizens in two Michigan prisons, against services as usual.',
-    source: 'SMITH ET AL. · UNIVERSITY OF MICHIGAN, 2022',
-  },
-  {
-    figure: '78%',
-    claim: 'of applicants chose the AI interview',
-    body: 'when offered one in a 70,000-applicant hiring trial. AI interviews are now part of real hiring. Meet one before it counts.',
-    source: 'JABARIAN · UNIVERSITY OF CHICAGO BOOTH, 2025',
-    accent: true,
-  },
-]
-
-const AUDIENCES = [
-  {
-    title: 'Training providers',
-    body: 'On a state Eligible Training Provider List, renewing every year on completion, employment and wage outcomes. Run each cohort here and the renewal data is already in one place.',
-    cta: 'For providers',
-  },
-  {
-    title: 'Workforce agencies',
-    body: 'Branded for your state, stocked with one offering from each approved provider, and reporting progress in the measures your programs already file.',
-    cta: 'For agencies',
-  },
-  {
-    title: 'Continuing-ed and completion programs',
-    body: '43 million adults have some college and no credential. Cohort delivery and outcome tracking for the programs bringing them back, outside the degree audit.',
-    cta: 'For programs',
-  },
-]
-
-const SKILL_BARS = [30, 40, 36, 52, 48, 66, 74, 80, 92, 100]
-
 function bookWalkthrough(e: FormEvent<HTMLFormElement>) {
   e.preventDefault()
   const email = new FormData(e.currentTarget).get('email')?.toString() ?? ''
   const subject = encodeURIComponent('Learn Differently walkthrough')
   const body = encodeURIComponent(`Please contact me to book a walkthrough: ${email}`)
   window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`
+}
+
+const pad = (n: number) => String(n).padStart(2, '0')
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path
+        d="m5 12.5 4.5 4.5L19 7.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+/** The loop in miniature: one lesson, one simulation, one verified skill, one match. */
+function HeroCards() {
+  return (
+    <div className="ld-hero-cards" aria-label="The learning loop, illustrated">
+      <svg className="ld-hero-loop" viewBox="0 0 520 560" aria-hidden="true">
+        <ellipse
+          cx="260"
+          cy="280"
+          rx="215"
+          ry="235"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeDasharray="6 10"
+          transform="rotate(-12 260 280)"
+        />
+      </svg>
+
+      <div className="ld-card ld-card-lesson">
+        <span className="ld-mono ld-faint">MICROLEARNING · 3 MIN</span>
+        <span className="ld-card-title">Triage an alert</span>
+        <span className="ld-progress" aria-hidden="true">
+          <span style={{ width: '72%' }} />
+        </span>
+        <span className="ld-small ld-faint">Ends in a real-world exercise →</span>
+      </div>
+
+      <div className="ld-card ld-card-sim">
+        <div className="ld-row-between">
+          <span className="ld-mono ld-steel">SIMULATION · ON CALL</span>
+          <span className="ld-mono ld-pill">WITH AN AI AGENT</span>
+        </div>
+        <div className="ld-chat">
+          <div className="ld-chat-msg">
+            <span className="ld-chat-who">AI ops agent</span>
+            <span>Checkout latency is spiking. Roll back release 4.2?</span>
+          </div>
+          <div className="ld-chat-msg ld-chat-you">
+            <span className="ld-chat-who">You</span>
+            <span>
+              Checking deployment pipeline, initiating rollback, notifying on-call manager.
+            </span>
+          </div>
+        </div>
+        <span className="ld-small ld-steel ld-card-foot">Scored on judgment, not recall</span>
+      </div>
+
+      <div className="ld-card ld-card-skill">
+        <span className="ld-skill-check" aria-hidden="true">
+          <CheckIcon />
+        </span>
+        <div>
+          <span className="ld-mono ld-faint">VERIFIED SKILL</span>
+          <span className="ld-card-title">Incident triage</span>
+        </div>
+      </div>
+
+      <div className="ld-card ld-card-match">
+        <span className="ld-mono">TALENT MATCH</span>
+        <span className="ld-card-title">Junior SRE</span>
+        <span className="ld-match-strength">
+          <span className="ld-match-dot" aria-hidden="true" />
+          Strong match · 4 of 4 skills shown
+        </span>
+      </div>
+
+      <p className="ld-small ld-faint ld-hero-note">Sample records for illustration.</p>
+    </div>
+  )
+}
+
+/** Learn, practice, prove, drawn as a circle with the gap arrow back to the top. */
+function LoopDiagram() {
+  // Three nodes on a circle of radius 150 around (210, 210): top, lower right, lower left.
+  return (
+    <svg
+      className="ld-loop-svg"
+      viewBox="0 0 420 420"
+      role="img"
+      aria-label="The loop: learn, then practice, then prove, then back to learn"
+    >
+      <defs>
+        <marker
+          id="ld-arrow"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path d="M0 0 10 5 0 10z" fill="currentColor" />
+        </marker>
+      </defs>
+      <g className="ld-loop-ring" fill="none" strokeWidth="3" strokeLinecap="round">
+        <path d="M 255 76 A 150 150 0 0 1 355 246" markerEnd="url(#ld-arrow)" />
+        <path d="M 300 334 A 150 150 0 0 1 120 334" markerEnd="url(#ld-arrow)" />
+        <path d="M 100 310 A 150 150 0 0 1 165 76" markerEnd="url(#ld-arrow)" />
+      </g>
+      <g className="ld-loop-node ld-loop-learn" transform="translate(210 60)">
+        <circle r="40" />
+        <text y="6">Learn</text>
+      </g>
+      <g className="ld-loop-node ld-loop-practice" transform="translate(340 285)">
+        <circle r="40" />
+        <text y="6">Practice</text>
+      </g>
+      <g className="ld-loop-node ld-loop-prove" transform="translate(80 285)">
+        <circle r="40" />
+        <text y="6">Prove</text>
+      </g>
+      <g className="ld-loop-center">
+        <text x="210" y="186" textAnchor="middle">
+          +1 verified skill
+        </text>
+        <text x="210" y="210" textAnchor="middle" className="ld-loop-center-sub">
+          every pass
+        </text>
+        <text x="210" y="243" textAnchor="middle" className="ld-loop-center-gap">
+          gap found → targeted lesson
+        </text>
+      </g>
+    </svg>
+  )
+}
+
+function PathwaysExplorer() {
+  const [active, setActive] = useState(PATHWAYS[0].id)
+  const p = PATHWAYS.find((x) => x.id === active) ?? PATHWAYS[0]
+  // Arrow keys move between tabs (and select); only the active tab is in the Tab order.
+  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const last = PATHWAYS.length - 1
+    const to =
+      e.key === 'ArrowRight'
+        ? (index + 1) % PATHWAYS.length
+        : e.key === 'ArrowLeft'
+          ? (index + last) % PATHWAYS.length
+          : e.key === 'Home'
+            ? 0
+            : e.key === 'End'
+              ? last
+              : -1
+    if (to < 0) return
+    e.preventDefault()
+    setActive(PATHWAYS[to].id)
+    document.getElementById(`ld-pw-tab-${PATHWAYS[to].id}`)?.focus()
+  }
+  return (
+    <div className="ld-pathways">
+      <div className="ld-pathway-tabs" role="tablist" aria-label="Example pathways">
+        {PATHWAYS.map((x, i) => (
+          <button
+            key={x.id}
+            type="button"
+            role="tab"
+            id={`ld-pw-tab-${x.id}`}
+            aria-selected={x.id === p.id}
+            aria-controls="ld-pw-panel"
+            tabIndex={x.id === p.id ? 0 : -1}
+            className={x.id === p.id ? 'ld-pathway-tab ld-pathway-tab-on' : 'ld-pathway-tab'}
+            onClick={() => setActive(x.id)}
+            onKeyDown={(e) => onKeyDown(e, i)}
+          >
+            <span className="ld-mono ld-pathway-sector">{x.sector.toUpperCase()}</span>
+            <span className="ld-pathway-name">{x.title}</span>
+          </button>
+        ))}
+      </div>
+      <div
+        id="ld-pw-panel"
+        role="tabpanel"
+        tabIndex={0}
+        aria-labelledby={`ld-pw-tab-${p.id}`}
+        className="ld-pathway-panel"
+      >
+        <article className="ld-pathway-sim">
+          <p className="ld-mono ld-steel">WORK SIMULATION · WITH AN AI AGENT</p>
+          <h3 className="ld-pathway-sim-title">{p.simulationTitle}</h3>
+          <p className="ld-pathway-sim-body">{p.simulation}</p>
+          <p className="ld-mono ld-steel ld-pathway-sim-foot">
+            EVERY ATTEMPT IS SCORED · A PASS EARNS A VERIFIED SKILL
+          </p>
+        </article>
+        <div className="ld-pathway-facts">
+          <section>
+            <p className="ld-mono ld-eyebrow">MICROLEARNING</p>
+            <ul className="ld-pathway-list">
+              {p.lessons.map((l) => (
+                <li key={l}>{l}</li>
+              ))}
+            </ul>
+          </section>
+          <section>
+            <p className="ld-mono ld-eyebrow">SKILLS PROVEN</p>
+            <ul className="ld-pathway-chips">
+              {p.skills.map((s) => (
+                <li key={s}>
+                  <CheckIcon /> {s}
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section>
+            <p className="ld-mono ld-eyebrow">MATCHED ROLES</p>
+            <p className="ld-pathway-roles">{p.roles.join(' · ')}</p>
+          </section>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function HomePage() {
@@ -158,19 +274,13 @@ export function HomePage() {
               <ProductsMenu hrefFor={(p) => ({ href: productPagePath(p) })} />
             </li>
             <li>
-              <a href="#product">How it works</a>
+              <a href="#loop">How it works</a>
             </li>
             <li>
-              <a href="#pricing">Pricing</a>
+              <a href="#pathways">Pathways</a>
             </li>
             <li>
-              <a href="#rules">Why now</a>
-            </li>
-            <li>
-              <a href="#evidence">Evidence</a>
-            </li>
-            <li>
-              <a href="#stack">Your stack</a>
+              <a href="#outcomes">Outcomes</a>
             </li>
             <li>
               <a href="#who">Who it&apos;s for</a>
@@ -196,127 +306,302 @@ export function HomePage() {
       <main>
         <section id="top" className="ld-wrap ld-hero">
           <div className="ld-hero-copy">
+            <p className="ld-mono ld-eyebrow">
+              TRAINING AND WORKFORCE DEVELOPMENT FOR THE AGENTIC ERA
+            </p>
             <h1 className="ld-hero-title">
-              Run the
+              Learn.
               <br />
-              cohort.
+              Practice.
               <br />
-              <span className="ld-orange">
-                Own the
-                <br />
-                evidence.
-              </span>
+              Prove.
+              <br />
+              <span className="ld-orange">Get hired.</span>
             </h1>
             <p className="ld-lead">
-              The outcomes platform for workforce training. Enroll a cohort, teach in short lessons,
-              assess before and after, score a real interview, and export the report your funder
-              already asks for.
+              Five connected tools, one learning loop. Short lessons end in real exercises,
+              exercises become verified skills, and verified skills match learners to jobs. For
+              training providers, colleges and workforce agencies.
             </p>
             <div className="ld-hero-actions">
               <a href="#demo" className="ld-btn ld-btn-orange ld-btn-lg">
                 Book a walkthrough
               </a>
-              <a href="#product" className="ld-btn ld-btn-outline ld-btn-lg">
-                See the product
+              <a href="#platform" className="ld-btn ld-btn-outline ld-btn-lg">
+                See the five pieces
               </a>
-              <span className="ld-mono ld-faint">PRICED PER COHORT, NOT PER SEAT</span>
             </div>
+            <p className="ld-mono ld-faint">
+              SKILLS VERIFIED FROM THE FIRST EXERCISE, NOT THE FINAL EXAM
+            </p>
+            <p className="ld-hero-learner">
+              Sent here by your program? <a href="/sign-in">Sign in</a> with the account they gave
+              you. Not enrolled yet? <a href="#pathways">See what you would actually do →</a>
+            </p>
           </div>
-
-          <div className="ld-hero-cards">
-            <div className="ld-card ld-card-gain">
-              <span className="ld-mono ld-faint">SKILL GAIN · PRE TO POST</span>
-              <span className="ld-gain">
-                +31<span className="ld-gain-unit">pts</span>
-              </span>
-              <div className="ld-bars" aria-hidden="true">
-                {SKILL_BARS.map((h, i) => (
-                  <span
-                    key={i}
-                    className={
-                      i < 5 ? 'ld-bar' : i < 8 ? 'ld-bar ld-bar-sky' : 'ld-bar ld-bar-orange'
-                    }
-                    style={{ height: `${h}%` }}
-                  />
-                ))}
-              </div>
-              <span className="ld-small ld-faint">Cohort median, sample</span>
-            </div>
-
-            <div className="ld-card ld-card-record">
-              <div className="ld-row-between">
-                <span className="ld-mono ld-steel">READINESS RECORD</span>
-                <span className="ld-mono ld-pill">INSTRUCTOR-REVIEWED</span>
-              </div>
-              <div>
-                <span className="ld-record-name">J. Rivera</span>
-                <span className="ld-small ld-steel">Medical Assistant · Cohort 2026-C</span>
-              </div>
-              <div className="ld-record-stats">
-                <div>
-                  <strong>4.3</strong>
-                  <span>Interview / 5</span>
-                </div>
-                <div>
-                  <strong>88%</strong>
-                  <span>Post-assessment</span>
-                </div>
-                <div>
-                  <strong className="ld-orange">Ready</strong>
-                  <span>Status</span>
-                </div>
-              </div>
-              <span className="ld-small ld-steel ld-record-foot">
-                Structured interview · 6 questions · recorded 14:22
-              </span>
-            </div>
-
-            <div className="ld-card ld-card-export">
-              <div>
-                <strong>Export ready</strong>
-                <span className="ld-small ld-faint">Progress documentation · 24 learners</span>
-              </div>
-              <span className="ld-mono ld-chip">.CSV</span>
-            </div>
-            <p className="ld-small ld-faint ld-hero-note">Sample records for illustration.</p>
-          </div>
+          <HeroCards />
         </section>
 
         <div className="ld-wrap">
           <hr className="ld-rule" />
         </div>
 
-        <section id="product" className="ld-wrap ld-section">
+        <section id="breaks" className="ld-wrap ld-section">
           <div className="ld-section-head">
-            <h2 className="ld-h2">Every cohort ends in evidence a funder can use.</h2>
+            <div>
+              <p className="ld-mono ld-eyebrow">WHERE TRAINING BREAKS</p>
+              <h2 className="ld-h2">
+                Learners juggle disconnected tools, and their skills stay invisible.
+              </h2>
+            </div>
             <p className="ld-sub">
-              Five steps, one record per learner. Cohorts start when you have the students, not when
-              the semester does.
+              A course in one system, videos in another, no chance to practice the actual job, then
+              a job board where none of that work is visible. Four handoffs, four places to lose
+              people.
             </p>
           </div>
-          <ol className="ld-steps">
-            {STEPS.map((s) => (
-              <li key={s.n} className={s.highlight ? 'ld-step ld-step-hl' : 'ld-step'}>
-                <span className="ld-step-dot" aria-hidden="true" />
-                <span className="ld-mono ld-step-n">{s.n}</span>
-                <span className="ld-step-title">{s.title}</span>
-                <span className="ld-step-body">{s.body}</span>
+          <div className="ld-start" aria-label="Two learners who start from the same seat">
+            {SAME_START.map((s) => (
+              <article key={s.name} className={`ld-start-card ld-start-${s.tone}`}>
+                <div className="ld-start-score">
+                  <span className="ld-start-figure">{s.score}</span>
+                  <span className="ld-mono ld-steel">PRETEST</span>
+                </div>
+                <p className="ld-start-body">
+                  <strong>{s.name}</strong> {s.body}
+                </p>
+              </article>
+            ))}
+            <p className="ld-start-foot">
+              Same start line, same pace. Both finish with the same certificate, and neither has
+              shown an employer what they can do. (Maya and Theo are illustrative.)
+            </p>
+          </div>
+          <ol className="ld-breaks">
+            {BREAKS.map((b, i) => (
+              <li key={b.title} className="ld-break">
+                <span className="ld-mono ld-faint">{pad(i + 1)}</span>
+                <span className="ld-break-title">{b.title}</span>
+                <span className="ld-break-body">{b.body}</span>
               </li>
             ))}
           </ol>
         </section>
 
-        <section id="stack" className="ld-wrap ld-section">
+        <section id="loop" className="ld-wrap ld-section">
+          <div className="ld-section-head ld-ruled">
+            <div>
+              <p className="ld-mono ld-eyebrow">THE LOOP</p>
+              <h2 className="ld-h2">Every learner takes a different path to the same outcome.</h2>
+            </div>
+            <p className="ld-sub">
+              Nobody takes a class and can suddenly do the job. People learn a little, try it, find
+              the gap, and learn exactly what closes it. The loop repeats with every lesson, and
+              each pass adds a verified skill.
+            </p>
+          </div>
+          <div className="ld-loop">
+            <div className="ld-loop-figure">
+              <LoopDiagram />
+            </div>
+            <ol className="ld-loop-steps">
+              {LOOP.map((s, i) => (
+                <li key={s.key} className={`ld-loop-step ld-loop-step-${s.key}`}>
+                  <span className="ld-loop-step-n" aria-hidden="true">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <span className="ld-loop-step-title">{s.title}</span>
+                    <span className="ld-loop-step-body">{s.body}</span>
+                  </div>
+                </li>
+              ))}
+              <li className="ld-loop-step ld-loop-step-again">
+                <span className="ld-loop-step-n" aria-hidden="true">
+                  ↺
+                </span>
+                <div>
+                  <span className="ld-loop-step-title">Again, on the gap</span>
+                  <span className="ld-loop-step-body">
+                    A miss points to the next short lesson, not a retake of the course. Learn once,
+                    deeply. Learn often, as the work changes.
+                  </span>
+                </div>
+              </li>
+            </ol>
+          </div>
+          <div className="ld-pace">
+            <div className="ld-stat ld-stat-dark">
+              <span className="ld-stat-figure ld-orange">Moving fast?</span>
+              <span>
+                Show mastery and move on. Nobody who is nearly interview-ready sits through what
+                they already know.
+              </span>
+            </div>
+            <div className="ld-stat">
+              <span className="ld-stat-figure">Need more time?</span>
+              <span>
+                Work at your own pace without feeling behind. The loop meets you where the gap is,
+                and still gets you interview-ready.
+              </span>
+            </div>
+            <aside className="ld-journey" aria-label="An illustrative learner's twelve weeks">
+              <p className="ld-mono ld-faint">MAYA’S TWELVE WEEKS IN THE LOOP · ILLUSTRATIVE</p>
+              <ol>
+                {JOURNEY.map((j) => (
+                  <li key={j.week} className={j.hired ? 'ld-journey-hired' : undefined}>
+                    <span className="ld-mono">{j.week.toUpperCase()}</span>
+                    <span>{j.skill}</span>
+                  </li>
+                ))}
+              </ol>
+            </aside>
+          </div>
+        </section>
+
+        <section id="shift" className="ld-wrap ld-section">
+          <div className="ld-section-head ld-ruled">
+            <div>
+              <p className="ld-mono ld-eyebrow">A DIFFERENT MODEL</p>
+              <h2 className="ld-h2">Built for how people learn now.</h2>
+            </div>
+            <p className="ld-sub">
+              Traditional training moves a whole cohort at one pace and finds the gaps at the final
+              exam. This model flips each of those habits.
+            </p>
+          </div>
+          <div className="ld-shifts">
+            <div className="ld-shifts-head" aria-hidden="true">
+              <span className="ld-mono ld-faint">FROM · TRADITIONAL TRAINING</span>
+              <span className="ld-mono ld-eyebrow">TO · THIS MODEL</span>
+            </div>
+            <ul className="ld-shift-list">
+              {SHIFTS.map((s) => (
+                <li key={s.from} className={s.highlight ? 'ld-shift ld-shift-hl' : 'ld-shift'}>
+                  <span className="ld-shift-from">{s.from}</span>
+                  <span className="ld-shift-arrow" aria-hidden="true">
+                    →
+                  </span>
+                  <span className="ld-shift-to">{s.to}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="ld-small ld-faint ld-shifts-note">
+              The highlighted row is the biggest difference: proof starts at the first exercise, so
+              it powers job matching for learners and talent matching for employers.
+            </p>
+          </div>
+        </section>
+
+        <section id="platform" className="ld-dark ld-rounded-top">
+          <div className="ld-wrap ld-section ld-platform">
+            <div className="ld-section-head">
+              <div>
+                <p className="ld-mono ld-eyebrow-sky">THE PLATFORM</p>
+                <h2 className="ld-h2">Five pieces, one learning loop.</h2>
+              </div>
+              <p className="ld-sub">
+                Structure gives the path. Spark keeps people showing up. Practice turns knowledge
+                into proof. Proof powers opportunity for learners and placement for employers. Each
+                piece stands alone and shares one learner record.
+              </p>
+            </div>
+            <ol className="ld-pieces">
+              {PRODUCTS.map((p, i) => (
+                <li key={p.id} className="ld-piece">
+                  <span className="ld-mono ld-piece-role">
+                    {pad(i + 1)} · {p.role.toUpperCase()}
+                  </span>
+                  <h3 className="ld-piece-name">{p.name}</h3>
+                  <p className="ld-piece-tag">{p.tagline}</p>
+                  <ul className="ld-piece-list">
+                    {p.features.slice(0, 3).map((f) => (
+                      <li key={f.title}>{f.title}</li>
+                    ))}
+                  </ul>
+                  <div className="ld-piece-foot">
+                    <span
+                      className={
+                        p.status === 'available'
+                          ? 'ld-piece-status ld-piece-live'
+                          : 'ld-piece-status'
+                      }
+                    >
+                      {p.status === 'available' ? 'Available now' : 'Coming soon'}
+                    </span>
+                    <a href={productPagePath(p)} className="ld-piece-link">
+                      About <span aria-hidden="true">→</span>
+                    </a>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className="ld-platform-foot">
+              <strong>Learn often.</strong> What learners practice and what employers hire for flows
+              back into new lessons, so the loop keeps turning as AI changes the work.
+            </p>
+          </div>
+        </section>
+
+        <section id="tour" className="ld-paper ld-rounded-top ld-overlap">
+          <div className="ld-wrap ld-section">
+            <div className="ld-section-head">
+              <div>
+                <p className="ld-mono ld-eyebrow">SEE IT RUNNING</p>
+                <h2 className="ld-h2">A cohort, end to end, in ninety seconds.</h2>
+              </div>
+              <p className="ld-sub">
+                Enroll a cohort, teach a short lesson, watch a simulation get scored, and export the
+                outcomes report. A short tour is on its way; book a walkthrough to see it live
+                today.
+              </p>
+            </div>
+            {/* Placeholder for the product-tour GIF or video (#75): replace the inner div with the media. */}
+            <figure className="ld-tour-frame">
+              <div className="ld-tour-placeholder">
+                <span className="ld-tour-play" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="28" height="28">
+                    <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
+                  </svg>
+                </span>
+                <span className="ld-tour-label">Product tour</span>
+                <span className="ld-small ld-faint">Coming soon</span>
+              </div>
+              <figcaption className="ld-small ld-faint">
+                From enrollment to the outcomes export, on the live product.
+              </figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section id="pathways" className="ld-wrap ld-section">
+          <div className="ld-section-head ld-ruled">
+            <div>
+              <p className="ld-mono ld-eyebrow">WHAT A PATHWAY LOOKS LIKE</p>
+              <h2 className="ld-h2">Practice the job before day one.</h2>
+            </div>
+            <p className="ld-sub">
+              Jobs increasingly mean working with AI agents: giving them direction, checking their
+              output, fixing their mistakes. Each pathway pairs short lessons with a simulation of
+              that judgment, and every attempt becomes evidence an employer can see.
+            </p>
+          </div>
+          <PathwaysExplorer />
+          <p className="ld-small ld-faint">
+            Example pathways. Scenarios, skills and roles are illustrative.
+          </p>
+        </section>
+
+        <section id="connects" className="ld-wrap ld-section">
           <div className="ld-section-head ld-ruled">
             <div>
               <p className="ld-mono ld-eyebrow">FITS YOUR STACK</p>
-              <h2 className="ld-h2">
-                Not another LMS. An outcomes layer your IT office and registrar can approve.
-              </h2>
+              <h2 className="ld-h2">Connects to what you already run. Standards, not lock-in.</h2>
             </div>
             <p className="ld-sub">
-              Your systems stay the systems of record. Learn Differently runs the cohort, scores the
-              interview, and hands the evidence back.
+              Fragmented tools and repeat registrations are the pain our partners name first. Learn
+              Differently speaks LTI 1.3 and SCORM, keeps your SIS as the system of record, and
+              gives every learner one sign-in across all five pieces.
             </p>
           </div>
           <div className="ld-tiles">
@@ -330,177 +615,110 @@ export function HomePage() {
           </div>
         </section>
 
-        <section id="pricing" className="ld-dark ld-rounded-top">
-          <div className="ld-wrap ld-pricing">
-            <div className="ld-pricing-pitch">
-              <p className="ld-mono ld-eyebrow-sky">PRICING</p>
-              <h2 className="ld-h2 ld-h2-xl">
-                Priced for a cohort, <span className="ld-orange">not a campus.</span>
-              </h2>
-              <p className="ld-sub ld-steel">
-                The university stack is sold by the campus and by the seat, then needs a second tool
-                to author a lesson and a third to register a non-credit learner. A 24-person cohort
-                pays the campus price.
-              </p>
-              <div className="ld-price-box">
-                <span className="ld-mono ld-steel">HOW WE PRICE</span>
-                <span className="ld-price-head">
-                  One flat price per cohort. Fixed before you start.
-                </span>
-                <ul className="ld-dots">
-                  {PRICING_POINTS.map((p) => (
-                    <li key={p}>{p}</li>
-                  ))}
-                </ul>
-                <a href="#demo" className="ld-btn ld-btn-orange">
-                  Get cohort pricing
-                </a>
-              </div>
-            </div>
-            <div className="ld-pricing-compare">
-              <p className="ld-mono ld-steel">HOW THE UNIVERSITY STACK IS SOLD</p>
-              {UNIVERSITY_STACK.map((u, i) => (
-                <div key={u.title} className="ld-compare">
-                  <span className="ld-mono ld-faint">{String(i + 1).padStart(2, '0')}</span>
-                  <span className="ld-compare-title">{u.title}</span>
-                  <span className="ld-compare-body">{u.body}</span>
-                </div>
-              ))}
-              <div className="ld-worth">
-                <span className="ld-worth-title">What a cohort is worth to a state</span>
-                <span className="ld-worth-figure">~$68,000</span>
-                <span className="ld-worth-body">
-                  Delaware&apos;s WIOA Adult program spent $2,846 per participant on training in
-                  PY2024, about $68,000 for a cohort of 24. Miss 70/70, or your state&apos;s
-                  performance bar for its provider list, and that is the cohort you lose, every
-                  year. The record that keeps you listed should cost a small fraction of it.
-                </span>
-              </div>
-              <p className="ld-mono ld-source-dark">US DOL PY2024 DELAWARE STATE REPORT</p>
-            </div>
-          </div>
-        </section>
-
-        <section id="rules" className="ld-dark">
-          <div className="ld-wrap ld-section ld-rules">
+        <section id="why" className="ld-dark ld-rounded-top">
+          <div className="ld-wrap ld-section ld-why">
             <div className="ld-section-head">
               <div>
                 <p className="ld-mono ld-eyebrow-sky">WHY NOW</p>
-                <h2 className="ld-h2">The rules changed in 2026. Training is paid on outcomes.</h2>
+                <h2 className="ld-h2">The work is changing faster than training can keep up.</h2>
               </div>
-              <p className="ld-sub ld-steel">
-                Federal and state funders set the bar at numbers. Most providers have no system that
-                produces them.
+              <p className="ld-sub">
+                Entry-level work now means reviewing what an agent drafted, catching what a model
+                missed, and explaining the fix. That judgment is learned by doing, not by watching.
               </p>
             </div>
-            <div className="ld-rule-cards">
-              <article className="ld-rule-card ld-rule-pell">
-                <p className="ld-mono">WORKFORCE PELL · JULY 1 2026</p>
-                <p className="ld-rule-big">
-                  70<span className="ld-rule-slash">/</span>70
-                </p>
-                <p className="ld-rule-note">
-                  Short programs qualify only with a 70% completion rate and 70% of completers
-                  employed in the second quarter after exit. US Department of Education final rule,
-                  May 2026.
-                </p>
-              </article>
-              <article className="ld-rule-card ld-rule-wioa">
-                <p className="ld-mono ld-faint">WIOA · EVERY FUNDED PROGRAM</p>
-                <p className="ld-rule-big ld-rule-big-md">6</p>
-                <p className="ld-rule-label">indicators, reported quarterly</p>
-                <p className="ld-rule-note ld-muted">
-                  Employment after exit, earnings, credential attainment, measurable skill gains,
-                  employer effectiveness.
-                </p>
-              </article>
-              <article className="ld-rule-card ld-rule-ce">
-                <p className="ld-mono">CONTINUING ED, OWN SURVEY</p>
-                <p className="ld-rule-big ld-rule-big-sm">27%</p>
-                <p className="ld-rule-label">have integrated systems</p>
-                <p className="ld-rule-note">
-                  42% not ready for Workforce Pell reporting. Modern Campus and UPCEA, 2026.
-                </p>
-              </article>
-              <article className="ld-rule-card ld-rule-quote">
-                <p className="ld-rule-quote-text">
-                  Delaware&apos;s own PY2024 report ties a missed credential target to
-                  &ldquo;reporting delays with education partners.&rdquo;
-                </p>
-                <p className="ld-mono ld-steel">DELAWARE WIOA ANNUAL NARRATIVE, PY24</p>
+            <div className="ld-why-cards">
+              {WHY_NOW.map((w) => (
+                <article key={w.figure} className={`ld-why-card ld-why-${w.tone}`}>
+                  <p className="ld-why-figure">{w.figure}</p>
+                  <p className="ld-why-claim">{w.claim}</p>
+                </article>
+              ))}
+              <p className="ld-mono ld-why-source">
+                SOURCE: WORLD ECONOMIC FORUM, FUTURE OF JOBS REPORT 2025
+              </p>
+              <article className="ld-why-rules">
+                <div>
+                  <p className="ld-mono ld-steel">{RULES.label}</p>
+                  <p className="ld-why-rules-figure">{RULES.figure}</p>
+                </div>
+                <p className="ld-why-rules-body">{RULES.body}</p>
               </article>
             </div>
           </div>
         </section>
 
-        <section id="filter" className="ld-paper ld-rounded-top ld-overlap">
-          <div className="ld-wrap ld-filter">
-            <div className="ld-filter-copy">
-              <p className="ld-mono ld-eyebrow">THE GAP</p>
+        <section id="outcomes" className="ld-paper ld-rounded-top ld-overlap">
+          <div className="ld-wrap ld-section ld-outcomes">
+            <div className="ld-outcomes-copy">
+              <p className="ld-mono ld-eyebrow">OUTCOMES</p>
               <h2 className="ld-h2">
-                Employers dropped the degree filter. Your completers need a signal.
+                Measure what happened to the learner, not whether they finished.
               </h2>
               <p className="ld-sub">
-                Seven in ten employers now say they hire for skills. Yet when researchers followed
-                the hires, dropping the degree requirement changed about one in 700 of them, because
-                nothing replaced the filter. Employers say they value non-degree credentials and
-                cannot tell which ones mean ready. A scored, recorded interview against the role is
-                a signal an employer can watch.
+                Completion is the floor. Every cohort reports skill gains, credentials, placements
+                and employer demand, in the shapes workforce funders and accreditors already use:
+                measurable skill gains, credential attainment and employment after exit.
               </p>
-              <p className="ld-mono ld-faint">
-                NACE 2026 · BURNING GLASS INSTITUTE AND HARVARD BUSINESS SCHOOL, 2024 · SHRM, 2022
-              </p>
+              <a href="#demo" className="ld-btn ld-btn-ink">
+                Ask for a sample report
+              </a>
             </div>
-            <div className="ld-filter-stats">
-              <div className="ld-stat ld-stat-dark">
-                <span className="ld-stat-figure ld-orange">1 in 700</span>
-                <span>hires that changed when employers dropped the degree requirement</span>
-              </div>
-              <div className="ld-stat">
-                <span className="ld-stat-figure">90%</span>
-                <span>
-                  of HR professionals say alternative credentials add value, and cite unclear
-                  quality as the reason they do not act on them
-                </span>
-              </div>
-            </div>
+            <table className="ld-tracked">
+              <caption className="ld-visually-hidden">What is tracked for every cohort</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Outcome</th>
+                  <th scope="col">How it&apos;s tracked</th>
+                </tr>
+              </thead>
+              <tbody>
+                {TRACKED.map((t) => (
+                  <tr key={t.outcome}>
+                    <th scope="row">{t.outcome}</th>
+                    <td>{t.how}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
 
-        <section id="evidence" className="ld-wrap ld-section">
+        <section id="state" className="ld-wrap ld-section">
           <div className="ld-section-head ld-ruled">
             <div>
-              <p className="ld-mono ld-eyebrow">EVIDENCE</p>
-              <h2 className="ld-h2">Show the receipts.</h2>
+              <p className="ld-mono ld-eyebrow">FOR STATES AND WORKFORCE BOARDS</p>
+              <h2 className="ld-h2">One record across every provider you fund.</h2>
             </div>
             <p className="ld-sub">
-              Every learner finishes with a scored, recorded, structured interview against the role
-              they trained for. That record is the outcome.
+              Every contractor reports into the same measures with the same definitions, so
+              providers sit side by side instead of arriving in a hundred formats. Branded for your
+              state, with provider-list renewal data collected once.
             </p>
           </div>
-          <div className="ld-evidence">
-            {EVIDENCE.map((e) => (
-              <article key={e.source} className="ld-evidence-item">
-                <p className={e.accent ? 'ld-evidence-figure ld-orange' : 'ld-evidence-figure'}>
-                  {e.figure}
-                </p>
-                <p className="ld-evidence-claim">{e.claim}</p>
-                <p className="ld-evidence-body">{e.body}</p>
-                <p className="ld-mono ld-faint ld-evidence-source">{e.source}</p>
-              </article>
-            ))}
-          </div>
+          <figure className="ld-state-shot">
+            <img
+              src="/site/agency-dashboard.jpg"
+              width="1280"
+              height="860"
+              loading="lazy"
+              alt="A state workforce board's outcomes dashboard: participants enrolled, completion rate, learners who reached the target score and interview-ready count, then assessment scores before and after training for each provider"
+            />
+            <figcaption className="ld-small ld-faint">
+              An agency's view across the providers it funds. Fictional providers and sample data.
+            </figcaption>
+          </figure>
         </section>
 
         <section id="who" className="ld-wrap ld-section">
           <div className="ld-who-head">
-            <h2 className="ld-h2 ld-h2-sm">Built for the people who have to report.</h2>
+            <h2 className="ld-h2 ld-h2-sm">One platform, five kinds of partners.</h2>
             <p className="ld-mono ld-eyebrow">WHO IT&apos;S FOR</p>
           </div>
           <div className="ld-audiences">
             {AUDIENCES.map((a, i) => (
               <article key={a.title} className="ld-audience">
-                <span className="ld-mono ld-faint">{String(i + 1).padStart(2, '0')}</span>
+                <span className="ld-mono ld-faint">{pad(i + 1)}</span>
                 <h3 className="ld-h3 ld-h3-lg">{a.title}</h3>
                 <p>{a.body}</p>
                 <a href="#demo" className="ld-audience-link">
@@ -509,15 +727,53 @@ export function HomePage() {
               </article>
             ))}
           </div>
+          <p className="ld-sub ld-who-foot">
+            Each partner gets the same connected loop, set up around its own learners, pathways and
+            employer network.
+          </p>
+        </section>
+
+        <section id="licensing" className="ld-wrap ld-section">
+          <div className="ld-section-head ld-ruled">
+            <div>
+              <p className="ld-mono ld-eyebrow">LICENSING</p>
+              <h2 className="ld-h2 ld-h2-sm">Licensed the way your program is funded.</h2>
+            </div>
+            <p className="ld-sub">
+              By the seat, by the cohort, or by the site. Job matching and employer talent search
+              are add-ons. Pricing is quoted per partner.
+            </p>
+          </div>
+          <div className="ld-licenses">
+            {LICENSING.map((l) => (
+              <article key={l.name} className="ld-license">
+                <span className="ld-mono ld-tile-label">{l.label}</span>
+                <h3 className="ld-h3 ld-h3-lg">{l.name}</h3>
+                <p>{l.body}</p>
+                <p className="ld-license-best">
+                  <span className="ld-mono ld-faint">BEST FOR</span> {l.best}
+                </p>
+              </article>
+            ))}
+          </div>
         </section>
 
         <section id="demo" className="ld-cta ld-rounded-top">
           <div className="ld-wrap ld-cta-inner">
-            <h2 className="ld-cta-title">See a cohort run end to end.</h2>
+            <h2 className="ld-cta-title">Launch a pilot cohort.</h2>
+            <ol className="ld-pilot">
+              {PILOT_STEPS.map((s, i) => (
+                <li key={s.title}>
+                  <span className="ld-pilot-n">{i + 1}</span>
+                  <span className="ld-pilot-title">{s.title}</span>
+                  <span className="ld-pilot-body">{s.body}</span>
+                </li>
+              ))}
+            </ol>
             <div className="ld-cta-row">
               <p className="ld-cta-sub">
-                Thirty minutes. Bring your reporting template and we will fill it from a sample
-                cohort.
+                One pathway, one cohort, your employer partners. Thirty minutes to walk through it
+                end to end.
               </p>
               <form className="ld-cta-form" onSubmit={bookWalkthrough}>
                 <label htmlFor="ld-email" className="ld-visually-hidden">
@@ -530,13 +786,13 @@ export function HomePage() {
             <footer className="ld-footer">
               <div className="ld-footer-brand">
                 <span className="ld-footer-name">learn/differently</span>
-                <span>Priced for a cohort, not a campus.</span>
+                <span>Learn once. Learn often.</span>
                 <span className="ld-mono">learndifferently.tech</span>
               </div>
               <nav aria-label="Footer" className="ld-footer-links">
-                <a href="#pricing">Pricing</a>
-                <a href="#evidence">Evidence and sources</a>
-                <a href="#stack">Security</a>
+                <a href="#platform">Products</a>
+                <a href="#connects">Standards and security</a>
+                <a href="/release-notes/">Release notes</a>
                 <a href="/privacy">Privacy</a>
                 <a href={`mailto:${CONTACT_EMAIL}`}>Contact</a>
               </nav>
