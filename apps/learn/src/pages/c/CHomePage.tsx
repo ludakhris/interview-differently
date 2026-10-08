@@ -428,39 +428,53 @@ export function CHomePage() {
                 side by side. Fictional providers and sample data.
               </figcaption>
             </figure>
-            <div className="c-measure-strip">
-              <h3 className="c-measure-heading">Automatically track and report on</h3>
-              <ul className="c-measure-grid c-measure-grid-3">
-                {MEASURES.map((m) => (
-                  <li key={m.name}>
-                    <i aria-hidden="true">
-                      <CheckIcon />
-                    </i>
-                    <div>
-                      <span className="ld-mono ld-eyebrow">{m.when.toUpperCase()}</span>
-                      <strong>{m.name}</strong>
-                      <span className="c-measure-how">{m.how}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <h3 className="c-measure-heading">
-                Plus the two others the grant will ask for during an audit.
-              </h3>
-              <ul className="c-measure-grid c-measure-grid-2">
-                {MEASURES_MORE.map((m) => (
-                  <li key={m.name}>
-                    <i aria-hidden="true">
-                      <CheckIcon />
-                    </i>
-                    <div>
-                      <span className="ld-mono ld-eyebrow">{m.when.toUpperCase()}</span>
-                      <strong>{m.name}</strong>
-                      <span className="c-measure-how">{m.how}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+            <div className="c-report">
+              <div className="c-report-head">
+                <span className="ld-mono">
+                  OUTCOMES REPORT <span className="c-report-dim">· 5 MEASURES, ONE RECORD</span>
+                </span>
+                <span className="ld-mono c-report-dim">EXPORTED AS CSV · ANY DAY OF THE GRANT</span>
+              </div>
+              <div className="c-measure-strip">
+                <h3 className="c-measure-heading">Automatically track and report on</h3>
+                <ul className="c-measure-grid c-measure-grid-3">
+                  {MEASURES.map((m) => (
+                    <li key={m.name}>
+                      <i aria-hidden="true">
+                        <CheckIcon />
+                      </i>
+                      <div>
+                        <span className="ld-mono c-measure-when">
+                          <span className="ld-faint">TRACKED · </span>
+                          {m.when.toUpperCase()}
+                        </span>
+                        <strong>{m.name}</strong>
+                        <span className="c-measure-how">{m.how}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <h3 className="c-measure-heading">
+                  Plus the two others the grant will ask for during an audit.
+                </h3>
+                <ul className="c-measure-grid c-measure-grid-2">
+                  {MEASURES_MORE.map((m) => (
+                    <li key={m.name}>
+                      <i aria-hidden="true">
+                        <CheckIcon />
+                      </i>
+                      <div>
+                        <span className="ld-mono c-measure-when">
+                          <span className="ld-faint">TRACKED · </span>
+                          {m.when.toUpperCase()}
+                        </span>
+                        <strong>{m.name}</strong>
+                        <span className="c-measure-how">{m.how}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         </section>

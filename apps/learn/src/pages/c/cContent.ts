@@ -113,12 +113,12 @@ export const MEASURES = [
   },
   {
     name: 'Credential Attainment Rate',
-    when: 'Program end',
+    when: 'When the credential is earned',
     how: 'The credential each program leads to is on the record; attainment exports with the cohort.',
   },
   {
     name: 'Program Completion Rate',
-    when: 'Last module',
+    when: 'At the last module',
     how: 'Tracked per module and per learner, so who is at risk shows before the end date.',
   },
 ]
@@ -127,12 +127,12 @@ export const MEASURES = [
 export const MEASURES_MORE = [
   {
     name: 'Enrollment Target Fulfillment',
-    when: 'Day 1 · on enrollment',
+    when: 'On enrollment, day 1',
     how: 'Put the contracted target on the cohort; the rate is on the dashboard every day of the grant.',
   },
   {
     name: 'Initial Job Placement',
-    when: 'After completion',
+    when: 'At the job offer',
     how: 'Offers and start dates land on the learner’s record: a count, not a survey.',
   },
 ]
