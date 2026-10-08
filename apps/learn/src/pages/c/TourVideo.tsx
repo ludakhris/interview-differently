@@ -29,15 +29,16 @@ export function TourVideo() {
         aria-label="A forty-second tour of the real product: a state's view across providers, one provider's cohorts, one cohort's gradebook, attendance, and the export"
       />
       {!playing && (
-        <button type="button" className="c-tour-play" onClick={start}>
+        <button
+          type="button"
+          className="c-tour-play"
+          onClick={start}
+          aria-label="Play the tour, 40 seconds, no sound"
+        >
           <span className="c-tour-play-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="30" height="30">
+            <svg viewBox="0 0 24 24" width="22" height="22">
               <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
             </svg>
-          </span>
-          <span className="c-tour-play-label">
-            Watch the tour
-            <small>40 seconds · no sound</small>
           </span>
         </button>
       )}
