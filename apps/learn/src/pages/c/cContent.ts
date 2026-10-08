@@ -139,7 +139,7 @@ export const MEASURES_MORE = [
 ]
 
 export const PROVENANCE =
-  'Employment and earnings after exit still come from your state’s wage-record match; the platform hands it the exit file.'
+  'Four of the five come straight from the platform. Employment and earnings after exit come from your state’s wage-record match, and we export the exit records it needs.'
 
 export const WALKTHROUGH = [
   {
