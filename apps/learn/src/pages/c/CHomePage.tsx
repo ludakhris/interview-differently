@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type KeyboardEvent } from 'react'
+import type { FormEvent } from 'react'
 import { CONTACT_EMAIL } from '../../contact'
 import { AccountMenu } from '../../auth'
 import { ProductsMenu } from '../../components/ProductsMenu'
@@ -12,7 +12,6 @@ import {
   LOOP,
   MEASURES,
   MEASURES_MORE,
-  PERSONAS,
   PROVENANCE,
   TRADITIONAL,
   WALKTHROUGH,
@@ -218,75 +217,6 @@ function LoopDiagram() {
   )
 }
 
-/** The persona switch: what your team stops doing, from each seat. */
-function ForYourTeam() {
-  const [key, setKey] = useState(PERSONAS[0].key)
-  const p = PERSONAS.find((x) => x.key === key) ?? PERSONAS[0]
-  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
-    const last = PERSONAS.length - 1
-    const to =
-      e.key === 'ArrowRight'
-        ? (i + 1) % PERSONAS.length
-        : e.key === 'ArrowLeft'
-          ? (i + last) % PERSONAS.length
-          : e.key === 'Home'
-            ? 0
-            : e.key === 'End'
-              ? last
-              : -1
-    if (to < 0) return
-    e.preventDefault()
-    setKey(PERSONAS[to].key)
-    document.getElementById(`c-team-${PERSONAS[to].key}`)?.focus()
-  }
-  return (
-    <div className="c-team">
-      <div className="c-seg" role="tablist" aria-label="Who are you">
-        {PERSONAS.map((x, i) => (
-          <button
-            key={x.key}
-            id={`c-team-${x.key}`}
-            type="button"
-            role="tab"
-            aria-selected={x.key === p.key}
-            aria-controls="c-team-panel"
-            tabIndex={x.key === p.key ? 0 : -1}
-            className={x.key === p.key ? 'c-seg-btn c-seg-on' : 'c-seg-btn'}
-            onClick={() => setKey(x.key)}
-            onKeyDown={(e) => onKeyDown(e, i)}
-          >
-            {x.tab}
-          </button>
-        ))}
-      </div>
-      <div
-        id="c-team-panel"
-        role="tabpanel"
-        tabIndex={0}
-        aria-labelledby={`c-team-${p.key}`}
-        className="c-team-panel"
-      >
-        <div className="c-team-copy">
-          <h3 className="ld-h2 ld-h2-sm">{p.headline}</h3>
-          <p className="ld-sub">{p.lead}</p>
-          <ul className="c-points">
-            {p.points.map((pt) => (
-              <li key={pt}>{pt}</li>
-            ))}
-          </ul>
-          <a href={p.key === 'learner' ? '/sign-in' : '#demo'} className="ld-btn ld-btn-ink">
-            {p.cta}
-          </a>
-        </div>
-        <div className="c-stops">
-          <span className="ld-mono ld-steel">WHAT YOUR TEAM STOPS DOING</span>
-          <strong>{p.stops}</strong>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export function CHomePage() {
   return (
     <div className="ld c">
@@ -342,9 +272,9 @@ export function CHomePage() {
               Training that behaves like <span className="ld-orange">the job.</span>
             </h1>
             <p className="ld-lead">
-              Every learner takes a different path. Same outcome. One application with five
-              components that replaces the spreadsheets, disconnected systems and repeated reporting
-              your team juggles today.
+              Every learner takes a different path. Same outcome. One learning system that bridges
+              theory and job-ready skills, replaces the spreadsheets and disconnected tools, and
+              automates the manual work your team juggles today.
             </p>
             <div className="ld-hero-actions">
               <a href="#demo" className="ld-btn ld-btn-orange ld-btn-lg">
@@ -440,35 +370,15 @@ export function CHomePage() {
           <div className="ld-wrap ld-section c-team-section">
             <div className="ld-section-head">
               <div>
-                <p className="ld-mono ld-eyebrow-sky">FOR YOUR TEAM</p>
+                <p className="ld-mono ld-eyebrow-sky">
+                  FOR YOUR TEAM · ONE SEAMLESS APP · BETTER OUTCOMES · HOURS SAVED
+                </p>
                 <h2 className="ld-h2">Learners job-ready faster. Your team’s hours back.</h2>
               </div>
               <p className="ld-sub">
-                Skills that match what employers are hiring for, documented as they are gained. And
-                the attendance sheet, the gradebook, the placement spreadsheet and the quarterly
-                report stop being four separate jobs.
-              </p>
-            </div>
-            <ForYourTeam />
-          </div>
-        </section>
-
-        <section id="components" className="ld-paper ld-rounded-top ld-overlap">
-          <div className="ld-wrap ld-section">
-            <div className="ld-section-head">
-              <div>
-                <p className="ld-mono ld-eyebrow">
-                  ONE SEAMLESS APPLICATION · FIVE COMPONENTS · ONE RECORD
-                </p>
-                <h2 className="ld-h2 ld-h2-sm">
-                  What your team does by hand today, in separate places, then aggregates for the
-                  report.
-                </h2>
-              </div>
-              <p className="ld-sub">
-                One sign-in, one learner record. Each component takes over a file or a tool the team
-                keeps today, and writes to the record the report is built from. Nothing is entered
-                twice.
+                Skills that match what employers are hiring for, documented as they are gained. What
+                your team does by hand today, in separate places, then aggregates for the report,
+                happens once, in one app, on one learner record. Nothing is entered twice.
               </p>
             </div>
             <ul className="c-components">
@@ -482,6 +392,7 @@ export function CHomePage() {
                   <span className="c-component-arrow" aria-hidden="true">
                     ↓
                   </span>
+                  <span className="ld-mono ld-eyebrow">AUTOMATED BY</span>
                   <a href={productPagePath(PRODUCTS[i])} className="c-component-name">
                     {c.name}
                   </a>
@@ -492,60 +403,59 @@ export function CHomePage() {
           </div>
         </section>
 
-        <section id="outcomes" className="ld-wrap ld-section">
-          <div className="ld-section-head ld-ruled">
-            <div>
-              <p className="ld-mono ld-eyebrow">OUTCOMES ALREADY TRACKED</p>
-              <h2 className="ld-h2">Report once, in the terms your funders use.</h2>
+        <section id="outcomes" className="ld-paper ld-rounded-top ld-overlap">
+          <div className="ld-wrap ld-section">
+            <div className="ld-section-head">
+              <div>
+                <p className="ld-mono ld-eyebrow">OUTCOMES ALREADY TRACKED</p>
+                <h2 className="ld-h2">Report once, in the terms your funders use.</h2>
+              </div>
+              <p className="ld-sub">
+                The five measures your grants are held to are defined once and tracked as learners
+                work, so the quarterly report is an export, not a project. {PROVENANCE}
+              </p>
             </div>
-            <p className="ld-sub">
-              The three measures programs are held to are defined once and tracked as learners work,
-              so the quarterly report is an export, not a project. {PROVENANCE}
-            </p>
+            <figure className="ld-state-shot c-shot">
+              <img
+                src="/site/agency-dashboard.jpg"
+                width="1280"
+                height="860"
+                loading="lazy"
+                alt="A state workforce board's outcomes dashboard: participants enrolled, completion rate, learners who reached the target score and interview-ready count, then assessment scores before and after training for each provider"
+              />
+              <figcaption className="ld-small ld-faint">
+                The real product: what a state sees across the providers it funds, the same measures
+                side by side. Fictional providers and sample data.
+              </figcaption>
+            </figure>
+            <div className="c-measure-strip">
+              <p className="ld-mono ld-faint">THE THREE YOU’RE HELD TO</p>
+              <ul>
+                {MEASURES.map((m) => (
+                  <li key={m.abbr}>
+                    <span className="c-measure-name">
+                      <strong>{m.name}</strong>
+                      <span className="ld-mono ld-eyebrow">{m.abbr}</span>
+                    </span>
+                    <span className="c-measure-how">{m.how}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="ld-mono ld-faint">TWO MORE YOUR GRANT WILL ASK FOR</p>
+              <ul>
+                {MEASURES_MORE.map((m) => (
+                  <li key={m.abbr}>
+                    <span className="c-measure-name">
+                      <strong>{m.name}</strong>
+                      <span className="ld-mono ld-eyebrow">{m.abbr}</span>
+                      {m.soon && <span className="ld-piece-status">{m.soon}</span>}
+                    </span>
+                    <span className="c-measure-how">{m.how}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <div className="c-measures">
-            {MEASURES.map((m) => (
-              <article key={m.abbr} className="c-measure">
-                <span className="ld-mono ld-eyebrow">{m.abbr}</span>
-                <h3 className="ld-h3 ld-h3-lg">{m.name}</h3>
-                <p className="c-measure-def">{m.def}</p>
-                <p className="c-measure-how">
-                  <span className="ld-mono ld-faint">HOW IT’S TRACKED </span>
-                  {m.how}
-                </p>
-              </article>
-            ))}
-          </div>
-          <p className="ld-mono ld-faint c-measures-more-label">TWO MORE YOUR GRANT WILL ASK FOR</p>
-          <div className="c-measures c-measures-more">
-            {MEASURES_MORE.map((m) => (
-              <article key={m.abbr} className="c-measure">
-                <div className="ld-row-between">
-                  <span className="ld-mono ld-eyebrow">{m.abbr}</span>
-                  {m.soon && <span className="ld-piece-status">{m.soon}</span>}
-                </div>
-                <h3 className="ld-h3 ld-h3-lg">{m.name}</h3>
-                <p className="c-measure-def">{m.def}</p>
-                <p className="c-measure-how">
-                  <span className="ld-mono ld-faint">HOW IT’S TRACKED </span>
-                  {m.how}
-                </p>
-              </article>
-            ))}
-          </div>
-          <figure className="ld-state-shot c-shot">
-            <img
-              src="/site/agency-dashboard.jpg"
-              width="1280"
-              height="860"
-              loading="lazy"
-              alt="A state workforce board's outcomes dashboard: participants enrolled, completion rate, learners who reached the target score and interview-ready count, then assessment scores before and after training for each provider"
-            />
-            <figcaption className="ld-small ld-faint">
-              What a state sees across the providers it funds: the same measures, side by side.
-              Fictional providers and sample data.
-            </figcaption>
-          </figure>
         </section>
 
         <section id="pathways" className="ld-wrap ld-section">
@@ -609,7 +519,7 @@ export function CHomePage() {
                 <span className="ld-mono">learndifferently.tech</span>
               </div>
               <nav aria-label="Footer" className="ld-footer-links">
-                <a href="#components">Products</a>
+                <a href="#team">Products</a>
                 <a href="/release-notes/">Release notes</a>
                 <a href="/privacy">Privacy</a>
                 <a href={`mailto:${CONTACT_EMAIL}`}>Contact</a>

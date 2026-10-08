@@ -321,97 +321,11 @@
   font-weight: 700;
 }
 
-/* For your team: the segmented control */
+/* For your team: the dark band and the five by-hand cards */
 .c-team-section {
   padding-top: 96px;
   padding-bottom: 136px;
 }
-.c-team {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.c-seg {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  align-self: flex-start;
-}
-.c-seg-btn {
-  padding: 10px 16px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--white);
-  font: inherit;
-  font-weight: 700;
-  font-size: 15px;
-  cursor: pointer;
-}
-.c-seg-on {
-  background: var(--white);
-  color: var(--ink);
-}
-.c-team-panel {
-  display: grid;
-  grid-template-columns: 7fr 5fr;
-  gap: 24px;
-  padding: 36px;
-  border-radius: 24px;
-  background: var(--white);
-  color: var(--ink);
-}
-.c-team-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.c-team-copy .ld-btn {
-  align-self: flex-start;
-}
-.c-points {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 16px;
-}
-.c-points li {
-  position: relative;
-  padding-left: 20px;
-}
-.c-points li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 9px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--orange);
-}
-.c-stops {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 10px;
-  padding: 28px;
-  border-radius: 18px;
-  background: var(--ink);
-  color: var(--white);
-}
-.c-stops strong {
-  font-weight: 800;
-  font-size: 26px;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-}
-
 /* One seamless application: by hand today, then the component */
 .c-components {
   list-style: none;
@@ -451,6 +365,11 @@
   font-weight: 800;
   color: var(--orange);
 }
+/* The cards are white inside the dark band; keep their text ink (the band sets white). */
+.c-component,
+.c .ld-dark .c-component-name {
+  color: var(--ink);
+}
 .c-component-name {
   min-height: 2.2em;
   font-weight: 800;
@@ -464,49 +383,51 @@
   line-height: 1.45;
 }
 
-/* Outcomes: the measures */
-.c-measures {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+/* Outcomes: the dashboard, then a compact strip of the measures */
+.c-shot {
+  margin-top: 0;
 }
-.c-measure {
+.c-measure-strip {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 28px;
-  border-radius: 24px;
+  gap: 10px;
+}
+.c-measure-strip ul {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.c-measure-strip li {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 8px 24px;
+  align-items: baseline;
+  padding: 14px 24px;
+  border-radius: 14px;
   background: var(--white);
 }
-.c-measure-def {
-  font-size: 15px;
-  line-height: 1.55;
-  color: var(--muted);
+.c-measure-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
 }
-.c-measure-how {
-  margin-top: auto;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-  font-size: 15px;
-  line-height: 1.5;
+.c-measure-name strong {
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.01em;
 }
-.c-measure-how .ld-mono {
-  display: block;
-  margin-bottom: 4px;
-}
-.c-measures-more-label {
-  margin-top: 8px;
-}
-.c-measures-more {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: -28px;
-}
-.c-measure .ld-piece-status {
+.c-measure-name .ld-piece-status {
   border-color: var(--faint);
   color: var(--faint);
 }
-.c-shot {
-  margin-top: 12px;
+.c-measure-how {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
 }
 
 /* Career pathways, compact */
@@ -604,7 +525,6 @@
     flex: none;
     margin-top: 4px;
   }
-  .c-team-panel,
   .c-pace,
   .c-loopgrid {
     grid-template-columns: 1fr;
@@ -676,10 +596,6 @@
     width: min(460px, 100%);
     margin: 0 auto;
   }
-  .c-measures,
-  .c-measures-more {
-    grid-template-columns: 1fr;
-  }
   .c-components,
   .c-pathways {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -744,16 +660,10 @@
     padding-top: 64px;
     padding-bottom: 104px;
   }
-  .c-seg {
-    width: 100%;
-    border-radius: 18px;
-  }
-  .c-seg-btn {
-    flex: 1 1 auto;
-    text-align: center;
-  }
-  .c-team-panel {
-    padding: 22px;
+  .c-measure-strip li {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 14px 18px;
   }
   .c-float-cta {
     right: 12px;
