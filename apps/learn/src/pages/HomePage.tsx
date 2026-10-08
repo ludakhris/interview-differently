@@ -352,7 +352,10 @@ export function HomePage() {
           <div className="ld-section-head">
             <div>
               <p className="ld-mono ld-eyebrow">WHERE TRAINING BREAKS</p>
-              <h2 className="ld-h2">Same seat, same pace, and the verdict comes at the end.</h2>
+              <h2 className="ld-h2">
+                Training still runs at one speed, grades at the finish line, then struggles to land
+                the job.
+              </h2>
             </div>
             <p className="ld-sub">
               A course in one system, videos in another, no chance to practice the actual job, then
