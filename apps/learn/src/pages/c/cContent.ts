@@ -104,32 +104,36 @@ export const COMPONENTS: { name: string; icon: ManualIcon; manual: string; now: 
   },
 ]
 
-/** The measures programs are held to. Readers know the terms; say only how each is tracked. */
+/** The measures programs are held to: when each is captured, and how. Readers know the terms. */
 export const MEASURES = [
   {
     name: 'Measurable Skill Gains',
-    how: 'Every scored exercise and simulation is documented progress, on the record the day it happens.',
+    when: 'Every scored exercise',
+    how: 'Each scored exercise and simulation is documented progress, on the record the day it happens.',
   },
   {
     name: 'Credential Attainment Rate',
+    when: 'Program end',
     how: 'The credential each program leads to is on the record; attainment exports with the cohort.',
   },
   {
     name: 'Program Completion Rate',
+    when: 'Last module',
     how: 'Tracked per module and per learner, so who is at risk shows before the end date.',
   },
 ]
 
-/** Two more a grant agreement asks for. Placement arrives with Talent Match; say so. */
+/** Two more a grant agreement asks for. */
 export const MEASURES_MORE = [
   {
     name: 'Enrollment Target Fulfillment',
+    when: 'Day 1 · on enrollment',
     how: 'Put the contracted target on the cohort; the rate is on the dashboard every day of the grant.',
   },
   {
     name: 'Initial Job Placement',
-    how: 'Offers and start dates land on the record from Talent Match: a count, not a survey.',
-    soon: 'With Talent Match',
+    when: 'After completion',
+    how: 'Offers and start dates land on the learner’s record: a count, not a survey.',
   },
 ]
 

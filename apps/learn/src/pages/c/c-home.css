@@ -390,7 +390,7 @@
 .c-measure-strip {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   margin-top: -16px;
 }
 .c-measure-heading {
@@ -398,75 +398,36 @@
   font-size: 22px;
   letter-spacing: -0.02em;
   line-height: 1.2;
-  margin-top: 20px;
+  margin-top: 16px;
 }
-.c-measure-strip ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border-top: 1.5px solid var(--ink);
-}
-.c-measure-strip li {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 6px 24px;
-  align-items: baseline;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--line);
-}
-.c-measure-strip strong {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 10px;
-  font-weight: 800;
-  font-size: 17px;
-  letter-spacing: -0.01em;
-}
-.c-measure-strip .ld-piece-status {
-  border-color: var(--faint);
-  color: var(--faint);
-}
-.c-measure-how {
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--teal);
-}
-
-/* Measure options under review (?measures=1|2|3) */
-.c-mo {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: -16px;
-}
-.c-mo .c-measure-heading {
-  margin-top: 12px;
-}
-/* 1: checklist */
-.c-mo-check {
+.c-measure-grid {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
-.c-mo-check li {
+.c-measure-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.c-measure-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.c-measure-grid li {
   display: grid;
   grid-template-columns: 28px 1fr;
   gap: 14px;
   align-items: start;
-  padding: 18px 22px;
+  padding: 20px 22px;
   border-radius: 16px;
   background: var(--white);
 }
-.c-mo-check li > div {
+.c-measure-grid li > div {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-.c-mo-check i {
+.c-measure-grid i {
   display: grid;
   place-items: center;
   width: 28px;
@@ -476,135 +437,16 @@
   background: var(--ink);
   color: var(--orange);
 }
-.c-mo-check strong {
+.c-measure-grid strong {
   font-weight: 800;
   font-size: 17px;
   letter-spacing: -0.01em;
+  line-height: 1.2;
 }
-.c-mo .ld-piece-status {
-  margin-left: 6px;
-  vertical-align: middle;
-  border-color: var(--faint);
-  color: var(--faint);
-}
-/* 2: timeline */
-.c-mo-time {
-  position: relative;
-  list-style: none;
-  margin: 0;
-  padding: 24px 0 0;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 16px;
-}
-.c-mo-time::before {
-  content: '';
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  top: 40px;
-  height: 3px;
-  background: var(--ink);
-}
-.c-mo-time li {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.c-mo-time-dot {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--white);
-  font-weight: 800;
-  font-size: 14px;
-  border: 4px solid var(--paper);
-}
-.c-mo-time-soon .c-mo-time-dot {
-  background: var(--white);
-  color: var(--ink);
-  border-color: var(--paper);
-  box-shadow: inset 0 0 0 2px var(--ink);
-}
-.c-mo-time strong {
-  font-weight: 800;
-  font-size: 17px;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-}
-.c-mo-time .c-measure-how {
-  font-size: 14px;
-}
-/* 3: the export */
-.c-mo-export {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.c-mo-export-head {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 8px 16px;
-  padding: 12px 20px;
-  border-radius: 14px 14px 0 0;
-  background: var(--ink);
-  color: var(--steel);
-}
-.c-mo-export-stamp {
-  color: var(--orange);
-}
-.c-mo-export table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  margin-top: -10px;
-  background: var(--white);
-  border-radius: 0 0 14px 14px;
-  overflow: hidden;
+.c-measure-how {
   font-size: 15px;
-}
-.c-mo-export th,
-.c-mo-export td {
-  padding: 13px 20px;
-  text-align: left;
-  border-bottom: 1px solid var(--line);
-  vertical-align: top;
-}
-.c-mo-export thead th {
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  color: var(--faint);
-  background: var(--paper);
-}
-.c-mo-export tbody th {
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-}
-.c-mo-export tbody tr:last-child th,
-.c-mo-export tbody tr:last-child td {
-  border-bottom: 0;
-}
-.c-mo-num {
-  text-align: right !important;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-.c-mo-rate {
-  font-weight: 800;
-  font-size: 18px;
-}
-.c-mo-row-soon td,
-.c-mo-row-soon th {
-  color: var(--faint);
+  line-height: 1.5;
+  color: var(--teal);
 }
 
 /* Career pathways, compact */
@@ -777,16 +619,9 @@
   .c-pathways {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .c-mo-time {
+  .c-measure-grid-3,
+  .c-measure-grid-2 {
     grid-template-columns: 1fr;
-    gap: 14px;
-    padding-top: 0;
-  }
-  .c-mo-time::before {
-    display: none;
-  }
-  .c-mo-export td.c-measure-how {
-    display: none;
   }
   .c-components .c-component:last-child,
   .c-pathways .c-pathway:last-child {
@@ -848,16 +683,7 @@
     padding-top: 64px;
     padding-bottom: 104px;
   }
-  .c-measure-strip li {
-    grid-template-columns: 1fr;
-    gap: 4px;
-  }
-  .c-mo-check {
-    grid-template-columns: 1fr;
-  }
-  .c-mo-export tbody th {
-    white-space: normal;
-  }
+
   .c-float-cta {
     right: 12px;
     padding: 11px 16px;

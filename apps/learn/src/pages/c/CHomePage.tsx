@@ -6,7 +6,6 @@ import { productPagePath, PRODUCTS } from '../../products'
 import { PATHWAYS } from '../homeContent'
 import { PaceTracks } from './PaceTracks'
 import { FloatingCta } from './FloatingCta'
-import { MeasuresVisual } from './MeasureOptions'
 import {
   ANCHORS,
   COMPONENTS,
@@ -429,35 +428,40 @@ export function CHomePage() {
                 side by side. Fictional providers and sample data.
               </figcaption>
             </figure>
-            {new URLSearchParams(window.location.search).get('measures') ? (
-              <MeasuresVisual />
-            ) : (
-              <div className="c-measure-strip">
-                <h3 className="c-measure-heading">Automatically track and report on</h3>
-                <ul>
-                  {MEASURES.map((m) => (
-                    <li key={m.name}>
+            <div className="c-measure-strip">
+              <h3 className="c-measure-heading">Automatically track and report on</h3>
+              <ul className="c-measure-grid c-measure-grid-3">
+                {MEASURES.map((m) => (
+                  <li key={m.name}>
+                    <i aria-hidden="true">
+                      <CheckIcon />
+                    </i>
+                    <div>
+                      <span className="ld-mono ld-eyebrow">{m.when.toUpperCase()}</span>
                       <strong>{m.name}</strong>
                       <span className="c-measure-how">{m.how}</span>
-                    </li>
-                  ))}
-                </ul>
-                <h3 className="c-measure-heading">
-                  Plus the two others the grant will ask for during an audit.
-                </h3>
-                <ul>
-                  {MEASURES_MORE.map((m) => (
-                    <li key={m.name}>
-                      <strong>
-                        {m.name}
-                        {m.soon && <span className="ld-piece-status">{m.soon}</span>}
-                      </strong>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <h3 className="c-measure-heading">
+                Plus the two others the grant will ask for during an audit.
+              </h3>
+              <ul className="c-measure-grid c-measure-grid-2">
+                {MEASURES_MORE.map((m) => (
+                  <li key={m.name}>
+                    <i aria-hidden="true">
+                      <CheckIcon />
+                    </i>
+                    <div>
+                      <span className="ld-mono ld-eyebrow">{m.when.toUpperCase()}</span>
+                      <strong>{m.name}</strong>
                       <span className="c-measure-how">{m.how}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 
