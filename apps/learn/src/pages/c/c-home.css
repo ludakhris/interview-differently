@@ -392,14 +392,72 @@
 .c-shot {
   margin-top: 0;
 }
+.c-tour {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 60px rgba(11, 31, 46, 0.14);
+  background: var(--white);
+}
 .c-tour-video {
   display: block;
   width: 100%;
   height: auto;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  box-shadow: 0 24px 60px rgba(11, 31, 46, 0.14);
-  background: var(--white);
+}
+/* Poster state: a soft dim and one play control in the middle. */
+.c-tour-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  border: 0;
+  background: rgba(11, 31, 46, 0.28);
+  color: var(--white);
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.c-tour-play:hover {
+  background: rgba(11, 31, 46, 0.4);
+}
+.c-tour-play:focus-visible {
+  outline: 3px solid var(--orange);
+  outline-offset: -3px;
+}
+.c-tour-play-icon {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: var(--orange);
+  color: var(--ink);
+  box-shadow: 0 16px 40px rgba(11, 31, 46, 0.35);
+}
+.c-tour-play-icon svg {
+  margin-left: 4px;
+}
+.c-tour-play-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(11, 31, 46, 0.85);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  text-align: left;
+}
+.c-tour-play-label small {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--steel);
 }
 /* The report sheet that frames the measures */
 .c-report {
@@ -725,6 +783,17 @@
     right: 12px;
     padding: 11px 16px;
     font-size: 14px;
+  }
+  .c-tour-play {
+    gap: 10px;
+  }
+  .c-tour-play-icon {
+    width: 56px;
+    height: 56px;
+  }
+  .c-tour-play-label {
+    font-size: 15px;
+    padding: 8px 12px;
   }
   .c-report-head {
     padding: 12px 16px;

@@ -1,36 +1,46 @@
-import { useEffect, useRef } from 'react'
+import { useRef, useState } from 'react'
 
 /**
- * The outcomes tour: a short, silent, looping recording of the real product. Autoplays
- * muted (React does not render the muted attribute, so it is set here); people who prefer
- * reduced motion get the poster with controls instead.
+ * The outcomes tour: a short, silent recording of the real product. It shows its poster
+ * with a play button and only plays when asked; controls appear once it starts.
  */
 export function TourVideo() {
   const ref = useRef<HTMLVideoElement>(null)
-  useEffect(() => {
+  const [playing, setPlaying] = useState(false)
+  const start = () => {
     const el = ref.current
     if (!el) return
-    el.muted = true
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      el.controls = true
-      return
-    }
-    el.play().catch(() => {
-      el.controls = true
-    })
-  }, [])
+    el.controls = true
+    el.play()
+      .then(() => setPlaying(true))
+      .catch(() => setPlaying(true))
+  }
   return (
-    <video
-      ref={ref}
-      className="c-tour-video"
-      src="/site/outcomes-tour.mp4"
-      poster="/site/outcomes-tour-poster.jpg"
-      width="1280"
-      height="860"
-      loop
-      playsInline
-      preload="metadata"
-      aria-label="A thirty-second tour of the real product: a state's view across providers, one provider's cohorts, one cohort's gradebook, and the export"
-    />
+    <div className={playing ? 'c-tour c-tour-playing' : 'c-tour'}>
+      <video
+        ref={ref}
+        className="c-tour-video"
+        src="/site/outcomes-tour.mp4"
+        poster="/site/outcomes-tour-poster.jpg"
+        width="1280"
+        height="860"
+        playsInline
+        preload="metadata"
+        aria-label="A forty-second tour of the real product: a state's view across providers, one provider's cohorts, one cohort's gradebook, attendance, and the export"
+      />
+      {!playing && (
+        <button type="button" className="c-tour-play" onClick={start}>
+          <span className="c-tour-play-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="30" height="30">
+              <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
+            </svg>
+          </span>
+          <span className="c-tour-play-label">
+            Watch the tour
+            <small>40 seconds · no sound</small>
+          </span>
+        </button>
+      )}
+    </div>
   )
 }

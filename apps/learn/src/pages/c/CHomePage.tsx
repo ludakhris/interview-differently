@@ -419,8 +419,9 @@ export function CHomePage() {
             <figure className="ld-state-shot c-shot">
               <TourVideo />
               <figcaption className="ld-small ld-faint">
-                The real product, in thirty seconds: a state’s view across providers, one provider,
-                one cohort’s gradebook, the export. Fictional providers and sample data.
+                The real product, in forty seconds: a state’s view across providers, one provider,
+                one cohort’s gradebook, attendance in a tap, the export. Fictional providers and
+                sample data.
               </figcaption>
             </figure>
             <div className="c-report">
