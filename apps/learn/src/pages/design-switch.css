@@ -38,3 +38,22 @@
   outline: 2px solid #ffffff;
   outline-offset: 2px;
 }
+/* Phones: centred, compact, clear of the edges and the browser's bottom bar. */
+@media (max-width: 640px) {
+  .dsw {
+    left: 50%;
+    right: auto;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    padding: 4px;
+    gap: 2px;
+    white-space: nowrap;
+  }
+  .dsw-label {
+    display: none;
+  }
+  .dsw a {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}

@@ -20,28 +20,19 @@ export const ANCHORS = [
   },
 ]
 
-/** Two learners, two paths, one endpoint. Illustrative. */
+/** Two learners, one start, one endpoint, different routes. Illustrative. */
 export const PACE = [
   {
     name: 'Maya',
     score: '80%',
     weeks: 6,
-    steps: ['Caller verification', 'Ticket triage', 'Phishing response'],
-    note: 'Skips what the assessment showed she already has. Interview-ready by week six.',
+    note: 'Three skills to verify. Skips what the assessment showed she already has. Job-ready by week six.',
   },
   {
     name: 'Theo',
     score: '34%',
     weeks: 10,
-    steps: [
-      'Password resets',
-      'Caller verification',
-      'DNS basics',
-      'Ticket triage',
-      'Escalation',
-      'Phishing response',
-    ],
-    note: 'Gets the whole route, with a lesson added at each gap. Same outcome by week ten.',
+    note: 'The whole route, with a lesson added at each of two gaps. Same outcome by week ten.',
   },
 ]
 
@@ -60,7 +51,7 @@ export const LOOP = [
   {
     key: 'prove',
     title: 'Prove',
-    body: 'Scored against the pass mark your program set, with the work sample saved. A miss adds the next lesson to that learner’s plan. A pass is a verified skill on the record.',
+    body: 'Scored against the pass mark your program set, with the work sample saved. A pass is a verified skill on the record. A miss sends the loop around again.',
   },
 ]
 
@@ -157,13 +148,40 @@ export const PERSONAS: Persona[] = [
   },
 ]
 
-/** The five components of the one application, as the team meets them. */
-export const COMPONENTS = [
-  { name: 'Learning Management', replaces: 'the gradebook, the attendance sheet, the roster' },
-  { name: 'Micro Learning', replaces: 'the lecture recordings nobody finishes' },
-  { name: 'Skill Simulator', replaces: 'the quiz that proves recall, not readiness' },
-  { name: 'Job Board Match', replaces: 'the job list learners search by title' },
-  { name: 'Talent Match', replaces: 'the resume pile employers search by keyword' },
+export type ManualIcon = 'sheet' | 'video' | 'quiz' | 'list' | 'pile'
+
+/** The five components, each tied to the manual work it replaces. */
+export const COMPONENTS: { name: string; icon: ManualIcon; manual: string; now: string }[] = [
+  {
+    name: 'Learning Management',
+    icon: 'sheet',
+    manual: 'The gradebook, the attendance sheet and the roster, kept by hand in three files',
+    now: 'One record per learner that the report is built from',
+  },
+  {
+    name: 'Micro Learning',
+    icon: 'video',
+    manual: 'Lecture recordings nobody finishes, with no way to know who watched',
+    now: 'Three-minute lessons that end in an exercise your instructors can see',
+  },
+  {
+    name: 'Skill Simulator',
+    icon: 'quiz',
+    manual: 'A quiz that proves recall, graded and keyed in after class',
+    now: 'A simulation of the job, scored on the spot, work sample saved',
+  },
+  {
+    name: 'Job Board Match',
+    icon: 'list',
+    manual: 'A job list learners search by title, and placements tracked by asking around',
+    now: 'Roles matched to verified skills, and the match on the record',
+  },
+  {
+    name: 'Talent Match',
+    icon: 'pile',
+    manual: 'A resume pile employers search by keyword',
+    now: 'Candidates searched by verified skill, with the work sample attached',
+  },
 ]
 
 /** The measures funders ask for, with the definitions programs are held to. */

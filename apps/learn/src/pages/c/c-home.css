@@ -29,157 +29,167 @@
   color: var(--muted);
 }
 
-/* Two learners, two tracks, one endpoint */
-.c-pace {
-  display: grid;
-  grid-template-columns: 1fr 240px;
-  gap: 12px 20px;
-  align-items: stretch;
-  padding: 28px;
+/* Two learners, one start, one endpoint */
+.c-fork {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 28px 28px;
   border-radius: 24px;
   background: var(--white);
 }
-.c-pace-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 36px;
-  /* Room on the right for the "Week N" flag past the end of the longest track. */
-  padding: 12px 112px 28px 0;
+.c-fork-scroll {
+  overflow-x: auto;
 }
-.c-pace-row {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 20px;
-  align-items: center;
-}
-.c-pace-who {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.c-pace-who strong {
-  font-weight: 800;
-  font-size: 20px;
-  letter-spacing: -0.02em;
-}
-.c-pace-track {
-  position: relative;
-  height: 10px;
-  border-radius: 999px;
-  background: #e3eaf0;
-}
-.c-pace-line {
-  position: relative;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--sky);
-  animation: c-grow 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  transform-origin: left center;
-}
-.c-pace-row:nth-child(2) .c-pace-line {
-  background: var(--orange);
-  animation-duration: 2.2s;
-}
-@keyframes c-grow {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
-}
-.c-pace-node {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
-.c-pace-node i {
-  display: block;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--white);
-  border: 3px solid var(--ink);
-}
-.c-pace-node em {
-  position: absolute;
-  top: 18px;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  font-style: normal;
-  font-size: 11px;
-  font-weight: 600;
+.c-fork-hint {
+  display: none;
+  font-size: 13px;
   color: var(--faint);
 }
-.c-pace-row:nth-child(2) .c-pace-node:nth-child(odd) em {
-  top: auto;
-  bottom: 18px;
+.c-fork-svg {
+  display: block;
+  width: 100%;
+  min-width: 760px;
+  height: auto;
+  font-family: 'Manrope', system-ui, sans-serif;
 }
-.c-pace-flag {
-  position: absolute;
-  right: -6px;
-  top: 50%;
-  transform: translate(100%, -50%);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--ink);
-  color: var(--white);
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
+.c-fork-path {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: c-draw 2.2s cubic-bezier(0.3, 0.6, 0.2, 1) forwards;
 }
-.c-pace-flag svg {
+.c-fork-maya {
+  stroke: var(--sky);
+}
+.c-fork-theo {
+  stroke: var(--orange);
+  animation-duration: 3.2s;
+}
+@keyframes c-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.c-fork-start circle {
+  fill: var(--ink);
+}
+.c-fork-end circle {
+  fill: var(--ink);
+}
+.c-fork-end {
   color: var(--orange);
 }
-.c-pace-end {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 6px;
-  padding: 22px;
-  border-radius: 18px;
-  background: var(--ink);
-  color: var(--white);
+.c-fork-label {
+  fill: var(--teal);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
 }
-.c-pace-end .ld-mono {
-  color: var(--sky);
+.c-fork-sub {
+  fill: var(--faint);
+  font-size: 12px;
 }
-.c-pace-end strong {
+.c-fork-node circle {
+  fill: var(--white);
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+.c-fork-node text {
+  fill: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.c-fork-detour circle {
+  fill: var(--orange);
+}
+.c-fork-detour .c-fork-plus {
+  fill: var(--ink);
+  font-size: 15px;
   font-weight: 800;
-  font-size: 22px;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
 }
-.c-pace-end .ld-small {
-  color: var(--steel);
+.c-fork-detour text:not(.c-fork-plus) {
+  fill: var(--orange-text);
+  font-size: 12px;
+  font-weight: 700;
 }
-.c-pace-notes {
-  grid-column: 1 / -1;
+.c-fork-who {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.c-fork-who-maya {
+  fill: var(--teal);
+}
+.c-fork-who-theo {
+  fill: var(--orange-text);
+}
+.c-fork-week {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+.c-fork-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 24px;
   font-size: 14px;
   line-height: 1.5;
   color: var(--muted);
 }
+.c-fork-legend li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.c-fork-legend-maya strong {
+  color: var(--teal);
+}
+.c-fork-legend-theo strong {
+  color: var(--orange-text);
+}
+.c-fork-legend .ld-faint {
+  grid-column: 1 / -1;
+  font-size: 13px;
+}
 
-/* The loop in three */
+/* The loop: three cards across, a return path underneath back to Learn */
+.c-loop-wrap {
+  position: relative;
+  padding-bottom: 76px;
+}
 .c-loop {
+  position: relative;
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 44px;
 }
 .c-loop-step {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 26px 28px;
   border-radius: 20px;
   background: var(--white);
+}
+.c-loop-step + .c-loop-step::before {
+  content: '→';
+  position: absolute;
+  left: -34px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 800;
+  font-size: 26px;
+  color: var(--ink);
 }
 .c-loop-step p {
   font-size: 15px;
@@ -202,6 +212,41 @@
 .c-loop-practice .c-loop-n {
   background: var(--orange);
   color: var(--ink);
+}
+/* The U-shaped return: down from Prove, across, up into Learn, with an arrowhead. */
+.c-loop-return {
+  position: absolute;
+  left: calc(16.666% - 1.5px);
+  right: calc(16.666% - 1.5px);
+  top: calc(100% - 76px);
+  height: 52px;
+  border: 3px solid var(--ink);
+  border-top: 0;
+  border-radius: 0 0 28px 28px;
+}
+.c-loop-return::before {
+  content: '';
+  position: absolute;
+  left: -9px;
+  top: -4px;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 12px solid var(--ink);
+}
+.c-loop-return-label {
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 14px;
+  white-space: nowrap;
+}
+.c-loop-return-label strong {
+  color: var(--orange);
 }
 
 /* Traditional training models, what changes */
@@ -332,7 +377,7 @@
   letter-spacing: -0.02em;
 }
 
-/* One application, five components */
+/* One seamless application: by hand today, then the component */
 .c-components {
   list-style: none;
   margin: 0;
@@ -344,39 +389,44 @@
 .c-component {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   padding: 22px;
   border-radius: 20px;
   background: var(--white);
 }
-.c-component-name {
-  font-weight: 800;
-  font-size: 20px;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-  text-decoration: none;
+.c-component-glyph {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 6px;
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--faint);
 }
-.c-component-replaces {
+.c-component-manual {
   font-size: 14px;
   line-height: 1.45;
   color: var(--muted);
 }
-.c-component-replaces em {
-  font-style: normal;
-  color: var(--ink);
+.c-component-arrow {
+  margin: 6px 0 2px;
+  font-weight: 800;
+  color: var(--orange);
 }
-.c-component .ld-piece-status {
-  margin-top: auto;
-  align-self: flex-start;
-  border-color: var(--faint);
-  color: var(--faint);
+.c-component-name {
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-decoration: none;
 }
-.c-component .ld-piece-live {
-  border-color: var(--teal);
-  color: var(--teal);
+.c-component-now {
+  font-size: 14px;
+  line-height: 1.45;
 }
 
-/* Outcomes: the three measures */
+/* Outcomes: the measures */
 .c-measures {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -421,7 +471,7 @@
   margin-top: 12px;
 }
 
-/* Pathways, compact */
+/* Career pathways, compact */
 .c-pathways {
   list-style: none;
   margin: 0;
@@ -458,22 +508,52 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .c-pace-line {
+  .c-fork-path {
     animation: none;
+    stroke-dashoffset: 0;
   }
 }
 
 /* Tablet */
 @media (max-width: 960px) {
-  .c-pace,
   .c-team-panel {
     grid-template-columns: 1fr;
   }
-  .c-pace-end {
-    order: -1;
+  .c-loop {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
-  .c-loop,
-  .c-measures,
+  .c-loop-step + .c-loop-step::before {
+    content: '↓';
+    left: 28px;
+    top: -22px;
+    transform: none;
+    font-size: 20px;
+  }
+  .c-loop-wrap {
+    padding-bottom: 0;
+  }
+  .c-loop-return {
+    position: static;
+    height: auto;
+    margin-top: 16px;
+    border: 0;
+    border-radius: 0;
+  }
+  .c-loop-return::before {
+    display: none;
+  }
+  .c-loop-return-label {
+    position: static;
+    display: block;
+    transform: none;
+    white-space: normal;
+    border-radius: 16px;
+    padding: 12px 16px;
+  }
+  .c-measures {
+    grid-template-columns: 1fr;
+  }
   .c-measures-more {
     grid-template-columns: 1fr;
   }
@@ -491,30 +571,18 @@
 @media (max-width: 640px) {
   .c-anchors,
   .c-components,
-  .c-pathways {
+  .c-pathways,
+  .c-fork-legend {
     grid-template-columns: 1fr;
   }
   .c-anchors {
     margin-top: 8px;
   }
-  .c-pace {
-    padding: 20px;
+  .c-fork {
+    padding: 16px;
   }
-  .c-pace-rows {
-    padding-right: 0;
-  }
-  .c-pace-row {
-    grid-template-columns: 1fr;
-    gap: 28px;
-  }
-  .c-pace-node em {
-    display: none;
-  }
-  .c-pace-flag {
-    right: 0;
-    top: auto;
-    bottom: 16px;
-    transform: none;
+  .c-fork-hint {
+    display: block;
   }
   .c-trad-list li {
     grid-template-columns: 1fr;

@@ -2,7 +2,7 @@ import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import { CONTACT_EMAIL } from '../../contact'
 import { AccountMenu } from '../../auth'
 import { ProductsMenu } from '../../components/ProductsMenu'
-import { PRODUCTS, productPagePath } from '../../products'
+import { productPagePath, PRODUCTS } from '../../products'
 import { PATHWAYS } from '../homeContent'
 import {
   ANCHORS,
@@ -15,6 +15,7 @@ import {
   PROVENANCE,
   TRADITIONAL,
   WALKTHROUGH,
+  type ManualIcon,
 } from './cContent'
 import '../home.css'
 import './c-home.css'
@@ -43,7 +44,7 @@ function CheckIcon() {
   )
 }
 
-/** Design A's hero: a learner in action, one lesson to one match. */
+/** Design A's hero cards, as they are on Design A. */
 function HeroCards() {
   return (
     <div className="ld-hero-cards">
@@ -62,7 +63,7 @@ function HeroCards() {
       </svg>
       <div className="ld-card ld-card-lesson">
         <span className="ld-mono ld-faint">MICROLEARNING · 3 MIN</span>
-        <span className="ld-card-title">Verify the caller</span>
+        <span className="ld-card-title">Triage an alert</span>
         <span className="ld-progress" aria-hidden="true">
           <span style={{ width: '72%' }} />
         </span>
@@ -70,17 +71,19 @@ function HeroCards() {
       </div>
       <div className="ld-card ld-card-sim">
         <div className="ld-row-between">
-          <span className="ld-mono ld-steel">SIMULATION · HELP DESK</span>
+          <span className="ld-mono ld-steel">SIMULATION · ON CALL</span>
           <span className="ld-mono ld-pill">WITH AN AI AGENT</span>
         </div>
         <div className="ld-chat">
           <div className="ld-chat-msg">
-            <span className="ld-chat-who">AI help desk agent</span>
-            <span>Caller is locked out and asks for a reset. Draft reply ready. Send?</span>
+            <span className="ld-chat-who">AI ops agent</span>
+            <span>Checkout latency is spiking. Roll back release 4.2?</span>
           </div>
           <div className="ld-chat-msg ld-chat-you">
             <span className="ld-chat-who">You</span>
-            <span>Not yet. Verifying the caller first: employee ID and number on file.</span>
+            <span>
+              Checking deployment pipeline, initiating rollback, notifying on-call manager.
+            </span>
           </div>
         </div>
         <span className="ld-small ld-steel ld-card-foot">Scored on judgment, not recall</span>
@@ -91,15 +94,15 @@ function HeroCards() {
         </span>
         <div>
           <span className="ld-mono ld-faint">VERIFIED SKILL</span>
-          <span className="ld-card-title">Caller verification</span>
+          <span className="ld-card-title">Incident triage</span>
         </div>
       </div>
       <div className="ld-card ld-card-match">
-        <span className="ld-mono">ON THE RECORD</span>
-        <span className="ld-card-title">Week 1 · Maya R.</span>
+        <span className="ld-mono">TALENT MATCH</span>
+        <span className="ld-card-title">Junior SRE</span>
         <span className="ld-match-strength">
           <span className="ld-match-dot" aria-hidden="true" />
-          Measurable skill gain · documented
+          Strong match · 4 of 4 skills shown
         </span>
       </div>
       <p className="ld-small ld-faint ld-hero-note">Sample records for illustration.</p>
@@ -107,57 +110,209 @@ function HeroCards() {
   )
 }
 
-/** Two learners on two tracks of different length, one endpoint. */
-function PaceTracks() {
-  const longest = Math.max(...PACE.map((p) => p.weeks))
+/**
+ * Two learners from one start to one endpoint. Maya's route runs clean; Theo's dips and takes
+ * two detours where a gap added a lesson. Both rejoin at "day-1 job ready".
+ */
+function ForkTracks() {
+  const maya = 'M 70 150 C 190 150, 210 78, 320 78 L 700 78 C 810 78, 850 150, 930 150'
+  const theo =
+    'M 70 150 C 190 150, 210 222, 300 222 L 420 222 ' +
+    'C 440 222, 445 262, 480 262 C 515 262, 520 222, 540 222 ' +
+    'L 600 222 C 620 222, 625 262, 660 262 C 695 262, 700 222, 720 222 ' +
+    'L 790 222 C 860 222, 880 150, 930 150'
+  const mayaNodes: [number, string][] = [
+    [320, 'Caller verification'],
+    [510, 'Ticket triage'],
+    [700, 'Phishing response'],
+  ]
+  const theoNodes: [number, string][] = [
+    [300, 'Password resets'],
+    [420, 'Caller verification'],
+    [600, 'Ticket triage'],
+    [790, 'Phishing response'],
+  ]
+  const detours: [number, string][] = [
+    [480, 'Gap found · DNS basics added'],
+    [660, 'Gap found · Escalation added'],
+  ]
   return (
-    <div
-      className="c-pace"
-      role="img"
-      aria-label="Two learners reach the same outcome in different weeks"
-    >
-      <div className="c-pace-rows">
-        {PACE.map((p) => (
-          <div key={p.name} className="c-pace-row">
-            <div className="c-pace-who">
-              <strong>{p.name}</strong>
-              <span className="ld-mono ld-faint">ASSESSMENT {p.score}</span>
-            </div>
-            <div className="c-pace-track">
-              <div className="c-pace-line" style={{ width: `${(p.weeks / longest) * 100}%` }}>
-                {p.steps.map((s, i) => (
-                  <span
-                    key={s}
-                    className="c-pace-node"
-                    style={{ left: `${((i + 1) / (p.steps.length + 1)) * 100}%` }}
-                    title={s}
-                  >
-                    <i aria-hidden="true" />
-                    <em>{s}</em>
-                  </span>
-                ))}
-                <span className="c-pace-flag">
-                  <CheckIcon /> Week {p.weeks}
-                </span>
-              </div>
-            </div>
-          </div>
-        ))}
+    <div className="c-fork">
+      <p className="c-fork-hint">Swipe to follow both routes →</p>
+      <div className="c-fork-scroll">
+        <svg
+          className="c-fork-svg"
+          viewBox="0 0 1000 320"
+          role="img"
+          aria-label="Maya and Theo start from the same skills assessment, take different routes, and reach the same day-one job-ready endpoint"
+        >
+          <defs>
+            <marker
+              id="c-arrow"
+              viewBox="0 0 10 10"
+              refX="8"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto"
+            >
+              <path d="M0 0 10 5 0 10z" fill="currentColor" />
+            </marker>
+          </defs>
+
+          <path d={maya} className="c-fork-path c-fork-maya" pathLength={1} />
+          <path d={theo} className="c-fork-path c-fork-theo" pathLength={1} />
+
+          <g className="c-fork-start" transform="translate(70 150)">
+            <circle r="16" />
+            <text y="-30" textAnchor="middle" className="c-fork-label">
+              DAY 1
+            </text>
+            <text y="46" textAnchor="middle" className="c-fork-label">
+              SKILLS ASSESSMENT
+            </text>
+            <text y="62" textAnchor="middle" className="c-fork-sub">
+              a simulation of the job
+            </text>
+          </g>
+
+          {mayaNodes.map(([x, label]) => (
+            <g
+              key={label}
+              className="c-fork-node c-fork-node-maya"
+              transform={`translate(${x} 78)`}
+            >
+              <circle r="9" />
+              <text y="-18" textAnchor="middle">
+                {label}
+              </text>
+            </g>
+          ))}
+          <text x="200" y="118" className="c-fork-who c-fork-who-maya">
+            Maya · assessment 80%
+          </text>
+          <text x="790" y="116" className="c-fork-week c-fork-who-maya">
+            week 6
+          </text>
+
+          {theoNodes.map(([x, label]) => (
+            <g
+              key={label}
+              className="c-fork-node c-fork-node-theo"
+              transform={`translate(${x} 222)`}
+            >
+              <circle r="9" />
+              <text y="-18" textAnchor="middle">
+                {label}
+              </text>
+            </g>
+          ))}
+          {detours.map(([x, label]) => (
+            <g key={label} className="c-fork-detour" transform={`translate(${x} 262)`}>
+              <circle r="9" />
+              <text y="8" textAnchor="middle" className="c-fork-plus">
+                +
+              </text>
+              <text y="30" textAnchor="middle">
+                {label}
+              </text>
+            </g>
+          ))}
+          <text x="200" y="300" className="c-fork-who c-fork-who-theo">
+            Theo · assessment 34%
+          </text>
+          <text x="830" y="252" className="c-fork-week c-fork-who-theo">
+            week 10
+          </text>
+
+          <g className="c-fork-end" transform="translate(930 150)">
+            <circle r="22" />
+            <path
+              d="m-8 1 5 5 11-11"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <text y="-36" textAnchor="middle" className="c-fork-label">
+              DAY-1 JOB READY
+            </text>
+            <text y="50" textAnchor="middle" className="c-fork-sub">
+              credential earned
+            </text>
+            <text y="66" textAnchor="middle" className="c-fork-sub">
+              skill gains documented
+            </text>
+          </g>
+        </svg>
       </div>
-      <div className="c-pace-end">
-        <span className="ld-mono">SAME OUTCOME</span>
-        <strong>Verified skills. Interview-ready.</strong>
-        <span className="ld-small">On the record, in the funder’s terms.</span>
-      </div>
-      <p className="c-pace-notes">
+      <ul className="c-fork-legend">
         {PACE.map((p) => (
-          <span key={p.name}>
-            <strong>{p.name}:</strong> {p.note}{' '}
-          </span>
+          <li key={p.name} className={`c-fork-legend-${p.name.toLowerCase()}`}>
+            <strong>
+              {p.name} · {p.score} on the assessment · week {p.weeks}
+            </strong>
+            <span>{p.note}</span>
+          </li>
         ))}
-        <span className="ld-faint">Illustrative.</span>
-      </p>
+        <li className="ld-faint">
+          Illustrative learners. The route is how the product is built to work.
+        </li>
+      </ul>
     </div>
+  )
+}
+
+/** The manual artifact each component replaces, as a small line drawing. */
+function ManualGlyph({ icon }: { icon: ManualIcon }) {
+  const p = {
+    width: 36,
+    height: 36,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.6,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  }
+  if (icon === 'sheet')
+    return (
+      <svg {...p}>
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M3 9h18M3 14h18M9 4v16M15 4v16" />
+      </svg>
+    )
+  if (icon === 'video')
+    return (
+      <svg {...p}>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m10 9 5 3-5 3z" fill="currentColor" stroke="none" />
+      </svg>
+    )
+  if (icon === 'quiz')
+    return (
+      <svg {...p}>
+        <rect x="4" y="3" width="16" height="18" rx="2" />
+        <path d="M8 8h8M8 12h8M8 16h5" />
+        <path d="m6.5 7.5.8.8 1.4-1.6" strokeWidth="1.2" />
+      </svg>
+    )
+  if (icon === 'list')
+    return (
+      <svg {...p}>
+        <path d="M4 6h12M4 12h12M4 18h12" />
+        <circle cx="19" cy="12" r="2.2" />
+        <path d="m20.6 13.6 2 2" />
+      </svg>
+    )
+  return (
+    <svg {...p}>
+      <path d="M6 8h9l3 3v9H6z" />
+      <path d="M8 5h9l3 3v9" />
+      <path d="M9 13h6M9 16h6" />
+    </svg>
   )
 }
 
@@ -255,7 +410,7 @@ export function CHomePage() {
               <a href="#outcomes">Outcomes</a>
             </li>
             <li>
-              <a href="#pathways">Pathways</a>
+              <a href="#pathways">Career pathways</a>
             </li>
           </ul>
         </nav>
@@ -279,7 +434,7 @@ export function CHomePage() {
         <section id="top" className="ld-wrap ld-hero">
           <div className="ld-hero-copy">
             <p className="ld-mono ld-eyebrow">
-              ONE APPLICATION FOR TRAINING PROVIDERS, COLLEGES AND WORKFORCE AGENCIES
+              TRAINING AND WORKFORCE DEVELOPMENT FOR THE AGENTIC ERA
             </p>
             <h1 className="ld-hero-title c-hero-title">
               Training that behaves like <span className="ld-orange">the job.</span>
@@ -294,7 +449,7 @@ export function CHomePage() {
                 Book a walkthrough
               </a>
               <a href="#path" className="ld-btn ld-btn-outline ld-btn-lg">
-                See how it works
+                Follow one learner ↓
               </a>
             </div>
             <p className="ld-hero-learner">
@@ -322,28 +477,36 @@ export function CHomePage() {
               <p className="ld-mono ld-eyebrow">HOW IT WORKS</p>
               <h2 className="ld-h2">
                 Every learner takes a different path.{' '}
-                <span className="ld-orange">Same outcome.</span>
+                <span className="ld-orange">Same job-ready outcome.</span>
               </h2>
             </div>
             <p className="ld-sub">
-              A skills assessment modeled on the job places each learner. From there, a short
-              lesson, a real exercise, a score, and the next lesson chosen by the gap. Strong
-              learners move on; others get the full route. Everyone reaches the same bar, and your
+              A skills assessment modeled on the job places each learner on day one. From there, a
+              short lesson, a real exercise, a score, and the next lesson chosen by the gap. Strong
+              learners move on; others take the detours. Everyone reaches the same bar, and your
               team sees where each person is without asking.
             </p>
           </div>
-          <PaceTracks />
-          <ol className="c-loop">
-            {LOOP.map((s, i) => (
-              <li key={s.key} className={`c-loop-step c-loop-${s.key}`}>
-                <span className="c-loop-n" aria-hidden="true">
-                  {i + 1}
-                </span>
-                <h3 className="ld-h3">{s.title}</h3>
-                <p>{s.body}</p>
-              </li>
-            ))}
-          </ol>
+          <ForkTracks />
+          <div className="c-loop-wrap">
+            <ol className="c-loop">
+              {LOOP.map((s, i) => (
+                <li key={s.key} className={`c-loop-step c-loop-${s.key}`}>
+                  <span className="c-loop-n" aria-hidden="true">
+                    {i + 1}
+                  </span>
+                  <h3 className="ld-h3">{s.title}</h3>
+                  <p>{s.body}</p>
+                </li>
+              ))}
+            </ol>
+            <div className="c-loop-return" aria-hidden="true">
+              <span className="c-loop-return-label">
+                <strong>+1 verified skill every pass.</strong> A miss adds the next lesson, not a
+                retake, and the loop goes around again.
+              </span>
+            </div>
+          </div>
           <div className="c-trad">
             <p className="ld-mono ld-faint">TRADITIONAL TRAINING MODELS · WHAT CHANGES</p>
             <ul className="c-trad-list">
@@ -381,43 +544,37 @@ export function CHomePage() {
           <div className="ld-wrap ld-section">
             <div className="ld-section-head">
               <div>
-                <p className="ld-mono ld-eyebrow">ONE APPLICATION, FIVE COMPONENTS</p>
+                <p className="ld-mono ld-eyebrow">
+                  ONE SEAMLESS APPLICATION · FIVE COMPONENTS · ONE RECORD
+                </p>
                 <h2 className="ld-h2 ld-h2-sm">
                   What your team does by hand today, in separate places, then aggregates for the
                   report.
                 </h2>
               </div>
               <p className="ld-sub">
-                One sign-in, one learner record. Each component replaces a tool or a spreadsheet the
-                team keeps today, and writes to the record the report is built from.
+                One sign-in, one learner record. Each component takes over a file or a tool the team
+                keeps today, and writes to the record the report is built from. Nothing is entered
+                twice.
               </p>
             </div>
             <ul className="c-components">
-              {COMPONENTS.map((c, i) => {
-                const p = PRODUCTS[i]
-                return (
-                  <li key={c.name} className="c-component">
-                    <span className="ld-mono ld-faint">
-                      0{i + 1} · {p.role.toUpperCase()}
-                    </span>
-                    <a href={productPagePath(p)} className="c-component-name">
-                      {c.name}
-                    </a>
-                    <span className="c-component-replaces">
-                      Replaces <em>{c.replaces}</em>
-                    </span>
-                    <span
-                      className={
-                        p.status === 'available'
-                          ? 'ld-piece-status ld-piece-live'
-                          : 'ld-piece-status'
-                      }
-                    >
-                      {p.status === 'available' ? 'Available now' : 'Coming soon'}
-                    </span>
-                  </li>
-                )
-              })}
+              {COMPONENTS.map((c, i) => (
+                <li key={c.name} className="c-component">
+                  <span className="c-component-glyph">
+                    <ManualGlyph icon={c.icon} />
+                  </span>
+                  <span className="ld-mono ld-faint">BY HAND TODAY</span>
+                  <span className="c-component-manual">{c.manual}</span>
+                  <span className="c-component-arrow" aria-hidden="true">
+                    ↓
+                  </span>
+                  <a href={productPagePath(PRODUCTS[i])} className="c-component-name">
+                    {c.name}
+                  </a>
+                  <span className="c-component-now">{c.now}</span>
+                </li>
+              ))}
             </ul>
           </div>
         </section>
@@ -481,8 +638,10 @@ export function CHomePage() {
         <section id="pathways" className="ld-wrap ld-section">
           <div className="ld-section-head ld-ruled">
             <div>
-              <p className="ld-mono ld-eyebrow">PATHWAYS</p>
-              <h2 className="ld-h2 ld-h2-sm">Skills that match what employers are hiring for.</h2>
+              <p className="ld-mono ld-eyebrow">CAREER PATHWAYS</p>
+              <h2 className="ld-h2 ld-h2-sm">
+                Pathways built around the jobs employers are hiring for.
+              </h2>
             </div>
             <p className="ld-sub">
               Each pathway pairs short lessons with a simulation of the judgment the job now needs.
