@@ -49,8 +49,10 @@ Run both from `apps/api`, with the Railway CLI linked to this project. The produ
 Removes any old demo rows, then inserts fresh ones. The output is deterministic, so a reload gives identical data.
 
 ```bash
-railway run --service Postgres -e production sh -c 'DATABASE_URL="$DATABASE_PUBLIC_URL" npm run seed:learn-demo -- --allow-host junction.proxy.rlwy.net'
+railway run --service Postgres -e production sh -c 'DATABASE_URL="$DATABASE_PUBLIC_URL" LTI_LEARN_URL=https://learndifferently.tech npm run seed:learn-demo -- --allow-host junction.proxy.rlwy.net'
 ```
+
+The load needs `LTI_LEARN_URL` (the public LearnDifferently address) on any non-local database, because the brand logo URL is built from it; the script now checks this before it removes anything, so a missing value stops it without emptying the database. It also makes Cedar Mill's current cohort a Live cohort with seven weekly sessions (five already marked) so attendance has something to show, marks the two demo agencies, Cedar Mill and Lantern Hill as featured demos (the star in the workspace list), and puts a few Cedar Mill learners in two cohorts, one withdrawn.
 
 It prints `Loaded demo tenant: 8 courses, 24 cohorts, ...`. Check that `https://api.interviewdifferently.com/api/learn/public/delaware/catalog` lists courses.
 
@@ -66,6 +68,10 @@ It prints `Removed N institutions and M demo learners`. The same catalog URL sho
 
 `npm run seed:learn-demo` with `DATABASE_URL` pointing at localhost or the Railway dev database (`zephyr.proxy.rlwy.net`) needs no flags.
 
+### Sample waiting items for the attention bell (dev only)
+
+`npm run seed:attention-demo -- --email you@example.com` (from `apps/api`) adds fictional items for one person so the "Needs your attention" bell has something to show: two people waiting to join Cedar Mill's current cohort, an overdue support follow-up assigned to them, and an LTI platform waiting for approval. The person must have signed in to LearnDifferently once and be a system admin. Run the demo seed first. Add `--remove` to take the items away; a demo reseed removes the join requests and the follow-up but not the platform row. The script refuses any database but localhost and the dev database.
+
 ## Approving people who join with a code
 
 By default anyone who enters a cohort's join code is enrolled immediately. A cohort can instead ask staff to approve each person first (#68).
@@ -76,6 +82,10 @@ By default anyone who enters a cohort's join code is enrolled immediately. A coh
 4. Entering the code again after a decline reopens the request. Adding someone by email always enrolls them directly, with or without approval.
 
 Turning approval off does not touch requests already waiting; they stay listed and can still be approved or declined. No emails are sent: learners see the state on My learning.
+
+## The "Needs your attention" bell
+
+A bell next to the account menu lists work waiting for the signed-in person (#74): people waiting to join a cohort they manage, support follow-ups assigned to them that are due or overdue, LTI platforms waiting for approval (system admins), and their own profile when a course requires or needs a refresh of it. It shows counts and workspace or cohort names only, never participant names or note text, and loads when a page opens. It does not send email; email notifications are tracked in #73.
 
 ## Notes
 
