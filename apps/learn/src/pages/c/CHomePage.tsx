@@ -434,7 +434,7 @@ export function CHomePage() {
                 <span className="ld-mono c-report-dim">ONE RECORD · EXPORTED WHEN YOU NEED IT</span>
               </div>
               <div className="c-measure-strip">
-                <h3 className="c-measure-heading">Automatically track and report on</h3>
+                <h3 className="c-measure-heading">Automatically track and report on:</h3>
                 <ul className="c-measure-grid c-measure-grid-3">
                   {MEASURES.map((m) => (
                     <li key={m.name}>
@@ -453,7 +453,7 @@ export function CHomePage() {
                   ))}
                 </ul>
                 <h3 className="c-measure-heading">
-                  Plus the two others the grant will ask for during an audit.
+                  Plus the two others the grant will ask for during an audit:
                 </h3>
                 <ul className="c-measure-grid c-measure-grid-2">
                   {MEASURES_MORE.map((m) => (
