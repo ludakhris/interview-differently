@@ -554,25 +554,116 @@
 
 .dash-promo {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px 24px;
+  gap: 28px;
   margin-bottom: 24px;
-  padding: 16px 20px;
-  border: 1px solid var(--line, #dfe6ec);
-  border-left: 4px solid var(--teal, #056a99);
-  border-radius: 12px;
-  background: #ffffff;
+  padding: 24px 28px;
+  border-radius: 16px;
+  background: #0b1f2e;
+  color: #ffffff;
+}
+.dash-promo-text {
+  flex: 1;
+  min-width: 0;
+}
+.dash-promo-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #ff6a1a;
+  color: #0b1f2e;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .dash-promo strong {
-  font-size: 16px;
+  display: block;
+  margin-top: 10px;
+  font-size: 24px;
+  line-height: 1.2;
 }
 .dash-promo p {
-  max-width: 62ch;
-  margin: 4px 0 0;
-  color: var(--muted, #4a5d6c);
-  font-size: 14px;
+  max-width: 56ch;
+  margin: 6px 0 16px;
+  color: #b9c8d4;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.ld .dash-promo a.dash-promo-cta {
+  display: inline-block;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: #ff6a1a;
+  color: #0b1f2e;
+  font-weight: 700;
+  text-decoration: none;
+}
+.ld .dash-promo a.dash-promo-cta:hover,
+.ld .dash-promo a.dash-promo-cta:focus-visible {
+  background: #ff8442;
+  color: #0b1f2e;
+}
+.dash-promo-preview {
+  flex: none;
+  width: 230px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #ffffff;
+}
+.dash-promo-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 10px;
+  background: #05405c;
+}
+.dash-promo-logo {
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+}
+.dash-promo-line {
+  width: 64px;
+  height: 5px;
+  background: #8fb3c7;
+}
+.dash-promo-spark {
+  width: 28px;
+  height: 5px;
+  margin-left: auto;
+  background: #d76f0f;
+}
+.dash-promo-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 10px 10px 6px;
+}
+.dash-promo-tiles span {
+  height: 36px;
+  border-top: 3px solid #05405c;
+  background: #eaf0f4;
+}
+.dash-promo-tiles .dash-promo-tile-hot {
+  border-top-color: #d76f0f;
+}
+.dash-promo-chart {
+  display: block;
+  height: 34px;
+  margin: 0 10px 10px;
+  background: #eaf0f4;
+}
+@media (max-width: 720px) {
+  .dash-promo {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dash-promo-preview {
+    width: 100%;
+    max-width: 280px;
+  }
 }
 .dash-workspace {
   display: flex;
