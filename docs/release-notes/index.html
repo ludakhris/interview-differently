@@ -1512,6 +1512,328 @@
           </figure>
         </div>
       </article>
+      <article
+        class="entry"
+        id="course-setup"
+        data-status="shipped"
+        data-short="Course setup"
+        data-summary="Providers build courses from modules and items, with outcomes and target jobs."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-05">Oct 5, 2026</time>
+        </div>
+        <h2>Providers build courses: modules, items, outcomes and target jobs</h2>
+        <p>
+          Provider staff can create a course in their own workspace and build it from modules and
+          items: lessons, knowledge checks, assessments and practice interviews, with a question
+          builder for quizzes. A course states what a learner will be able to do and the jobs it
+          prepares them for, and has a readiness score and a target score that decide who counts as
+          interview ready and who reached the target.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>Draft courses are hidden from the public catalog until published.</li>
+            <li>A course with cohorts, or an item with learner results, cannot be deleted.</li>
+          </ul>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/46">Issue #46</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="cohorts"
+        data-status="shipped"
+        data-short="Cohorts and join codes"
+        data-summary="Cohorts with rosters, join codes, size limits and courses offered to organizations."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-05">Oct 5, 2026</time>
+        </div>
+        <h2>Cohorts, rosters, join codes and course offers</h2>
+        <p>
+          A cohort runs one course from a start date; the end date follows from the course length.
+          Each cohort gets a join code and a roster with progress. Staff can add a learner by email,
+          withdraw one (results are kept), set a maximum cohort size, and offer a course to
+          organizations under the same agency.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              Once a cohort is full, the join code and adding by email are refused. Withdrawn
+              learners do not count.
+            </li>
+            <li>Join codes are never shown on the public catalog.</li>
+          </ul>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/46">Issue #46</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="learner-path"
+        data-status="shipped"
+        data-short="Learner path"
+        data-summary="Learners join with a code, work through the course and build a readiness record."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-05">Oct 5, 2026</time>
+        </div>
+        <h2>The learner path: join with a code, learn, take quizzes, build a readiness record</h2>
+        <p>
+          A learner joins a cohort with its code, then works through the course outline one item at
+          a time: lessons, quizzes and assessments. Quizzes are graded on the server and the answer
+          key is never sent to the browser. Knowledge checks can be retaken and keep the best score;
+          pre and post assessments count once. Progress feeds a readiness record that shows where
+          the learner stands.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>Work is blocked before a cohort starts and after it ends.</li>
+          </ul>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/46">Issue #46</a>
+          <a href="https://github.com/ludakhris/interview-differently/issues/49">Issue #49</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="scorm"
+        data-status="shipped"
+        data-short="SCORM lessons"
+        data-summary="SCORM 1.2 and 2004 packages play inside a course and report progress."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-05">Oct 5, 2026</time>
+        </div>
+        <h2>SCORM packages play inside a course</h2>
+        <p>
+          Course authors can upload a SCORM 1.2 or 2004 package into a module. Learners play it
+          inside the course, and what the package reports (completion, pass or fail, score, where
+          they left off) is saved per learner and counts toward course completion. Bad packages are
+          refused with a clear message before anything is kept.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              Learners see these as "Interactive lesson"; the word SCORM is only shown to authors.
+            </li>
+          </ul>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/47">Issue #47</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="practice-interview"
+        data-status="shipped"
+        data-short="Practice interview"
+        data-summary="A typed practice interview scored with specific coaching."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-05">Oct 5, 2026</time>
+        </div>
+        <h2>Typed practice interview with scored coaching</h2>
+        <p>
+          Authors give a practice-interview item a role and up to six questions. The learner types
+          an answer to each, and each answer is scored from 0 to 100 with specific coaching on how
+          to improve. The best score counts toward the readiness record and toward the agency's
+          interview-ready measure.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>Authors choose how many attempts a learner gets (1 to 5; the default is one).</li>
+            <li>Only scores and feedback are kept, not the learner's answers.</li>
+          </ul>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/49">Issue #49</a>
+          <a href="https://github.com/ludakhris/interview-differently/issues/52">Issue #52</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="agency-outcomes"
+        data-status="shipped"
+        data-short="Outcomes dashboard"
+        data-summary="Outcomes, a gradebook and an exit-file export for agencies, providers and organizations."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-05">Oct 5, 2026</time>
+        </div>
+        <h2>Outcomes dashboard, cohort gradebook and exit-file export</h2>
+        <p>
+          Agencies get a dashboard of results across their providers: pre-to-post growth,
+          completion, interview readiness and the share of learners who reached the course target
+          score, with a gradebook for every cohort and a spreadsheet export of participant records.
+          Providers and organizations see the same views for their own courses and cohorts. The
+          dashboard comes in two skins, the Delaware Department of Labor look on its host and the
+          LearnDifferently look elsewhere.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>A person with more than one workspace gets a chooser, and a bar to switch.</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/learn-differently/06-agency-dashboard-desktop.png"
+              ><img
+                loading="lazy"
+                src="../screenshots/learn-differently/06-agency-dashboard-desktop.png"
+                alt="Agency outcomes dashboard"
+            /></a>
+            <figcaption>The agency dashboard.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/learn-differently/08-cohort-gradebook-desktop.png"
+              ><img
+                loading="lazy"
+                src="../screenshots/learn-differently/08-cohort-gradebook-desktop.png"
+                alt="Cohort gradebook"
+            /></a>
+            <figcaption>A cohort gradebook.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/46">Issue #46</a>
+          <a href="https://github.com/ludakhris/interview-differently/issues/48">Issue #48</a>
+          <a href="https://github.com/ludakhris/interview-differently/issues/50">Issue #50</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="delaware-front-door"
+        data-status="shipped"
+        data-short="Delaware front door"
+        data-summary="A live course catalog and branded sign-in on the Delaware demo site."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-05">Oct 5, 2026</time>
+        </div>
+        <h2>Delaware front door: live catalog and branded sign-in</h2>
+        <p>
+          The Delaware demonstration site now reads its course catalog from the platform instead of
+          a sample list. Its buttons go to real places: browsing and searching the catalog, opening
+          a course offering, starting a practice interview, and My learning. Sign-in uses the
+          Delaware look when you arrive from that site.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>The site is a demonstration with fictional providers and sample records.</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/learn-differently/03-delaware-tenant-desktop.png"
+              ><img
+                loading="lazy"
+                src="../screenshots/learn-differently/03-delaware-tenant-desktop.png"
+                alt="Delaware demonstration site"
+            /></a>
+            <figcaption>The Delaware front door.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/learn-differently/05-sign-in.png"
+              ><img
+                loading="lazy"
+                src="../screenshots/learn-differently/05-sign-in.png"
+                alt="Sign-in page"
+            /></a>
+            <figcaption>Sign-in.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/49">Issue #49</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="products-menu"
+        data-status="shipped"
+        data-short="Products menu"
+        data-summary="A Products menu lists the five connected apps on the site and in the app."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-05">Oct 5, 2026</time>
+        </div>
+        <h2>A Products menu for the five connected apps</h2>
+        <p>
+          A header menu lists the five connected products. On the public site each opens a product
+          page; in the signed-in app the ones that exist open the app itself, and the rest read
+          "Coming soon".
+        </p>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/45">Issue #45</a>
+        </div>
+      </article>
+
+      <article
+        class="entry"
+        id="learndifferently-site"
+        data-status="shipped"
+        data-short="LearnDifferently site"
+        data-summary="The LearnDifferently homepage, the Delaware demo site and an account menu."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-04">Oct 4, 2026</time>
+        </div>
+        <h2>learndifferently.tech: homepage, Delaware demo site and account menu</h2>
+        <p>
+          LearnDifferently has its own public homepage and sign-in, separate from Interview
+          Differently, on learndifferently.tech. The same app serves the Delaware Department of
+          Labor demonstration site on its own host. Signed-in people get an account menu, and links
+          to either site show a proper preview card in chat apps and on social sites.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>The Delaware site is labelled as a demonstration, not an official state site.</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/learn-differently/01-homepage-desktop.png"
+              ><img
+                loading="lazy"
+                src="../screenshots/learn-differently/01-homepage-desktop.png"
+                alt="LearnDifferently homepage"
+            /></a>
+            <figcaption>The homepage.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/learn-differently/02-homepage-phone.png"
+              ><img
+                loading="lazy"
+                src="../screenshots/learn-differently/02-homepage-phone.png"
+                alt="Homepage on a phone"
+            /></a>
+            <figcaption>On a phone.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/45">Issue #45</a>
+          <a href="https://github.com/ludakhris/interview-differently/issues/46">Issue #46</a>
+          <a href="https://github.com/ludakhris/interview-differently/issues/49">Issue #49</a>
+        </div>
+      </article>
     </main>
 
     <footer>
