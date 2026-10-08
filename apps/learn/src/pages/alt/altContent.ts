@@ -71,8 +71,8 @@ export const STORY: StoryStep[] = [
     key: 'start',
     stage: 'start',
     label: 'Week 1 · Day 1',
-    title: 'The pretest tells the plan what she already has.',
-    body: 'Maya scores 80%. Her path starts at the gap, not at page one. Theo scores 34% and gets the whole route. Same cohort, two plans.',
+    title: 'A skills assessment, modeled on the job, tells the plan what she already has.',
+    body: 'Not a quiz: a simulation of the work itself. Maya scores 80%, so her path starts at the gap, not at page one. Theo scores 34% and gets the whole route. Same cohort, two plans.',
   },
   {
     key: 'learn',
@@ -147,10 +147,10 @@ export const PERSONAS: Persona[] = [
     lead: 'Your curriculum, attendance, milestones and outcome exports in one place, with ready-made pathways and simulations when you want them.',
     metricLabel: 'What you stop doing',
     metric: 'Spreadsheets',
-    metricNote: 'for attendance, pretest placement, gradebooks and the quarterly funder report',
+    metricNote: 'for attendance, placement, gradebooks and the quarterly funder report',
     points: [
       'Attendance in a tap, with time-on-task for learners working on their own',
-      'A pretest that places each learner, so strong students skip what they know',
+      'An opening skills assessment, a simulation of the job, places each learner so strong students skip what they know',
       'Milestone due dates per module; who is behind shows up before the deadline',
       'Completion, skill gains and credentials ready for your provider-list renewal',
     ],

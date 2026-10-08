@@ -1,16 +1,18 @@
 /* Alternative homepage: editorial serif, instrument panels, one learner's loop.
    Self-contained under .alt; home.css is loaded only for the account menu. */
 .alt {
-  --cream: #f5f1e8;
-  --paper: #fbf9f4;
-  --night: #0f1115;
-  --ink: #15181d;
-  --lime: #d4f55a;
-  --lime-deep: #5a7300;
-  --lilac: #b9b0ff;
-  --coral: #ff6d4d;
-  --mute: #5a5f68;
-  --dim: #656a74;
+  /* Cream paper, deep forest panels, brass for what is verified, sage for learning,
+     terracotta for gaps. Token names kept from the first palette. */
+  --cream: #f4efe6;
+  --paper: #faf7f1;
+  --night: #1b2a23;
+  --ink: #1a1d1b;
+  --lime: #e6c35c;
+  --lime-deep: #6f5a12;
+  --lilac: #9ec5a8;
+  --coral: #e07a4f;
+  --mute: #585d58;
+  --dim: #656a66;
   --line: rgba(21, 24, 29, 0.12);
   --line-dark: rgba(255, 255, 255, 0.12);
   --serif: 'Fraunces', 'Iowan Old Style', Georgia, serif;
@@ -151,7 +153,7 @@
   color: var(--ink);
 }
 .alt-btn-lime:hover {
-  background: #e3ff7a;
+  background: #f0d272;
 }
 .alt .alt-btn-ink {
   background: var(--ink);
@@ -170,7 +172,7 @@
   position: sticky;
   top: 0;
   z-index: 30;
-  background: rgba(245, 241, 232, 0.86);
+  background: rgba(244, 239, 230, 0.86);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
 }
@@ -391,7 +393,7 @@
   color: var(--lilac);
 }
 .alt-k-practice .alt-ledger-what {
-  color: #ffd27a;
+  color: #cfe3f5;
 }
 .alt-k-prove .alt-ledger-what {
   color: var(--lime);
@@ -400,7 +402,7 @@
   color: var(--coral);
 }
 .alt-k-match .alt-ledger-what {
-  color: #7fe0ff;
+  color: #d8c6f0;
 }
 .alt-ledger-detail {
   color: rgba(255, 255, 255, 0.78);
@@ -440,6 +442,52 @@
   border-bottom: 1px solid var(--line);
 }
 
+/* The old bet */
+.alt-bet-section {
+  padding-top: 72px;
+  padding-bottom: 24px;
+}
+.alt-bet {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.alt-bet-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 26px 28px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.alt-bet-card p {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.alt-bet-answer {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 28px;
+  align-items: center;
+  padding: 24px 28px;
+  border-radius: var(--radius);
+  background: var(--night);
+  color: #f3f1ea;
+}
+.alt-bet-answer .alt-mono {
+  color: var(--lime);
+}
+.alt-bet-answer p {
+  font-size: 18px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+}
+
 /* The story */
 .alt-story {
   display: grid;
@@ -472,7 +520,7 @@
   stroke-dasharray: 4 8;
 }
 .alt-dial-stop circle {
-  fill: #2a2e36;
+  fill: #2e3f36;
   stroke: var(--night);
   stroke-width: 4;
   transition:
@@ -611,7 +659,7 @@
   padding: 18px 16px;
   border-radius: 26px;
   background: var(--night);
-  border: 6px solid #2a2e36;
+  border: 6px solid #2e3f36;
 }
 .alt-phone strong {
   font-size: 16px;
@@ -622,7 +670,7 @@
   place-items: center;
   height: 110px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #3b3f8a, #1e2145);
+  background: linear-gradient(135deg, #35594a, #1b2a23);
 }
 .alt-phone-video i {
   width: 0;
@@ -1274,7 +1322,9 @@
     padding-bottom: 64px;
   }
   .alt-strip,
-  .alt-buy ul {
+  .alt-buy ul,
+  .alt-bet,
+  .alt-bet-answer {
     grid-template-columns: 1fr;
   }
   .alt-section {

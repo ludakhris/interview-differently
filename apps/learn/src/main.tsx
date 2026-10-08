@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom/client'
 import { resolveContext } from './brand'
 import { resolveSite } from './site'
 import { AuthProvider } from './auth'
-import { AltHomePage as HomePage } from './pages/alt/AltHomePage'
+import { HomePage } from './pages/HomePage'
+import { AltHomePage } from './pages/alt/AltHomePage'
 import { DelawarePage } from './pages/DelawarePage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { SignInPage } from './pages/SignInPage'
@@ -55,7 +56,8 @@ function page(): ReactNode {
     document.title = 'Career Readiness Tool — Delaware Department of Labor (demonstration)'
     return <DelawarePage />
   }
-  return <HomePage />
+  // Two candidate homepages are under review: ?design=a shows the first, the default is the second.
+  return new URLSearchParams(search).get('design') === 'a' ? <HomePage /> : <AltHomePage />
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

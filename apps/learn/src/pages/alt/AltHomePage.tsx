@@ -10,7 +10,7 @@ import { CONTACT_EMAIL } from '../../contact'
 import { AccountMenu } from '../../auth'
 import { ProductsMenu } from '../../components/ProductsMenu'
 import { PRODUCTS, productPagePath } from '../../products'
-import { PATHWAYS } from '../homeContent'
+import { BET, BET_ANSWER, PATHWAYS } from '../homeContent'
 import {
   BUY,
   LEDGER,
@@ -111,7 +111,7 @@ function StoryMock({ stage }: { stage: StoryStep['stage'] }) {
     return (
       <div className="alt-mock alt-mock-plan">
         <div className="alt-mock-row">
-          <span className="alt-mono">PRETEST</span>
+          <span className="alt-mono">SKILLS ASSESSMENT</span>
           <span className="alt-mono">PLAN</span>
         </div>
         <div className="alt-mock-plan-row">
@@ -476,6 +476,27 @@ export function AltHomePage() {
             ))}
           </ul>
         </div>
+
+        <section id="bet" className="alt-wrap alt-section alt-bet-section">
+          <div className="alt-head">
+            <p className="alt-mono alt-eyebrow">THE OLD BET</p>
+            <h2 className="alt-h2">
+              Sit in a class. Invest. <em>Then find out.</em>
+            </h2>
+          </div>
+          <div className="alt-bet">
+            {BET.map((b) => (
+              <article key={b.who} className="alt-bet-card">
+                <span className="alt-mono alt-eyebrow">{b.who}</span>
+                <p>{b.body}</p>
+              </article>
+            ))}
+            <div className="alt-bet-answer">
+              <span className="alt-mono">THE LOOP’S ANSWER</span>
+              <p>{BET_ANSWER}</p>
+            </div>
+          </div>
+        </section>
 
         <section id="story" className="alt-wrap alt-section">
           <div className="alt-head">
