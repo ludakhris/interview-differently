@@ -273,7 +273,7 @@ export function CHomePage() {
             </h1>
             <p className="ld-lead">
               Every learner takes a different path. Same outcome. One learning system that turns
-              theory into job-ready skills. It replaces the spreadsheets and disconnected tools, and
+              theory into job-ready skills. Replaces the spreadsheets and disconnected tools, and
               automates the manual work your team juggles today.
             </p>
             <div className="ld-hero-actions">
