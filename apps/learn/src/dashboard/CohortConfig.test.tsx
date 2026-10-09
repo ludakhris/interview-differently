@@ -54,10 +54,10 @@ const setup = (over: object = {}) => {
 const openBtn = () => screen.getByRole('button', { name: 'Edit cohort configuration' })
 
 describe('cohort configuration dialog', () => {
-  it('replaces the inline form: no details card, a button with a hidden gear icon opens the dialog', async () => {
+  it('replaces the inline form: no details card, a button with a hidden gear emoji opens the dialog', async () => {
     setup()
     expect(screen.queryByText('Cohort details')).toBeNull()
-    expect(openBtn().querySelector('svg[aria-hidden="true"]')).toBeTruthy()
+    expect(openBtn().querySelector('[aria-hidden="true"]')?.textContent).toBe('⚙️')
     expect(screen.queryByRole('dialog')).toBeNull()
     await userEvent.click(openBtn())
     expect(screen.getByRole('dialog', { name: 'Edit cohort configuration' })).toBeTruthy()

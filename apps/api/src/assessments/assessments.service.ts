@@ -374,6 +374,17 @@ export class AssessmentsService {
       await this.prisma.membership.create({ data: { userId, institutionId, cohortId } })
   }
 
+  /** The same results for a delivery, after checking it was made to this cohort. */
+  async cohortDeliveryResults(cohortId: string, deliveryId: string) {
+    const d = await this.prisma.assessmentDelivery.findUnique({
+      where: { id: deliveryId },
+      select: { cohortId: true },
+    })
+    if (!d || d.cohortId !== cohortId)
+      throw new NotFoundException(`Delivery ${deliveryId} not found for this cohort`)
+    return this.deliveryResults(deliveryId)
+  }
+
   /** Every attempt on a delivery with per-section scores — the admin results table. */
   async deliveryResults(id: string) {
     const d = await this.prisma.assessmentDelivery.findUnique({

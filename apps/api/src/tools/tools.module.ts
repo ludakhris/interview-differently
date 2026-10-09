@@ -11,5 +11,6 @@ import { ToolsService } from './tools.service'
   imports: [PrismaModule],
   controllers: [SandboxActivityController, ToolsAdminController, ToolsMeController],
   providers: [ToolsService],
+  exports: [ToolsService],
 })
 export class ToolsModule {}

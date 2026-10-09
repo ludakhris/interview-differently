@@ -18,5 +18,6 @@ import { AssessmentsService } from './assessments.service'
     InvitesMeController,
   ],
   providers: [AssessmentsService],
+  exports: [AssessmentsService],
 })
 export class AssessmentsModule {}

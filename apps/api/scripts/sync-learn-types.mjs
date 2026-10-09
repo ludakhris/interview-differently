@@ -22,7 +22,11 @@ export const NAMES = [
   'activity',
   'record',
   'attention',
+  'monitor',
 ]
+
+/** Where each copy goes. The monitor types are the Simulator feed's contract, so they live in core, not in the LMS folder. */
+export const dirOf = (name) => (name === 'monitor' ? 'core' : 'learn')
 
 export const header = (
   name
@@ -38,7 +42,7 @@ export const copyOf = (original) =>
 
 for (const name of NAMES) {
   const source = resolve(here, `../../../packages/types/src/${name}.ts`)
-  const target = resolve(here, `../src/learn/${name}-types.ts`)
+  const target = resolve(here, `../src/${dirOf(name)}/${name}-types.ts`)
   writeFileSync(target, header(name) + copyOf(readFileSync(source, 'utf8')))
-  console.log(`Wrote src/learn/${name}-types.ts`)
+  console.log(`Wrote src/${dirOf(name)}/${name}-types.ts`)
 }

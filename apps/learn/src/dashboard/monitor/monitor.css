@@ -1,0 +1,100 @@
+/* Live monitors of Simulator work (assessments and SQL). Colours come from the dashboard theme variables. */
+.mon-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 8px;
+}
+.mon-fresh {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.mon-refresh {
+  padding: 6px 14px;
+  border: 1px solid var(--navy);
+  border-radius: var(--dash-radius, 0);
+  background: transparent;
+  color: var(--navy);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mon-refresh:hover:not(:disabled) {
+  background: var(--sky);
+}
+.mon-auto {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.mon-pick span {
+  font-size: 14px;
+  font-weight: 700;
+}
+.mon-pick select,
+.mon-auto select {
+  padding: 5px 8px;
+  border: 1px solid var(--ink-soft);
+  border-radius: var(--dash-radius, 0);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+.mon-sort {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mon-sort:hover {
+  text-decoration: underline;
+}
+.mon-bar {
+  display: inline-block;
+  width: 7em;
+  height: 8px;
+  vertical-align: middle;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.mon-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--ink, #14202e);
+}
+.mon-bar-done > span {
+  background: #1f8a4c;
+}
+.mon-live {
+  font-weight: 600;
+}
+.mon-query {
+  margin: 0 0 12px;
+}
+.mon-query pre {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  background: var(--surface-alt, var(--surface));
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+.mon-err {
+  color: #b3261e;
+}
+.mon-student summary {
+  cursor: pointer;
+}

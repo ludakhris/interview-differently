@@ -5,7 +5,13 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import type { PrismaService } from '../prisma/prisma.service'
-import { LearnCohortsService, assessmentStatusOf } from './learn-cohorts.service'
+import type { SimulatorFeed } from '../core/simulator-feed'
+import {
+  LearnCohortsService,
+  assessmentStatusOf,
+  improvementOf,
+  launchedItem,
+} from './learn-cohorts.service'
 import type { LearnService } from './learn.service'
 import type { LearnerService } from './learner.service'
 import type { DataAccessLogService } from './data-access-log.service'
@@ -51,6 +57,7 @@ const prisma = {
 const learn = { assertRole: jest.fn(), assertWorkspace: jest.fn() }
 const learner = { recomputeCompletion: jest.fn(), attemptLogOf: jest.fn() }
 const access = { assertProviderStaff: jest.fn(), scopeForCohort: jest.fn() }
+const feed = { assessmentMonitor: jest.fn(), sqlMonitor: jest.fn(), assessmentResults: jest.fn() }
 const service = new LearnCohortsService(
   prisma as unknown as PrismaService,
   learn as unknown as LearnService,
@@ -59,7 +66,8 @@ const service = new LearnCohortsService(
     prisma as unknown as PrismaService,
     access as unknown as ProviderAccessService,
     {} as unknown as DataAccessLogService
-  )
+  ),
+  feed as unknown as SimulatorFeed
 )
 
 const ws = { id: 'w1', name: 'Harbor Point', kind: 'provider', subdomain: 'harborpoint' }
@@ -307,7 +315,25 @@ describe('assessmentStatusOf', () => {
   })
 })
 
-describe('assessmentStatus', () => {
+describe('improvementOf', () => {
+  it('averages the change over learners who have both scores', () => {
+    expect(
+      improvementOf([
+        { pre: 40, post: 70 },
+        { pre: 50, post: 90 },
+        { pre: 60, post: null }, // no post yet: left out
+        { pre: null, post: 80 }, // no pre: left out
+      ])
+    ).toEqual({ learners: 2, averagePre: 45, averagePost: 80, change: 35 })
+  })
+  it('is null when nobody has both, and can be negative', () => {
+    expect(improvementOf([{ pre: 50, post: null }])).toBeNull()
+    expect(improvementOf([])).toBeNull()
+    expect(improvementOf([{ pre: 80, post: 60 }])?.change).toBe(-20)
+  })
+})
+
+describe('assessmentSummary', () => {
   const assess = (id: string, label: string | null, config: object = {}) => ({
     id,
     title: `T ${id}`,
@@ -317,18 +343,19 @@ describe('assessmentStatus', () => {
   beforeEach(() => {
     prisma.cohort.findUnique.mockResolvedValue(cohortRow())
     prisma.courseItem.findMany.mockResolvedValue([
-      assess('post1', 'post'),
+      assess('pre1', 'pre'),
       { id: 'iv', title: 'Interview', label: null, config: { toolId: 'id-interview', ref: 'x' } },
+      assess('post1', 'post'),
     ])
-    prisma.enrollment.findMany.mockResolvedValue([
-      { id: 'e1', user: { email: 'a@x.test', displayName: 'Ana' } },
-      { id: 'e2', user: { email: 'b@x.test', displayName: 'Ben' } },
-      { id: 'e3', user: { email: 'c@x.test', displayName: null } },
-    ])
+    prisma.enrollment.findMany.mockResolvedValue([{ id: 'e1' }, { id: 'e2' }, { id: 'e3' }])
     prisma.itemProgress.findMany.mockResolvedValue([
+      { enrollmentId: 'e1', itemId: 'pre1', score: 40, attempts: 1 },
+      { enrollmentId: 'e2', itemId: 'pre1', score: 60, attempts: 1 },
       { enrollmentId: 'e1', itemId: 'post1', score: 80, attempts: 1 },
     ])
     prisma.itemAttempt.findMany.mockResolvedValue([
+      { enrollmentId: 'e1', itemId: 'pre1', createdAt: new Date('2026-10-01T12:00:00Z') },
+      { enrollmentId: 'e2', itemId: 'pre1', createdAt: new Date('2026-10-01T12:00:00Z') },
       { enrollmentId: 'e1', itemId: 'post1', createdAt: new Date('2026-10-09T12:10:00Z') },
     ])
     prisma.activitySession.findMany.mockResolvedValue([
@@ -337,30 +364,338 @@ describe('assessmentStatus', () => {
     ])
   })
 
-  it('lists assessment items only, with each learner open first, then not started, then submitted', async () => {
-    const out = await service.assessmentStatus('u', 'agency-admin', 'k1')
-    expect(out.items.map((i) => i.itemId)).toEqual(['post1'])
-    const [item] = out.items
-    expect(item.label).toBe('post')
-    expect(item.attemptsAllowed).toBe(1)
-    expect(item.counts).toEqual({ notStarted: 1, inProgress: 1, submitted: 1 })
-    expect(item.learners.map((l) => [l.name, l.status])).toEqual([
-      ['Ben', 'in_progress'],
-      ['c@x.test', 'not_started'],
-      ['Ana', 'submitted'],
+  it('has a row per assessment of the course, in course order, with counts and average score', async () => {
+    const out = await service.assessmentSummary('u', 'agency-admin', 'k1')
+    expect(out.items.map((i) => [i.itemId, i.label])).toEqual([
+      ['pre1', 'pre'],
+      ['post1', 'post'],
     ])
-    expect(item.learners.find((l) => l.name === 'Ana')).toMatchObject({ score: 80, attempts: 1 })
+    const [pre, post] = out.items
+    expect(pre).toMatchObject({
+      counts: { notStarted: 1, inProgress: 0, submitted: 2 },
+      averageScore: 50,
+      improvement: null,
+    })
+    expect(post).toMatchObject({
+      attemptsAllowed: 1,
+      counts: { notStarted: 1, inProgress: 1, submitted: 1 },
+      averageScore: 80,
+    })
+  })
+
+  it('puts the improvement over the pre on the post row only, from learners with both scores', async () => {
+    const [pre, post] = (await service.assessmentSummary('u', 'agency-admin', 'k1')).items
+    expect(pre.improvement).toBeNull()
+    expect(post.improvement).toEqual({ learners: 1, averagePre: 40, averagePost: 80, change: 40 })
   })
 
   it('checks the staff member first, and reads nothing for a course with no assessments', async () => {
     prisma.courseItem.findMany.mockResolvedValue([])
-    const out = await service.assessmentStatus('u', 'agency-admin', 'k1')
+    const out = await service.assessmentSummary('u', 'agency-admin', 'k1')
     expect(learn.assertWorkspace).toHaveBeenCalled()
     expect(out.items).toEqual([])
     learn.assertRole.mockImplementationOnce(() => {
       throw new ForbiddenException()
     })
-    await expect(service.assessmentStatus('u', 'learner', 'k1')).rejects.toThrow(ForbiddenException)
+    await expect(service.assessmentSummary('u', 'learner', 'k1')).rejects.toThrow(
+      ForbiddenException
+    )
+  })
+})
+
+describe('assessment results', () => {
+  const assess = (id: string, title: string, label: string | null) => ({
+    id,
+    title,
+    label,
+    config: { toolId: 'id-assessment', ref: 'x' },
+  })
+  const delivery = (id: string, label: string) => ({
+    id,
+    label,
+    tags: [] as string[],
+    assessmentTitle: 'Bank',
+    opensAt: null,
+    closesAt: null,
+    timeLimitMinutes: null,
+    counts: { notStarted: 0, inProgress: 0, submitted: 0 },
+    students: [],
+  })
+  const attempt = (userId: string, percent: number, over: object = {}) => ({
+    userId,
+    status: 'submitted' as const,
+    submittedAt: '2026-10-09T12:20:00.000Z',
+    late: false,
+    minutes: 12,
+    overall: { correct: percent / 25, total: 4, percent },
+    sections: [{ sectionId: 's1', title: 'Basics', correct: percent / 25, total: 4 }],
+    ...over,
+  })
+  beforeEach(() => {
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    prisma.courseItem.findMany.mockResolvedValue([
+      assess('pre1', 'Pre-assessment', 'pre'),
+      assess('post1', 'Post-assessment', 'post'),
+    ])
+    prisma.enrollment.findMany.mockResolvedValue([
+      { id: 'e1', userId: 'u1', user: { email: 'a@x.test', displayName: 'Ana' } },
+      { id: 'e2', userId: 'u2', user: { email: 'b@x.test', displayName: 'Ben' } },
+    ])
+    prisma.itemProgress.findMany.mockResolvedValue([
+      { enrollmentId: 'e1', itemId: 'pre1', score: 50 },
+      { enrollmentId: 'e1', itemId: 'post1', score: 75 },
+      { enrollmentId: 'e2', itemId: 'pre1', score: 25 },
+    ])
+    feed.assessmentMonitor.mockResolvedValue({
+      generatedAt: 'now',
+      cohort: { id: 'k1', name: 'K' },
+      deliveries: [delivery('d1', 'lti:post1'), delivery('dx', 'lti:pre1')],
+      other: [],
+    })
+    feed.assessmentResults.mockReset()
+    feed.assessmentResults.mockResolvedValue({
+      deliveryId: 'd1',
+      expectedMinutes: 10,
+      medianMinutes: 12,
+      sections: [{ id: 's1', title: 'Basics' }],
+      attempts: [attempt('u1', 75)],
+    })
+  })
+
+  it("lists every learner on the roster with the Simulator's grading and, on the post, the change from the pre", async () => {
+    const r = await service.assessmentResults('u', 'agency-admin', 'k1', 'post1')
+    expect(feed.assessmentResults).toHaveBeenCalledWith('k1', 'd1') // only this item's delivery
+    expect(r).toMatchObject({
+      title: 'Post-assessment',
+      label: 'post',
+      expectedMinutes: 10,
+      medianMinutes: 12,
+    })
+    expect(r.sections).toEqual([{ id: 's1', title: 'Basics' }])
+    expect(r.learners.map((l) => [l.name, l.status, l.overall, l.pre, l.post, l.change])).toEqual([
+      ['Ana', 'submitted', 75, 50, 75, 25],
+      ['Ben', 'not_started', null, 25, null, null], // no post yet: no change
+    ])
+    expect(r.improvement).toEqual({ learners: 1, averagePre: 50, averagePost: 75, change: 25 })
+  })
+
+  it('lists learners with a result first, then by name', async () => {
+    feed.assessmentResults.mockResolvedValue({
+      deliveryId: 'd1',
+      expectedMinutes: null,
+      medianMinutes: null,
+      sections: [],
+      attempts: [attempt('u2', 100)], // Ben submitted; Ana has not
+    })
+    const r = await service.assessmentResults('u', 'agency-admin', 'k1', 'post1')
+    expect(r.learners.map((l) => [l.name, l.status])).toEqual([
+      ['Ben', 'submitted'],
+      ['Ana', 'not_started'],
+    ])
+  })
+
+  it('does not compute a change for the pre-assessment', async () => {
+    feed.assessmentResults.mockResolvedValue({
+      deliveryId: 'dx',
+      expectedMinutes: null,
+      medianMinutes: null,
+      sections: [],
+      attempts: [attempt('u2', 25)],
+    })
+    const r = await service.assessmentResults('u', 'agency-admin', 'k1', 'pre1')
+    expect(r.improvement).toBeNull()
+    expect(r.learners.every((l) => l.pre === null && l.change === null)).toBe(true)
+  })
+
+  it('shows the latest attempt of a retake', async () => {
+    feed.assessmentMonitor.mockResolvedValue({
+      generatedAt: 'now',
+      cohort: { id: 'k1', name: 'K' },
+      deliveries: [delivery('d2', 'lti:post1#2'), delivery('d1', 'lti:post1')],
+      other: [],
+    })
+    feed.assessmentResults.mockImplementation(async (_c: string, id: string) => ({
+      deliveryId: id,
+      expectedMinutes: null,
+      medianMinutes: null,
+      sections: [{ id: 's1', title: 'Basics' }],
+      attempts: [id === 'd1' ? attempt('u1', 25) : attempt('u1', 100)],
+    }))
+    const r = await service.assessmentResults('u', 'agency-admin', 'k1', 'post1')
+    expect(r.learners[0].overall).toBe(100)
+  })
+
+  it('refuses an item that is not an assessment of the course, and a non-staff caller', async () => {
+    await expect(service.assessmentResults('u', 'agency-admin', 'k1', 'nope')).rejects.toThrow(
+      NotFoundException
+    )
+    learn.assertWorkspace.mockRejectedValueOnce(new ForbiddenException())
+    await expect(service.assessmentResults('u', 'agency-admin', 'k1', 'post1')).rejects.toThrow(
+      ForbiddenException
+    )
+  })
+
+  it('writes one CSV per assessment, with a column per section and the change on the post', async () => {
+    const csv = await service.assessmentResultsCsv('u', 'agency-admin', 'k1', 'post1')
+    const lines = csv.replace('\uFEFF', '').trim().split('\r\n')
+    expect(lines[0]).toBe(
+      'learner,email,status,submitted_at,late,minutes,overall_percent,Basics (correct/total),pre_percent,post_percent,change_points'
+    )
+    expect(lines[1]).toBe('Ana,a@x.test,submitted,2026-10-09T12:20:00.000Z,,12,75,3/4,50,75,25')
+    expect(lines[2]).toBe('Ben,b@x.test,not_started,,,,,,25,,')
+  })
+
+  it('writes every assessment in one CSV, a row per learner per assessment', async () => {
+    feed.assessmentResults.mockImplementation(async (_c: string, id: string) => ({
+      deliveryId: id,
+      expectedMinutes: null,
+      medianMinutes: null,
+      sections: [],
+      attempts: id === 'd1' ? [attempt('u1', 75)] : [],
+    }))
+    const csv = await service.assessmentsCsv('u', 'agency-admin', 'k1')
+    const lines = csv.replace('\uFEFF', '').trim().split('\r\n')
+    expect(lines[0].startsWith('assessment,learner,email,status')).toBe(true)
+    expect(lines).toHaveLength(1 + 2 * 2) // two assessments x two learners
+    expect(lines.filter((l) => l.startsWith('Post-assessment,Ana')).length).toBe(1)
+  })
+})
+
+describe('launchedItem', () => {
+  it('reads the course item and attempt behind a course launch label', () => {
+    expect(launchedItem('lti:item-1')).toEqual({ itemId: 'item-1', attempt: 1 })
+    expect(launchedItem('lti:item-1#3')).toEqual({ itemId: 'item-1', attempt: 3 })
+    expect(launchedItem('post')).toBeNull()
+    expect(launchedItem('Final exam')).toBeNull()
+  })
+})
+
+describe('live monitors', () => {
+  const delivery = (id: string, label: string, over: object = {}) => ({
+    id,
+    label,
+    tags: [] as string[],
+    assessmentTitle: 'Bank',
+    opensAt: null,
+    closesAt: null,
+    timeLimitMinutes: null,
+    counts: { notStarted: 0, inProgress: 0, submitted: 0 },
+    students: [],
+    ...over,
+  })
+  const monitorOf = (deliveries: ReturnType<typeof delivery>[]) => ({
+    generatedAt: 'now',
+    cohort: { id: 'k1', name: 'K' },
+    deliveries,
+    other: [],
+  })
+  const assess = (id: string, title: string, label: string | null, config: object = {}) => ({
+    id,
+    title,
+    label,
+    config: { toolId: 'id-assessment', ref: 'x', ...config },
+  })
+  beforeEach(() => {
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    feed.assessmentMonitor.mockReset()
+    feed.sqlMonitor.mockReset()
+    prisma.courseItem.findMany.mockReset()
+    prisma.enrollment.findMany.mockReset()
+  })
+
+  it('asks the feed only after the staff checks, scoped to the cohort institution', async () => {
+    feed.assessmentMonitor.mockResolvedValue(monitorOf([]))
+    prisma.courseItem.findMany.mockResolvedValue([])
+    await service.assessmentMonitor('u', 'agency-admin', 'k1')
+    expect(learn.assertWorkspace).toHaveBeenCalled()
+    expect(feed.assessmentMonitor).toHaveBeenCalledWith(expect.any(String), 'k1')
+    learn.assertWorkspace.mockRejectedValueOnce(new ForbiddenException())
+    feed.assessmentMonitor.mockClear()
+    await expect(service.assessmentMonitor('u', 'agency-admin', 'k1')).rejects.toThrow(
+      ForbiddenException
+    )
+    expect(feed.assessmentMonitor).not.toHaveBeenCalled()
+    learn.assertWorkspace.mockRejectedValueOnce(new ForbiddenException())
+    await expect(service.sqlMonitor('u', 'agency-admin', 'k1')).rejects.toThrow(ForbiddenException)
+    expect(feed.sqlMonitor).not.toHaveBeenCalled()
+  })
+
+  it('lists one card per course assessment, in course order, whether or not it was launched', async () => {
+    prisma.courseItem.findMany.mockResolvedValue([
+      assess('pre1', 'Pre-assessment', 'pre', { timeLimitMinutes: 20 }),
+      {
+        id: 'lesson',
+        title: 'Interview',
+        label: null,
+        config: { toolId: 'id-interview', ref: 'x' },
+      },
+      assess('post1', 'Post-assessment', 'post'),
+    ])
+    feed.assessmentMonitor.mockResolvedValue(
+      monitorOf([
+        delivery('d1', 'lti:post1', {
+          // Ana (on the roster) submitted; 'stranger' is known to the Simulator but is not in the course
+          students: [
+            { userId: 'u1', name: 'Ana', status: 'submitted' },
+            { userId: 'stranger', name: 'Zed', status: 'not_started' },
+          ],
+          counts: { notStarted: 1, inProgress: 0, submitted: 1 },
+        }),
+      ])
+    )
+    prisma.enrollment.findMany.mockResolvedValue([
+      { userId: 'u2', user: { email: 'b@x.test', displayName: 'Ben' } },
+      { userId: 'u1', user: { email: 'a@x.test', displayName: 'Ana' } },
+    ])
+    const out = await service.assessmentMonitor('u', 'agency-admin', 'k1')
+    expect(out.deliveries.map((d) => [d.label, d.tags])).toEqual([
+      ['Pre-assessment', ['pre']],
+      ['Post-assessment', ['post']],
+    ])
+    // the unlaunched Pre: everyone not started, from the course roster
+    const pre = out.deliveries[0]
+    expect(pre.assessmentTitle).toBeNull()
+    expect(pre.timeLimitMinutes).toBe(20)
+    expect(pre.counts).toEqual({ notStarted: 2, inProgress: 0, submitted: 0 })
+    expect(pre.students.map((s) => [s.name, s.status])).toEqual([
+      ['Ana', 'not_started'],
+      ['Ben', 'not_started'],
+    ])
+    // the launched Post keeps what the Simulator reported
+    expect(out.deliveries[1]).toMatchObject({
+      assessmentTitle: 'Bank',
+      counts: { notStarted: 0, inProgress: 0, submitted: 1 }, // Zed is not on the course roster
+    })
+    expect(out.deliveries[1].students.map((x) => x.name)).toEqual(['Ana'])
+  })
+
+  it('shows each attempt of a retake as its own card, and sets aside deliveries that are not the course', async () => {
+    prisma.courseItem.findMany.mockResolvedValue([assess('pre1', 'Pre-assessment', 'pre')])
+    prisma.enrollment.findMany.mockResolvedValue([])
+    feed.assessmentMonitor.mockResolvedValue(
+      monitorOf([
+        delivery('d2', 'lti:pre1#2'),
+        delivery('d1', 'lti:pre1'),
+        delivery('d3', 'lti:gone'),
+        delivery('d4', 'post'),
+      ])
+    )
+    const out = await service.assessmentMonitor('u', 'agency-admin', 'k1')
+    expect(out.deliveries.map((d) => [d.id, d.label, d.tags])).toEqual([
+      ['d1', 'Pre-assessment', ['pre', 'attempt 1']],
+      ['d2', 'Pre-assessment', ['pre', 'attempt 2']],
+    ])
+    // deleted item and a delivery scheduled directly are not course assessments
+    expect(out.other.map((d) => [d.id, d.label, d.tags])).toEqual([
+      ['d3', 'Bank', ['lti:gone']],
+      ['d4', 'Bank', ['post']],
+    ])
+  })
+
+  it('returns the SQL feed for the cohort', async () => {
+    feed.sqlMonitor.mockResolvedValue({ enabled: true })
+    expect(await service.sqlMonitor('u', 'agency-admin', 'k1')).toEqual({ enabled: true })
+    expect(feed.sqlMonitor).toHaveBeenCalledWith('k1')
   })
 })
 

@@ -534,7 +534,28 @@ function DetailPanel({
             Deliveries
           </h3>
           <button
-            onClick={() => setShowNew((v) => !v)}
+            onClick={async () => {
+              if (showNew) return setShowNew(false)
+              // Course assessments are set up in Learn Differently; scheduling here is for testing.
+              const proceed = await confirm({
+                title: 'Set assessments up in Learn Differently',
+                body: (
+                  <>
+                    <p>
+                      Add the assessment to a course in Learn Differently, as a pre- or
+                      post-assessment, instead of scheduling it here. That is where cohorts,
+                      attempts and results are managed, and where instructors will look.
+                    </p>
+                    <p className="mt-2">
+                      A delivery scheduled here is not part of any course. Use it for testing only.
+                    </p>
+                  </>
+                ),
+                confirmLabel: 'Schedule here anyway',
+                cancelLabel: 'Go back',
+              })
+              if (proceed) setShowNew(true)
+            }}
             className="text-[12px] font-semibold text-green-light hover:text-green transition-colors"
           >
             {showNew ? 'Cancel' : '+ Schedule delivery'}

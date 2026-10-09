@@ -117,3 +117,42 @@ describe('AssessmentsService.getResult review', () => {
     expect(await svc.getResult('u1', 'a1', 'd1', true, true)).toMatchObject({ learner: 'Ana' })
   })
 })
+
+describe('AssessmentsService.cohortDeliveryResults', () => {
+  const svc = (cohortId: string | null) =>
+    new AssessmentsService(
+      {
+        assessmentDelivery: {
+          findUnique: jest.fn(async (a: { include?: unknown }) =>
+            cohortId === null
+              ? null
+              : a.include
+                ? {
+                    id: 'd1',
+                    cohortId,
+                    label: 'post',
+                    showReview: null,
+                    assessment: { id: 'a', title: 'T', sections: [], expectedMinutes: null },
+                    cohort: null,
+                    attempts: [],
+                  }
+                : { cohortId }
+          ),
+        },
+        user: { findMany: jest.fn(async () => []) },
+        membership: { findMany: jest.fn(async () => []) },
+      } as never,
+      {} as never,
+      {} as never
+    )
+
+  it('returns the results for a delivery made to the cohort', async () => {
+    const r = await svc('k1').cohortDeliveryResults('k1', 'd1')
+    expect(r.delivery.id).toBe('d1')
+  })
+
+  it('refuses a delivery made to another cohort, or one that does not exist', async () => {
+    await expect(svc('other').cohortDeliveryResults('k1', 'd1')).rejects.toThrow('not found')
+    await expect(svc(null).cohortDeliveryResults('k1', 'd1')).rejects.toThrow('not found')
+  })
+})

@@ -1,11 +1,14 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common'
 import type {
-  AssessmentStatus,
+  AssessmentImprovement,
+  AssessmentResults,
+  AssessmentSummary,
   CohortDelivery,
   CohortDetail,
   CohortJoinRequestRow,
@@ -17,6 +20,13 @@ import type {
   ToolAttempt,
 } from './learn-types'
 import { PrismaService } from '../prisma/prisma.service'
+import { SIMULATOR_FEED, type SimulatorFeed } from '../core/simulator-feed'
+import type {
+  AssessmentDeliveryResults,
+  AssessmentMonitorDelivery,
+  CohortAssessmentMonitor,
+  CohortSqlMonitor,
+} from '../core/monitor-types'
 import { assessmentLimits, toolAnyById } from '../lti/platform/lti-platform-config'
 import {
   assertApprovalContact,
@@ -27,6 +37,7 @@ import {
   validateCohortFields,
   validateEmail,
 } from './cohort-config'
+import { CSV_BOM, csvLine } from './attendance/attendance-rules'
 import { LearnerService } from './learner.service'
 import { LEARN_ROLES, LearnService } from './learn.service'
 import { ParticipantNotesService } from './talent/participant-notes.service'
@@ -40,7 +51,8 @@ export class LearnCohortsService {
     private readonly prisma: PrismaService,
     private readonly learn: LearnService,
     private readonly learner: LearnerService,
-    private readonly notes: ParticipantNotesService
+    private readonly notes: ParticipantNotesService,
+    @Inject(SIMULATOR_FEED) private readonly feed: SimulatorFeed
   ) {}
 
   // ── access ────────────────────────────────────────────────────────────────
@@ -496,31 +508,37 @@ export class LearnCohortsService {
     return { change, cohort: await this.detail(userId, role, e.cohortId) }
   }
 
-  /**
-   * Who has not started, who has the assessment open and who has submitted, for each assessment
-   * item of the cohort's course. Built only from what the course records: scores that came back
-   * and the time the tool was opened. How far through the questions a learner is stays with the
-   * Simulator, which owns the attempt.
-   */
-  async assessmentStatus(
-    userId: string,
-    role: string | undefined,
-    cohortId: string
-  ): Promise<AssessmentStatus> {
-    const cohort = await this.cohortFor(userId, role, cohortId)
+  /** The assessment items of a course, in course order. */
+  private async assessmentItems(courseId: string) {
     const tools = await this.prisma.courseItem.findMany({
-      where: { module: { courseId: cohort.course.id }, type: 'tool' },
+      where: { module: { courseId }, type: 'tool' },
       orderBy: [{ module: { position: 'asc' } }, { position: 'asc' }],
       select: { id: true, title: true, label: true, config: true },
     })
-    const items = tools.filter(
+    return tools.filter(
       (t) => toolAnyById((t.config as { toolId?: unknown } | null)?.toolId)?.kind === 'assessment'
     )
+  }
+
+  /**
+   * The cohort's Assessments grid: for each assessment item of the course, how many have not
+   * started, have it open or have submitted, the average score, and (on the post-assessment) the
+   * improvement over the pre-assessment. Built only from what the course records: scores that came
+   * back and the time the tool was opened. How far through the questions a learner is, and their
+   * section scores, stay with the Simulator (see assessmentResults and the live monitor).
+   */
+  async assessmentSummary(
+    userId: string,
+    role: string | undefined,
+    cohortId: string
+  ): Promise<AssessmentSummary> {
+    const cohort = await this.cohortFor(userId, role, cohortId)
+    const items = await this.assessmentItems(cohort.course.id)
     const generatedAt = new Date().toISOString()
     if (items.length === 0) return { generatedAt, items: [] }
     const enrollments = await this.prisma.enrollment.findMany({
       where: { cohortId, status: { not: 'withdrawn' } },
-      select: { id: true, user: { select: { email: true, displayName: true } } },
+      select: { id: true },
     })
     const where = {
       itemId: { in: items.map((i) => i.id) },
@@ -555,47 +573,338 @@ export class LearnCohortsService {
       const k = key(l.enrollmentId, l.itemId)
       if (!lastOpened.has(k)) lastOpened.set(k, l.startedAt)
     }
+    const preItem = items.find((i) => i.label === 'pre')
     return {
       generatedAt,
       items: items.map((item) => {
         const allowed = assessmentLimits(item.config).maxAttempts
-        const learners = enrollments.map((e) => {
+        const counts = { notStarted: 0, inProgress: 0, submitted: 0 }
+        const scores: number[] = []
+        for (const e of enrollments) {
           const k = key(e.id, item.id)
           const p = progressBy.get(k)
-          const openedAt = lastOpened.get(k) ?? null
-          return {
-            enrollmentId: e.id,
-            name: e.user.displayName ?? e.user.email ?? 'Learner',
-            email: e.user.email,
-            status: assessmentStatusOf({
-              attempts: p?.attempts ?? 0,
-              allowed,
-              lastAttemptAt: lastAttempt.get(k) ?? null,
-              openedAt,
-            }),
-            score: p?.score ?? null,
+          const status = assessmentStatusOf({
             attempts: p?.attempts ?? 0,
-            openedAt: openedAt?.toISOString() ?? null,
-          }
-        })
-        // Open ones first (the live ones), then not started, then submitted; names within each.
-        const rank = { in_progress: 0, not_started: 1, submitted: 2 }
-        learners.sort((a, b) => rank[a.status] - rank[b.status] || a.name.localeCompare(b.name))
-        const count = (s: string) => learners.filter((l) => l.status === s).length
+            allowed,
+            lastAttemptAt: lastAttempt.get(k) ?? null,
+            openedAt: lastOpened.get(k) ?? null,
+          })
+          if (status === 'not_started') counts.notStarted++
+          else if (status === 'in_progress') counts.inProgress++
+          else counts.submitted++
+          if (typeof p?.score === 'number') scores.push(p.score)
+        }
+        const improvement =
+          item.label === 'post' && preItem
+            ? improvementOf(
+                enrollments.map((e) => ({
+                  pre: progressBy.get(key(e.id, preItem.id))?.score ?? null,
+                  post: progressBy.get(key(e.id, item.id))?.score ?? null,
+                }))
+              )
+            : null
         return {
           itemId: item.id,
           title: item.title,
           label: item.label === 'pre' || item.label === 'post' ? item.label : null,
           attemptsAllowed: allowed,
-          counts: {
-            notStarted: count('not_started'),
-            inProgress: count('in_progress'),
-            submitted: count('submitted'),
-          },
-          learners,
+          counts,
+          averageScore: scores.length
+            ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+            : null,
+          improvement,
         }
       }),
     }
+  }
+
+  /**
+   * Every learner's result on one assessment of the cohort: status, time taken, overall and
+   * section scores (from the Simulator) and, on the post-assessment, each learner's change from
+   * the pre-assessment (from the course's own scores).
+   */
+  async assessmentResults(
+    userId: string,
+    role: string | undefined,
+    cohortId: string,
+    itemId: string
+  ): Promise<AssessmentResults> {
+    const cohort = await this.cohortFor(userId, role, cohortId)
+    const items = await this.assessmentItems(cohort.course.id)
+    const item = items.find((i) => i.id === itemId)
+    if (!item) throw new NotFoundException('Assessment not found')
+    return this.resultsFor(cohort, items, item)
+  }
+
+  private async resultsFor(
+    cohort: { id: string; institution: { id: string } },
+    items: { id: string; title: string; label: string | null }[],
+    item: { id: string; title: string; label: string | null }
+  ): Promise<AssessmentResults> {
+    const roster = await this.prisma.enrollment.findMany({
+      where: { cohortId: cohort.id, status: { not: 'withdrawn' } },
+      select: { id: true, userId: true, user: { select: { email: true, displayName: true } } },
+    })
+    // Retakes are separate deliveries; the latest attempt a learner has is the one shown.
+    const monitor = await this.feed.assessmentMonitor(cohort.institution.id, cohort.id)
+    const runs = monitor.deliveries
+      .map((d) => ({ d, launched: launchedItem(d.label) }))
+      .filter((x) => x.launched?.itemId === item.id)
+      .sort((a, b) => (a.launched?.attempt ?? 0) - (b.launched?.attempt ?? 0))
+    const results = await Promise.all(
+      runs.map((r) => this.feed.assessmentResults(cohort.id, r.d.id))
+    )
+    const attemptOf = new Map<string, AssessmentDeliveryResults['attempts'][number]>()
+    for (const r of results) for (const a of r.attempts) attemptOf.set(a.userId, a)
+    const last = results[results.length - 1]
+    const isPost = item.label === 'post'
+    const preItem = items.find((i) => i.label === 'pre')
+    const scores =
+      isPost && preItem
+        ? await this.prisma.itemProgress.findMany({
+            where: {
+              itemId: { in: [preItem.id, item.id] },
+              enrollmentId: { in: roster.map((e) => e.id) },
+            },
+            select: { enrollmentId: true, itemId: true, score: true },
+          })
+        : []
+    const score = (enrollmentId: string, itemId: string) =>
+      scores.find((x) => x.enrollmentId === enrollmentId && x.itemId === itemId)?.score ?? null
+    const learners = roster
+      .map((e) => {
+        const a = attemptOf.get(e.userId)
+        const pre = isPost && preItem ? score(e.id, preItem.id) : null
+        const post = isPost ? score(e.id, item.id) : null
+        return {
+          enrollmentId: e.id,
+          userId: e.userId,
+          name: e.user.displayName ?? e.user.email ?? e.userId,
+          email: e.user.email,
+          status: a ? a.status : ('not_started' as const),
+          submittedAt: a?.submittedAt ?? null,
+          late: a?.late ?? false,
+          minutes: a?.minutes ?? null,
+          overall: a?.overall ? a.overall.percent : null,
+          sections: (a?.sections ?? []).map(({ sectionId, correct, total }) => ({
+            sectionId,
+            correct,
+            total,
+          })),
+          pre,
+          post,
+          change: pre !== null && post !== null ? post - pre : null,
+        }
+      })
+      // Learners with a result first, then those working on it, then those who have not started.
+      .sort(
+        (a, b) =>
+          RESULT_RANK[a.status] - RESULT_RANK[b.status] ||
+          a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+      )
+    return {
+      itemId: item.id,
+      title: item.title,
+      label: item.label === 'pre' || item.label === 'post' ? item.label : null,
+      sections: last?.sections ?? [],
+      expectedMinutes: last?.expectedMinutes ?? null,
+      medianMinutes: last?.medianMinutes ?? null,
+      improvement: isPost
+        ? improvementOf(learners.map((l) => ({ pre: l.pre, post: l.post })))
+        : null,
+      learners,
+    }
+  }
+
+  /** One assessment's results as a CSV (one row per learner, a column per section). */
+  async assessmentResultsCsv(
+    userId: string,
+    role: string | undefined,
+    cohortId: string,
+    itemId: string
+  ): Promise<string> {
+    const r = await this.assessmentResults(userId, role, cohortId, itemId)
+    const post = r.label === 'post'
+    const lines = [
+      csvLine([
+        'learner',
+        'email',
+        'status',
+        'submitted_at',
+        'late',
+        'minutes',
+        'overall_percent',
+        ...r.sections.map((s) => `${s.title} (correct/total)`),
+        ...(post ? ['pre_percent', 'post_percent', 'change_points'] : []),
+      ]),
+      ...r.learners.map((l) =>
+        csvLine([
+          l.name,
+          l.email,
+          l.status,
+          l.submittedAt,
+          l.late ? 'yes' : '',
+          l.minutes,
+          l.overall,
+          ...r.sections.map((s) => {
+            const x = l.sections.find((y) => y.sectionId === s.id)
+            return x ? `${x.correct}/${x.total}` : ''
+          }),
+          ...(post ? [l.pre, l.post, l.change] : []),
+        ])
+      ),
+    ]
+    return CSV_BOM + lines.join('\r\n') + '\r\n'
+  }
+
+  /** Every assessment of the cohort in one CSV: a row per learner per assessment. */
+  async assessmentsCsv(
+    userId: string,
+    role: string | undefined,
+    cohortId: string
+  ): Promise<string> {
+    const cohort = await this.cohortFor(userId, role, cohortId)
+    const items = await this.assessmentItems(cohort.course.id)
+    const all = await Promise.all(items.map((i) => this.resultsFor(cohort, items, i)))
+    const lines = [
+      csvLine([
+        'assessment',
+        'learner',
+        'email',
+        'status',
+        'submitted_at',
+        'late',
+        'minutes',
+        'overall_percent',
+        'pre_percent',
+        'post_percent',
+        'change_points',
+      ]),
+      ...all.flatMap((r) =>
+        r.learners.map((l) =>
+          csvLine([
+            r.title,
+            l.name,
+            l.email,
+            l.status,
+            l.submittedAt,
+            l.late ? 'yes' : '',
+            l.minutes,
+            l.overall,
+            l.pre,
+            l.post,
+            l.change,
+          ])
+        )
+      ),
+    ]
+    return CSV_BOM + lines.join('\r\n') + '\r\n'
+  }
+
+  /**
+   * How far through each assessment this cohort's learners are, live from the Simulator. Same
+   * staff access as the rest of the cohort; a course launch is named by its course item.
+   */
+  async assessmentMonitor(
+    userId: string,
+    role: string | undefined,
+    cohortId: string
+  ): Promise<CohortAssessmentMonitor> {
+    const cohort = await this.cohortFor(userId, role, cohortId)
+    const monitor = await this.feed.assessmentMonitor(cohort.institution.id, cohortId)
+    // The course decides what is listed: one card per assessment item, in course order, even
+    // before anyone has started it. What the Simulator knows is matched to the item by its launch.
+    const items = await this.assessmentItems(cohort.course.id)
+    const itemIds = new Set(items.map((i) => i.id))
+    const launches = new Map<string, { attempt: number; d: AssessmentMonitorDelivery }[]>()
+    const other: AssessmentMonitorDelivery[] = []
+    for (const d of monitor.deliveries) {
+      const launched = launchedItem(d.label)
+      if (launched && itemIds.has(launched.itemId))
+        launches.set(launched.itemId, [
+          ...(launches.get(launched.itemId) ?? []),
+          { attempt: launched.attempt, d },
+        ])
+      else other.push(d)
+    }
+    // The course roster decides who is listed on a course card (the Simulator also knows people the
+    // course does not), and is everyone's state for an assessment nobody has launched yet.
+    const roster = items.length
+      ? await this.prisma.enrollment.findMany({
+          where: { cohortId, status: { not: 'withdrawn' } },
+          select: { userId: true, user: { select: { email: true, displayName: true } } },
+        })
+      : []
+    const enrolled = new Set(roster.map((e) => e.userId))
+    const onRoster = (d: AssessmentMonitorDelivery): AssessmentMonitorDelivery => {
+      const students = d.students.filter((x) => enrolled.has(x.userId))
+      const count = (st: string) => students.filter((x) => x.status === st).length
+      return {
+        ...d,
+        students,
+        counts: {
+          notStarted: count('not_started'),
+          inProgress: count('in_progress'),
+          submitted: count('submitted'),
+        },
+      }
+    }
+    const notStarted = (item: (typeof items)[number]): AssessmentMonitorDelivery => ({
+      id: `item-${item.id}`,
+      label: item.title,
+      tags: item.label ? [item.label] : [],
+      assessmentTitle: null,
+      itemId: item.id,
+      opensAt: null,
+      closesAt: null,
+      timeLimitMinutes: assessmentLimits(item.config).timeLimitMinutes,
+      counts: { notStarted: roster.length, inProgress: 0, submitted: 0 },
+      students: roster
+        .map((e) => ({
+          userId: e.userId,
+          name: e.user.displayName ?? e.user.email ?? e.userId,
+          email: e.user.email,
+          status: 'not_started' as const,
+          answeredCount: 0,
+          questionCount: 0,
+          startedAt: null,
+          submittedAt: null,
+          lastActivityAt: null,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    })
+    return {
+      generatedAt: monitor.generatedAt,
+      cohort: monitor.cohort,
+      deliveries: items.flatMap((item) => {
+        const runs = (launches.get(item.id) ?? []).sort((a, b) => a.attempt - b.attempt)
+        if (runs.length === 0) return [notStarted(item)]
+        return runs.map(({ attempt, d }) => ({
+          ...onRoster(d),
+          itemId: item.id,
+          label: item.title,
+          tags: [
+            ...(item.label ? [item.label] : []),
+            ...(runs.length > 1 ? [`attempt ${attempt}`] : []),
+          ],
+        }))
+      }),
+      other: other.map((d) => ({
+        ...d,
+        label: d.assessmentTitle ?? d.label,
+        tags: d.label ? [d.label] : [],
+      })),
+    }
+  }
+
+  /** The SQL each learner of this cohort has run, live from the Simulator. Same staff access. */
+  async sqlMonitor(
+    userId: string,
+    role: string | undefined,
+    cohortId: string
+  ): Promise<CohortSqlMonitor> {
+    await this.cohortFor(userId, role, cohortId)
+    return this.feed.sqlMonitor(cohortId)
   }
 
   /**
@@ -747,4 +1056,34 @@ export function assessmentStatusOf(a: {
   const reopened = a.openedAt !== null && (a.lastAttemptAt === null || a.openedAt > a.lastAttemptAt)
   if (a.attempts < a.allowed && reopened) return 'in_progress'
   return a.attempts > 0 ? 'submitted' : 'not_started'
+}
+
+const RESULT_RANK = { submitted: 0, in_progress: 1, not_started: 2 } as const
+
+/** The course item and attempt number behind a course-launched delivery's label (`lti:<itemId>` or `lti:<itemId>#<n>`). */
+export function launchedItem(label: string): { itemId: string; attempt: number } | null {
+  const m = /^lti:(.+?)(?:#(\d+))?$/.exec(label)
+  return m ? { itemId: m[1], attempt: m[2] ? Number(m[2]) : 1 } : null
+}
+
+/**
+ * How a cohort did on the post-assessment compared with the pre-assessment, over the learners who
+ * have both scores; null when none do.
+ */
+export function improvementOf(
+  pairs: { pre: number | null; post: number | null }[]
+): AssessmentImprovement | null {
+  const both = pairs.filter(
+    (p): p is { pre: number; post: number } => p.pre !== null && p.post !== null
+  )
+  if (both.length === 0) return null
+  const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length
+  const averagePre = mean(both.map((p) => p.pre))
+  const averagePost = mean(both.map((p) => p.post))
+  return {
+    learners: both.length,
+    averagePre: Math.round(averagePre),
+    averagePost: Math.round(averagePost),
+    change: Math.round(averagePost - averagePre),
+  }
 }

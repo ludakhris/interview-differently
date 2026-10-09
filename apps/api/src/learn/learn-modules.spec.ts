@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 import { ClerkService } from '../auth/clerk.service'
+import { SIMULATOR_FEED } from '../core/simulator-feed'
 import { PrismaService } from '../prisma/prisma.service'
 import { ActivityModule } from './activity/activity.module'
 import { ActivityService } from './activity/activity.service'
@@ -20,11 +21,23 @@ import { TalentService } from './talent/talent.service'
 @Module({ providers: [{ provide: ClerkService, useValue: {} }], exports: [ClerkService] })
 class FakeAuthModule {}
 
+// The real feed module is global too (the Simulator provides it); the LMS only needs the token.
+@Global()
+@Module({ providers: [{ provide: SIMULATOR_FEED, useValue: {} }], exports: [SIMULATOR_FEED] })
+class FakeFeedModule {}
+
 // The feature modules must wire up: each gets the shared access layer by injection.
 describe('feature modules (#69)', () => {
   it('compile with the shared access services', async () => {
     const mod = await Test.createTestingModule({
-      imports: [FakeAuthModule, OutcomesModule, TalentModule, AttendanceModule, ActivityModule],
+      imports: [
+        FakeAuthModule,
+        FakeFeedModule,
+        OutcomesModule,
+        TalentModule,
+        AttendanceModule,
+        ActivityModule,
+      ],
     })
       .overrideProvider(PrismaService)
       .useValue({})
@@ -39,7 +52,9 @@ describe('feature modules (#69)', () => {
   // LearnerService takes ActivityService as @Optional, so a missing ActivityModule would otherwise
   // silently turn the activity hook off. TalentModule imports LearnModule back (forwardRef).
   it('wires ActivityService into LearnerService and resolves the Talent forwardRef cycle', async () => {
-    const mod = await Test.createTestingModule({ imports: [FakeAuthModule, LearnModule] })
+    const mod = await Test.createTestingModule({
+      imports: [FakeAuthModule, FakeFeedModule, LearnModule],
+    })
       .overrideProvider(PrismaService)
       .useValue({})
       .compile()

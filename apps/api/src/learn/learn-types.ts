@@ -292,35 +292,69 @@ export interface CohortRosterRow {
   noteSummary: { notes: number; openFollowUps: number } | null
 }
 
-/** Where one learner is on one assessment of a cohort's course, from what the course itself records. */
+/** Where one learner is on one assessment of a cohort's course. */
 export type AssessmentLearnerStatus = 'not_started' | 'in_progress' | 'submitted'
 
-export interface AssessmentStatusLearner {
-  enrollmentId: string
-  name: string
-  email: string | null
-  status: AssessmentLearnerStatus
-  /** Best score so far; null until a score has come back. */
-  score: number | null
-  /** Scores recorded for this learner. */
-  attempts: number
-  /** The latest time they opened the assessment; null if never. */
-  openedAt: string | null
+/** How a cohort did on the post-assessment compared with the pre-assessment, for learners who have both scores. */
+export interface AssessmentImprovement {
+  /** Learners with both a pre and a post score. */
+  learners: number
+  averagePre: number
+  averagePost: number
+  /** Percentage points: averagePost minus averagePre. */
+  change: number
 }
 
-/** One assessment item of the cohort's course with every learner's status (live: refresh to update). */
-export interface AssessmentStatusItem {
+/** One row of the cohort's Assessments grid: an assessment item of the course with its stats. */
+export interface AssessmentSummaryRow {
   itemId: string
   title: string
   label: 'pre' | 'post' | null
   attemptsAllowed: number
   counts: { notStarted: number; inProgress: number; submitted: number }
-  learners: AssessmentStatusLearner[]
+  /** Average of the best scores learners have so far; null when nobody has one. */
+  averageScore: number | null
+  /** Set on the post-assessment row when any learner has both scores; null otherwise. */
+  improvement: AssessmentImprovement | null
 }
 
-export interface AssessmentStatus {
+export interface AssessmentSummary {
   generatedAt: string
-  items: AssessmentStatusItem[]
+  items: AssessmentSummaryRow[]
+}
+
+export interface AssessmentResultLearner {
+  enrollmentId: string
+  userId: string
+  name: string
+  email: string | null
+  status: AssessmentLearnerStatus
+  submittedAt: string | null
+  late: boolean
+  /** Minutes from start to submit; null until submitted. */
+  minutes: number | null
+  /** Percent correct on the latest attempt; null until submitted. */
+  overall: number | null
+  /** Correct and total per section, in the order of AssessmentResults.sections. */
+  sections: { sectionId: string; correct: number; total: number }[]
+  /** On the post-assessment: this learner's pre and post scores and the change; null elsewhere or when either is missing. */
+  pre: number | null
+  post: number | null
+  change: number | null
+}
+
+/** Every learner's result on one assessment of the cohort: the view behind the grid's View results and Download CSV. */
+export interface AssessmentResults {
+  itemId: string
+  title: string
+  label: 'pre' | 'post' | null
+  sections: { id: string; title: string }[]
+  /** The assessment's designed length; null when none was set. */
+  expectedMinutes: number | null
+  /** Median minutes taken by those who submitted; null until someone has. */
+  medianMinutes: number | null
+  improvement: AssessmentImprovement | null
+  learners: AssessmentResultLearner[]
 }
 
 export interface CohortDetail extends CohortListItem {

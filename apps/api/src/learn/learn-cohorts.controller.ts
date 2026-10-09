@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Post,
   Put,
@@ -79,10 +80,51 @@ export class LearnCohortsController {
     return this.cohorts.recompute(req.userId, req.userRole, id)
   }
 
-  /** Who has started, is partway or has submitted each assessment of the cohort's course. */
-  @Get('cohorts/:id/assessment-status')
-  assessmentStatus(@Req() req: LearnRequest, @Param('id') id: string) {
-    return this.cohorts.assessmentStatus(req.userId, req.userRole, id)
+  /** The cohort's Assessments grid: each assessment of the course with its stats. */
+  @Get('cohorts/:id/assessments')
+  assessmentSummary(@Req() req: LearnRequest, @Param('id') id: string) {
+    return this.cohorts.assessmentSummary(req.userId, req.userRole, id)
+  }
+
+  /** Every assessment of the cohort in one CSV. */
+  @Get('cohorts/:id/assessments.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="assessments.csv"')
+  assessmentsCsv(@Req() req: LearnRequest, @Param('id') id: string) {
+    return this.cohorts.assessmentsCsv(req.userId, req.userRole, id)
+  }
+
+  /** Every learner's result on one assessment. */
+  @Get('cohorts/:id/assessments/:itemId/results')
+  assessmentResults(
+    @Req() req: LearnRequest,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string
+  ) {
+    return this.cohorts.assessmentResults(req.userId, req.userRole, id, itemId)
+  }
+
+  @Get('cohorts/:id/assessments/:itemId/results.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="assessment-results.csv"')
+  assessmentResultsCsv(
+    @Req() req: LearnRequest,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string
+  ) {
+    return this.cohorts.assessmentResultsCsv(req.userId, req.userRole, id, itemId)
+  }
+
+  /** How far through each assessment the cohort's learners are, live. */
+  @Get('cohorts/:id/monitor/assessments')
+  assessmentMonitor(@Req() req: LearnRequest, @Param('id') id: string) {
+    return this.cohorts.assessmentMonitor(req.userId, req.userRole, id)
+  }
+
+  /** The SQL the cohort's learners have run in the sandbox, live. */
+  @Get('cohorts/:id/monitor/sql')
+  sqlMonitor(@Req() req: LearnRequest, @Param('id') id: string) {
+    return this.cohorts.sqlMonitor(req.userId, req.userRole, id)
   }
 
   /** Starts the LTI launch that opens one learner's submitted answers, read-only, for staff. */

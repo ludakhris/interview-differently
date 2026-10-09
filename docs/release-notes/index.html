@@ -518,87 +518,121 @@
         class="entry"
         id="assessment-review"
         data-status="review"
-        data-short="Assessment status and answers"
-        data-summary="Instructors see who has opened and submitted each assessment and can open a learner's answers; learners can review theirs once their attempts are used."
+        data-short="Assessments: progress, results, answers"
+        data-summary="The cohort page lists each assessment with its stats, a live monitor, results with the change from pre to post, CSV downloads and each learner's answers."
       >
         <div class="meta">
           <span class="chip review">IN REVIEW</span><time datetime="2026-10-09">Oct 9, 2026</time>
         </div>
-        <h2>See who is taking an assessment, and what they answered</h2>
+        <h2>Assessments on the cohort page: progress, live monitor, results and answers</h2>
         <p>
-          A cohort page now has an Assessments section. For each pre- and post-assessment in the
-          course it shows who has not started, who has opened it and has no score yet, and who has
-          submitted, with each learner's best score and the time they last opened it. Select Refresh
-          to see the latest; the page does not update on its own.
+          A cohort page now has an Assessments section. It lists each assessment in the course (the
+          pre and the post) with how many learners have submitted it, are working on it, or have not
+          started, the average score, and, on the post-assessment, how much the cohort improved over
+          the pre. Every row has three buttons: Live monitor, View results and Download CSV.
+          Download all, at the top, puts every assessment in one file.
         </p>
         <p>
-          Beside a learner who has submitted, select View answers (it is also on the learner's
-          attempts in the roster). The answers open in Interview Differently, under your
-          institution's own branding: the overall score, the score for each section, and every
-          question with what the learner chose, what was right, and what they got wrong. A link
-          takes you back to the cohort.
+          The live monitor shows one assessment at a time. Pick it from the Assessment list and
+          watch each learner's status, how many questions they have answered so far, and when they
+          last saved. Refresh now fetches the latest numbers once; Refresh automatically does the
+          same on a timer you choose, from every 5 to 60 seconds. Cohorts that use the SQL sandbox
+          also get SQL practice in the list, with each learner's recent queries.
         </p>
         <p>
-          Learners get the same view. Once a learner has used all their attempts, their assessment
-          page offers Review your answers. It is on by default for a post-assessment and off for a
-          pre-assessment, because the same questions are reused; whoever builds the course can
-          change it on the item.
+          View results opens every learner's result: time taken, score on each section and overall,
+          and on the post-assessment the learner's pre score and change. From there, Answers opens
+          that learner's answers, with the overall score, the section scores and every question
+          marked right or wrong, under your institution's own branding. Learners get the same view
+          on their assessment page once they have used all their attempts: on by default for a
+          post-assessment, off for a pre because the same questions are reused. Whoever builds the
+          course can change it on the item.
         </p>
         <div class="know">
           <strong>Good to know</strong>
           <ul>
             <li>
-              The status shows opened and submitted, not how far through the questions someone is.
-              That detail stays in Interview Differently.
+              The grid shows who has opened and submitted from what the course records. How far
+              through the questions someone is comes from the live monitor, which reads it from
+              Interview Differently.
             </li>
             <li>
-              Instructors can open a learner's answers as soon as the learner has submitted,
-              whatever the learner-facing setting is. Learners see theirs only after every attempt
-              is used, so nobody can look at the answers and then retake.
+              The improvement counts only learners who have both a pre and a post score. It is the
+              average change in percentage points, and the grid shows the averages behind it.
             </li>
             <li>
-              A post-assessment now allows one attempt, and the field shows why. An older
-              post-assessment saved with more attempts keeps them until someone edits and saves it.
+              Instructors can open a learner's answers as soon as the learner has submitted.
+              Learners see theirs only after every attempt is used, so nobody can look at the
+              answers and then retake.
             </li>
             <li>
-              Right and wrong are marked with bold [Correct Answer] and [Your Answer] labels, and a
-              key at the top, so the meaning never depends on color alone.
+              Assessments should be set up in Learn Differently, by adding them to a course.
+              Interview Differently now warns administrators who schedule one directly. Any that
+              already exist still appear in the live monitor, labeled as outside the course.
             </li>
             <li>
-              The assessment page now warns about unanswered questions before a learner submits, and
-              its three tiles sit in one row on a wide screen.
+              A post-assessment allows one attempt, and the field says why. An older post-assessment
+              saved with more attempts keeps them until someone edits and saves it.
+            </li>
+            <li>
+              Right and wrong are marked with bold [Correct Answer] and [Your Answer] labels and a
+              key, so the meaning never depends on color alone. The assessment page warns about
+              unanswered questions before a learner submits.
+            </li>
+            <li>
+              The cohort page itself is easier to scan: the course status chips sit next to the
+              title, the buttons are Edit cohort configuration and Learner activity log, a bar of
+              links jumps to each section, and an orange line separates the sections.
             </li>
           </ul>
         </div>
         <div class="shots">
           <figure>
+            <a href="../screenshots/assessment-review/06-cohort-header.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/assessment-review/06-cohort-header.jpg"
+                alt="The top of a cohort page: title with Online and Running chips, the join code, two buttons and a dark bar of links to each section"
+            /></a>
+            <figcaption>The cohort page header with the jump bar.</figcaption>
+          </figure>
+          <figure>
             <a href="../screenshots/assessment-review/01-cohort-assessments.jpg"
               ><img
                 loading="lazy"
                 src="../screenshots/assessment-review/01-cohort-assessments.jpg"
-                alt="The cohort page Assessments section listing each learner's status, best score and last opened time"
+                alt="The Assessments grid listing the pre and post assessments with submitted, in progress and not started counts, the average, and Live monitor, View results and Download CSV on each row"
             /></a>
-            <figcaption>The cohort's Assessments section (sample learners).</figcaption>
+            <figcaption>
+              Each assessment with its stats and three buttons (sample learners).
+            </figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/assessment-review/08-live-monitor.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/assessment-review/08-live-monitor.jpg"
+                alt="The live monitor with the Post-assessment chosen, listing each learner's status, progress and last saved time"
+            /></a>
+            <figcaption>The live monitor, one assessment at a time.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/assessment-review/07-results.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/assessment-review/07-results.jpg"
+                alt="The results dialog listing each learner's status, time, overall score, pre score and change, with an Answers button"
+            /></a>
+            <figcaption>View results: every learner, with pre and change on the post.</figcaption>
           </figure>
           <figure>
             <a href="../screenshots/assessment-review/02-staff-answers.jpg"
               ><img
                 loading="lazy"
                 src="../screenshots/assessment-review/02-staff-answers.jpg"
-                alt="A learner's answers with the overall score, section scores, a key, and each question marked right or wrong"
+                alt="A learner's answers with the overall score, section scores and a key, under the institution's branding"
             /></a>
-            <figcaption>
-              An instructor opens a learner's answers, under the institution's own branding.
-            </figcaption>
-          </figure>
-          <figure>
-            <a href="../screenshots/assessment-review/05-answers-marked.jpg"
-              ><img
-                loading="lazy"
-                src="../screenshots/assessment-review/05-answers-marked.jpg"
-                alt="Questions with the learner's answer and the correct answer marked in bold brackets, wrong answers in red and right answers in green"
-            /></a>
-            <figcaption>Each question marks the learner's answer and the correct one.</figcaption>
+            <figcaption>An instructor opens a learner's answers.</figcaption>
           </figure>
           <figure>
             <a href="../screenshots/assessment-review/04-learner-review-button.jpg"

@@ -13,6 +13,7 @@ import { OfferedCoursesPage } from './OfferedCoursesPage'
 import { DashboardShell, Notice } from './DashboardShell'
 import { GradebookPage } from './GradebookPage'
 import { LearningCoursePage } from './LearningCoursePage'
+import { MonitorPage } from './monitor/MonitorPage'
 import { LearningItemPage } from './LearningItemPage'
 import { LearningPage } from './LearningPage'
 import { canSeeActivity, canSeeTalent } from './roleAccess'
@@ -151,6 +152,7 @@ function Routes({ pathname }: { pathname: string }) {
   const course = /^\/lms\/courses\/([^/]+)\/?$/.exec(pathname)
   const cohort = /^\/lms\/dashboard\/cohorts\/([^/]+)\/?$/.exec(pathname)
   const runCohort = /^\/lms\/cohorts\/([^/]+)\/?$/.exec(pathname)
+  const monitorCohort = /^\/lms\/cohorts\/([^/]+)\/monitor\/?$/.exec(pathname)
   const learnerRecord = /^\/lms\/cohorts\/([^/]+)\/learners\/([^/]+)\/?$/.exec(pathname)
   const onCourses = pathname === '/lms/courses' || pathname.startsWith('/lms/courses/')
   const onCohorts = pathname === '/lms/cohorts' || pathname.startsWith('/lms/cohorts/')
@@ -226,7 +228,9 @@ function Routes({ pathname }: { pathname: string }) {
     if (onCohorts) {
       return (
         <DashboardShell>
-          {runCohort ? (
+          {monitorCohort ? (
+            <MonitorPage cohortId={decodeURIComponent(monitorCohort[1])} />
+          ) : runCohort ? (
             <CohortPage cohortId={decodeURIComponent(runCohort[1])} />
           ) : (
             <CohortsPage workspace={current.subdomain} />

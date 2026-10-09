@@ -2,7 +2,8 @@ import type { CohortDetail } from '@id/types'
 import { Fragment, useEffect, useState, type FormEvent } from 'react'
 import { useApiFetch, useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
-import { AssessmentStatusPanel } from './AssessmentStatus'
+import { AssessmentsSection } from './assessments/AssessmentsSection'
+import { CohortJumpBar } from './CohortJumpBar'
 import { AttemptsPanel } from './AttemptsPanel'
 import { AttendancePanel } from './attendance/AttendancePanel'
 import { Meter } from './charts'
@@ -212,47 +213,17 @@ function Cohort({
       <p className="dash-back">
         <a href={href('/lms/cohorts')}>← All cohorts</a>
       </p>
-      <div className="dash-head">
-        <div>
+      <div className="dash-head co-head">
+        <div className="co-titlerow">
           <h1 className="dash-h2">{cohort.name}</h1>
-          <p className="dash-sub">
-            {cohort.courseTitle} · {dateOnly(cohort.startsAt)} to {dateOnly(cohort.endsAt)}
-            {cohort.lengthWeeks ? ` (${cohort.lengthWeeks} weeks)` : ''}
-          </p>
-        </div>
-        <div className="dash-cohort-actions">
-          <a
-            className="dash-btn-secondary dash-btn-link"
-            href={href(`/lms/activity/${encodeURIComponent(cohort.id)}`)}
-          >
-            Activity
-          </a>
-          <button
-            type="button"
-            className="dash-btn-secondary dash-btn-icon"
-            onClick={() => setConfigOpen(true)}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              aria-hidden="true"
-              focusable="false"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-            Edit cohort configuration
-          </button>
           <CohortDeliveryChip delivery={cohort.delivery} />
           <CohortAttendanceChip delivery={cohort.delivery} />
           <CohortStatusChip status={cohort.status} />
         </div>
+        <p className="dash-sub">
+          {cohort.courseTitle} · {dateOnly(cohort.startsAt)} to {dateOnly(cohort.endsAt)}
+          {cohort.lengthWeeks ? ` (${cohort.lengthWeeks} weeks)` : ''}
+        </p>
       </div>
 
       {message && (
@@ -264,170 +235,186 @@ function Cohort({
         </p>
       )}
 
-      <section className="dash-card dash-joincode" aria-labelledby="h-code">
-        <div>
-          <h2 className="dash-card-title" id="h-code">
-            Join code
-          </h2>
-          <p className="dash-sub">Share this with learners. They sign in and enter it to join.</p>
-        </div>
-        <div className="dash-joincode-box">
-          <span className="dash-code dash-code-big">{cohort.joinKey ?? '—'}</span>
-          <button type="button" className="dash-btn-secondary" onClick={copyCode}>
-            {copied ? 'Copied' : 'Copy'}
-          </button>
-        </div>
-      </section>
-
-      {cohort.delivery !== 'online' && <AttendancePanel cohortId={cohort.id} />}
-
-      <AssessmentStatusPanel cohortId={cohort.id} />
-
-      <section className="dash-section" aria-labelledby="h-roster">
-        <div className="dash-head">
+      <div className="co-sections">
+        <section className="dash-card dash-joincode" aria-labelledby="h-code">
           <div>
-            <h2 className="dash-h2" id="h-roster">
-              Roster
+            <h2 className="dash-card-title" id="h-code">
+              Join code
             </h2>
-            <p className="dash-sub">
-              {cohort.maxLearners !== null
-                ? `${cohort.enrolled} of ${cohort.maxLearners} places taken`
-                : `${cohort.enrolled} ${cohort.enrolled === 1 ? 'learner' : 'learners'}`}
-            </p>
+            <p className="dash-sub">Share this with learners. They sign in and enter it to join.</p>
           </div>
+          <div className="dash-joincode-box">
+            <span className="dash-code dash-code-big">{cohort.joinKey ?? '—'}</span>
+            <button type="button" className="dash-btn-secondary" onClick={copyCode}>
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        </section>
+
+        <div className="dash-cohort-actions co-actions">
+          <button type="button" className="dash-btn-secondary" onClick={() => setConfigOpen(true)}>
+            <span aria-hidden="true">⚙️</span> Edit cohort configuration
+          </button>
+          <a
+            className="dash-btn-secondary dash-btn-link"
+            href={href(`/lms/activity/${encodeURIComponent(cohort.id)}`)}
+          >
+            <span aria-hidden="true">⏱️</span> Learner activity log
+          </a>
         </div>
 
-        <PendingRequests cohortId={cohort.id} onApproved={() => void refetchRoster()} />
+        <CohortJumpBar />
 
-        <form className="dash-inline-form" onSubmit={addLearner}>
-          <label className="dash-field">
-            <span>Add a learner by email</span>
-            <input name="email" type="email" required placeholder="name@example.com" />
-          </label>
-          <button type="submit" className="dash-btn-secondary" disabled={busy}>
-            Add learner
-          </button>
-        </form>
-        <p className="dash-muted dash-hint">
-          Only people who have already signed in can be added by email. Everyone else joins with the
-          code.
-        </p>
+        {cohort.delivery !== 'online' && <AttendancePanel cohortId={cohort.id} />}
 
-        {cohort.roster.length === 0 ? (
-          <div className="dash-empty">
-            <h3 className="dash-card-title">No learners yet</h3>
-            <p>Share the join code above, or add someone by email.</p>
+        <AssessmentsSection cohortId={cohort.id} />
+
+        <section className="dash-section" aria-labelledby="h-roster">
+          <div className="dash-head">
+            <div>
+              <h2 className="dash-h2" id="h-roster">
+                Roster
+              </h2>
+              <p className="dash-sub">
+                {cohort.maxLearners !== null
+                  ? `${cohort.enrolled} of ${cohort.maxLearners} places taken`
+                  : `${cohort.enrolled} ${cohort.enrolled === 1 ? 'learner' : 'learners'}`}
+              </p>
+            </div>
           </div>
-        ) : (
-          <div className="dash-tablewrap">
-            <table className="dash-table">
-              <thead>
-                <tr>
-                  <th scope="col">Learner</th>
-                  <th scope="col">Email</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Course progress</th>
-                  <th scope="col">Joined</th>
-                  {showNotes && <th scope="col">Notes</th>}
-                  <th scope="col">
-                    <span className="dash-visually-hidden">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {cohort.roster.map((r) => (
-                  <Fragment key={r.enrollmentId}>
-                    <tr>
-                      <th scope="row">
-                        <a
-                          href={href(
-                            `/lms/cohorts/${encodeURIComponent(cohort.id)}/learners/${encodeURIComponent(r.userId)}`
-                          )}
-                        >
-                          {r.name}
-                        </a>
-                      </th>
-                      <td>{r.email ?? '—'}</td>
-                      <td>{STATUS_LABEL[r.status]}</td>
-                      <td>
-                        <Meter
-                          value={r.itemsTotal ? r.itemsDone / r.itemsTotal : null}
-                          label="Course progress"
-                        />
-                      </td>
-                      <td>{dateShort(r.enrolledAt)}</td>
-                      {showNotes && (
+
+          <PendingRequests cohortId={cohort.id} onApproved={() => void refetchRoster()} />
+
+          <form className="dash-inline-form" onSubmit={addLearner}>
+            <label className="dash-field">
+              <span>Add a learner by email</span>
+              <input name="email" type="email" required placeholder="name@example.com" />
+            </label>
+            <button type="submit" className="dash-btn-secondary" disabled={busy}>
+              Add learner
+            </button>
+          </form>
+          <p className="dash-muted dash-hint">
+            Only people who have already signed in can be added by email. Everyone else joins with
+            the code.
+          </p>
+
+          {cohort.roster.length === 0 ? (
+            <div className="dash-empty">
+              <h3 className="dash-card-title">No learners yet</h3>
+              <p>Share the join code above, or add someone by email.</p>
+            </div>
+          ) : (
+            <div className="dash-tablewrap">
+              <table className="dash-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Learner</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Course progress</th>
+                    <th scope="col">Joined</th>
+                    {showNotes && <th scope="col">Notes</th>}
+                    <th scope="col">
+                      <span className="dash-visually-hidden">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cohort.roster.map((r) => (
+                    <Fragment key={r.enrollmentId}>
+                      <tr>
+                        <th scope="row">
+                          <a
+                            href={href(
+                              `/lms/cohorts/${encodeURIComponent(cohort.id)}/learners/${encodeURIComponent(r.userId)}`
+                            )}
+                          >
+                            {r.name}
+                          </a>
+                        </th>
+                        <td>{r.email ?? '—'}</td>
+                        <td>{STATUS_LABEL[r.status]}</td>
                         <td>
-                          {r.noteSummary &&
-                          (r.noteSummary.notes > 0 || r.noteSummary.openFollowUps > 0) ? (
-                            <NoteIndicators
-                              notes={r.noteSummary.notes}
-                              openFollowUps={r.noteSummary.openFollowUps}
-                              notesHref={`${recordHref(r.userId)}#lr-notes`}
-                              followUpsHref={`${recordHref(r.userId)}#lr-support`}
-                            />
-                          ) : r.noteSummary ? (
-                            <span className="dash-muted" aria-label="No notes or follow-ups">
-                              —
-                            </span>
-                          ) : null}
-                        </td>
-                      )}
-                      <td>
-                        {r.status !== 'withdrawn' && (
-                          <>
-                            <button
-                              type="button"
-                              className="dash-btn-quiet"
-                              aria-expanded={attemptsFor === r.enrollmentId}
-                              title="Each recorded attempt at a connected-tool item"
-                              onClick={() =>
-                                setAttemptsFor(
-                                  attemptsFor === r.enrollmentId ? null : r.enrollmentId
-                                )
-                              }
-                            >
-                              Attempts
-                            </button>{' '}
-                            <button
-                              type="button"
-                              className="dash-btn-quiet"
-                              disabled={busy}
-                              title="Check this learner's course status and completion date against the current rules"
-                              onClick={() => void recompute(r.enrollmentId, r.name)}
-                            >
-                              Recompute
-                            </button>{' '}
-                            <button
-                              type="button"
-                              className="dash-btn-quiet"
-                              disabled={busy}
-                              onClick={() => withdraw(r.enrollmentId, r.name)}
-                            >
-                              Withdraw
-                            </button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                    {attemptsFor === r.enrollmentId && (
-                      <tr className="dash-attempts-row">
-                        <td colSpan={6}>
-                          <AttemptsPanel
-                            courseId={cohort.courseId}
-                            enrollmentId={r.enrollmentId}
-                            name={r.name}
+                          <Meter
+                            value={r.itemsTotal ? r.itemsDone / r.itemsTotal : null}
+                            label="Course progress"
                           />
                         </td>
+                        <td>{dateShort(r.enrolledAt)}</td>
+                        {showNotes && (
+                          <td>
+                            {r.noteSummary &&
+                            (r.noteSummary.notes > 0 || r.noteSummary.openFollowUps > 0) ? (
+                              <NoteIndicators
+                                notes={r.noteSummary.notes}
+                                openFollowUps={r.noteSummary.openFollowUps}
+                                notesHref={`${recordHref(r.userId)}#lr-notes`}
+                                followUpsHref={`${recordHref(r.userId)}#lr-support`}
+                              />
+                            ) : r.noteSummary ? (
+                              <span className="dash-muted" aria-label="No notes or follow-ups">
+                                —
+                              </span>
+                            ) : null}
+                          </td>
+                        )}
+                        <td>
+                          {r.status !== 'withdrawn' && (
+                            <>
+                              <button
+                                type="button"
+                                className="dash-btn-quiet"
+                                aria-expanded={attemptsFor === r.enrollmentId}
+                                title="Each recorded attempt at a connected-tool item"
+                                onClick={() =>
+                                  setAttemptsFor(
+                                    attemptsFor === r.enrollmentId ? null : r.enrollmentId
+                                  )
+                                }
+                              >
+                                Attempts
+                              </button>{' '}
+                              <button
+                                type="button"
+                                className="dash-btn-quiet"
+                                disabled={busy}
+                                title="Check this learner's course status and completion date against the current rules"
+                                onClick={() => void recompute(r.enrollmentId, r.name)}
+                              >
+                                Recompute
+                              </button>{' '}
+                              <button
+                                type="button"
+                                className="dash-btn-quiet"
+                                disabled={busy}
+                                onClick={() => withdraw(r.enrollmentId, r.name)}
+                              >
+                                Withdraw
+                              </button>
+                            </>
+                          )}
+                        </td>
                       </tr>
-                    )}
-                  </Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                      {attemptsFor === r.enrollmentId && (
+                        <tr className="dash-attempts-row">
+                          <td colSpan={6}>
+                            <AttemptsPanel
+                              courseId={cohort.courseId}
+                              enrollmentId={r.enrollmentId}
+                              name={r.name}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
 
       {configOpen && (
         <CohortConfigModal

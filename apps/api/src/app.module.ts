@@ -16,6 +16,7 @@ import { MeModule } from './me/me.module'
 import { AnalyticsModule } from './analytics/analytics.module'
 import { DatasetsModule } from './datasets/datasets.module'
 import { ToolsModule } from './tools/tools.module'
+import { SimulatorFeedModule } from './simulator-feed/simulator-feed.module'
 import { AssessmentsModule } from './assessments/assessments.module'
 import { UsageModule } from './usage/usage.module'
 import { LearnModule } from './learn/learn.module'
@@ -42,6 +43,7 @@ import { LtiToolModule } from './lti/tool/lti-tool.module'
     DatasetsModule,
     ToolsModule,
     AssessmentsModule,
+    SimulatorFeedModule,
     UsageModule,
     LearnModule,
     LtiPlatformModule,
