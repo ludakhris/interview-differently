@@ -133,7 +133,7 @@ export const MEASURES_MORE = [
   {
     name: 'Initial Job Placement',
     when: 'At the job offer',
-    how: 'Offers and start dates land on the learner’s record: a count, not a survey.',
+    how: 'Offers and start dates land on the learner’s record, each marked as matched through us, employer confirmed, learner reported, or automation detected.',
   },
 ]
 

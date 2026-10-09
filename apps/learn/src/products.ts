@@ -72,7 +72,7 @@ export const PRODUCTS: Product[] = [
     status: 'soon',
     headline: 'Learning that fits in a scroll',
     pitch:
-      'Bite-sized videos from instructors and industry creators, plus live office hours. Every short lesson ends in a real-world exercise.',
+      'Bite-sized "Micro-Lessons" from instructors and the education creators already going viral, brought into the pathway, plus live office hours. Every short lesson ends in a real-world exercise.',
     forLearners: 'Learn on your phone, between shifts, and never get stuck alone.',
     features: [
       {
@@ -80,8 +80,8 @@ export const PRODUCTS: Product[] = [
         body: 'Videos that teach one skill, then put it to work.',
       },
       {
-        title: 'Instructors',
-        body: 'Partner instructors publish lessons straight into their pathways.',
+        title: 'Connected content',
+        body: 'We are connecting to the platforms and providers creators already use, so their lessons can sit in the pathway instead of being rebuilt.',
       },
       {
         title: 'Engaging creators',
@@ -132,16 +132,16 @@ export const PRODUCTS: Product[] = [
     status: 'soon',
     headline: 'Jobs that fit what you can actually do',
     pitch:
-      'Roles matched to the skills a learner has proven, not the titles on a resume. Each match shows the gap to the next job and the lessons that close it.',
+      'Roles from partner employers and the job sources we connect to, matched to the skills a learner has proven, not the titles on a resume. Each match shows the gap to the next job and the lessons that close it.',
     forLearners: 'See the gap to your next role, and apply with your simulation work attached.',
     features: [
       {
-        title: 'Matched on proven skills',
-        body: 'Roles ranked against the verified skills profile, not keywords.',
+        title: 'Connected to job sources',
+        body: 'Postings come from partner employers and the job sources we connect to, so learners are not sent to yet another job site.',
       },
       {
-        title: 'The gap, made visible',
-        body: 'What a role needs that you have not shown yet, and the lesson that covers it.',
+        title: 'Matched on proven skills',
+        body: 'Roles ranked against the verified skills profile, not keywords, with the gap to each role and the lesson that covers it.',
       },
       {
         title: 'Apply with evidence',
@@ -174,7 +174,7 @@ export const PRODUCTS: Product[] = [
       },
       {
         title: 'Partner cohorts',
-        body: 'Hire from the programs you fund or sponsor, with the training record attached.',
+        body: 'Hire from the programs you fund or sponsor, with the training record attached and the hire recorded.',
       },
       {
         title: 'Learner-controlled sharing',
