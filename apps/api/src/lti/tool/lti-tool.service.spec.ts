@@ -1379,6 +1379,7 @@ describe('assessment launch', () => {
   function ready(over: { assessment?: unknown; cohort?: unknown } = {}) {
     const h = setup() as ReturnType<typeof setup> & { prisma: Row }
     const deliveries: Row[] = []
+    const attempts: Row[] = []
     h.prisma.assessment = {
       findUnique: jest.fn(async (a: Row) =>
         over.assessment === undefined
@@ -1398,7 +1399,15 @@ describe('assessment launch', () => {
             (d) =>
               d.assessmentId === a.where.assessmentId &&
               d.cohortId === a.where.cohortId &&
-              d.label === a.where.label
+              d.label === a.where.label &&
+              // a review launch only matches a delivery this learner submitted
+              (!a.where.attempts?.some ||
+                attempts.some(
+                  (t) =>
+                    t.userId === a.where.attempts.some.userId &&
+                    t.submittedAt &&
+                    t.delivery.label === d.label
+                ))
           ) ?? null
       ),
       create: jest.fn(async (a: Row) => {
@@ -1409,7 +1418,6 @@ describe('assessment launch', () => {
       }),
     }
     // the learner's attempts: `delivery` is what the tool's where-clause filters on
-    const attempts: Row[] = []
     h.prisma.assessmentAttempt = {
       ...h.prisma.assessmentAttempt,
       findMany: jest.fn(async (a: Row) =>
@@ -1460,6 +1468,47 @@ describe('assessment launch', () => {
       lineitem: LINEITEM,
     })
     expect(h.prisma.scenario.findUnique).not.toHaveBeenCalled()
+  })
+
+  describe('review launch', () => {
+    const review = { ref: 'sql-basics', tool: 'id-assessment', attempt: 1, review: true }
+    const submitted = (label: string) => ({
+      userId: 'u1',
+      submittedAt: new Date(),
+      delivery: { assessmentId: 'as1', cohortId: 'c1', label },
+    })
+
+    it('opens a session marked review on the delivery the learner submitted', async () => {
+      const h = ready()
+      h.deliveries.push({ id: 'd1', assessmentId: 'as1', cohortId: 'c1', label: 'lti:item1' })
+      h.attempts.push(submitted('lti:item1'))
+      const r = await launchWith(h, review)
+      expect(r.redirect.startsWith('http://localhost:5173/lti/assessment/d1#session=')).toBe(true)
+      expect(sessionOf(r)).toMatchObject({ deliveryId: 'd1', review: true })
+    })
+
+    it('reviews the retake the claim names', async () => {
+      const h = ready()
+      h.deliveries.push({ id: 'd2', assessmentId: 'as1', cohortId: 'c1', label: 'lti:item1#2' })
+      h.attempts.push(submitted('lti:item1#2'))
+      expect(sessionOf(await launchWith(h, { ...review, attempt: 2 }))).toMatchObject({
+        deliveryId: 'd2',
+        review: true,
+      })
+    })
+
+    it('never creates a delivery, and refuses when nothing was submitted', async () => {
+      const h = ready()
+      await expect(launchWith(h, review)).rejects.toMatchObject({ status: 404 })
+      h.deliveries.push({ id: 'd1', assessmentId: 'as1', cohortId: 'c1', label: 'lti:item1' })
+      await expect(launchWith(h, review)).rejects.toMatchObject({ status: 404 }) // started, not submitted
+      expect(h.deliveries).toHaveLength(1)
+    })
+
+    it('an ordinary launch carries no review flag', async () => {
+      const h = ready()
+      expect(sessionOf(await launchWith(h))).not.toHaveProperty('review')
+    })
   })
 
   describe('attempts and time limits', () => {

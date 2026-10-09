@@ -36,6 +36,7 @@ import {
   assessmentLimits,
   learnUrl,
   platformRegistration,
+  reviewAllowed,
   managedTools,
   registeredTools,
   scopeOf,
@@ -122,9 +123,16 @@ export class LtiPlatformService {
   // ── launch ──────────────────────────────────────────────────────────────────
 
   /** Checks the learner may open this tool item and returns the form that starts the OIDC login. */
-  async startLaunch(userId: string, cohortId: string, itemId: string, returnOrigin?: string) {
-    const { tool, config, enrollmentId } = await this.toolItem(cohortId, itemId, userId)
-    if (tool.kind === 'assessment') {
+  async startLaunch(
+    userId: string,
+    cohortId: string,
+    itemId: string,
+    returnOrigin?: string,
+    mode?: 'review'
+  ) {
+    const { tool, config, label, enrollmentId } = await this.toolItem(cohortId, itemId, userId)
+    if (mode === 'review') await this.assertCanReview(userId, cohortId, itemId, tool, config, label)
+    else if (tool.kind === 'assessment') {
       const { maxAttempts } = assessmentLimits(config)
       const used = await this.attemptsUsed(userId, cohortId, itemId)
       if (used >= maxAttempts)
@@ -134,9 +142,10 @@ export class LtiPlatformService {
     const origin = isLearnOrigin(returnOrigin, learnUrl())
       ? new URL(returnOrigin!).origin
       : undefined
-    const hint = this.signHint({ userId, cohortId, itemId, returnOrigin: origin })
+    const hint = this.signHint({ userId, cohortId, itemId, returnOrigin: origin, mode })
     // #69 E: note the launch for tool time. Not awaited and never throws: it cannot slow or fail a launch.
-    if (this.activity && enrollmentId)
+    // Looking at answers is not tool time.
+    if (this.activity && enrollmentId && mode !== 'review')
       void Promise.resolve()
         .then(() => this.activity?.openToolLaunch(enrollmentId, userId, itemId))
         .catch(() => undefined)
@@ -151,6 +160,26 @@ export class LtiPlatformService {
         lti_deployment_id: tool.deploymentId,
       },
     }
+  }
+
+  /**
+   * Review is for a learner who has used every attempt on an assessment item that allows it, so it
+   * can never be a peek before a retake. The tool trusts this check: it signs the launch.
+   */
+  private async assertCanReview(
+    userId: string,
+    cohortId: string,
+    itemId: string,
+    tool: { kind: string },
+    config: unknown,
+    label: string | null
+  ) {
+    if (tool.kind !== 'assessment' || !reviewAllowed(config, label))
+      throw new ConflictException('Answers are not available to review for this item.')
+    const used = await this.attemptsUsed(userId, cohortId, itemId)
+    if (used < 1) throw new ConflictException('There is nothing to review yet.')
+    if (used < assessmentLimits(config).maxAttempts)
+      throw new ConflictException('You can review your answers once all your attempts are used.')
   }
 
   /** Scores recorded for this learner on the item (LearnDifferently's own count of attempts). */
@@ -205,7 +234,7 @@ export class LtiPlatformService {
       throw new ConflictException(
         'This tool is not available to this program. Tell your instructor.'
       )
-    return { tool, ref: config.ref, config: item.config, enrollmentId }
+    return { tool, ref: config.ref, config: item.config, label: item.label, enrollmentId }
   }
 
   private signHint(claims: {
@@ -213,6 +242,7 @@ export class LtiPlatformService {
     cohortId: string
     itemId: string
     returnOrigin?: string
+    mode?: 'review'
   }): string {
     const body = b64url(JSON.stringify({ ...claims, jti: newId(), exp: nowS() + HINT_TTL_S }))
     const mac = createHmac('sha256', this.hintSecret).update(body).digest('base64url')
@@ -232,6 +262,7 @@ export class LtiPlatformService {
       cohortId?: unknown
       itemId?: unknown
       returnOrigin?: unknown
+      mode?: unknown
       jti?: unknown
       exp?: unknown
     }
@@ -240,12 +271,13 @@ export class LtiPlatformService {
     } catch {
       throw new HttpException('Invalid lti_message_hint', 400)
     }
-    const { userId, cohortId, itemId, returnOrigin, jti, exp } = claims
+    const { userId, cohortId, itemId, returnOrigin, mode, jti, exp } = claims
     if (
       typeof userId !== 'string' ||
       typeof cohortId !== 'string' ||
       typeof itemId !== 'string' ||
       (returnOrigin !== undefined && typeof returnOrigin !== 'string') ||
+      (mode !== undefined && mode !== 'review') ||
       typeof jti !== 'string' ||
       typeof exp !== 'number'
     )
@@ -256,7 +288,7 @@ export class LtiPlatformService {
       typeof returnOrigin === 'string' && isLearnOrigin(returnOrigin, learnUrl())
         ? returnOrigin
         : undefined
-    return { userId, cohortId, itemId, returnOrigin: origin, jti, exp }
+    return { userId, cohortId, itemId, returnOrigin: origin, mode, jti, exp }
   }
 
   /** OIDC authentication request from a tool: replies with a form that posts the signed id_token. */
@@ -285,12 +317,23 @@ export class LtiPlatformService {
       tool: itemTool,
       ref,
       config: itemConfig,
+      label: itemLabel,
     } = await this.toolItem(hint.cohortId, hint.itemId, hint.userId)
     if (itemTool.clientId !== tool.clientId)
       throw new HttpException('This item does not launch that client', 400)
     // An assessment's attempts may have run out since the hint was minted (another tab); a hint is not a way around the cap.
     let used = 0
-    if (itemTool.kind === 'assessment') {
+    if (hint.mode === 'review') {
+      await this.assertCanReview(
+        hint.userId,
+        hint.cohortId,
+        hint.itemId,
+        itemTool,
+        itemConfig,
+        itemLabel
+      )
+      used = await this.attemptsUsed(hint.userId, hint.cohortId, hint.itemId)
+    } else if (itemTool.kind === 'assessment') {
       const { maxAttempts } = assessmentLimits(itemConfig)
       used = await this.attemptsUsed(hint.userId, hint.cohortId, hint.itemId)
       if (used >= maxAttempts)
@@ -301,7 +344,10 @@ export class LtiPlatformService {
 
     // Assessment tools also learn which attempt this is (the next one after those scored) and the time limit.
     let custom: Record<string, unknown> = { ref, tool: itemTool.toolId }
-    if (itemTool.kind === 'assessment') {
+    if (hint.mode === 'review') {
+      // the latest attempt is the one reviewed; the tool must not start anything
+      custom = { ...custom, attempt: used, review: true }
+    } else if (itemTool.kind === 'assessment') {
       const { timeLimitMinutes } = assessmentLimits(itemConfig)
       custom = { ...custom, attempt: used + 1, ...(timeLimitMinutes ? { timeLimitMinutes } : {}) }
     }

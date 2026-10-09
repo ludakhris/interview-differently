@@ -403,6 +403,7 @@ model AssessmentDelivery {
   opensAt          DateTime?
   closesAt         DateTime?
   timeLimitMinutes Int?
+  showReview       Boolean?                               // learners see answers + key after submit; null = yes for 'post' labels, no otherwise
   inviteCode       String?             @unique              // /a/<code> — join the cohort + start; null = no public link
   createdAt        DateTime            @default(now())
   assessment       Assessment          @relation(fields: [assessmentId], references: [id], onDelete: Cascade)

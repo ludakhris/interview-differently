@@ -32,6 +32,7 @@ import {
   assessmentLimits,
   isInterviewLike,
   passScoreOf,
+  reviewAllowed,
   scopeOf,
   toolAllowedFor,
   isPracticeItem,
@@ -692,6 +693,10 @@ export class LearnerService {
             ref: config.ref,
             // Interviews are unlimited; an assessment allows `maxAttempts` recorded scores.
             retries: limits ? (progress?.attempts ?? 0) < limits.maxAttempts : true,
+            reviewable:
+              !!limits &&
+              (progress?.attempts ?? 0) >= limits.maxAttempts &&
+              reviewAllowed(config, item.label),
             attemptsAllowed: limits ? limits.maxAttempts : null,
             timeLimitMinutes: limits ? limits.timeLimitMinutes : null,
             passScore: passScoreOf(config, item.label),

@@ -458,6 +458,8 @@ export interface LearnerItem {
     ref: string
     /** True while the learner may launch it again: always for an interview, until the attempts are used for an assessment. */
     retries: boolean
+    /** True when the learner may open their answers: attempts used up and the item allows review. */
+    reviewable: boolean
     /** Attempts an assessment allows; null means unlimited (an interview). */
     attemptsAllowed: number | null
     /** Minutes an assessment attempt may take; null means no limit. */

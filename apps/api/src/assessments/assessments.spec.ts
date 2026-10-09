@@ -518,6 +518,8 @@ describe('live progress (#40)', () => {
 describe('LTI attempts (#63)', () => {
   const delivery = {
     id: 'd1',
+    label: 'pre',
+    showReview: null as boolean | null,
     cohortId: 'c1',
     opensAt: null as Date | null,
     closesAt: null as Date | null,

@@ -126,6 +126,11 @@ export function ItemEditor(props: {
   const [passScore, setPassScore] = useState(
     item.config.passScore ? String(item.config.passScore) : ''
   )
+  // Answer review follows the label (post on, pre off) until the author ticks it either way.
+  const [reviewChoice, setReviewChoice] = useState<boolean | null>(
+    typeof item.config.reviewAnswers === 'boolean' ? item.config.reviewAnswers : null
+  )
+  const reviewAnswers = reviewChoice ?? label === 'post'
   const [timeLimit, setTimeLimit] = useState(
     item.config.timeLimitMinutes ? String(item.config.timeLimitMinutes) : ''
   )
@@ -162,6 +167,7 @@ export function ItemEditor(props: {
                     attempts,
                     timeLimit,
                     passScore,
+                    reviewAnswers,
                     countsAsInterview,
                     optional,
                   })
@@ -436,6 +442,19 @@ export function ItemEditor(props: {
                 <small className="dash-muted">
                   The best score counts. A started attempt can be resumed. The timer starts when the
                   learner opens the attempt.
+                </small>
+              </label>
+              <label className="dash-check">
+                <input
+                  type="checkbox"
+                  checked={reviewAnswers}
+                  onChange={(e) => setReviewChoice(e.target.checked)}
+                />
+                <span>Let learners review their answers</span>
+                <small className="dash-muted">
+                  Once all their attempts are used, they can see what they got wrong and the correct
+                  answers. On by default for a post-assessment, off for a pre (the same questions
+                  are reused).
                 </small>
               </label>
             </>

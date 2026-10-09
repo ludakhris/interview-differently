@@ -125,6 +125,13 @@ describe('toolConfig', () => {
     countsAsInterview: false,
     optional: false,
   }
+  it('saves answer review for an assessment tool only', () => {
+    const assess = { ...f, toolId: 'id-assessment' }
+    expect(toolConfig({ ...assess, reviewAnswers: true })).toMatchObject({ reviewAnswers: true })
+    expect(toolConfig({ ...assess, reviewAnswers: false })).toMatchObject({ reviewAnswers: false })
+    expect(toolConfig(assess)).not.toHaveProperty('reviewAnswers')
+    expect(toolConfig({ ...f, reviewAnswers: true })).not.toHaveProperty('reviewAnswers')
+  })
   it('keeps the interview flag only when ticked on a non-assessment tool', () => {
     expect(toolConfig(f)).toEqual({ toolId: 'id-interview', ref: 'voice' })
     expect(toolConfig({ ...f, countsAsInterview: true })).toEqual({

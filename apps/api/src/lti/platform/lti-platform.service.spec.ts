@@ -425,6 +425,64 @@ describe('assessment attempts and time limit', () => {
     await reject(service.authenticate(params), 409, 'You have used all 1 attempts.')
   })
 
+  describe('review launch', () => {
+    const review = (label: string | null, config: object = {}) =>
+      prisma.courseItem.findUnique.mockResolvedValue({
+        id: 'i1',
+        type: 'tool',
+        label,
+        config: { toolId: 'id-assessment', ref: 'cna-pre', ...config },
+        module: { courseId: 'c1' },
+      })
+    const startReview = () => service.startLaunch('u1', 'k1', 'i1', undefined, 'review')
+
+    it('is refused while an attempt is left, or before anything was taken', async () => {
+      review('post', { maxAttempts: 2 })
+      prisma.itemProgress.findFirst.mockResolvedValue({ attempts: 1 })
+      await reject(startReview(), 409, 'once all your attempts are used')
+      prisma.itemProgress.findFirst.mockResolvedValue(null)
+      await reject(startReview(), 409, 'nothing to review')
+    })
+
+    it('is refused when the item does not allow review (a pre by default)', async () => {
+      review('pre')
+      prisma.itemProgress.findFirst.mockResolvedValue({ attempts: 1 })
+      await reject(startReview(), 409, 'not available to review')
+      review('post', { reviewAnswers: false })
+      await reject(startReview(), 409, 'not available to review')
+    })
+
+    it('sends review and the last attempt number once the attempts are used up', async () => {
+      review('post', { maxAttempts: 2 })
+      prisma.itemProgress.findFirst.mockResolvedValue({ attempts: 2 })
+      const hint = (await startReview()).fields.lti_message_hint
+      const html = await service.authenticate({
+        scope: 'openid',
+        response_type: 'id_token',
+        response_mode: 'form_post',
+        prompt: 'none',
+        client_id: tool.clientId,
+        redirect_uri: tool.launchUrl,
+        login_hint: 'u1',
+        lti_message_hint: hint,
+        state: 'st',
+        nonce: 'n1',
+      })
+      const claims = await verifyJwt(field(html, 'id_token'), {
+        issuer: reg.issuer,
+        audience: tool.clientId,
+        nonce: 'n1',
+        keyFor: async () => service.jwks().keys[0],
+      })
+      expect(claims[CLAIM.custom]).toEqual({
+        ref: 'cna-pre',
+        tool: 'id-assessment',
+        attempt: 2,
+        review: true,
+      })
+    })
+  })
+
   it('leaves interview tools unlimited and without attempt or time-limit claims', async () => {
     prisma.itemProgress.findFirst.mockResolvedValue({ attempts: 50 })
     await expect(service.startLaunch('u1', 'k1', 'i1')).resolves.toBeTruthy()

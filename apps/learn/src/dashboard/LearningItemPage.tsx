@@ -516,13 +516,14 @@ function ToolItem(props: {
     []
   )
 
-  async function open() {
+  async function open(mode?: 'review') {
     setBusy(true)
     setError(null)
     try {
       const out = await send<{ action: string; fields: Record<string, string> }>(
         'POST',
-        `/learn/me/cohorts/${item.cohortId}/items/${item.id}/tool-launch`
+        `/learn/me/cohorts/${item.cohortId}/items/${item.id}/tool-launch`,
+        mode ? { mode } : undefined
       )
       submitLaunchForm(out.action, out.fields)
     } catch (err) {
@@ -610,22 +611,37 @@ function ToolItem(props: {
             <a className="dash-btn" href={props.nextHref}>
               {props.nextLabel}
             </a>
+            {tool.reviewable && (
+              <button
+                type="button"
+                className="dash-btn-secondary"
+                onClick={() => open('review')}
+                disabled={busy}
+              >
+                {busy ? 'Opening…' : 'Review your answers'}
+              </button>
+            )}
             {tool.retries && (
               <button
                 type="button"
                 className="dash-btn-secondary"
-                onClick={open}
+                onClick={() => open()}
                 disabled={busy || !!item.locked}
               >
                 {busy ? 'Opening…' : 'Try again'}
               </button>
             )}
           </>
+        ) : tool.reviewable ? (
+          // attempts used up without reaching the pass mark: nothing left to launch, but the answers can be opened
+          <button type="button" className="dash-btn" onClick={() => open('review')} disabled={busy}>
+            {busy ? 'Opening…' : 'Review your answers'}
+          </button>
         ) : (
           <button
             type="button"
             className="dash-btn"
-            onClick={open}
+            onClick={() => open()}
             disabled={busy || !!item.locked || !tool.retries}
           >
             {busy ? 'Opening…' : item.attempts > 0 ? 'Try again' : copy.start}

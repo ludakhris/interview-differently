@@ -104,6 +104,17 @@ export class AssessmentsAdminController {
     return this.service.deliveryResults(id)
   }
 
+  @Get('deliveries/:id/attempts/:attemptId/review')
+  @InstitutionAdminAllowed()
+  async attemptReview(
+    @Req() req: AdminRequest,
+    @Param('id') id: string,
+    @Param('attemptId') attemptId: string
+  ) {
+    await this.scope.assertDelivery(req, id)
+    return this.service.attemptReview(id, attemptId)
+  }
+
   @Get('institutions/:institutionId/assessments')
   @InstitutionAdminAllowed()
   prePost(
@@ -202,6 +213,8 @@ export class AssessmentsMeController {
   start(@Req() req: MeRequest, @Param('id') id: string) {
     if (!req.lti) return this.service.startAttempt(req.userId, id)
     if (!req.lti.deliveryId || req.lti.deliveryId !== id) throw new ForbiddenException()
+    // a review session finds the submitted attempt; it can never start one
+    if (req.lti.review) return this.service.findSubmittedAttemptForLti(req.userId, id)
     return this.service.startAttemptForLti(req.userId, id)
   }
 
@@ -233,7 +246,7 @@ export class AssessmentsMeController {
 
   @Get('attempts/:id/result')
   result(@Req() req: MeRequest, @Param('id') id: string) {
-    return this.service.getResult(req.userId, id, this.pinned(req))
+    return this.service.getResult(req.userId, id, this.pinned(req), req.lti?.review === true)
   }
 
   /** The session's delivery for an LTI caller (never undefined, which would mean unpinned); undefined for Clerk. */

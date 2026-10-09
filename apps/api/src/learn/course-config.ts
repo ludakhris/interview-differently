@@ -311,12 +311,17 @@ function validateItemByType(
       if (given !== null && !tool.labelable)
         return bad(`${tool.name} cannot be a pre or post assessment`)
       // Attempt rules apply to assessment tools only; for any other tool they are dropped.
-      const rules: Record<string, number> = {}
+      const rules: Record<string, number | boolean> = {}
       if (tool.kind === 'assessment') {
         rules.maxAttempts = whole(config.maxAttempts, 'Attempts allowed', 1, 5) ?? 1
         const limit = whole(config.timeLimitMinutes, 'Time limit', 5, 240)
         if (limit !== undefined) rules.timeLimitMinutes = limit
+        // Whether learners can review their answers once the attempts are used up.
+        if (config.reviewAnswers !== undefined && typeof config.reviewAnswers !== 'boolean')
+          return bad('Answer review must be true or false')
+        if (typeof config.reviewAnswers === 'boolean') rules.reviewAnswers = config.reviewAnswers
       }
+
       // The score that counts as done; none by default, and never on a pre-assessment baseline.
       const pass = given === 'pre' ? undefined : whole(config.passScore, 'Pass mark', 1, 100)
       if (pass !== undefined) rules.passScore = pass

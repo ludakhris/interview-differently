@@ -31,6 +31,11 @@ export interface LtiSession {
    * this session may start an attempt on. Absent means the session can reach no assessment route.
    */
   deliveryId?: string
+  /**
+   * Set when the platform launched this assessment session to look at answers, not to take it: the
+   * session may read the submitted attempt's review and cannot start an attempt.
+   */
+  review?: boolean
   jti: string
   /** Issued-at, epoch seconds: a result must be completed after the session began. */
   iat: number
@@ -85,6 +90,7 @@ export function verifySession(
     (typeof claims.deliveryId !== 'string' || !claims.deliveryId)
   )
     throw invalid()
+  if (claims.review !== undefined && (claims.review !== true || !claims.deliveryId)) throw invalid()
   if (claims.brand !== undefined) {
     // validated again, and the stored form must already be the sanitized form
     const clean = sanitizeBrand(claims.brand)

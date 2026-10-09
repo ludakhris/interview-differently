@@ -258,6 +258,7 @@ export class LtiToolService {
         resourceLinkId: claims[CLAIM.resourceLink]?.id,
         attempt: claims[CLAIM.custom]?.attempt,
         timeLimitMinutes: claims[CLAIM.custom]?.timeLimitMinutes,
+        review: claims[CLAIM.custom]?.review === true,
       })
     }
     const row = await this.prisma.scenario.findUnique({ where: { scenarioId: ref } })
@@ -309,6 +310,8 @@ export class LtiToolService {
     resourceLinkId: unknown
     attempt: unknown
     timeLimitMinutes: unknown
+    /** Look at the submitted attempt instead of taking one: nothing is created or started. */
+    review?: boolean
   }): Promise<{ redirect: string }> {
     // never trust the claim: both are checked strictly before anything is looked up or created
     const attempt = l.attempt === undefined ? 1 : l.attempt
@@ -358,12 +361,10 @@ export class LtiToolService {
         throw new LtiError('That attempt is not available yet. Finish your earlier attempt first.')
       }
     }
-    const delivery = await this.findOrCreateDelivery(
-      assessment.id,
-      cohort?.id ?? null,
-      attempt === 1 ? baseLabel : `${baseLabel}#${attempt}`,
-      limit
-    )
+    const label = attempt === 1 ? baseLabel : `${baseLabel}#${attempt}`
+    const delivery = l.review
+      ? await this.findSubmittedDelivery(assessment.id, cohort?.id ?? null, label, l.who.sub)
+      : await this.findOrCreateDelivery(assessment.id, cohort?.id ?? null, label, limit)
     const iat = Math.floor(this.now() / 1000)
     // the session must outlive the delivery's own time limit (the stored one, not this claim's)
     const ttl = Math.max(
@@ -377,6 +378,7 @@ export class LtiToolService {
       returnUrl: l.returnUrl,
       datasets: assessment.dataset ? [assessment.dataset.slug] : [],
       deliveryId: delivery.id,
+      ...(l.review ? { review: true } : {}),
       ...(l.brand ? { brand: l.brand } : {}),
       jti: newId(),
       iat,
@@ -417,6 +419,27 @@ export class LtiToolService {
    * store claim is a short lock around find-then-create; a launch that loses the lock waits for the
    * winner's row and fails with a 503 page if it never appears.
    */
+  /** The delivery whose attempt this learner submitted, for a review launch. Never creates one. */
+  private async findSubmittedDelivery(
+    assessmentId: string,
+    cohortId: string | null,
+    label: string,
+    userId: string
+  ): Promise<{ id: string; timeLimitMinutes: number | null }> {
+    const d = await this.prisma.assessmentDelivery.findFirst({
+      where: {
+        assessmentId,
+        cohortId,
+        label,
+        attempts: { some: { userId, submittedAt: { not: null } } },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, timeLimitMinutes: true },
+    })
+    if (!d) throw new LtiError('There is no submitted attempt to review.', 404)
+    return d
+  }
+
   private async findOrCreateDelivery(
     assessmentId: string,
     cohortId: string | null,

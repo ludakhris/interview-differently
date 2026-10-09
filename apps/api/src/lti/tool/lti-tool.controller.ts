@@ -83,8 +83,13 @@ export class LtiToolController {
   @Get('session')
   @UseGuards(LtiOnlyGuard)
   session(@Req() req: LtiRequest) {
-    const { brand, ref, deliveryId } = req.lti!
-    return { brand: brand ?? null, ref, ...(deliveryId ? { deliveryId } : {}) }
+    const { brand, ref, deliveryId, review } = req.lti!
+    return {
+      brand: brand ?? null,
+      ref,
+      ...(deliveryId ? { deliveryId } : {}),
+      ...(review ? { review: true } : {}),
+    }
   }
 
   /**

@@ -198,6 +198,8 @@ export function toolConfig(f: {
   attempts: string
   timeLimit: string
   passScore: string
+  /** Learners may open their answers once the attempts are used up. Assessment tools only. */
+  reviewAnswers?: boolean
   countsAsInterview: boolean
   optional: boolean
   /** The tools on offer; the built-ins when omitted. */
@@ -211,7 +213,11 @@ export function toolConfig(f: {
     ...(f.skill ? { skill: f.skill } : {}),
     ...(pass ? { passScore: pass } : {}),
     ...(toolLabelable(f.toolId, f.tools)
-      ? { maxAttempts: parseAttempts(f.attempts), ...(limit ? { timeLimitMinutes: limit } : {}) }
+      ? {
+          maxAttempts: parseAttempts(f.attempts),
+          ...(limit ? { timeLimitMinutes: limit } : {}),
+          ...(f.reviewAnswers === undefined ? {} : { reviewAnswers: f.reviewAnswers }),
+        }
       : f.countsAsInterview
         ? { countsAsInterview: true }
         : f.optional

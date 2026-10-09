@@ -71,6 +71,8 @@ export const completeLtiAssessment = (attemptId: string): Promise<HandBack> =>
 export interface LtiToolSession {
   brand: Brand | null
   ref: string
+  /** An assessment session opened to look at answers, not to take the assessment. */
+  review?: boolean
 }
 
 /** Fetches the launch session. Callers treat any failure as "no brand". */
@@ -80,5 +82,9 @@ export async function fetchLtiToolSession(): Promise<LtiToolSession> {
   })
   if (!res.ok) throw new Error(`Session lookup failed: ${res.status}`)
   const data = (await res.json()) as Partial<LtiToolSession>
-  return { brand: data.brand ?? null, ref: typeof data.ref === 'string' ? data.ref : '' }
+  return {
+    brand: data.brand ?? null,
+    ref: typeof data.ref === 'string' ? data.ref : '',
+    ...(data.review === true ? { review: true } : {}),
+  }
 }

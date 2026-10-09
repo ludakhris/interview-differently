@@ -3,10 +3,12 @@ import { useParams } from 'react-router-dom'
 import { AssessmentAttemptPage } from '@/pages/AssessmentAttemptPage'
 import { LtiNav } from '@/components/LtiNav'
 import { LtiBrandProvider } from '@/components/LtiBrandProvider'
-import { captureLtiSession, preferLtiToken } from '@/services/ltiSession'
+import { captureLtiSession, getLtiReturnUrl, preferLtiToken } from '@/services/ltiSession'
 import { completeLtiAssessment, fetchLtiToolSession } from '@/services/ltiService'
 import { LtiScoreSent } from '@/components/LtiScoreSent'
-import { startAttempt } from '@/services/assessmentsService'
+import { AttemptReview } from '@/components/AttemptReview'
+import { ScoreSummary } from '@/components/ScoreSummary'
+import { fetchAttemptResult, startAttempt, type StudentResult } from '@/services/assessmentsService'
 import { applyBrand, NO_BRAND, type AppliedBrand } from '@/lib/brand'
 
 /** How long the first screen waits for the brand before showing the default look. */
@@ -23,6 +25,7 @@ const ltiToken = preferLtiToken(() => Promise.resolve(null))
 export function LtiAssessmentPage() {
   const [token] = useState(() => captureLtiSession())
   const [brand, setBrand] = useState<AppliedBrand | null>(null)
+  const [review, setReview] = useState(false)
 
   // The brand is re-validated here; a failed or slow call just means the default look.
   useEffect(() => {
@@ -33,7 +36,11 @@ export function LtiAssessmentPage() {
     let cancelled = false
     const timer = setTimeout(() => !cancelled && setBrand((b) => b ?? NO_BRAND), BRAND_WAIT_MS)
     fetchLtiToolSession()
-      .then((s) => !cancelled && setBrand((b) => b ?? applyBrand(s.brand)))
+      .then((s) => {
+        if (cancelled) return
+        setReview(s.review === true)
+        setBrand((b) => b ?? applyBrand(s.brand))
+      })
       .catch(() => !cancelled && setBrand(NO_BRAND))
     return () => {
       cancelled = true
@@ -45,7 +52,7 @@ export function LtiAssessmentPage() {
   if (!brand) return <div className="min-h-screen" />
   return (
     <LtiBrandProvider brand={brand}>
-      <LtiAssessment token={token} />
+      {review ? <LtiReview token={token} /> : <LtiAssessment token={token} />}
     </LtiBrandProvider>
   )
 }
@@ -69,6 +76,70 @@ function Message({
 
 const BUTTON =
   'px-4 py-2 rounded-md bg-green hover:bg-green-light text-[13px] font-semibold text-on-primary disabled:opacity-50 transition-colors'
+
+/**
+ * Opened from the course after the learner used all their attempts: shows the submitted attempt's
+ * answers. Nothing is started or resent; the session cannot do either.
+ */
+function LtiReview({ token }: { token: string | null }) {
+  const { deliveryId } = useParams<{ deliveryId: string }>()
+  const [result, setResult] = useState<StudentResult | null>(null)
+  const [failed, setFailed] = useState(false)
+  const courseUrl = getLtiReturnUrl()
+
+  useEffect(() => {
+    if (!token || !deliveryId) return
+    startAttempt(ltiToken, deliveryId)
+      .then(({ id }) => fetchAttemptResult(ltiToken, id))
+      .then(setResult)
+      .catch(() => setFailed(true))
+  }, [token, deliveryId])
+
+  if (!token || !deliveryId || failed) {
+    return (
+      <Message label="Your answers">
+        <p className="text-fg text-[15px] mb-4">
+          We could not open your answers. Go back to your course and try again.
+        </p>
+        {courseUrl && (
+          <a href={courseUrl} className="text-green underline font-semibold text-[14px]">
+            Back to your course
+          </a>
+        )}
+      </Message>
+    )
+  }
+  if (!result) {
+    return (
+      <Message label="Your answers">
+        <p className="text-slate-mid text-[14px]">Opening your answers…</p>
+      </Message>
+    )
+  }
+  return (
+    <div className="min-h-screen bg-surface">
+      <LtiNav trackLabel="Your answers" />
+      <div className="max-w-3xl mx-auto px-6 py-10">
+        <div className="flex items-baseline justify-between gap-4 mb-6">
+          <h1 className="font-display font-extrabold text-[22px] text-fg tracking-tight">
+            Your answers · {result.overall.percent}%
+          </h1>
+          {courseUrl && (
+            <a href={courseUrl} className="text-green underline font-semibold text-[13px]">
+              Back to your course
+            </a>
+          )}
+        </div>
+        <ScoreSummary overall={result.overall} sections={result.sections} />
+        {result.review ? (
+          <AttemptReview review={result.review} />
+        ) : (
+          <p className="text-slate-mid text-[14px]">There are no answers to show.</p>
+        )}
+      </div>
+    </div>
+  )
+}
 
 type Phase = 'starting' | 'taking' | 'sending'
 

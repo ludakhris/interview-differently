@@ -27,6 +27,13 @@ export interface DeliveryInput {
   opensAt?: string | null
   closesAt?: string | null
   timeLimitMinutes?: number | null
+  /** Learners see their answers and the key after submitting. Omitted/null = on for "post" labels, off otherwise. */
+  showReview?: boolean | null
+}
+
+/** Whether learners may review their answers after submitting; an explicit choice wins over the label default. */
+export function reviewEnabled(d: { label: string; showReview: boolean | null }): boolean {
+  return d.showReview ?? d.label.trim().toLowerCase().startsWith('post')
 }
 
 // Students get this long past the deadline before a submit is marked late —
@@ -191,6 +198,7 @@ export class AssessmentsService {
         opensAt: d.opensAt,
         closesAt: d.closesAt,
         timeLimitMinutes: d.timeLimitMinutes,
+        reviewEnabled: reviewEnabled(d),
         inviteCode: d.inviteCode,
         createdAt: d.createdAt,
         startedCount: d.attempts.length,
@@ -220,6 +228,7 @@ export class AssessmentsService {
     if (opensAt && closesAt && closesAt <= opensAt)
       throw new BadRequestException('closesAt must be after opensAt')
     const timeLimitMinutes = input.timeLimitMinutes ?? null
+    const showReview = typeof input.showReview === 'boolean' ? input.showReview : null
     if (
       timeLimitMinutes !== null &&
       !(Number.isInteger(timeLimitMinutes) && timeLimitMinutes > 0)
@@ -239,7 +248,15 @@ export class AssessmentsService {
       )
     }
     return this.prisma.assessmentDelivery.create({
-      data: { assessmentId, cohortId: input.cohortId, label, opensAt, closesAt, timeLimitMinutes },
+      data: {
+        assessmentId,
+        cohortId: input.cohortId,
+        label,
+        opensAt,
+        closesAt,
+        timeLimitMinutes,
+        showReview,
+      },
     })
   }
 
@@ -396,6 +413,7 @@ export class AssessmentsService {
       delivery: {
         id: d.id,
         label: d.label,
+        reviewEnabled: reviewEnabled(d),
         cohortName: d.cohort?.name ?? null,
         assessmentTitle: d.assessment.title,
         expectedMinutes: d.assessment.expectedMinutes,
@@ -931,7 +949,17 @@ export class AssessmentsService {
     return this.studentResult(sectionScores)
   }
 
-  async getResult(userId: string, attemptId: string, deliveryId?: string) {
+  /** The learner's submitted attempt on a delivery, for a review session. */
+  async findSubmittedAttemptForLti(userId: string, deliveryId: string) {
+    const a = await this.prisma.assessmentAttempt.findUnique({
+      where: { deliveryId_userId: { deliveryId, userId } },
+    })
+    if (!a?.submittedAt) throw new NotFoundException('There is no submitted attempt to review.')
+    return { id: a.id }
+  }
+
+  /** `forceReview`: an LTI review session, which the course only launches after the attempts are used up. */
+  async getResult(userId: string, attemptId: string, deliveryId?: string, forceReview = false) {
     const a = await this.loadOwnAttempt(userId, attemptId, deliveryId)
     if (!a.submittedAt) throw new BadRequestException('Attempt not submitted yet')
     return {
@@ -939,7 +967,63 @@ export class AssessmentsService {
       label: a.delivery.label,
       submittedAt: a.submittedAt,
       ...this.studentResult(a.sectionScores as unknown as SectionScore[]),
+      ...(forceReview || reviewEnabled(a.delivery) ? { review: this.buildReview(a) } : {}),
     }
+  }
+
+  /** Admin: one attempt's full answers against the key, whatever the delivery's learner-review setting. */
+  async attemptReview(deliveryId: string, attemptId: string) {
+    const a = await this.prisma.assessmentAttempt.findUnique({
+      where: { id: attemptId },
+      include: { delivery: { include: { assessment: true } } },
+    })
+    if (!a || a.deliveryId !== deliveryId)
+      throw new NotFoundException(`Attempt ${attemptId} not found`)
+    if (!a.submittedAt) throw new BadRequestException('Attempt not submitted yet')
+    return {
+      title: a.delivery.assessment.title,
+      ...this.studentResult(a.sectionScores as unknown as SectionScore[]),
+      review: this.buildReview(a),
+    }
+  }
+
+  /** Every drawn question in paper order with the learner's answer, the key and the grade. */
+  private buildReview(a: {
+    drawnQuestionIds: unknown
+    answers: unknown
+    sectionScores: unknown
+    delivery: { assessment: { sections: unknown } }
+  }) {
+    const sections = a.delivery.assessment.sections as unknown as AssessmentSection[]
+    const index = questionIndex(sections)
+    const saved = (a.answers as Record<string, string>) ?? {}
+    const graded = new Map(
+      ((a.sectionScores as unknown as SectionScore[] | null) ?? []).flatMap((s) =>
+        s.questions.map((q) => [q.id, q] as const)
+      )
+    )
+    return sections
+      .map((s) => ({
+        sectionId: s.id,
+        title: s.title,
+        questions: (a.drawnQuestionIds as string[])
+          .filter((id) => index.get(id)?.sectionId === s.id)
+          .map((id) => {
+            const q = index.get(id)!
+            const g = graded.get(id)
+            return {
+              id,
+              type: q.type,
+              prompt: q.prompt,
+              ...(q.type === 'sql' ? {} : { options: q.options }),
+              answer: saved[id] ?? '',
+              correct: g?.correct ?? false,
+              correctAnswer: q.type === 'sql' ? q.referenceSql : q.answer,
+              ...(g?.error ? { error: g.error } : {}),
+            }
+          }),
+      }))
+      .filter((s) => s.questions.length > 0)
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────

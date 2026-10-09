@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Nav } from '@/components/Nav'
-import { ScoreRing } from '@/components/ScoreRing'
+import { ScoreSummary } from '@/components/ScoreSummary'
+import { AttemptReview } from '@/components/AttemptReview'
 import { fetchAttemptResult, type StudentResult } from '@/services/assessmentsService'
 
 /**
- * Student result (#25): overall score + per-section bars. Deliberately no
- * per-question breakdown — the same bank is reused for the post-assessment.
+ * Student result (#25): overall score + per-section bars. The per-question review (their answer,
+ * what was wrong, the key) appears only when the delivery allows it: on by default for post
+ * assessments, off for pre, because the same bank is reused for the post.
  */
 export function AssessmentResultPage() {
   const { attemptId = '' } = useParams()
@@ -49,47 +51,13 @@ export function AssessmentResultPage() {
               </h1>
             </div>
 
-            <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 flex items-center gap-6 mb-6">
-              <ScoreRing score={result.overall.percent} size={96} label="%" />
-              <div>
-                <p className="font-display font-extrabold text-[28px] text-[#f5f3ee] leading-none">
-                  {result.overall.correct}
-                  <span className="text-white/30 text-[18px]"> / {result.overall.total}</span>
-                </p>
-                <p className="text-[13px] text-slate-mid mt-1">questions correct overall</p>
-              </div>
-            </div>
+            <ScoreSummary overall={result.overall} sections={result.sections} />
 
-            <div className="bg-[#111111] rounded-2xl border border-white/10 p-6">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
-                By section
-              </p>
-              <ul className="space-y-4">
-                {result.sections.map((s) => {
-                  const pct = s.total ? Math.round((s.correct / s.total) * 100) : 0
-                  return (
-                    <li key={s.sectionId}>
-                      <div className="flex items-baseline justify-between mb-1.5">
-                        <p className="text-[13px] font-semibold text-[#f5f3ee]">{s.title}</p>
-                        <p className="font-mono text-[12px] text-slate-light">
-                          {s.correct}/{s.total} · {pct}%
-                        </p>
-                      </div>
-                      <div className="h-2 rounded-full bg-white/8 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${pct}%`,
-                            backgroundColor:
-                              pct >= 70 ? '#2d9e5f' : pct >= 40 ? '#d4830a' : '#ef4444',
-                          }}
-                        />
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
+            {result.review && (
+              <div className="mt-6">
+                <AttemptReview review={result.review} />
+              </div>
+            )}
 
             <div className="mt-6">
               <button

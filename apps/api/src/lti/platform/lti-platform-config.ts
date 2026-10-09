@@ -159,6 +159,15 @@ export function passScoreOf(config: unknown, label: string | null): number | nul
     : null
 }
 
+/**
+ * Whether learners may review their answers once their attempts are used up: an explicit choice on
+ * the item, else on for a post-assessment and off for anything else (a pre shares its questions).
+ */
+export function reviewAllowed(config: unknown, label: string | null): boolean {
+  const v = (config as { reviewAnswers?: unknown } | null | undefined)?.reviewAnswers
+  return typeof v === 'boolean' ? v : label === 'post'
+}
+
 /** Attempt rules for an assessment-kind tool item, read from its stored config (defaults: one attempt, no time limit). */
 export function assessmentLimits(config: unknown): {
   maxAttempts: number

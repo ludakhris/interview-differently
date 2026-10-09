@@ -71,6 +71,8 @@ export interface DeliverySummary {
   opensAt: string | null
   closesAt: string | null
   timeLimitMinutes: number | null
+  /** Learners see their answers and the key after submitting. */
+  reviewEnabled: boolean
   inviteCode: string | null
   createdAt: string
   startedCount: number
@@ -113,12 +115,15 @@ export interface DeliveryInput {
   opensAt?: string | null
   closesAt?: string | null
   timeLimitMinutes?: number | null
+  /** Omit for the default: on for "post" labels, off otherwise. */
+  showReview?: boolean | null
 }
 
 export interface DeliveryResults {
   delivery: {
     id: string
     label: string
+    reviewEnabled: boolean
     cohortName: string | null
     assessmentTitle: string
     expectedMinutes: number | null
@@ -220,6 +225,26 @@ export async function getDeliveryResults(getToken: GetToken, id: string): Promis
   return res.json() as Promise<DeliveryResults>
 }
 
+/** An admin's view of one submitted attempt: the learner's scores and every answer. */
+export interface AttemptReviewResult {
+  title: string
+  overall: OverallScore
+  sections: SectionScoreSummary[]
+  review: ReviewSection[]
+}
+
+export async function getAttemptReview(
+  getToken: GetToken,
+  deliveryId: string,
+  attemptId: string
+): Promise<AttemptReviewResult> {
+  const res = await authedFetch(
+    getToken,
+    `/admin/deliveries/${deliveryId}/attempts/${attemptId}/review`
+  )
+  return res.json() as Promise<AttemptReviewResult>
+}
+
 // ── Student ────────────────────────────────────────────────────────────────
 
 export interface MyDelivery {
@@ -252,12 +277,33 @@ export interface AttemptPaper {
   answers: Record<string, string>
 }
 
+export interface ReviewQuestion {
+  id: string
+  type: 'mc' | 'scenario' | 'sql'
+  prompt: string
+  options?: { key: string; text: string }[]
+  /** The learner's saved answer (option letter or SQL text); '' if left blank. */
+  answer: string
+  correct: boolean
+  /** Option letter, or the reference SQL for a SQL question. */
+  correctAnswer: string
+  error?: string
+}
+
+export interface ReviewSection {
+  sectionId: string
+  title: string
+  questions: ReviewQuestion[]
+}
+
 export interface StudentResult {
   title?: string
   label?: string
   submittedAt?: string
   overall: OverallScore
   sections: SectionScoreSummary[]
+  /** Present only when the delivery lets learners review their answers. */
+  review?: ReviewSection[]
 }
 
 export async function fetchMyAssessments(getToken: GetToken): Promise<MyDelivery[]> {

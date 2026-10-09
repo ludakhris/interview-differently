@@ -1419,6 +1419,7 @@ describe('recordToolResult', () => {
       name: 'Interview Differently',
       ref: 'cna-interview',
       retries: true,
+      reviewable: false,
       attemptsAllowed: null,
       timeLimitMinutes: null,
       passScore: null,
@@ -1720,6 +1721,7 @@ describe('recordToolResult', () => {
       name: 'Interview Differently',
       ref: 'cna-interview',
       retries: true,
+      reviewable: false,
       attemptsAllowed: null,
       timeLimitMinutes: null,
       passScore: null,
@@ -1750,6 +1752,7 @@ describe('recordToolResult', () => {
     })
     expect((await service.item('u1', 'k1', 'i1')).tool).toMatchObject({
       retries: true,
+      reviewable: false,
       attemptsAllowed: null,
     })
   })
@@ -1768,6 +1771,7 @@ describe('recordToolResult', () => {
         name: 'Interview Differently assessment',
         ref: 'cna-pre',
         retries: true,
+        reviewable: false,
         attemptsAllowed: 1,
         timeLimitMinutes: null,
         passScore: null,
@@ -1781,6 +1785,27 @@ describe('recordToolResult', () => {
       expect((await service.item('u1', 'k1', 'i1')).tool?.retries).toBe(false)
     })
 
+    it('offers answer review only once every attempt is used, and only where the item allows it', async () => {
+      const reviewable = async (label: string, config: object, attempts: number) => {
+        prisma.courseItem.findUnique.mockResolvedValue(
+          item('tool', label, { toolId: 'id-assessment', ref: 'cna', ...config })
+        )
+        prisma.itemProgress.findUnique.mockResolvedValue({
+          status: 'completed',
+          score: 70,
+          attempts,
+        })
+        return (await service.item('u1', 'k1', 'i1')).tool?.reviewable
+      }
+      expect(await reviewable('post', {}, 1)).toBe(true) // post defaults on
+      expect(await reviewable('post', {}, 0)).toBe(false) // nothing taken yet
+      expect(await reviewable('post', { maxAttempts: 2 }, 1)).toBe(false) // an attempt left: no peeking
+      expect(await reviewable('post', { maxAttempts: 2 }, 2)).toBe(true)
+      expect(await reviewable('pre', {}, 1)).toBe(false) // pre defaults off
+      expect(await reviewable('pre', { reviewAnswers: true }, 1)).toBe(true)
+      expect(await reviewable('post', { reviewAnswers: false }, 1)).toBe(false)
+    })
+
     it('exposes the configured limits and keeps retries until the last attempt is used', async () => {
       prisma.courseItem.findUnique.mockResolvedValue(
         assess({ maxAttempts: 3, timeLimitMinutes: 45 })
@@ -1792,6 +1817,7 @@ describe('recordToolResult', () => {
       })
       expect((await service.item('u1', 'k1', 'i1')).tool).toMatchObject({
         retries: true,
+        reviewable: false,
         attemptsAllowed: 3,
         timeLimitMinutes: 45,
       })

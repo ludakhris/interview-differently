@@ -7,9 +7,13 @@ import { useOwnerOptions, type OwnerOption } from '@/hooks/useOwnerOptions'
 import { OwnerSelect, resolveOwner, type OwnerChoice } from '@/components/OwnerSelect'
 import { OwnerBadge } from './AdminDatasetsPage'
 import { downloadCsv } from '@/lib/csv'
+import { AttemptReview } from '@/components/AttemptReview'
+import { ScoreSummary } from '@/components/ScoreSummary'
 import { listCohortOptions, type CohortOption } from '@/services/datasetsService'
 import {
   createDelivery,
+  getAttemptReview,
+  type AttemptReviewResult,
   createInvite,
   deleteAssessment,
   deleteDelivery,
@@ -584,7 +588,8 @@ function DetailPanel({
                       ? `${fmt(d.opensAt)} → ${fmt(d.closesAt)}`
                       : 'always open'}
                     {d.timeLimitMinutes && ` · ${d.timeLimitMinutes} min`} · {d.submittedCount}/
-                    {d.startedCount} submitted
+                    {d.startedCount} submitted ·{' '}
+                    {d.reviewEnabled ? 'learners see answers' : 'answers hidden from learners'}
                   </p>
                   <InviteLink
                     getToken={getToken}
@@ -738,6 +743,9 @@ function NewDeliveryForm({
   const [opensAt, setOpensAt] = useState('')
   const [closesAt, setClosesAt] = useState('')
   const [timeLimit, setTimeLimit] = useState('')
+  // Learner answer review: follows the label ("post" on, otherwise off) until the admin ticks it.
+  const [reviewChoice, setReviewChoice] = useState<boolean | null>(null)
+  const showReview = reviewChoice ?? label.trim().toLowerCase().startsWith('post')
   const [submitting, setSubmitting] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
@@ -754,6 +762,7 @@ function NewDeliveryForm({
             opensAt: opensAt ? new Date(opensAt).toISOString() : null,
             closesAt: closesAt ? new Date(closesAt).toISOString() : null,
             timeLimitMinutes: timeLimit ? Number(timeLimit) : null,
+            showReview,
           })
           await onCreated()
         } catch (e) {
@@ -821,6 +830,21 @@ function NewDeliveryForm({
           className={`${inputCls} mt-1`}
         />
       </label>
+      <label className="flex items-start gap-2 sm:col-span-2">
+        <input
+          type="checkbox"
+          checked={showReview}
+          onChange={(e) => setReviewChoice(e.target.checked)}
+          className="mt-0.5"
+        />
+        <span className="text-[12px] text-slate-light">
+          Let learners review their answers after submitting
+          <span className="block text-[11px] text-white/40">
+            Shows what they got wrong and the correct answer. On by default for post, off for pre
+            (the same questions are reused).
+          </span>
+        </span>
+      </label>
       {err && <p className="text-[12px] text-red-400 sm:col-span-2">{err}</p>}
       <div className="sm:col-span-2 flex justify-end">
         <button
@@ -840,6 +864,7 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
   const [err, setErr] = useState<string | null>(null)
   const [loadedAt, setLoadedAt] = useState<Date | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [viewing, setViewing] = useState<{ attemptId: string; who: string } | null>(null) // answers open in a popup
 
   // Manual refresh only — no polling (#40).
   const load = useCallback(() => {
@@ -984,6 +1009,19 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
                   })}
                   <td className="text-right py-2 pl-4 font-mono font-semibold text-[#f5f3ee]">
                     {a.overall ? `${a.overall.percent}%` : '—'}
+                    {a.submittedAt && (
+                      <button
+                        onClick={() =>
+                          setViewing({
+                            attemptId: a.attemptId,
+                            who: a.displayName ?? a.email ?? a.userId,
+                          })
+                        }
+                        className="block ml-auto font-sans text-[11px] font-normal text-slate-mid hover:text-[#f5f3ee]"
+                      >
+                        Answers →
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -1000,6 +1038,79 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
           </table>
         </div>
       )}
+      {viewing && (
+        <AttemptAnswers
+          key={viewing.attemptId}
+          getToken={getToken}
+          deliveryId={deliveryId}
+          attemptId={viewing.attemptId}
+          who={viewing.who}
+          onClose={() => setViewing(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+/** One learner's answers in a popup: Escape, the backdrop or Close dismisses it. */
+function AttemptAnswers({
+  getToken,
+  deliveryId,
+  attemptId,
+  who,
+  onClose,
+}: {
+  getToken: GetToken
+  deliveryId: string
+  attemptId: string
+  who: string
+  onClose: () => void
+}) {
+  const [result, setResult] = useState<AttemptReviewResult | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    getAttemptReview(getToken, deliveryId, attemptId)
+      .then(setResult)
+      .catch((e) => setErr(e instanceof Error ? e.message : 'Failed to load answers'))
+  }, [getToken, deliveryId, attemptId])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/70 flex items-start justify-center p-4 sm:p-8 overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Answers: ${who}`}
+        className="w-full max-w-3xl bg-surface rounded-2xl border border-edge/10 p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-display font-bold text-[16px] text-fg">Answers · {who}</h3>
+          <button
+            onClick={onClose}
+            className="text-[12px] font-semibold text-slate-mid hover:text-fg transition-colors"
+          >
+            Close
+          </button>
+        </div>
+        {err && <p className="text-[12px] text-red-400">{err}</p>}
+        {!result && !err && <p className="text-[13px] text-slate-mid">Loading answers…</p>}
+        {result && (
+          <>
+            <ScoreSummary overall={result.overall} sections={result.sections} />
+            <AttemptReview review={result.review} />
+          </>
+        )}
+      </div>
     </div>
   )
 }
