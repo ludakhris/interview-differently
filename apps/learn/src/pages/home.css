@@ -1814,6 +1814,24 @@
 .ld-account-menu button:focus-visible {
   background: var(--paper);
 }
+/* Links in the account menu (the signed-in menu has learner and staff links, not only buttons):
+   the same look as the buttons, and as the dashboard skins give them. */
+.ld-account-menu a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.ld-account-menu a:hover,
+.ld-account-menu a:focus-visible {
+  background: var(--paper);
+}
+.ld-account-menu .ld-account-group a {
+  padding-left: 28px;
+}
 /* Narrow screens: account and actions share the logo row, nav wraps below,
    so the right-anchored account menu stays on screen. */
 @media (max-width: 1100px) {
