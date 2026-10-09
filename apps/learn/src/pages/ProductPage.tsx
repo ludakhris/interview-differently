@@ -41,24 +41,9 @@ export function ProductPage({ id }: { id: string }) {
           <h1 className="ld-hero-title pp-title">{p.headline}</h1>
           <p className="ld-lead">{p.pitch}</p>
           <div className="ld-hero-actions">
-            {open ? (
-              <a
-                className="ld-btn ld-btn-orange ld-btn-lg"
-                href={p.href}
-                {...(p.external ? { rel: 'noopener' } : {})}
-              >
-                Open {p.name}
-              </a>
-            ) : (
-              <a className="ld-btn ld-btn-orange ld-btn-lg" href="/#demo">
-                Book a walkthrough
-              </a>
-            )}
-            {open && (
-              <a className="ld-btn ld-btn-ink ld-btn-lg" href="/#demo">
-                Book a walkthrough
-              </a>
-            )}
+            <a className="ld-btn ld-btn-orange ld-btn-lg" href="/#demo">
+              Book a walkthrough
+            </a>
           </div>
         </div>
         <div className="pp-swap">

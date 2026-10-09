@@ -273,9 +273,10 @@ export function HomePage() {
               Training that behaves like <span className="ld-orange">the job.</span>
             </h1>
             <p className="ld-lead">
-              Every learner takes a different path. Same outcome. One learning system that turns
-              theory into job-ready skills. Replaces the spreadsheets and disconnected tools, and
-              automates the manual work your team juggles today.
+              Every learner takes a different path. Same outcome. One learning system for any
+              program that trains people for real jobs: workforce development, colleges, nonprofits,
+              employer academies. It turns theory into job-ready skills, replaces the spreadsheets
+              and disconnected tools, and automates the manual work your team juggles today.
             </p>
             <div className="ld-hero-actions">
               <a href="#demo" className="ld-btn ld-btn-orange ld-btn-lg">
