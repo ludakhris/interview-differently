@@ -423,6 +423,96 @@ export class AssessmentsService {
     }
   }
 
+  /**
+   * Progress for every assessment delivered to one cohort: who hasn't started, who is partway
+   * (answered of drawn) and who has submitted. Progress only; no scores.
+   */
+  async cohortActivity(institutionId: string, cohortId: string) {
+    const cohort = await this.prisma.cohort.findFirst({
+      where: { id: cohortId, institutionId },
+      select: { id: true, name: true },
+    })
+    if (!cohort) throw new NotFoundException(`Cohort ${cohortId} not found in this institution`)
+    const [deliveries, members] = await Promise.all([
+      this.prisma.assessmentDelivery.findMany({
+        where: { cohortId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          assessment: { select: { title: true } },
+          attempts: {
+            select: {
+              userId: true,
+              drawnQuestionIds: true,
+              answers: true,
+              startedAt: true,
+              submittedAt: true,
+              updatedAt: true,
+            },
+          },
+        },
+      }),
+      this.prisma.membership.findMany({
+        where: { cohortId },
+        select: { userId: true, user: { select: { email: true, displayName: true } } },
+      }),
+    ])
+    const roster = [...new Map(members.map((m) => [m.userId, m.user])).entries()]
+    // A student who attempted then left the cohort still has an attempt row; show them too.
+    const extraIds = [
+      ...new Set(deliveries.flatMap((d) => d.attempts.map((a) => a.userId))),
+    ].filter((id) => !roster.some(([uid]) => uid === id))
+    const extras = extraIds.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: extraIds } },
+          select: { id: true, email: true, displayName: true },
+        })
+      : []
+    const people = [...roster.map(([id, u]) => ({ id, ...u })), ...extras]
+
+    return {
+      generatedAt: new Date(),
+      cohort,
+      deliveries: deliveries.map((d) => {
+        const byUser = new Map(d.attempts.map((a) => [a.userId, a]))
+        const students = people.map((p) => {
+          const a = byUser.get(p.id)
+          const status = (!a ? 'not_started' : a.submittedAt ? 'submitted' : 'in_progress') as
+            | 'not_started'
+            | 'submitted'
+            | 'in_progress'
+          return {
+            userId: p.id,
+            name: p.displayName ?? p.email ?? p.id,
+            email: p.email,
+            status,
+            ...(a ? progress(a) : { answeredCount: 0, questionCount: 0 }),
+            startedAt: a?.startedAt ?? null,
+            submittedAt: a?.submittedAt ?? null,
+            lastActivityAt: a?.updatedAt ?? null,
+          }
+        })
+        // In-progress first (the live ones), then not started, then submitted; names within each.
+        const rank = { in_progress: 0, not_started: 1, submitted: 2 }
+        students.sort((a, b) => rank[a.status] - rank[b.status] || a.name.localeCompare(b.name))
+        const count = (status: string) => students.filter((s) => s.status === status).length
+        return {
+          id: d.id,
+          label: d.label,
+          assessmentTitle: d.assessment.title,
+          opensAt: d.opensAt,
+          closesAt: d.closesAt,
+          timeLimitMinutes: d.timeLimitMinutes,
+          counts: {
+            notStarted: count('not_started'),
+            inProgress: count('in_progress'),
+            submitted: count('submitted'),
+          },
+          students,
+        }
+      }),
+    }
+  }
+
   // ── Institution analytics: pre ↔ post ────────────────────────────────────
   //
   // Deliveries on the same assessment + cohort whose labels start with "pre"

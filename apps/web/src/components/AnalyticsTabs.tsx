@@ -20,6 +20,7 @@ export type AnalyticsTab =
   | 'assessments'
   | 'students'
   | 'sandbox'
+  | 'activity'
 
 const ALL_TABS: Array<{ key: AnalyticsTab; label: string; suffix: string }> = [
   { key: 'overview', label: 'Overview', suffix: '/analytics' },
@@ -28,6 +29,7 @@ const ALL_TABS: Array<{ key: AnalyticsTab; label: string; suffix: string }> = [
   { key: 'assessments', label: 'Assessments', suffix: '/assessments' },
   { key: 'students', label: 'Students', suffix: '/students' },
   { key: 'sandbox', label: 'SQL Activity', suffix: '/sandbox' },
+  { key: 'activity', label: 'Assessment Activity', suffix: '/assessment-activity' },
 ]
 
 export interface AnalyticsTabsProps {

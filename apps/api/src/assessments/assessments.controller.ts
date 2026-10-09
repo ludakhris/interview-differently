@@ -115,6 +115,18 @@ export class AssessmentsAdminController {
     return this.service.institutionPrePost(institutionId, cohortId || undefined)
   }
 
+  @Get('institutions/:institutionId/assessment-activity')
+  @InstitutionAdminAllowed()
+  activity(
+    @Req() req: AdminRequest,
+    @Param('institutionId') institutionId: string,
+    @Query('cohortId') cohortId?: string
+  ) {
+    this.scope.assertInstitution(req, institutionId)
+    if (!cohortId) throw new BadRequestException('cohortId is required')
+    return this.service.cohortActivity(institutionId, cohortId)
+  }
+
   @Post('deliveries/:id/invite')
   @InstitutionAdminAllowed()
   async createInvite(@Req() req: AdminRequest, @Param('id') id: string) {

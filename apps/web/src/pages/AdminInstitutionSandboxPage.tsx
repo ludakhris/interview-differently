@@ -139,7 +139,15 @@ export function AdminInstitutionSandboxPage() {
         <AnalyticsTabs
           institutionId={institutionId}
           active="sandbox"
-          available={['overview', 'engagement', 'heatmap', 'assessments', 'students', 'sandbox']}
+          available={[
+            'overview',
+            'engagement',
+            'heatmap',
+            'assessments',
+            'students',
+            'sandbox',
+            'activity',
+          ]}
         />
 
         <div className="flex items-center flex-wrap gap-x-5 gap-y-2 mb-4">
