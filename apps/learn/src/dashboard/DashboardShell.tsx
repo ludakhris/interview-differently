@@ -103,18 +103,22 @@ function useNavModel() {
   })
 }
 
-/** Avatar menu: the person's learner and staff links, then Sign out. */
-function AccountControl() {
+/**
+ * Avatar menu: the person's learner and staff links, then Sign out. Used by every signed-in page,
+ * including the public site (see SiteAccountMenu), so the menu is the same everywhere.
+ * `signedOut` is what a visitor sees in its place.
+ */
+export function AccountControl({ signedOut = null }: { signedOut?: ReactNode }) {
   const { fixedTenant } = useApp()
   const model = useNavModel()
   const flat = useNav()
   // A tenant host fixes the workspace and keeps the older flat list.
-  if (fixedTenant) return <AccountMenu signedOut={null} links={flat} />
+  if (fixedTenant) return <AccountMenu signedOut={signedOut} links={flat} />
   const groups: MenuGroup[] = [
     ...(model.account.learner ? [{ heading: "I'm a learner", links: model.account.learner }] : []),
     ...(model.account.staff ? [{ heading: "I'm a staff member", links: model.account.staff }] : []),
   ]
-  return <AccountMenu signedOut={null} groups={groups.length > 0 ? groups : undefined} />
+  return <AccountMenu signedOut={signedOut} groups={groups.length > 0 ? groups : undefined} />
 }
 
 /** The bell (what needs the person's attention) beside the avatar menu. */

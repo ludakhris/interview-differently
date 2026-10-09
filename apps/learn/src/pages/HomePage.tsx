@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react'
 import { CONTACT_EMAIL } from '../contact'
-import { AccountMenu } from '../auth'
+import { SiteAccountMenu } from '../components/SiteAccountMenu'
 import { ProductsMenu } from '../components/ProductsMenu'
 import { productPagePath, PRODUCTS } from '../products'
 import { PATHWAYS } from './homeContent'
@@ -248,7 +248,7 @@ export function HomePage() {
           </ul>
         </nav>
         <div className="ld-header-actions">
-          <AccountMenu
+          <SiteAccountMenu
             signedOut={
               <>
                 <a href="/sign-in" className="ld-signin-link">

@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { AccountMenu } from '../auth'
+import { SiteAccountMenu } from '../components/SiteAccountMenu'
 import { ProductsMenu } from '../components/ProductsMenu'
 import { productPagePath } from '../products'
 import { CONTACT_EMAIL } from '../contact'
@@ -23,7 +23,7 @@ export function SimpleShell({ children }: { children: ReactNode }) {
             </li>
           </ul>
         </nav>
-        <AccountMenu signedOut={null} />
+        <SiteAccountMenu signedOut={null} />
       </header>
       <main className="ld-wrap ld-simple-main">{children}</main>
       <footer className="ld-wrap ld-simple-footer">
