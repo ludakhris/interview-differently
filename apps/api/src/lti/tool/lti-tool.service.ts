@@ -19,6 +19,7 @@ import {
   AGS_SCOPE_SCORE,
   BRAND_CLAIM,
   CLAIM,
+  INSTRUCTOR_ROLE,
   DIMENSIONS_FIELD,
   jwksKeyResolver,
   jwksOf,
@@ -27,6 +28,7 @@ import {
   SCORE_CONTENT_TYPE,
   signJwt,
   verifyJwt,
+  type JwtClaims,
   type KeyPair,
 } from '../lti-spec'
 import {
@@ -259,6 +261,7 @@ export class LtiToolService {
         attempt: claims[CLAIM.custom]?.attempt,
         timeLimitMinutes: claims[CLAIM.custom]?.timeLimitMinutes,
         review: claims[CLAIM.custom]?.review === true,
+        reviewUser: staffReviewUser(reg, claims),
       })
     }
     const row = await this.prisma.scenario.findUnique({ where: { scenarioId: ref } })
@@ -312,6 +315,8 @@ export class LtiToolService {
     timeLimitMinutes: unknown
     /** Look at the submitted attempt instead of taking one: nothing is created or started. */
     review?: boolean
+    /** Staff review: the local id of the learner whose submitted attempt is opened. */
+    reviewUser?: string
   }): Promise<{ redirect: string }> {
     // never trust the claim: both are checked strictly before anything is looked up or created
     const attempt = l.attempt === undefined ? 1 : l.attempt
@@ -363,7 +368,12 @@ export class LtiToolService {
     }
     const label = attempt === 1 ? baseLabel : `${baseLabel}#${attempt}`
     const delivery = l.review
-      ? await this.findSubmittedDelivery(assessment.id, cohort?.id ?? null, label, l.who.sub)
+      ? await this.findSubmittedDelivery(
+          assessment.id,
+          cohort?.id ?? null,
+          label,
+          l.reviewUser ?? l.who.sub
+        )
       : await this.findOrCreateDelivery(assessment.id, cohort?.id ?? null, label, limit)
     const iat = Math.floor(this.now() / 1000)
     // the session must outlive the delivery's own time limit (the stored one, not this claim's)
@@ -379,6 +389,7 @@ export class LtiToolService {
       datasets: assessment.dataset ? [assessment.dataset.slug] : [],
       deliveryId: delivery.id,
       ...(l.review ? { review: true } : {}),
+      ...(l.review && l.reviewUser ? { reviewUser: l.reviewUser } : {}),
       ...(l.brand ? { brand: l.brand } : {}),
       jti: newId(),
       iat,
@@ -937,6 +948,25 @@ function promptNodes(data: unknown): { nodeId: string; prompt: string }[] {
 type Identity = Pick<LtiSession, 'sub' | 'platformId' | 'platformSub'>
 
 /** Who a launching learner is here: see `keepsBareSub`. The built-in platform leaves tokens as they were. */
+/**
+ * A staff review names the learner it opens, and only an instructor launch may: the learner's local
+ * id, or undefined for an ordinary launch. Never trust the claim alone.
+ */
+function staffReviewUser(platform: ToolPlatform, claims: JwtClaims): string | undefined {
+  const sub = claims[CLAIM.custom]?.reviewUser
+  if (sub === undefined) return undefined
+  const roles = claims[CLAIM.roles]
+  if (
+    typeof sub !== 'string' ||
+    !sub ||
+    claims[CLAIM.custom]?.review !== true ||
+    !Array.isArray(roles) ||
+    !roles.includes(INSTRUCTOR_ROLE)
+  )
+    throw new LtiError('Invalid review launch')
+  return identityOf(platform, sub).sub
+}
+
 function identityOf(platform: ToolPlatform, sub: string): Identity {
   return {
     sub: keepsBareSub(platform) ? sub : `lti:${platform.id}:${sub}`,

@@ -1,6 +1,7 @@
 import {
   BRAND_CLAIM,
   CLAIM,
+  INSTRUCTOR_ROLE,
   AGS_SCOPE_SCORE,
   DIMENSIONS_FIELD,
   SCORE_CONTENT_TYPE,
@@ -1503,6 +1504,46 @@ describe('assessment launch', () => {
       h.deliveries.push({ id: 'd1', assessmentId: 'as1', cohortId: 'c1', label: 'lti:item1' })
       await expect(launchWith(h, review)).rejects.toMatchObject({ status: 404 }) // started, not submitted
       expect(h.deliveries).toHaveLength(1)
+    })
+
+    describe('staff review of a learner', () => {
+      const staffClaims = { [CLAIM.roles]: [INSTRUCTOR_ROLE] }
+      const forLearner = { ...review, reviewUser: 'learner1' }
+      const learnerAttempt = {
+        userId: 'learner1',
+        submittedAt: new Date(),
+        delivery: { assessmentId: 'as1', cohortId: 'c1', label: 'lti:item1' },
+      }
+
+      it('opens the learner attempt in a session that stays the staff member', async () => {
+        const h = ready()
+        h.deliveries.push({ id: 'd1', assessmentId: 'as1', cohortId: 'c1', label: 'lti:item1' })
+        h.attempts.push(learnerAttempt)
+        const session = sessionOf(await launchWith(h, forLearner, staffClaims))
+        expect(session).toMatchObject({
+          sub: 'u1',
+          deliveryId: 'd1',
+          review: true,
+          reviewUser: 'learner1',
+        })
+      })
+
+      it('finds nothing when the learner submitted nothing, even if the staff member did', async () => {
+        const h = ready()
+        h.deliveries.push({ id: 'd1', assessmentId: 'as1', cohortId: 'c1', label: 'lti:item1' })
+        h.attempts.push(submitted('lti:item1')) // belongs to u1, the staff member
+        await expect(launchWith(h, forLearner, staffClaims)).rejects.toMatchObject({ status: 404 })
+      })
+
+      it('refuses a learner launch that names someone else, or a review user without review', async () => {
+        const h = ready()
+        h.deliveries.push({ id: 'd1', assessmentId: 'as1', cohortId: 'c1', label: 'lti:item1' })
+        h.attempts.push(learnerAttempt)
+        await expect(launchWith(h, forLearner)).rejects.toThrow('Invalid review launch')
+        await expect(
+          launchWith(h, { ...forLearner, review: undefined }, staffClaims)
+        ).rejects.toThrow('Invalid review launch')
+      })
     })
 
     it('an ordinary launch carries no review flag', async () => {

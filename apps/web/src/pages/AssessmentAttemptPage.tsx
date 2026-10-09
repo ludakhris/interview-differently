@@ -117,12 +117,26 @@ export function AssessmentAttemptPage({
   const submit = useCallback(
     async (auto = false) => {
       if (submitting) return
+      // An untouched starter query is not an answer the learner wrote, so it counts as unanswered here.
+      const unanswered = (paper?.sections ?? []).reduce(
+        (n, sec) =>
+          n +
+          sec.questions.filter((q) => !(answers[q.id] ?? dirtyRef.current[q.id])?.trim()).length,
+        0
+      )
       if (
         !auto &&
         !(await confirm({
-          title: 'Submit your answers?',
-          body: 'You cannot change them afterwards. Unanswered questions score zero.',
-          confirmLabel: 'Submit',
+          title:
+            unanswered > 0
+              ? `Submit with ${unanswered} unanswered ${unanswered === 1 ? 'question' : 'questions'}?`
+              : 'Submit your answers?',
+          body:
+            unanswered > 0
+              ? 'You cannot change your answers afterwards, and unanswered questions score zero. Go back if you want to finish them first.'
+              : 'You cannot change them afterwards.',
+          confirmLabel: unanswered > 0 ? 'Submit anyway' : 'Submit',
+          cancelLabel: unanswered > 0 ? 'Go back' : undefined,
         }))
       )
         return

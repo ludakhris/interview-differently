@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import type { PrismaService } from '../prisma/prisma.service'
-import { LearnCohortsService } from './learn-cohorts.service'
+import { LearnCohortsService, assessmentStatusOf } from './learn-cohorts.service'
 import type { LearnService } from './learn.service'
 import type { LearnerService } from './learner.service'
 import type { DataAccessLogService } from './data-access-log.service'
@@ -29,8 +29,10 @@ const prisma = {
     update: jest.fn(),
     count: jest.fn(),
   },
-  courseItem: { findUnique: jest.fn() },
-  itemProgress: { findUnique: jest.fn() },
+  courseItem: { findUnique: jest.fn(), findMany: jest.fn() },
+  itemProgress: { findUnique: jest.fn(), findMany: jest.fn() },
+  itemAttempt: { findMany: jest.fn() },
+  activitySession: { findMany: jest.fn() },
   membership: { upsert: jest.fn() },
   joinRequest: {
     findUnique: jest.fn(),
@@ -273,6 +275,126 @@ describe('attempts', () => {
     prisma.courseItem.findUnique.mockResolvedValueOnce({ ...toolItem, type: 'lesson' })
     await expect(service.attempts('u', 'agency-admin', 'e1', 'i1')).rejects.toThrow(
       NotFoundException
+    )
+  })
+})
+
+describe('assessmentStatusOf', () => {
+  const t = (m: number) => new Date(2026, 9, 9, 12, m)
+  it('is not started with no score and no launch', () => {
+    expect(
+      assessmentStatusOf({ attempts: 0, allowed: 1, lastAttemptAt: null, openedAt: null })
+    ).toBe('not_started')
+  })
+  it('is in progress once opened with no score yet', () => {
+    expect(
+      assessmentStatusOf({ attempts: 0, allowed: 1, lastAttemptAt: null, openedAt: t(1) })
+    ).toBe('in_progress')
+  })
+  it('is submitted when the score came back after the launch', () => {
+    expect(
+      assessmentStatusOf({ attempts: 1, allowed: 1, lastAttemptAt: t(5), openedAt: t(1) })
+    ).toBe('submitted')
+  })
+  it('is in progress again on a retake opened after the last score, with attempts left', () => {
+    expect(
+      assessmentStatusOf({ attempts: 1, allowed: 2, lastAttemptAt: t(5), openedAt: t(9) })
+    ).toBe('in_progress')
+    // with none left it is just submitted
+    expect(
+      assessmentStatusOf({ attempts: 2, allowed: 2, lastAttemptAt: t(5), openedAt: t(9) })
+    ).toBe('submitted')
+  })
+})
+
+describe('assessmentStatus', () => {
+  const assess = (id: string, label: string | null, config: object = {}) => ({
+    id,
+    title: `T ${id}`,
+    label,
+    config: { toolId: 'id-assessment', ref: 'x', ...config },
+  })
+  beforeEach(() => {
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    prisma.courseItem.findMany.mockResolvedValue([
+      assess('post1', 'post'),
+      { id: 'iv', title: 'Interview', label: null, config: { toolId: 'id-interview', ref: 'x' } },
+    ])
+    prisma.enrollment.findMany.mockResolvedValue([
+      { id: 'e1', user: { email: 'a@x.test', displayName: 'Ana' } },
+      { id: 'e2', user: { email: 'b@x.test', displayName: 'Ben' } },
+      { id: 'e3', user: { email: 'c@x.test', displayName: null } },
+    ])
+    prisma.itemProgress.findMany.mockResolvedValue([
+      { enrollmentId: 'e1', itemId: 'post1', score: 80, attempts: 1 },
+    ])
+    prisma.itemAttempt.findMany.mockResolvedValue([
+      { enrollmentId: 'e1', itemId: 'post1', createdAt: new Date('2026-10-09T12:10:00Z') },
+    ])
+    prisma.activitySession.findMany.mockResolvedValue([
+      { enrollmentId: 'e2', itemId: 'post1', startedAt: new Date('2026-10-09T12:20:00Z') },
+      { enrollmentId: 'e1', itemId: 'post1', startedAt: new Date('2026-10-09T12:00:00Z') },
+    ])
+  })
+
+  it('lists assessment items only, with each learner open first, then not started, then submitted', async () => {
+    const out = await service.assessmentStatus('u', 'agency-admin', 'k1')
+    expect(out.items.map((i) => i.itemId)).toEqual(['post1'])
+    const [item] = out.items
+    expect(item.label).toBe('post')
+    expect(item.attemptsAllowed).toBe(1)
+    expect(item.counts).toEqual({ notStarted: 1, inProgress: 1, submitted: 1 })
+    expect(item.learners.map((l) => [l.name, l.status])).toEqual([
+      ['Ben', 'in_progress'],
+      ['c@x.test', 'not_started'],
+      ['Ana', 'submitted'],
+    ])
+    expect(item.learners.find((l) => l.name === 'Ana')).toMatchObject({ score: 80, attempts: 1 })
+  })
+
+  it('checks the staff member first, and reads nothing for a course with no assessments', async () => {
+    prisma.courseItem.findMany.mockResolvedValue([])
+    const out = await service.assessmentStatus('u', 'agency-admin', 'k1')
+    expect(learn.assertWorkspace).toHaveBeenCalled()
+    expect(out.items).toEqual([])
+    learn.assertRole.mockImplementationOnce(() => {
+      throw new ForbiddenException()
+    })
+    await expect(service.assessmentStatus('u', 'learner', 'k1')).rejects.toThrow(ForbiddenException)
+  })
+})
+
+describe('reviewTarget', () => {
+  const tool = { id: 'i1', type: 'tool', module: { courseId: 'c1' } }
+  beforeEach(() => {
+    prisma.enrollment.findUnique.mockResolvedValue({ id: 'e1', cohortId: 'k1', userId: 'learner1' })
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    prisma.courseItem.findUnique.mockResolvedValue(tool)
+  })
+
+  it('names the learner and the item once the staff checks pass', async () => {
+    expect(await service.reviewTarget('u', 'agency-admin', 'e1', 'i1')).toEqual({
+      cohortId: 'k1',
+      itemId: 'i1',
+      learnerUserId: 'learner1',
+    })
+  })
+
+  it('refuses another workspace, an unknown enrollment, and an item outside the course', async () => {
+    learn.assertWorkspace.mockRejectedValueOnce(new ForbiddenException())
+    await expect(service.reviewTarget('u', 'agency-admin', 'e1', 'i1')).rejects.toThrow(
+      ForbiddenException
+    )
+    prisma.enrollment.findUnique.mockResolvedValueOnce(null)
+    await expect(service.reviewTarget('u', 'agency-admin', 'x', 'i1')).rejects.toThrow(
+      NotFoundException
+    )
+    prisma.courseItem.findUnique.mockResolvedValueOnce({ ...tool, module: { courseId: 'c9' } })
+    await expect(service.reviewTarget('u', 'agency-admin', 'e1', 'i1')).rejects.toThrow(
+      NotFoundException
+    )
+    await expect(service.reviewTarget('u', 'agency-admin', 'e1', undefined)).rejects.toThrow(
+      BadRequestException
     )
   })
 })

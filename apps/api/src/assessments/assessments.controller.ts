@@ -214,7 +214,8 @@ export class AssessmentsMeController {
     if (!req.lti) return this.service.startAttempt(req.userId, id)
     if (!req.lti.deliveryId || req.lti.deliveryId !== id) throw new ForbiddenException()
     // a review session finds the submitted attempt; it can never start one
-    if (req.lti.review) return this.service.findSubmittedAttemptForLti(req.userId, id)
+    if (req.lti.review)
+      return this.service.findSubmittedAttemptForLti(req.lti.reviewUser ?? req.userId, id)
     return this.service.startAttemptForLti(req.userId, id)
   }
 
@@ -246,7 +247,15 @@ export class AssessmentsMeController {
 
   @Get('attempts/:id/result')
   result(@Req() req: MeRequest, @Param('id') id: string) {
-    return this.service.getResult(req.userId, id, this.pinned(req), req.lti?.review === true)
+    // staff review: the attempt is the learner's, and the result says whose it is
+    const staff = req.lti?.reviewUser
+    return this.service.getResult(
+      staff ?? req.userId,
+      id,
+      this.pinned(req),
+      req.lti?.review === true,
+      staff !== undefined
+    )
   }
 
   /** The session's delivery for an LTI caller (never undefined, which would mean unpinned); undefined for Clerk. */

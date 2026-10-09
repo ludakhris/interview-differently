@@ -21,6 +21,7 @@ import {
   BRAND_CLAIM,
   CLAIM,
   DIMENSIONS_FIELD,
+  INSTRUCTOR_ROLE,
   LEARNER_ROLE,
   LtiError,
   b64url,
@@ -149,11 +150,50 @@ export class LtiPlatformService {
       void Promise.resolve()
         .then(() => this.activity?.openToolLaunch(enrollmentId, userId, itemId))
         .catch(() => undefined)
+    return this.loginForm(tool, userId, hint)
+  }
+
+  /**
+   * Staff open one learner's submitted assessment, read-only. The caller (the cohort's staff
+   * access check) has already decided the staff member may see this learner; this checks the item
+   * and that there is something submitted. Staff are not bound by the learner release gate.
+   */
+  async startStaffReview(
+    staffUserId: string,
+    cohortId: string,
+    itemId: string,
+    learnerUserId: string,
+    returnOrigin?: string
+  ) {
+    const { tool } = await this.toolItem(cohortId, itemId, undefined, true)
+    if (tool.kind !== 'assessment')
+      throw new ConflictException('Answers are only kept for assessments.')
+    if ((await this.attemptsUsed(learnerUserId, cohortId, itemId)) < 1)
+      throw new ConflictException('This learner has not submitted this assessment.')
+    const origin = isLearnOrigin(returnOrigin, learnUrl())
+      ? new URL(returnOrigin!).origin
+      : undefined
+    const hint = this.signHint({
+      userId: staffUserId,
+      cohortId,
+      itemId,
+      returnOrigin: origin,
+      mode: 'review',
+      reviewUserId: learnerUserId,
+    })
+    return this.loginForm(tool, staffUserId, hint)
+  }
+
+  private loginForm(
+    tool: { loginUrl: string; launchUrl: string; clientId: string; deploymentId: string },
+    loginHint: string,
+    hint: string
+  ) {
     return {
       action: tool.loginUrl,
       fields: {
         iss: platformRegistration().issuer,
-        login_hint: userId,
+        login_hint: loginHint,
         target_link_uri: tool.launchUrl,
         lti_message_hint: hint,
         client_id: tool.clientId,
@@ -243,6 +283,8 @@ export class LtiPlatformService {
     itemId: string
     returnOrigin?: string
     mode?: 'review'
+    /** Staff review: the learner whose submitted attempt `userId` (the staff member) opens. */
+    reviewUserId?: string
   }): string {
     const body = b64url(JSON.stringify({ ...claims, jti: newId(), exp: nowS() + HINT_TTL_S }))
     const mac = createHmac('sha256', this.hintSecret).update(body).digest('base64url')
@@ -263,6 +305,7 @@ export class LtiPlatformService {
       itemId?: unknown
       returnOrigin?: unknown
       mode?: unknown
+      reviewUserId?: unknown
       jti?: unknown
       exp?: unknown
     }
@@ -271,13 +314,14 @@ export class LtiPlatformService {
     } catch {
       throw new HttpException('Invalid lti_message_hint', 400)
     }
-    const { userId, cohortId, itemId, returnOrigin, mode, jti, exp } = claims
+    const { userId, cohortId, itemId, returnOrigin, mode, reviewUserId, jti, exp } = claims
     if (
       typeof userId !== 'string' ||
       typeof cohortId !== 'string' ||
       typeof itemId !== 'string' ||
       (returnOrigin !== undefined && typeof returnOrigin !== 'string') ||
       (mode !== undefined && mode !== 'review') ||
+      (reviewUserId !== undefined && (typeof reviewUserId !== 'string' || mode !== 'review')) ||
       typeof jti !== 'string' ||
       typeof exp !== 'number'
     )
@@ -288,7 +332,7 @@ export class LtiPlatformService {
       typeof returnOrigin === 'string' && isLearnOrigin(returnOrigin, learnUrl())
         ? returnOrigin
         : undefined
-    return { userId, cohortId, itemId, returnOrigin: origin, mode, jti, exp }
+    return { userId, cohortId, itemId, returnOrigin: origin, mode, reviewUserId, jti, exp }
   }
 
   /** OIDC authentication request from a tool: replies with a form that posts the signed id_token. */
@@ -318,12 +362,21 @@ export class LtiPlatformService {
       ref,
       config: itemConfig,
       label: itemLabel,
-    } = await this.toolItem(hint.cohortId, hint.itemId, hint.userId)
+    } = await this.toolItem(
+      hint.cohortId,
+      hint.itemId,
+      // a staff review is not the staff member's own enrollment
+      hint.reviewUserId ? undefined : hint.userId,
+      !!hint.reviewUserId
+    )
     if (itemTool.clientId !== tool.clientId)
       throw new HttpException('This item does not launch that client', 400)
     // An assessment's attempts may have run out since the hint was minted (another tab); a hint is not a way around the cap.
     let used = 0
-    if (hint.mode === 'review') {
+    if (hint.reviewUserId) {
+      used = await this.attemptsUsed(hint.reviewUserId, hint.cohortId, hint.itemId)
+      if (used < 1) throw new ConflictException('This learner has not submitted this assessment.')
+    } else if (hint.mode === 'review') {
       await this.assertCanReview(
         hint.userId,
         hint.cohortId,
@@ -346,7 +399,12 @@ export class LtiPlatformService {
     let custom: Record<string, unknown> = { ref, tool: itemTool.toolId }
     if (hint.mode === 'review') {
       // the latest attempt is the one reviewed; the tool must not start anything
-      custom = { ...custom, attempt: used, review: true }
+      custom = {
+        ...custom,
+        attempt: used,
+        review: true,
+        ...(hint.reviewUserId ? { reviewUser: hint.reviewUserId } : {}),
+      }
     } else if (itemTool.kind === 'assessment') {
       const { timeLimitMinutes } = assessmentLimits(itemConfig)
       custom = { ...custom, attempt: used + 1, ...(timeLimitMinutes ? { timeLimitMinutes } : {}) }
@@ -370,11 +428,13 @@ export class LtiPlatformService {
         [CLAIM.targetLinkUri]: tool.launchUrl,
         [CLAIM.resourceLink]: { id: hint.itemId },
         [CLAIM.context]: { id: hint.cohortId },
-        [CLAIM.roles]: [LEARNER_ROLE],
+        [CLAIM.roles]: [hint.reviewUserId ? INSTRUCTOR_ROLE : LEARNER_ROLE],
         [CLAIM.custom]: custom,
         [CLAIM.launchPresentation]: {
           document_target: 'window',
-          return_url: `${hint.returnOrigin ?? learnUrl()}/lms/learning/${hint.cohortId}/${hint.itemId}`,
+          return_url: hint.reviewUserId
+            ? `${hint.returnOrigin ?? learnUrl()}/lms/cohorts/${hint.cohortId}`
+            : `${hint.returnOrigin ?? learnUrl()}/lms/learning/${hint.cohortId}/${hint.itemId}`,
         },
         [CLAIM.agsEndpoint]: { scope: [AGS_SCOPE_SCORE], lineitem },
         ...(brand ? { [BRAND_CLAIM]: brand } : {}),

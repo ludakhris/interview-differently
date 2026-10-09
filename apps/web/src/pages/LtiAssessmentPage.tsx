@@ -97,9 +97,9 @@ function LtiReview({ token }: { token: string | null }) {
 
   if (!token || !deliveryId || failed) {
     return (
-      <Message label="Your answers">
+      <Message label="Answers">
         <p className="text-fg text-[15px] mb-4">
-          We could not open your answers. Go back to your course and try again.
+          We could not open the answers. Go back to your course and try again.
         </p>
         {courseUrl && (
           <a href={courseUrl} className="text-green underline font-semibold text-[14px]">
@@ -122,11 +122,12 @@ function LtiReview({ token }: { token: string | null }) {
       <div className="max-w-3xl mx-auto px-6 py-10">
         <div className="flex items-baseline justify-between gap-4 mb-6">
           <h1 className="font-display font-extrabold text-[22px] text-fg tracking-tight">
-            Your answers · {result.overall.percent}%
+            {result.learner ? `Answers · ${result.learner}` : 'Your answers'} ·{' '}
+            {result.overall.percent}%
           </h1>
           {courseUrl && (
             <a href={courseUrl} className="text-green underline font-semibold text-[13px]">
-              Back to your course
+              {result.learner ? 'Back to the cohort' : 'Back to your course'}
             </a>
           )}
         </div>

@@ -959,10 +959,23 @@ export class AssessmentsService {
   }
 
   /** `forceReview`: an LTI review session, which the course only launches after the attempts are used up. */
-  async getResult(userId: string, attemptId: string, deliveryId?: string, forceReview = false) {
+  async getResult(
+    userId: string,
+    attemptId: string,
+    deliveryId?: string,
+    forceReview = false,
+    withLearner = false
+  ) {
     const a = await this.loadOwnAttempt(userId, attemptId, deliveryId)
     if (!a.submittedAt) throw new BadRequestException('Attempt not submitted yet')
+    const learner = withLearner
+      ? await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true, displayName: true },
+        })
+      : null
     return {
+      ...(learner ? { learner: learner.displayName ?? learner.email ?? userId } : {}),
       title: a.delivery.assessment.title,
       label: a.delivery.label,
       submittedAt: a.submittedAt,

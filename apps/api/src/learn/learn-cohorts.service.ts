@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common'
 import type {
+  AssessmentStatus,
   CohortDelivery,
   CohortDetail,
   CohortJoinRequestRow,
@@ -16,6 +17,7 @@ import type {
   ToolAttempt,
 } from './learn-types'
 import { PrismaService } from '../prisma/prisma.service'
+import { assessmentLimits, toolAnyById } from '../lti/platform/lti-platform-config'
 import {
   assertApprovalContact,
   assertProfileRefresh,
@@ -494,6 +496,131 @@ export class LearnCohortsService {
     return { change, cohort: await this.detail(userId, role, e.cohortId) }
   }
 
+  /**
+   * Who has not started, who has the assessment open and who has submitted, for each assessment
+   * item of the cohort's course. Built only from what the course records: scores that came back
+   * and the time the tool was opened. How far through the questions a learner is stays with the
+   * Simulator, which owns the attempt.
+   */
+  async assessmentStatus(
+    userId: string,
+    role: string | undefined,
+    cohortId: string
+  ): Promise<AssessmentStatus> {
+    const cohort = await this.cohortFor(userId, role, cohortId)
+    const tools = await this.prisma.courseItem.findMany({
+      where: { module: { courseId: cohort.course.id }, type: 'tool' },
+      orderBy: [{ module: { position: 'asc' } }, { position: 'asc' }],
+      select: { id: true, title: true, label: true, config: true },
+    })
+    const items = tools.filter(
+      (t) => toolAnyById((t.config as { toolId?: unknown } | null)?.toolId)?.kind === 'assessment'
+    )
+    const generatedAt = new Date().toISOString()
+    if (items.length === 0) return { generatedAt, items: [] }
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: { cohortId, status: { not: 'withdrawn' } },
+      select: { id: true, user: { select: { email: true, displayName: true } } },
+    })
+    const where = {
+      itemId: { in: items.map((i) => i.id) },
+      enrollmentId: { in: enrollments.map((e) => e.id) },
+    }
+    const [progress, attempts, launches] = await Promise.all([
+      this.prisma.itemProgress.findMany({
+        where,
+        select: { enrollmentId: true, itemId: true, score: true, attempts: true },
+      }),
+      this.prisma.itemAttempt.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        select: { enrollmentId: true, itemId: true, createdAt: true },
+      }),
+      this.prisma.activitySession.findMany({
+        where: { ...where, kind: 'tool' },
+        orderBy: { startedAt: 'desc' },
+        select: { enrollmentId: true, itemId: true, startedAt: true },
+      }),
+    ])
+    const key = (e: string, i: string | null) => `${e}:${i}`
+    const progressBy = new Map(progress.map((p) => [key(p.enrollmentId, p.itemId), p]))
+    // newest first, so the first row seen for a pair is its latest
+    const lastAttempt = new Map<string, Date>()
+    for (const a of attempts) {
+      const k = key(a.enrollmentId, a.itemId)
+      if (!lastAttempt.has(k)) lastAttempt.set(k, a.createdAt)
+    }
+    const lastOpened = new Map<string, Date>()
+    for (const l of launches) {
+      const k = key(l.enrollmentId, l.itemId)
+      if (!lastOpened.has(k)) lastOpened.set(k, l.startedAt)
+    }
+    return {
+      generatedAt,
+      items: items.map((item) => {
+        const allowed = assessmentLimits(item.config).maxAttempts
+        const learners = enrollments.map((e) => {
+          const k = key(e.id, item.id)
+          const p = progressBy.get(k)
+          const openedAt = lastOpened.get(k) ?? null
+          return {
+            enrollmentId: e.id,
+            name: e.user.displayName ?? e.user.email ?? 'Learner',
+            email: e.user.email,
+            status: assessmentStatusOf({
+              attempts: p?.attempts ?? 0,
+              allowed,
+              lastAttemptAt: lastAttempt.get(k) ?? null,
+              openedAt,
+            }),
+            score: p?.score ?? null,
+            attempts: p?.attempts ?? 0,
+            openedAt: openedAt?.toISOString() ?? null,
+          }
+        })
+        // Open ones first (the live ones), then not started, then submitted; names within each.
+        const rank = { in_progress: 0, not_started: 1, submitted: 2 }
+        learners.sort((a, b) => rank[a.status] - rank[b.status] || a.name.localeCompare(b.name))
+        const count = (s: string) => learners.filter((l) => l.status === s).length
+        return {
+          itemId: item.id,
+          title: item.title,
+          label: item.label === 'pre' || item.label === 'post' ? item.label : null,
+          attemptsAllowed: allowed,
+          counts: {
+            notStarted: count('not_started'),
+            inProgress: count('in_progress'),
+            submitted: count('submitted'),
+          },
+          learners,
+        }
+      }),
+    }
+  }
+
+  /**
+   * Staff may open a learner's answers on an assessment item of this cohort. Returns who and what
+   * to launch; the caller starts the LTI review launch.
+   */
+  async reviewTarget(
+    userId: string,
+    role: string | undefined,
+    enrollmentId: string,
+    itemId: string | undefined
+  ): Promise<{ cohortId: string; itemId: string; learnerUserId: string }> {
+    const e = await this.prisma.enrollment.findUnique({ where: { id: enrollmentId } })
+    if (!e) throw new NotFoundException('Enrollment not found')
+    const cohort = await this.cohortFor(userId, role, e.cohortId)
+    if (!itemId) throw new BadRequestException('itemId is required')
+    const item = await this.prisma.courseItem.findUnique({
+      where: { id: itemId },
+      include: { module: { select: { courseId: true } } },
+    })
+    if (!item || item.module.courseId !== cohort.course.id || item.type !== 'tool')
+      throw new NotFoundException('Item not found')
+    return { cohortId: e.cohortId, itemId, learnerUserId: e.userId }
+  }
+
   /** One learner's recorded scores for a connected-tool item (#67); same access as recompute. */
   async attempts(
     userId: string,
@@ -605,4 +732,19 @@ export class LearnCohortsService {
     await this.learn.assertWorkspace(userId, role, course.provider.subdomain as string)
     return course
   }
+}
+
+/**
+ * A learner's place on an assessment, from the course's own records. Open means the tool was
+ * opened after the last score came back (or there is no score yet), with attempts left to use.
+ */
+export function assessmentStatusOf(a: {
+  attempts: number
+  allowed: number
+  lastAttemptAt: Date | null
+  openedAt: Date | null
+}): 'not_started' | 'in_progress' | 'submitted' {
+  const reopened = a.openedAt !== null && (a.lastAttemptAt === null || a.openedAt > a.lastAttemptAt)
+  if (a.attempts < a.allowed && reopened) return 'in_progress'
+  return a.attempts > 0 ? 'submitted' : 'not_started'
 }

@@ -512,6 +512,117 @@
 
     <main id="entries">
       <p class="empty-note" id="none" hidden>No updates match. Clear the search or choose All.</p>
+      <!-- ======================= IN REVIEW (assessment answers and status) ======================= -->
+
+      <article
+        class="entry"
+        id="assessment-review"
+        data-status="review"
+        data-short="Assessment status and answers"
+        data-summary="Instructors see who has opened and submitted each assessment and can open a learner's answers; learners can review theirs once their attempts are used."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-09">Oct 9, 2026</time>
+        </div>
+        <h2>See who is taking an assessment, and what they answered</h2>
+        <p>
+          A cohort page now has an Assessments section. For each pre- and post-assessment in the
+          course it shows who has not started, who has opened it and has no score yet, and who has
+          submitted, with each learner's best score and the time they last opened it. Select Refresh
+          to see the latest; the page does not update on its own.
+        </p>
+        <p>
+          Beside a learner who has submitted, select View answers (it is also on the learner's
+          attempts in the roster). The answers open in Interview Differently, under your
+          institution's own branding: the overall score, the score for each section, and every
+          question with what the learner chose, what was right, and what they got wrong. A link
+          takes you back to the cohort.
+        </p>
+        <p>
+          Learners get the same view. Once a learner has used all their attempts, their assessment
+          page offers Review your answers. It is on by default for a post-assessment and off for a
+          pre-assessment, because the same questions are reused; whoever builds the course can
+          change it on the item.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              The status shows opened and submitted, not how far through the questions someone is.
+              That detail stays in Interview Differently.
+            </li>
+            <li>
+              Instructors can open a learner's answers as soon as the learner has submitted,
+              whatever the learner-facing setting is. Learners see theirs only after every attempt
+              is used, so nobody can look at the answers and then retake.
+            </li>
+            <li>
+              A post-assessment now allows one attempt, and the field shows why. An older
+              post-assessment saved with more attempts keeps them until someone edits and saves it.
+            </li>
+            <li>
+              Right and wrong are marked with bold [Correct Answer] and [Your Answer] labels, and a
+              key at the top, so the meaning never depends on color alone.
+            </li>
+            <li>
+              The assessment page now warns about unanswered questions before a learner submits, and
+              its three tiles sit in one row on a wide screen.
+            </li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/assessment-review/01-cohort-assessments.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/assessment-review/01-cohort-assessments.jpg"
+                alt="The cohort page Assessments section listing each learner's status, best score and last opened time"
+            /></a>
+            <figcaption>The cohort's Assessments section (sample learners).</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/assessment-review/02-staff-answers.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/assessment-review/02-staff-answers.jpg"
+                alt="A learner's answers with the overall score, section scores, a key, and each question marked right or wrong"
+            /></a>
+            <figcaption>
+              An instructor opens a learner's answers, under the institution's own branding.
+            </figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/assessment-review/05-answers-marked.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/assessment-review/05-answers-marked.jpg"
+                alt="Questions with the learner's answer and the correct answer marked in bold brackets, wrong answers in red and right answers in green"
+            /></a>
+            <figcaption>Each question marks the learner's answer and the correct one.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/assessment-review/04-learner-review-button.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/assessment-review/04-learner-review-button.jpg"
+                alt="A learner's completed post-assessment page with a Review your answers button"
+            /></a>
+            <figcaption>The learner's page once the attempts are used.</figcaption>
+          </figure>
+          <figure>
+            <a href="../screenshots/assessment-review/03-item-settings.jpg"
+              ><img
+                loading="lazy"
+                src="../screenshots/assessment-review/03-item-settings.jpg"
+                alt="The assessment item settings with attempts fixed at one and the review option ticked"
+            /></a>
+            <figcaption>
+              Item settings: one attempt for a post-assessment, and the review option.
+            </figcaption>
+          </figure>
+        </div>
+      </article>
+
       <!-- ======================= SHIPPED (new homepage) ======================= -->
 
       <article
@@ -656,17 +767,17 @@
         </div>
       </article>
 
-      <!-- ======================= IN REVIEW (needs your attention) ======================= -->
+      <!-- ======================= SHIPPED (needs your attention) ======================= -->
 
       <article
         class="entry"
         id="attention-alert"
-        data-status="review"
+        data-status="shipped"
         data-short="Needs-your-attention bell"
         data-summary="A bell in the header shows how many things are waiting for you, with a link to each."
       >
         <div class="meta">
-          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-07">Oct 7, 2026</time>
         </div>
         <h2>A bell shows what needs your attention</h2>
         <p>
@@ -719,17 +830,17 @@
         </div>
       </article>
 
-      <!-- ======================= IN REVIEW (outcomes drill-downs) ======================= -->
+      <!-- ======================= SHIPPED (outcomes drill-downs) ======================= -->
 
       <article
         class="entry"
         id="outcomes-drilldowns"
-        data-status="review"
+        data-status="shipped"
         data-short="Outcomes drill-downs"
         data-summary="Open a provider, organization or cohort straight from the outcomes page."
       >
         <div class="meta">
-          <span class="chip review">IN REVIEW</span><time datetime="2026-10-07">Oct 7, 2026</time>
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-07">Oct 7, 2026</time>
         </div>
         <h2>Outcomes: open a provider, organization or cohort from the dashboard</h2>
         <p>

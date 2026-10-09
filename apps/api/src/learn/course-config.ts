@@ -314,6 +314,9 @@ function validateItemByType(
       const rules: Record<string, number | boolean> = {}
       if (tool.kind === 'assessment') {
         rules.maxAttempts = whole(config.maxAttempts, 'Attempts allowed', 1, 5) ?? 1
+        // A post-assessment measures what the course taught, so a retake would inflate the gain.
+        if (given === 'post' && rules.maxAttempts !== 1)
+          return bad('A post-assessment allows one attempt')
         const limit = whole(config.timeLimitMinutes, 'Time limit', 5, 240)
         if (limit !== undefined) rules.timeLimitMinutes = limit
         // Whether learners can review their answers once the attempts are used up.

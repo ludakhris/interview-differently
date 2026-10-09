@@ -61,7 +61,10 @@ function setup(delivery: { label: string; showReview: boolean | null }) {
       },
     },
   }
-  const prisma = { assessmentAttempt: { findUnique: jest.fn(async () => attempt) } }
+  const prisma = {
+    assessmentAttempt: { findUnique: jest.fn(async () => attempt) },
+    user: { findUnique: jest.fn(async () => ({ email: 'ana@x.test', displayName: 'Ana' })) },
+  }
   return new AssessmentsService(prisma as never, {} as never, {} as never)
 }
 
@@ -106,5 +109,11 @@ describe('AssessmentsService.getResult review', () => {
     const svc = setup({ label: 'lti:item1', showReview: null })
     expect(await svc.getResult('u1', 'a1', 'd1')).not.toHaveProperty('review')
     expect(await svc.getResult('u1', 'a1', 'd1', true)).toHaveProperty('review')
+  })
+
+  it('names the learner only when asked (a staff review)', async () => {
+    const svc = setup({ label: 'lti:item1', showReview: null })
+    expect(await svc.getResult('u1', 'a1', 'd1', true)).not.toHaveProperty('learner')
+    expect(await svc.getResult('u1', 'a1', 'd1', true, true)).toMatchObject({ learner: 'Ana' })
   })
 })

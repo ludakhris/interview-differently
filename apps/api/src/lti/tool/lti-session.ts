@@ -36,6 +36,11 @@ export interface LtiSession {
    * session may read the submitted attempt's review and cannot start an attempt.
    */
   review?: boolean
+  /**
+   * Set (with `review`) when staff open a learner's submitted attempt: the local id of the learner
+   * whose attempt this session may read. `sub` stays the staff member, who owns no attempt.
+   */
+  reviewUser?: string
   jti: string
   /** Issued-at, epoch seconds: a result must be completed after the session began. */
   iat: number
@@ -91,6 +96,11 @@ export function verifySession(
   )
     throw invalid()
   if (claims.review !== undefined && (claims.review !== true || !claims.deliveryId)) throw invalid()
+  if (
+    claims.reviewUser !== undefined &&
+    (typeof claims.reviewUser !== 'string' || !claims.reviewUser || claims.review !== true)
+  )
+    throw invalid()
   if (claims.brand !== undefined) {
     // validated again, and the stored form must already be the sanitized form
     const clean = sanitizeBrand(claims.brand)

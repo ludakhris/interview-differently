@@ -2,6 +2,7 @@ import type { CohortDetail } from '@id/types'
 import { Fragment, useEffect, useState, type FormEvent } from 'react'
 import { useApiFetch, useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
+import { AssessmentStatusPanel } from './AssessmentStatus'
 import { AttemptsPanel } from './AttemptsPanel'
 import { AttendancePanel } from './attendance/AttendancePanel'
 import { Meter } from './charts'
@@ -279,6 +280,8 @@ function Cohort({
       </section>
 
       {cohort.delivery !== 'online' && <AttendancePanel cohortId={cohort.id} />}
+
+      <AssessmentStatusPanel cohortId={cohort.id} />
 
       <section className="dash-section" aria-labelledby="h-roster">
         <div className="dash-head">

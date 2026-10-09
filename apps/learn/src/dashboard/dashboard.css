@@ -1877,7 +1877,7 @@
 }
 .dash-ready-points {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13em, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(11em, 1fr));
   gap: 12px;
   margin: 0 0 20px;
   padding: 0;

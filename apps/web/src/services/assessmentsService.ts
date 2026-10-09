@@ -300,6 +300,8 @@ export interface StudentResult {
   title?: string
   label?: string
   submittedAt?: string
+  /** Whose attempt this is: set only when staff open a learner's answers. */
+  learner?: string
   overall: OverallScore
   sections: SectionScoreSummary[]
   /** Present only when the delivery lets learners review their answers. */

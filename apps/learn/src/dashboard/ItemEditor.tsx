@@ -164,7 +164,7 @@ export function ItemEditor(props: {
                     toolId,
                     ref: toolRef,
                     skill,
-                    attempts,
+                    attempts: label === 'post' ? '1' : attempts,
                     timeLimit,
                     passScore,
                     reviewAnswers,
@@ -425,9 +425,16 @@ export function ItemEditor(props: {
                   type="number"
                   min={1}
                   max={5}
-                  value={attempts}
+                  value={label === 'post' ? '1' : attempts}
+                  disabled={label === 'post'}
                   onChange={(e) => setAttempts(e.target.value)}
                 />
+                {label === 'post' && (
+                  <small className="dash-muted">
+                    A post-assessment allows one attempt. It measures what the learner knows after
+                    the course, so a retake would inflate the gain from the pre-assessment.
+                  </small>
+                )}
               </label>
               <label className="dash-field">
                 <span>Time limit (minutes, optional)</span>

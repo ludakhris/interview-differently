@@ -487,6 +487,22 @@ describe('tool items', () => {
       ).toMatchObject({ timeLimitMinutes: 5 })
     })
 
+    it('allows a post-assessment one attempt only; a pre or unlabelled item may have more', () => {
+      const many = { ...assess.config, maxAttempts: 3 }
+      expect(() => validateItemInput({ ...assess, label: 'post', config: many })).toThrow(
+        'A post-assessment allows one attempt'
+      )
+      expect(
+        validateItemInput({ ...assess, label: 'post', config: { ...many, maxAttempts: 1 } }).config
+      ).toMatchObject({ maxAttempts: 1 })
+      expect(validateItemInput({ ...assess, label: 'post' }).config).toMatchObject({
+        maxAttempts: 1,
+      })
+      expect(validateItemInput({ ...assess, label: 'pre', config: many }).config).toMatchObject({
+        maxAttempts: 3,
+      })
+    })
+
     it('rejects attempts and time limits out of range or not whole numbers', () => {
       for (const maxAttempts of [0, 6, 1.5, '2'])
         expect(() =>

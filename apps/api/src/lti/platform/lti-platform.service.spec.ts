@@ -7,6 +7,7 @@ import {
   AGS_SCOPE_SCORE,
   BRAND_CLAIM,
   CLAIM,
+  INSTRUCTOR_ROLE,
   DIMENSIONS_FIELD,
   LEARNER_ROLE,
   generateKeyPair,
@@ -450,6 +451,76 @@ describe('assessment attempts and time limit', () => {
       await reject(startReview(), 409, 'not available to review')
       review('post', { reviewAnswers: false })
       await reject(startReview(), 409, 'not available to review')
+    })
+
+    describe('staff review of a learner', () => {
+      const authFor = async (hint: string) =>
+        service.authenticate({
+          scope: 'openid',
+          response_type: 'id_token',
+          response_mode: 'form_post',
+          prompt: 'none',
+          client_id: tool.clientId,
+          redirect_uri: tool.launchUrl,
+          login_hint: 'staff1',
+          lti_message_hint: hint,
+          state: 'st',
+          nonce: 'n1',
+        })
+      const staffReview = () => service.startStaffReview('staff1', 'k1', 'i1', 'learner1')
+
+      it('opens an instructor launch for the learner, without enrolling the staff member', async () => {
+        review('post', { maxAttempts: 3 })
+        prisma.enrollment.findUnique.mockResolvedValue(null) // staff are not in the cohort
+        prisma.itemProgress.findFirst.mockResolvedValue({ attempts: 1 }) // learner has attempts left, yet staff may look
+        const form = await staffReview()
+        expect(form.fields.login_hint).toBe('staff1')
+        const claims = await verifyJwt(
+          field(await authFor(form.fields.lti_message_hint), 'id_token'),
+          {
+            issuer: reg.issuer,
+            audience: tool.clientId,
+            nonce: 'n1',
+            keyFor: async () => service.jwks().keys[0],
+          }
+        )
+        expect(claims.sub).toBe('staff1')
+        expect(claims[CLAIM.roles]).toEqual([INSTRUCTOR_ROLE])
+        expect(claims[CLAIM.custom]).toEqual({
+          ref: 'cna-pre',
+          tool: 'id-assessment',
+          attempt: 1,
+          review: true,
+          reviewUser: 'learner1',
+        })
+        expect((claims[CLAIM.launchPresentation] as { return_url: string }).return_url).toBe(
+          'http://learn.test/lms/cohorts/k1'
+        )
+      })
+
+      it('refuses an item that is not an assessment, and a learner with nothing submitted', async () => {
+        prisma.courseItem.findUnique.mockResolvedValue({
+          id: 'i1',
+          type: 'tool',
+          label: null,
+          config: { toolId: 'id-interview', ref: 'x' },
+          module: { courseId: 'c1' },
+        })
+        await reject(staffReview(), 409, 'only kept for assessments')
+        review('post')
+        prisma.itemProgress.findFirst.mockResolvedValue(null)
+        await reject(staffReview(), 409, 'has not submitted')
+      })
+
+      it('never counts as the learner opening the tool', async () => {
+        const openToolLaunch = jest.fn()
+        const svc = makeService(store, { openToolLaunch } as unknown as ActivityService)
+        review('post')
+        prisma.itemProgress.findFirst.mockResolvedValue({ attempts: 1 })
+        await svc.startStaffReview('staff1', 'k1', 'i1', 'learner1')
+        await Promise.resolve()
+        expect(openToolLaunch).not.toHaveBeenCalled()
+      })
     })
 
     it('sends review and the last attempt number once the attempts are used up', async () => {

@@ -288,6 +288,37 @@ export interface CohortRosterRow {
   noteSummary: { notes: number; openFollowUps: number } | null
 }
 
+/** Where one learner is on one assessment of a cohort's course, from what the course itself records. */
+export type AssessmentLearnerStatus = 'not_started' | 'in_progress' | 'submitted'
+
+export interface AssessmentStatusLearner {
+  enrollmentId: string
+  name: string
+  email: string | null
+  status: AssessmentLearnerStatus
+  /** Best score so far; null until a score has come back. */
+  score: number | null
+  /** Scores recorded for this learner. */
+  attempts: number
+  /** The latest time they opened the assessment; null if never. */
+  openedAt: string | null
+}
+
+/** One assessment item of the cohort's course with every learner's status (live: refresh to update). */
+export interface AssessmentStatusItem {
+  itemId: string
+  title: string
+  label: 'pre' | 'post' | null
+  attemptsAllowed: number
+  counts: { notStarted: number; inProgress: number; submitted: number }
+  learners: AssessmentStatusLearner[]
+}
+
+export interface AssessmentStatus {
+  generatedAt: string
+  items: AssessmentStatusItem[]
+}
+
 export interface CohortDetail extends CohortListItem {
   host: { id: string; name: string; subdomain: string }
   lengthWeeks: number | null
