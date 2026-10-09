@@ -25,6 +25,7 @@ import { AdminDatasetsPage } from '@/pages/AdminDatasetsPage'
 import { AdminUsagePage } from '@/pages/AdminUsagePage'
 import { AdminLtiPlatformsPage } from '@/pages/AdminLtiPlatformsPage'
 import { AdminInstitutionSandboxPage } from '@/pages/AdminInstitutionSandboxPage'
+import { AdminInstitutionAssessmentActivityPage } from '@/pages/AdminInstitutionAssessmentActivityPage'
 import { SqlSandboxPage } from '@/pages/SqlSandboxPage'
 import { AssessmentsPage } from '@/pages/AssessmentsPage'
 import { AssessmentAttemptPage } from '@/pages/AssessmentAttemptPage'
@@ -287,6 +288,14 @@ export default function App() {
           element={
             <AdminRoute>
               <AdminInstitutionSandboxPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/institutions/:institutionId/assessment-activity"
+          element={
+            <AdminRoute>
+              <AdminInstitutionAssessmentActivityPage />
             </AdminRoute>
           }
         />

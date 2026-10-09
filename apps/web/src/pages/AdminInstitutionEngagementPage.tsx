@@ -106,7 +106,15 @@ export function AdminInstitutionEngagementPage() {
         <AnalyticsTabs
           institutionId={institutionId}
           active="engagement"
-          available={['overview', 'engagement', 'heatmap', 'assessments', 'students', 'sandbox']}
+          available={[
+            'overview',
+            'engagement',
+            'heatmap',
+            'assessments',
+            'students',
+            'sandbox',
+            'activity',
+          ]}
         />
 
         {error && (

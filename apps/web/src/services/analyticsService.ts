@@ -232,3 +232,45 @@ export async function fetchStudentRoster(
   const res = await authedFetch(getToken, `/admin/institutions/${institutionId}/students${qs}`)
   return res.json() as Promise<RosterResponse>
 }
+
+export type ActivityStatus = 'not_started' | 'in_progress' | 'submitted'
+
+export interface AssessmentActivityStudent {
+  userId: string
+  name: string
+  email: string | null
+  status: ActivityStatus
+  /** Progress, not correctness: non-blank saved answers out of questions drawn. */
+  answeredCount: number
+  questionCount: number
+  startedAt: string | null
+  submittedAt: string | null
+  lastActivityAt: string | null
+}
+
+export interface AssessmentActivity {
+  generatedAt: string
+  cohort: { id: string; name: string }
+  deliveries: {
+    id: string
+    label: string
+    assessmentTitle: string
+    opensAt: string | null
+    closesAt: string | null
+    timeLimitMinutes: number | null
+    counts: { notStarted: number; inProgress: number; submitted: number }
+    students: AssessmentActivityStudent[]
+  }[]
+}
+
+export async function fetchAssessmentActivity(
+  getToken: GetToken,
+  institutionId: string,
+  cohortId: string
+): Promise<AssessmentActivity> {
+  const res = await authedFetch(
+    getToken,
+    `/admin/institutions/${institutionId}/assessment-activity?cohortId=${encodeURIComponent(cohortId)}`
+  )
+  return res.json() as Promise<AssessmentActivity>
+}
