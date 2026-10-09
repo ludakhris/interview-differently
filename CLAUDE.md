@@ -11,11 +11,18 @@
 
 ## Issue titles
 
-Prefix every GitHub issue title with its main component: `[LMS]`, `[Train]`, `[ID]`, `[MicroLearning]` or `[Matching]` (for example `[LMS] Talent search: skills field`). Areas such as Talent, Attendance or Support belong under their component.
+Prefix every GitHub issue title with its main component: `[LMS]`, `[ID]`, `[MicroLearning]` or `[Matching]` (for example `[LMS] Talent search: skills field`). Areas such as Talent, Attendance or Support belong under their component.
 
 ## Product boundaries
 
 Learn Differently is five products on one learner record: LMS (Structure), Micro Learning (Spark), Skill Simulator (Practice), Job Board Match (Opportunity), Talent Match (Placement). Before scoping a non-trivial feature, read `docs/product-boundaries.md` and name the product it belongs to. If a request crosses products, say so and propose the split before building; never let one product grow another's features (for example job matching or employer search inside the LMS).
+
+- **New products or pieces:** adding one (or splitting or merging any of the five) requires updating `docs/product-boundaries.md` in the same change, and the product list at the top of this section here: its verb, the one job, what it owns, writes, reads and must not grow, and its row in the table. Update its page in `apps/learn/src/products.ts` too.
+- **Keep product pages in step:** when the boundaries doc changes what a product does, update that product's page (`apps/learn/src/products.ts`, and `COMPONENTS` in `apps/learn/src/pages/home/content.ts` if the homepage line changes). Public copy stays plain and promises only what the doc supports.
+- **Critic review:** any change to `docs/product-boundaries.md` must be reviewed by an independent subagent acting as critic before it is committed. Give it the diff and the doc, not your reasoning; ask for contradictions with `CLAUDE.md` and the code, vague or overlapping ownership, rules that cannot be followed, and anything promised that is not built. Fix or answer each finding, and note the outcome in the commit message.
+- **Where code lives:** new backend code goes in the folder of the product that owns it (see "Where code lives" in the doc) and imports nothing across products; until a folder exists, write it as if it did.
+- **Known bleed** in the doc is a list of things not to do. The inventory and remediation checklist live in GitHub issue #81, not in the doc.
+- **New bleed:** if a change adds or extends something that crosses a boundary (even knowingly, to ship sooner), add a checklist line to GitHub issue #81 in the same change, naming the PR or issue, the paths and the product it should move to, and say so in the PR description. Reviewing a PR includes checking this.
 
 ## Release notes
 
@@ -53,7 +60,6 @@ Intentionally excluded — open an issue (and link this section) only if the sit
 
 - Native mobile app
 - Marketplace for community-built scenarios
-- ATS or job application platform integrations
 - Payment processing and subscription management
 
 # How We Develop (Company Std Guidiance for all projects)
