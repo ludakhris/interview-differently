@@ -103,7 +103,7 @@
 .ld .ld-btn-orange,
 .ld .ld-btn-orange:hover {
   background: var(--orange);
-  color: var(--ink);
+  color: var(--white);
   font-weight: 800;
 }
 .ld .ld-btn-outline {
@@ -278,7 +278,7 @@
 .ld-pill {
   font-size: 11px;
   color: var(--ink);
-  background: var(--sky);
+  background: var(--orange);
   border-radius: 999px;
   padding: 4px 9px;
   white-space: nowrap;
@@ -302,8 +302,11 @@
 .ld-chat-you {
   align-self: flex-end;
   border-radius: 14px 14px 4px 14px;
-  background: var(--orange);
+  background: var(--sky);
   color: var(--ink);
+}
+.ld-chat-you .ld-chat-who {
+  opacity: 1;
 }
 .ld-chat-who {
   font-size: 11px;
@@ -1370,8 +1373,8 @@
 
 /* Closing CTA + footer */
 .ld-cta {
-  background: var(--orange);
-  color: var(--ink);
+  background: var(--ink);
+  color: var(--white);
 }
 .ld-cta-inner {
   display: flex;
@@ -1401,7 +1404,8 @@
   gap: 8px;
   padding: 24px 28px;
   border-radius: 20px;
-  border: 1.5px solid rgba(11, 31, 46, 0.25);
+  background: var(--white);
+  color: var(--ink);
 }
 .ld-pilot-n {
   display: grid;
@@ -1421,7 +1425,7 @@
 .ld-pilot-body {
   font-size: 15px;
   line-height: 1.5;
-  color: var(--brown);
+  color: var(--ink);
 }
 .ld-cta-row {
   display: flex;
@@ -1433,7 +1437,7 @@
 .ld-cta-sub {
   font-size: 20px;
   line-height: 1.5;
-  color: var(--brown);
+  color: var(--white);
   max-width: 30em;
 }
 .ld-cta-form {
@@ -1460,9 +1464,9 @@
     system-ui,
     sans-serif;
   padding: 16px 24px;
-  border: 1.5px solid var(--ink);
+  border: 1.5px solid var(--orange);
   border-radius: 999px;
-  background: var(--ink);
+  background: var(--orange);
   color: var(--white);
   cursor: pointer;
 }
@@ -1472,7 +1476,7 @@
   justify-content: space-between;
   gap: 12px 40px;
   padding-top: 24px;
-  border-top: 1.5px solid rgba(11, 31, 46, 0.25);
+  border-top: 1.5px solid rgba(255, 255, 255, 0.25);
   font-size: 14px;
 }
 .ld-footer-brand,
@@ -1481,19 +1485,19 @@
   flex-wrap: wrap;
   gap: 8px 24px;
   align-items: center;
-  color: var(--brown);
+  color: var(--white);
 }
 .ld-footer-name {
   font-weight: 800;
-  color: var(--ink);
+  color: var(--white);
 }
 .ld-footer-links a {
   text-decoration: none;
   font-weight: 600;
-  color: var(--ink);
+  color: var(--white);
 }
 .ld .ld-footer-links a:hover {
-  color: var(--ink);
+  color: var(--white);
   text-decoration: underline;
 }
 

@@ -505,7 +505,9 @@ export function HomePage() {
 
         <section id="demo" className="ld-cta ld-rounded-top">
           <div className="ld-wrap ld-cta-inner">
-            <h2 className="ld-cta-title">See a cohort run end to end.</h2>
+            <h2 className="ld-cta-title">
+              See a cohort run <span className="ld-orange">end to end.</span>
+            </h2>
             <ol className="ld-pilot">
               {WALKTHROUGH.map((s, i) => (
                 <li key={s.t}>

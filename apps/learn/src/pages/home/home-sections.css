@@ -573,7 +573,7 @@
   padding: 14px 22px;
   border-radius: 999px;
   background: var(--orange);
-  color: var(--ink);
+  color: var(--white);
   font-weight: 800;
   font-size: 15px;
   text-decoration: none;
@@ -586,7 +586,7 @@
     transform 0.25s ease;
 }
 .c .c-float-cta {
-  color: var(--ink);
+  color: var(--white);
 }
 .c-float-cta-on {
   opacity: 1;
