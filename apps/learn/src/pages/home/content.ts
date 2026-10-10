@@ -107,6 +107,15 @@ export const MEASURES = [
   },
 ]
 
+/** The tiles under the hero: the main measures plus Employment Outcomes, each with how it is met. */
+export const HERO_MEASURES = [
+  ...MEASURES,
+  {
+    name: 'Employment Outcomes',
+    how: 'Replace spreadsheets with automated, real-time outcome dashboards and reports that connect training to employment results.',
+  },
+]
+
 /** Two more a grant agreement asks for, by when each is captured. */
 export const MEASURES_MORE = [
   { name: 'Enrollment Target Fulfillment', when: 'On enrollment, day 1' },

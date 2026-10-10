@@ -15,13 +15,13 @@
   display: block;
 }
 
-/* Three anchors under the hero */
+/* Four tiles under the hero */
 .c-anchors {
   list-style: none;
   margin: -16px 0 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 .c-anchors li {
@@ -607,6 +607,9 @@
 
 /* Tablet */
 @media (max-width: 960px) {
+  .c-anchors {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   /* The hero cluster is capped at 460px by home.css; centre it rather than leave it left. */
   .c .ld-hero-cards {
     width: min(460px, 100%);

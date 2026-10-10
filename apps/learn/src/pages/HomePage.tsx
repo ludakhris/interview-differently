@@ -9,6 +9,7 @@ import { FloatingCta } from './home/FloatingCta'
 import { TourVideo } from './home/TourVideo'
 import {
   COMPONENTS,
+  HERO_MEASURES,
   LOOP,
   MEASURES,
   MEASURES_MORE,
@@ -327,7 +328,7 @@ export function HomePage() {
 
         <div className="ld-wrap">
           <ul className="c-anchors" aria-label="What you get">
-            {MEASURES.map((m) => (
+            {HERO_MEASURES.map((m) => (
               <li key={m.name}>
                 <span className="ld-mono ld-eyebrow">{m.name.toUpperCase()}</span>
                 <span>{m.how}</span>
