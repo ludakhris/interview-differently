@@ -297,8 +297,7 @@ export function HomePage() {
               TRAINING AND WORKFORCE DEVELOPMENT FOR THE AGENTIC ERA
             </p>
             <h1 className="ld-hero-title c-hero-title">
-              Tr<span className="ld-orange">ai</span>ning that{' '}
-              <span className="ld-orange">adapts.</span>{' '}
+              Tr<span className="ld-orange">ai</span>ning that adapts.{' '}
               <span className="c-hero-line">
                 Admin work, <span className="ld-orange">automated.</span>
               </span>
