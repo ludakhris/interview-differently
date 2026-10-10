@@ -303,12 +303,11 @@ export function HomePage() {
               </span>
             </h1>
             <p className="ld-lead">
-              Every learner follows a different path. The goal is the same: job-ready skills. One
-              learning system for workforce development organizations, colleges, nonprofits,
-              training providers and employer academies. It uses AI to adapt each learner’s plan to
-              close the gap between what they can do and what the job needs. It replaces the
-              spreadsheets and disconnected tools and automates the administrative work. Staff get
-              time back to support participants.
+              Every learner follows a different path to the same goal: job-ready skills. AI adapts
+              each learner’s plan to close the gap between what they can do and what the job needs,
+              and the admin work is automated so staff get time back for participants. Built for
+              workforce development organizations, colleges, nonprofits, training providers,
+              employer academies, or any program that trains people for real jobs.
             </p>
             <div className="ld-hero-actions">
               <a href="#demo" className="ld-btn ld-btn-orange ld-btn-lg">
