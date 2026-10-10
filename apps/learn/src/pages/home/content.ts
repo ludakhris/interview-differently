@@ -4,22 +4,6 @@
  * funder definitions are the public WIOA ones.
  */
 
-/** The three anchors beside "Training that behaves like the job." */
-export const ANCHORS = [
-  {
-    k: 'MEASURABLE SKILLS GAINED',
-    v: 'Every exercise is scored against the program’s pass mark, so skill gains show up in week one, not at the final exam.',
-  },
-  {
-    k: 'OUTCOMES ALREADY TRACKED',
-    v: 'Completion, credentials and skill gains land in one record while learners work. Nothing is re-entered.',
-  },
-  {
-    k: 'REPORT ONCE',
-    v: 'Exports in the terms your funders use: Measurable Skill Gains, Credential Attainment, Program Completion.',
-  },
-]
-
 /** Two learners, one start, one endpoint, different routes. Illustrative. */
 export const PACE = [
   {
@@ -104,37 +88,29 @@ export const COMPONENTS: { name: string; icon: ManualIcon; manual: string; now: 
   },
 ]
 
-/** The measures programs are held to: when each is captured, and how. Readers know the terms. */
+/** The measures programs are held to, shown under the hero with how each is met, and again by when. */
 export const MEASURES = [
   {
     name: 'Measurable Skill Gains',
     when: 'Every scored exercise',
-    how: 'Each scored exercise and simulation is documented progress, on the record the day it happens.',
+    how: 'Skill gains documented instantly, from the first exercise. AI adapts each learning plan, accelerating ready learners and adding lessons where gaps remain.',
   },
   {
-    name: 'Credential Attainment Rate',
-    when: 'When the credential is earned',
-    how: 'The credential each program leads to is on the record; attainment exports with the cohort.',
+    name: 'Program Completion',
+    when: 'Every module',
+    how: 'Each learner’s progress in real time, with participation and support needs visible, so who is at risk shows before the end date.',
   },
   {
-    name: 'Program Completion Rate',
-    when: 'At the last module',
-    how: 'Tracked per module and per learner, so who is at risk shows before the end date.',
+    name: 'Credential Attainment',
+    when: 'Readiness, then the credential',
+    how: 'See who is ready for the exam and who can do the job, then track credentials earned for reporting and verification.',
   },
 ]
 
-/** Two more a grant agreement asks for. */
+/** Two more a grant agreement asks for, by when each is captured. */
 export const MEASURES_MORE = [
-  {
-    name: 'Enrollment Target Fulfillment',
-    when: 'On enrollment, day 1',
-    how: 'Put the contracted target on the cohort; the rate is on the dashboard every day of the grant.',
-  },
-  {
-    name: 'Initial Job Placement',
-    when: 'At the job offer',
-    how: 'Offers and start dates land on the learner’s record, each marked as matched through us, employer confirmed, learner reported, or automation detected.',
-  },
+  { name: 'Enrollment Target Fulfillment', when: 'On enrollment, day 1' },
+  { name: 'Employment Outcomes', when: 'At the job offer' },
 ]
 
 export const PROVENANCE =

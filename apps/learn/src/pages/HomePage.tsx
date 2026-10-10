@@ -8,7 +8,6 @@ import { PaceTracks } from './home/PaceTracks'
 import { FloatingCta } from './home/FloatingCta'
 import { TourVideo } from './home/TourVideo'
 import {
-  ANCHORS,
   COMPONENTS,
   LOOP,
   MEASURES,
@@ -218,6 +217,34 @@ function LoopDiagram() {
   )
 }
 
+/** One grant measure per card: the name and when it is captured. */
+function MeasureList({
+  measures,
+  columns,
+}: {
+  measures: { name: string; when: string }[]
+  columns: 2 | 3
+}) {
+  return (
+    <ul className={`c-measure-grid c-measure-grid-${columns}`}>
+      {measures.map((m) => (
+        <li key={m.name}>
+          <i aria-hidden="true">
+            <CheckIcon />
+          </i>
+          <div>
+            <strong>{m.name}</strong>
+            <span className="ld-mono c-measure-when">
+              <span className="ld-faint">TRACKED · </span>
+              {m.when.toUpperCase()}
+            </span>
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 export function HomePage() {
   return (
     <div className="ld c">
@@ -270,13 +297,19 @@ export function HomePage() {
               TRAINING AND WORKFORCE DEVELOPMENT FOR THE AGENTIC ERA
             </p>
             <h1 className="ld-hero-title c-hero-title">
-              Training that behaves like <span className="ld-orange">the job.</span>
+              Tr<span className="ld-orange">ai</span>ning that{' '}
+              <span className="ld-orange">adapts.</span>{' '}
+              <span className="c-hero-line">
+                Admin work, <span className="ld-orange">automated.</span>
+              </span>
             </h1>
             <p className="ld-lead">
-              Every learner takes a different path. Same outcome. One learning system for any
-              program that trains people for real jobs: workforce development, colleges, nonprofits,
-              employer academies. It turns theory into job-ready skills, replaces the spreadsheets
-              and disconnected tools, and automates the manual work your team juggles today.
+              Every learner follows a different path. The goal is the same: job-ready skills. One
+              learning system for workforce development organizations, colleges, nonprofits,
+              training providers and employer academies. It uses AI to adapt each learner’s plan to
+              close the gap between what they can do and what the job needs. It replaces the
+              spreadsheets and disconnected tools and automates the administrative work. Staff get
+              time back to support participants.
             </p>
             <div className="ld-hero-actions">
               <a href="#demo" className="ld-btn ld-btn-orange ld-btn-lg">
@@ -296,10 +329,10 @@ export function HomePage() {
 
         <div className="ld-wrap">
           <ul className="c-anchors" aria-label="What you get">
-            {ANCHORS.map((a) => (
-              <li key={a.k}>
-                <span className="ld-mono ld-eyebrow">{a.k}</span>
-                <span>{a.v}</span>
+            {MEASURES.map((m) => (
+              <li key={m.name}>
+                <span className="ld-mono ld-eyebrow">{m.name.toUpperCase()}</span>
+                <span>{m.how}</span>
               </li>
             ))}
           </ul>
@@ -432,43 +465,11 @@ export function HomePage() {
               </div>
               <div className="c-measure-strip">
                 <h3 className="c-measure-heading">Automatically track and report on:</h3>
-                <ul className="c-measure-grid c-measure-grid-3">
-                  {MEASURES.map((m) => (
-                    <li key={m.name}>
-                      <i aria-hidden="true">
-                        <CheckIcon />
-                      </i>
-                      <div>
-                        <strong>{m.name}</strong>
-                        <span className="ld-mono c-measure-when">
-                          <span className="ld-faint">TRACKED · </span>
-                          {m.when.toUpperCase()}
-                        </span>
-                        <span className="c-measure-how">{m.how}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <MeasureList measures={MEASURES} columns={3} />
                 <h3 className="c-measure-heading">
-                  Plus the two others the grant will ask for during an audit:
+                  Plus two more the grant will ask for during an audit:
                 </h3>
-                <ul className="c-measure-grid c-measure-grid-2">
-                  {MEASURES_MORE.map((m) => (
-                    <li key={m.name}>
-                      <i aria-hidden="true">
-                        <CheckIcon />
-                      </i>
-                      <div>
-                        <strong>{m.name}</strong>
-                        <span className="ld-mono c-measure-when">
-                          <span className="ld-faint">TRACKED · </span>
-                          {m.when.toUpperCase()}
-                        </span>
-                        <span className="c-measure-how">{m.how}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <MeasureList measures={MEASURES_MORE} columns={2} />
               </div>
             </div>
           </div>
