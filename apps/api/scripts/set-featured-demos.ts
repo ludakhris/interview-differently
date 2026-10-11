@@ -12,10 +12,10 @@
  * --allow-host for production only with the owner's OK.
  */
 
-import 'dotenv/config'
+import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
 
-const DEV_HOSTS = ['localhost', '127.0.0.1', 'zephyr.proxy.rlwy.net']
+const DEV_HOSTS = ['localhost', '127.0.0.1']
 const FEATURED_IDS = [
   'demo-inst-delaware-dol',
   'demo-inst-chesapeake-workforce',

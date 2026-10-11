@@ -18,12 +18,12 @@
  * --allow-host for production only with the owner's OK, and with that environment's LTI_API_BASE set.
  */
 
-import 'dotenv/config'
+import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
 import { platformCreated } from '../src/lti/tool/platform-registry.service'
 import { platformRegistration } from '../src/lti/tool/lti-tool.config'
 
-const DEV_HOSTS = ['localhost', '127.0.0.1', 'zephyr.proxy.rlwy.net']
+const DEV_HOSTS = ['localhost', '127.0.0.1']
 const WHO = { userId: null, userName: 'System (seed script)' }
 
 function targetHost(allowHost: string | undefined): string {

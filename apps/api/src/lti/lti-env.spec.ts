@@ -64,7 +64,7 @@ describe('isLearnOrigin', () => {
 
 describe('resolveLearnOrigin', () => {
   it('uses LTI_LEARN_URL with trailing slashes trimmed, whatever the database host', () => {
-    expect(resolveLearnOrigin('https://learndifferently.tech/', 'db.rlwy.net')).toBe(
+    expect(resolveLearnOrigin('https://learndifferently.tech/', 'db.example.com')).toBe(
       'https://learndifferently.tech'
     )
   })
@@ -74,7 +74,7 @@ describe('resolveLearnOrigin', () => {
     expect(resolveLearnOrigin('  ', host)).toBe('http://localhost:5174')
   })
 
-  it.each([['zephyr.proxy.rlwy.net'], ['db.example.com']])(
+  it.each([['db.example.com'], ['db2.example.com']])(
     'throws for a %s database when LTI_LEARN_URL is unset',
     (host) => {
       expect(() => resolveLearnOrigin(undefined, host)).toThrow('LTI_LEARN_URL is not set')

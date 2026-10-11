@@ -13,10 +13,10 @@
  * Railway dev database. Run the demo seed first (npm run seed:learn-demo) so the cohort and learners exist.
  */
 
-import 'dotenv/config'
+import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
 
-const DEV_HOSTS = ['localhost', '127.0.0.1', 'zephyr.proxy.rlwy.net']
+const DEV_HOSTS = ['localhost', '127.0.0.1']
 const COHORT = 'demo-cohort-cedar-mill-c'
 const PROVIDER = 'demo-inst-cedar-mill'
 const REQUESTERS = ['demo-learner-cedar-mill-a-2', 'demo-learner-cedar-mill-a-3']
@@ -33,8 +33,10 @@ async function main() {
   const url = process.env.DATABASE_URL
   if (!url) throw new Error('DATABASE_URL is not set')
   const host = new URL(url).hostname
-  if (!DEV_HOSTS.includes(host))
-    throw new Error(`DATABASE_URL points at ${host}, not a development database.`)
+  if (!DEV_HOSTS.includes(host) && host !== arg('--allow-host'))
+    throw new Error(
+      `DATABASE_URL points at ${host}, not localhost. Pass --allow-host ${host} only for a development database.`
+    )
   const email = arg('--email')
   if (!email) throw new Error('Pass --email <the address you sign in with>')
   const remove = process.argv.includes('--remove')
