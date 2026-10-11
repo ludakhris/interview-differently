@@ -1,17 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { LEARN_ROLES, LearnService } from './learn.service'
-
-/**
- * Staff roles that may read an institution's participant records (notes, support items, compensation,
- * resumes), as long as they also hold a membership in that institution's workspace. "Institution"
- * means a provider or an organization that hosts cohorts; the code keeps the older name `providerId`. Agency admins and
- * case managers are deliberately not here; system admins pass every role check (LearnService.assertRole).
- */
-export const PROVIDER_STAFF_ROLES: string[] = [LEARN_ROLES.providerAdmin]
-
-/** Roles that may manage a cohort: the same as the roster (see LearnCohortsService). */
-export const COHORT_STAFF_ROLES: string[] = [LEARN_ROLES.agencyAdmin, LEARN_ROLES.providerAdmin]
+import { AccessService } from './access/access.service'
 
 /**
  * The cohorts whose people an institution may see: a provider's are those of its own courses; an
@@ -46,7 +35,7 @@ export interface CohortContext {
 export class ProviderAccessService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly learn: LearnService
+    private readonly access: AccessService
   ) {}
 
   /** The provider (and host workspace) of a cohort. No permission check: use it to scope, not to authorize. */
@@ -73,27 +62,23 @@ export class ProviderAccessService {
   }
 
   /**
-   * Throws unless the caller is staff of this provider or organization: a system admin, or a
-   * provider-admin with a workspace-level membership (cohortId null) in that institution. Agency
-   * admins, other institutions' staff and learners are refused.
+   * Throws unless the caller is staff of this provider or organization (action `participant.records`):
+   * a system admin, or a provider or organization admin with a role at that institution. Agency
+   * admins, case managers, other institutions' staff and learners are refused.
    */
   async assertProviderStaff(
     userId: string,
     role: string | undefined,
     providerId: string
   ): Promise<void> {
-    this.learn.assertRole(role, PROVIDER_STAFF_ROLES)
-    if (role === LEARN_ROLES.systemAdmin) return
-    const member = await this.prisma.membership.findFirst({
-      where: {
-        userId,
-        institutionId: providerId,
-        cohortId: null,
-        institution: { kind: { in: ['provider', 'organization'] } },
-      },
-      select: { id: true },
+    await this.access.authorize({ userId, role }, 'participant.records', {
+      institutionId: providerId,
     })
-    if (!member) throw new ForbiddenException('No access to this provider')
+  }
+
+  /** Throws unless the caller holds a role that reads participant records at some institution (or is a system admin). */
+  async assertStaffAnywhere(userId: string, role: string | undefined): Promise<void> {
+    await this.access.authorizeAnywhere({ userId, role }, 'participant.records')
   }
 
   /**
@@ -117,19 +102,16 @@ export class ProviderAccessService {
   }
 
   /**
-   * The roster guard: the caller may manage the cohort if they may open its workspace (agency admins
-   * in scope, provider and organization admins who are members of it, system admins).
-   * Same rule as LearnCohortsService.cohortFor.
+   * The roster guard (action `cohort.staff`): the caller may work the cohort if they may open its
+   * workspace as a manager, or teach the cohort. Same rule as LearnCohortsService.
    */
   async assertCohortStaff(
     userId: string,
     role: string | undefined,
     cohortId: string
   ): Promise<CohortContext> {
-    this.learn.assertRole(role, COHORT_STAFF_ROLES)
-    const ctx = await this.providerOfCohort(cohortId)
-    await this.learn.assertWorkspace(userId, role, ctx.hostSubdomain)
-    return ctx
+    await this.access.authorize({ userId, role }, 'cohort.staff', { cohortId })
+    return this.providerOfCohort(cohortId)
   }
 
   /** Throws NotFound unless the person is (or was) enrolled in a cohort in this institution's scope. */

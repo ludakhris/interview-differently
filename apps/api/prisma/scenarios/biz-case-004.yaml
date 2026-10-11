@@ -102,7 +102,13 @@ exhibits:
       - { key: comp, label: Competitors / 10k HH, format: decimal, sortable: true }
     rows:
       - { city: Chattanooga TN, low: 78, spend: { value: 3100, tone: accent }, rent: 14, comp: 1.2 }
-      - { city: Augusta GA, low: 92, spend: { value: 3300, tone: accent, emphasis: true }, rent: 12, comp: 0.9 }
+      - {
+          city: Augusta GA,
+          low: 92,
+          spend: { value: 3300, tone: accent, emphasis: true },
+          rent: 12,
+          comp: 0.9,
+        }
       - { city: Mobile AL, low: 71, spend: 2900, rent: 11, comp: 1.4 }
       - { city: Greenville SC, low: 65, spend: 2700, rent: 18, comp: 1.8 }
       - { city: Lakeland FL, low: 88, spend: 2800, rent: 22, comp: 2.1 }

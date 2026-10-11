@@ -212,11 +212,91 @@ suite('agency structure and agencyId triggers', () => {
       expect((await one(`SELECT "agencyId" FROM "SupportItem" LIMIT 1`)).agencyId).toBe('A')
     })
 
-    it('keep a learner’s membership, without the cohort, when the cohort is deleted', async () => {
+    it('give an invitation the agency of its institution, and allow one per address and place', async () => {
+      await insert(db, 'RoleInvite', {
+        id: 'inv-1',
+        email: 'new@example.test',
+        institutionId: 'prov-A',
+        role: 'case-manager',
+      })
+      expect((await one(`SELECT "agencyId" FROM "RoleInvite" WHERE id='inv-1'`)).agencyId).toBe('A')
+      await expect(
+        insert(db, 'RoleInvite', {
+          id: 'inv-2',
+          email: 'new@example.test',
+          institutionId: 'prov-A',
+          role: 'provider-admin',
+        })
+      ).rejects.toThrow(/RoleInvite_one_per_place/)
+      // the same address at another place, or for a cohort, is a different invitation
+      await insert(db, 'RoleInvite', {
+        id: 'inv-3',
+        email: 'new@example.test',
+        institutionId: 'prov-B',
+        role: 'case-manager',
+      })
+      await insert(db, 'RoleInvite', {
+        id: 'inv-4',
+        email: 'new@example.test',
+        institutionId: 'prov-A',
+        cohortId: 'coh-A',
+        role: 'instructor',
+      })
+      // an invitation goes when its cohort does
+      await insert(db, 'Cohort', { id: 'coh-inv', institutionId: 'prov-A', name: 'x' })
+      await insert(db, 'RoleInvite', {
+        id: 'inv-5',
+        email: 'x@example.test',
+        institutionId: 'prov-A',
+        cohortId: 'coh-inv',
+        role: 'instructor',
+      })
+      await db.query(`DELETE FROM "Cohort" WHERE id='coh-inv'`)
+      expect((await db.query(`SELECT 1 FROM "RoleInvite" WHERE id='inv-5'`)).rows).toHaveLength(0)
+    })
+
+    it('allow one workspace-level membership per person and institution, and one per cohort', async () => {
+      await insert(db, 'Membership', { id: 'm-ws-1', userId: 'learner-A', institutionId: 'prov-B' })
+      await expect(
+        insert(db, 'Membership', { id: 'm-ws-2', userId: 'learner-A', institutionId: 'prov-B' })
+      ).rejects.toThrow(/Membership_workspace_unique/)
+      // a membership in a cohort is a different thing
+      await insert(db, 'Membership', {
+        id: 'm-co-1',
+        userId: 'learner-A',
+        institutionId: 'prov-B',
+        cohortId: 'coh-B',
+      })
+    })
+
+    it('keep a learner’s workspace membership, and drop the redundant cohort one, when the cohort is deleted', async () => {
+      await insert(db, 'Cohort', { id: 'coh-gone2', institutionId: 'prov-A', name: 'gone' })
+      await insert(db, 'Membership', {
+        id: 'm-gone2',
+        userId: 'learner-A',
+        institutionId: 'prov-A',
+        cohortId: 'coh-gone2',
+      })
+      await db.query(`DELETE FROM "Cohort" WHERE id = 'coh-gone2'`)
+      expect((await db.query(`SELECT 1 FROM "Membership" WHERE id = 'm-gone2'`)).rows).toHaveLength(
+        0
+      )
+      // the workspace-level one made earlier is still there
+      expect(
+        (
+          await db.query(
+            `SELECT 1 FROM "Membership" WHERE "userId"='learner-A' AND "institutionId"='prov-A' AND "cohortId" IS NULL`
+          )
+        ).rows.length
+      ).toBeGreaterThan(0)
+    })
+
+    it('keep a learner’s only membership, without the cohort, when the cohort is deleted', async () => {
+      await insert(db, 'User', { id: 'learner-solo' })
       await insert(db, 'Cohort', { id: 'coh-gone', institutionId: 'prov-A', name: 'gone' })
       await insert(db, 'Membership', {
         id: 'm-gone',
-        userId: 'learner-A',
+        userId: 'learner-solo',
         institutionId: 'prov-A',
         cohortId: 'coh-gone',
       })

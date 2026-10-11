@@ -104,7 +104,7 @@ exhibits:
           Marcus said to ask you since you have the orders DB. Finance will ask
           how we picked them, so whatever "top" means, make it defensible.
       - kind: quote
-        text: 'If someone on the list can''t actually receive the email, I need to know that before Friday, not after.'
+        text: "If someone on the list can't actually receive the email, I need to know that before Friday, not after."
         attribution: Priya
 
   - id: data-dictionary
@@ -137,7 +137,7 @@ exhibits:
           - 'Aggregate to the level the question is asked at (per customer, not per line item). One row per customer, or your GROUP BY is wrong.'
           - 'ORDER BY before LIMIT, and look at the rows just below the cut before you cut.'
       - kind: quote
-        text: 'Strong analysts don''t write the final query in one shot. They build it in steps they can check.'
+        text: "Strong analysts don't write the final query in one shot. They build it in steps they can check."
         attribution: Marcus
 
   - id: top5-result
@@ -165,7 +165,12 @@ exhibits:
     rows:
       - { rank: 1, name: Kofi Rodriguez, revenue: '$1,305.88', email: OK }
       - { rank: 2, name: Rohan King, revenue: '$1,194.33', email: OK }
-      - { rank: 3, name: Owen Khan, revenue: '$1,008.08', email: { value: Missing, tone: danger, emphasis: true } }
+      - {
+          rank: 3,
+          name: Owen Khan,
+          revenue: '$1,008.08',
+          email: { value: Missing, tone: danger, emphasis: true },
+        }
       - { rank: 3, name: Tomas Lewis, revenue: '$1,008.08', email: OK }
       - { rank: 5, name: Arjun King, revenue: '$949.12', email: OK }
 
@@ -272,7 +277,7 @@ nodes:
         caption: the rows finance counts
     choices:
       - id: A
-        text: 'Exclude them (they aren''t completed in the system), flag the three order IDs to Marcus and ops as a data-quality issue, and note the exclusion in what you send Priya.'
+        text: "Exclude them (they aren't completed in the system), flag the three order IDs to Marcus and ops as a data-quality issue, and note the exclusion in what you send Priya."
         next: data-001-n4-fb-a
         signals:
           Data Judgment: strong
@@ -283,7 +288,7 @@ nodes:
         signals:
           Data Judgment: proficient
       - id: C
-        text: 'Ignore it. Three orders out of 187 won''t move a top-five list.'
+        text: "Ignore it. Three orders out of 187 won't move a top-five list."
         next: data-001-n4-fb-c
         signals:
           Data Judgment: developing
@@ -435,7 +440,7 @@ nodes:
         signals:
           Communicating Findings: developing
       - id: C
-        text: 'Drop Owen Khan since he can''t be emailed anyway, and send the next customer down as #5 so she gets five clean rows.'
+        text: "Drop Owen Khan since he can't be emailed anyway, and send the next customer down as #5 so she gets five clean rows."
         next: data-001-end-c
         signals:
           Communicating Findings: developing

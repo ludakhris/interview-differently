@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
 import { LearnGuard } from '../../auth/learn.guard'
+import { Access, SelfOnly } from '../access/access.decorator'
 import { MAX_RESUME_BYTES } from './resume'
 import { TalentService, type ParticipantFilters } from './talent.service'
 
@@ -53,18 +54,21 @@ export class TalentController {
   // ── the learner's own profile (one per person, not per provider) ──────────
 
   @Get('me/profile')
+  @SelfOnly()
   @Header('Cache-Control', 'no-store')
   mine(@Req() req: LearnRequest) {
     return this.service.myProfile(req.userId)
   }
 
   @Put('me/profile')
+  @SelfOnly()
   @Header('Cache-Control', 'no-store')
   save(@Req() req: LearnRequest, @Body() body: unknown) {
     return this.service.saveProfile(req.userId, body)
   }
 
   @Post('me/profile/resume')
+  @SelfOnly()
   @Header('Cache-Control', 'no-store')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_RESUME_BYTES } }))
   uploadResume(
@@ -75,12 +79,14 @@ export class TalentController {
   }
 
   @Get('me/profile/resume')
+  @SelfOnly()
   @Header('Cache-Control', 'no-store')
   myResume(@Req() req: LearnRequest) {
     return this.service.myResumeLink(req.userId)
   }
 
   @Delete('me/profile/resume')
+  @SelfOnly()
   @Header('Cache-Control', 'no-store')
   removeResume(@Req() req: LearnRequest) {
     return this.service.deleteResume(req.userId)
@@ -89,6 +95,7 @@ export class TalentController {
   // ── provider staff ────────────────────────────────────────────────────────
 
   @Get('providers/:providerId/participants')
+  @Access('participant.records')
   @Header('Cache-Control', 'no-store')
   participants(
     @Req() req: LearnRequest,
@@ -103,6 +110,7 @@ export class TalentController {
   }
 
   @Get('providers/:providerId/participants/:userId')
+  @Access('participant.records')
   @Header('Cache-Control', 'no-store')
   header(
     @Req() req: LearnRequest,
@@ -117,6 +125,7 @@ export class TalentController {
   }
 
   @Get('providers/:providerId/participants/:userId/profile')
+  @Access('participant.records')
   @Header('Cache-Control', 'no-store')
   staffProfile(
     @Req() req: LearnRequest,
@@ -127,6 +136,7 @@ export class TalentController {
   }
 
   @Get('providers/:providerId/participants/:userId/compensation')
+  @Access('participant.records')
   @Header('Cache-Control', 'no-store')
   staffCompensation(
     @Req() req: LearnRequest,
@@ -141,6 +151,7 @@ export class TalentController {
   }
 
   @Get('providers/:providerId/participants/:userId/resume')
+  @Access('participant.records')
   @Header('Cache-Control', 'no-store')
   staffResume(
     @Req() req: LearnRequest,
@@ -155,6 +166,7 @@ export class TalentController {
   }
 
   @Get('providers/:providerId/talent-export.csv')
+  @Access('participant.records')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="talent.csv"')
   @Header('Cache-Control', 'no-store')

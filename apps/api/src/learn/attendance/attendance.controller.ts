@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { LearnGuard } from '../../auth/learn.guard'
+import { Access, SelfOnly } from '../access/access.decorator'
 import { AttendanceService } from './attendance.service'
 
 interface LearnRequest {
@@ -25,16 +26,19 @@ export class AttendanceController {
   constructor(private readonly service: AttendanceService) {}
 
   @Get('cohorts/:cohortId/sessions')
+  @Access('cohort.staff')
   list(@Req() req: LearnRequest, @Param('cohortId') cohortId: string) {
     return this.service.listSessions(req.userId, req.userRole, cohortId)
   }
 
   @Post('cohorts/:cohortId/sessions')
+  @Access('cohort.staff')
   create(@Req() req: LearnRequest, @Param('cohortId') cohortId: string, @Body() body: unknown) {
     return this.service.createSession(req.userId, req.userRole, cohortId, body)
   }
 
   @Put('cohorts/:cohortId/sessions/:sessionId')
+  @Access('cohort.staff')
   update(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
@@ -45,6 +49,7 @@ export class AttendanceController {
   }
 
   @Delete('cohorts/:cohortId/sessions/:sessionId')
+  @Access('cohort.staff')
   remove(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
@@ -54,6 +59,7 @@ export class AttendanceController {
   }
 
   @Get('cohorts/:cohortId/sessions/:sessionId/marks')
+  @Access('cohort.staff')
   sheet(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
@@ -63,6 +69,7 @@ export class AttendanceController {
   }
 
   @Put('cohorts/:cohortId/sessions/:sessionId/marks')
+  @Access('cohort.staff')
   saveMarks(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
@@ -73,11 +80,13 @@ export class AttendanceController {
   }
 
   @Get('cohorts/:cohortId/attendance')
+  @Access('cohort.staff')
   summary(@Req() req: LearnRequest, @Param('cohortId') cohortId: string) {
     return this.service.summary(req.userId, req.userRole, cohortId)
   }
 
   @Get('cohorts/:cohortId/attendance.csv')
+  @Access('cohort.staff')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="attendance.csv"')
   csv(@Req() req: LearnRequest, @Param('cohortId') cohortId: string) {
@@ -85,6 +94,7 @@ export class AttendanceController {
   }
 
   @Get('cohorts/:cohortId/sessions/:sessionId/attendance.csv')
+  @Access('cohort.staff')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="session-attendance.csv"')
   sessionCsv(
@@ -97,6 +107,7 @@ export class AttendanceController {
 
   /** The signed-in learner's own attendance: their marks only, never the staff note. */
   @Get('me/cohorts/:cohortId/attendance')
+  @SelfOnly()
   mine(@Req() req: LearnRequest, @Param('cohortId') cohortId: string) {
     return this.service.mine(req.userId, cohortId)
   }

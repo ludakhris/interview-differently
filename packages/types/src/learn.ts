@@ -95,6 +95,8 @@ export interface LearnWorkspace {
   parentId: string | null
   /** Marked as a demo with full sample data (attendance, talent, activity, notes), to find it among many. */
   featuredDemo: boolean
+  /** The caller's highest role in it: 'system-admin', 'agency-admin', 'provider-admin', 'organization-admin', 'case-manager' or 'instructor'. */
+  role: string
 }
 
 /** A workspace as shown on the chooser: who it reports to, and what is in it. */

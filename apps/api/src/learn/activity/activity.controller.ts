@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { LearnGuard } from '../../auth/learn.guard'
+import { Access, SelfOnly } from '../access/access.decorator'
 import { ActivityService } from './activity.service'
 
 interface LearnRequest {
@@ -26,12 +27,14 @@ export class ActivityController {
 
   /** The learner pages' heartbeat. Any signed-in learner; only their own enrollment is touched. */
   @Post('me/activity/heartbeat')
+  @SelfOnly()
   @HttpCode(204)
   async heartbeat(@Req() req: LearnRequest, @Body() body: unknown): Promise<void> {
     await this.service.heartbeat(req.userId, body)
   }
 
   @Get('me/cohorts/:cohortId/activity')
+  @SelfOnly()
   own(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
@@ -43,6 +46,7 @@ export class ActivityController {
   }
 
   @Get('cohorts/:cohortId/activity')
+  @Access('cohort.staff')
   cohort(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
@@ -54,6 +58,7 @@ export class ActivityController {
   }
 
   @Get('cohorts/:cohortId/activity/learners/:userId')
+  @Access('cohort.staff')
   learner(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
@@ -66,6 +71,7 @@ export class ActivityController {
   }
 
   @Get('cohorts/:cohortId/activity.csv')
+  @Access('cohort.staff')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="cohort-activity.csv"')
   csv(

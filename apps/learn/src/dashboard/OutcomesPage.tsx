@@ -4,7 +4,8 @@ import { downloadFile, useApiFetch, useLoad } from './api'
 import { Dumbbell, Funnel, Legend, Meter, PairedBars, StatTile } from './charts'
 import { dateOnly, dateShort, pct, points, score } from './format'
 import { useApp } from './app-context'
-import { errorNotice, useRole } from './shared'
+import { canExportExitFile } from './roleAccess'
+import { errorNotice, useWorkspaceRole } from './shared'
 import { workspaceHref } from './WorkspaceSwitcher'
 
 export function OutcomesPage({ tenant }: { tenant: string }) {
@@ -28,7 +29,7 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
   const gradebookLink = (cohortId: string) =>
     href(`/lms/dashboard/cohorts/${encodeURIComponent(cohortId)}`)
   const t = data.totals
-  const role = useRole()
+  const role = useWorkspaceRole(tenant)
   const apiFetch = useApiFetch()
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState(false)
@@ -206,7 +207,7 @@ export function Outcomes({ data, tenant }: { data: AgencyOutcomes; tenant: strin
           Assessment scores before and after training for each cohort, grouped by provider. Open a
           cohort for its gradebook, or a provider for its own outcomes.
         </p>
-        {(role === 'agency-admin' || role === 'system-admin') && (
+        {canExportExitFile(role) && (
           <p className="dash-sub">
             <button type="button" className="dash-linkbtn" onClick={exportCsv} disabled={exporting}>
               {exporting ? 'Preparing…' : 'Export participant records (CSV)'}

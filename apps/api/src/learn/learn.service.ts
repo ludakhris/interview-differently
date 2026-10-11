@@ -7,63 +7,32 @@ import type {
   LearnWorkspaceSummary,
 } from './learn-types'
 import { PrismaService } from '../prisma/prisma.service'
+import { AccessService, type Actor } from './access/access.service'
+import { ROLES, SYSTEM_ADMIN } from './access/permissions'
 import { agencyOutcomes, gradebook, type EnrollmentRow } from './outcomes'
 import { exitFileCsv } from './exit-file'
 
-/** Roles on the LearnDifferently Clerk instance (publicMetadata.role). */
-export const LEARN_ROLES = {
-  agencyAdmin: 'agency-admin',
-  caseManager: 'case-manager',
-  providerAdmin: 'provider-admin',
-  /** Runs the platform: everything an agency admin can do, plus connected tools. */
-  systemAdmin: 'system-admin',
-} as const
-
-/**
- * LEARN_ROLES from least to most access. The admin tool lists roles by this
- * order and labels a change as an upgrade or a downgrade. A user with no role
- * (a learner) ranks below all of them. Add a new role here as well as above.
- */
-export const LEARN_ROLE_ORDER: string[] = [
-  LEARN_ROLES.caseManager,
-  LEARN_ROLES.providerAdmin,
-  LEARN_ROLES.agencyAdmin,
-  LEARN_ROLES.systemAdmin,
-]
-
 @Injectable()
 export class LearnService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  /** Throws unless the caller's LearnDifferently role is one of `allowed`. */
-  assertRole(role: string | undefined, allowed: string[]): void {
-    if (role === LEARN_ROLES.systemAdmin) return
-    if (!role || !allowed.includes(role)) throw new ForbiddenException('Insufficient role')
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly access: AccessService
+  ) {}
 
   /**
-   * Workspaces the caller may open. System admins see every agency and what reports to one. An
-   * agency admin sees the agencies they hold a workspace membership in and the providers and
-   * organizations under them. Anyone else sees the institutions they hold a membership in.
+   * Workspaces the caller may open, each with their highest role in it (AccessService.workspaceRoles): a
+   * system admin opens every agency and what reports to one, an agency admin their agencies and what
+   * reports to them, everyone else the institutions where they hold a role.
    */
   async workspaces(userId: string, role: string | undefined): Promise<LearnWorkspace[]> {
-    const member = { some: { userId, cohortId: null } }
-    // For an agency, only a grant (a membership with a role) opens it; the roles below it are bound by membership alone.
-    const grant = { some: { userId, cohortId: null, role: { not: null } } }
-    const where =
-      role === LEARN_ROLES.systemAdmin
-        ? { subdomain: { not: null }, OR: [{ kind: 'agency' }, { parent: { kind: 'agency' } }] }
-        : role === LEARN_ROLES.agencyAdmin
-          ? {
-              subdomain: { not: null },
-              OR: [
-                { kind: 'agency', memberships: grant },
-                { parent: { kind: 'agency', memberships: grant } },
-              ],
-            }
-          : { subdomain: { not: null }, memberships: member }
+    const actor = { userId, role }
+    const system = this.access.isSystemAdmin(actor)
+    const roles = system ? [] : await this.access.workspaceRoles(actor)
+    if (!system && roles.length === 0) return []
     const rows = await this.prisma.institution.findMany({
-      where,
+      where: system
+        ? { subdomain: { not: null }, OR: [{ kind: 'agency' }, { parent: { kind: 'agency' } }] }
+        : { subdomain: { not: null }, id: { in: roles.map((r) => r.institutionId) } },
       select: {
         id: true,
         name: true,
@@ -74,7 +43,12 @@ export class LearnService {
       },
       orderBy: [{ kind: 'asc' }, { name: 'asc' }],
     })
-    return rows.map((r) => ({ ...r, subdomain: r.subdomain as string }))
+    const roleOf = new Map(roles.map((r) => [r.institutionId, r.role]))
+    return rows.map((r) => ({
+      ...r,
+      subdomain: r.subdomain as string,
+      role: system ? SYSTEM_ADMIN : (roleOf.get(r.id) as LearnWorkspace['role']),
+    }))
   }
 
   /** The workspaces the caller may open, each with what is in it, for the chooser. */
@@ -96,6 +70,7 @@ export class LearnService {
       }),
       this.prisma.cohort.findMany({
         select: {
+          id: true,
           institutionId: true,
           institution: { select: { parentId: true } },
           course: { select: { providerId: true, provider: { select: { parentId: true } } } },
@@ -106,6 +81,10 @@ export class LearnService {
     ])
     const parentName = new Map(parents.map((p) => [p.id, p.name]))
     const courses = new Map(courseCounts.map((c) => [c.providerId, c._count._all]))
+    // An instructor sees only what is theirs: their cohorts and their learners, not the workspace's totals.
+    const taught = new Map<string, string[] | null>()
+    for (const w of list.filter((w) => w.role === ROLES.instructor))
+      taught.set(w.id, await this.access.instructorCohortsIn({ userId, role }, w.id))
     return list.map((w) => {
       const own = (c: (typeof cohorts)[number]): boolean =>
         w.kind === 'agency'
@@ -113,13 +92,15 @@ export class LearnService {
           : w.kind === 'provider'
             ? c.course?.providerId === w.id
             : c.institutionId === w.id
-      const mine = cohorts.filter(own)
-      const partners = children.filter((c) => c.parentId === w.id)
+      const narrowed = taught.get(w.id)
+      const mine = cohorts.filter(own).filter((c) => !narrowed || narrowed.includes(c.id))
+      const partners = narrowed ? [] : children.filter((c) => c.parentId === w.id)
       return {
         ...w,
         parentName: (w.parentId && parentName.get(w.parentId)) || null,
-        courses:
-          w.kind === 'agency'
+        courses: narrowed
+          ? 0
+          : w.kind === 'agency'
             ? partners.reduce((n, p) => n + (courses.get(p.id) ?? 0), 0)
             : (courses.get(w.id) ?? 0),
         cohorts: mine.length,
@@ -136,10 +117,7 @@ export class LearnService {
     role: string | undefined,
     subdomain: string
   ): Promise<void> {
-    const list = await this.workspaces(userId, role)
-    if (!list.some((w) => w.subdomain === subdomain)) {
-      throw new ForbiddenException('No access to this workspace')
-    }
+    await this.access.authorize({ userId, role }, 'workspace.open', { workspace: subdomain })
   }
 
   /**
@@ -219,7 +197,8 @@ export class LearnService {
     `)
   }
 
-  async outcomes(subdomain: string): Promise<AgencyOutcomes> {
+  async outcomes(actor: Actor, subdomain: string): Promise<AgencyOutcomes> {
+    await this.access.authorize(actor, 'outcomes.read', { workspace: subdomain })
     const scope = await this.reportScope(subdomain)
     return agencyOutcomes(
       { id: scope.id, name: scope.name },
@@ -228,14 +207,19 @@ export class LearnService {
     )
   }
 
-  async gradebook(subdomain: string, cohortId: string): Promise<Gradebook> {
+  async gradebook(actor: Actor, subdomain: string, cohortId: string): Promise<Gradebook> {
+    await this.access.authorize(actor, 'gradebook.read', { workspace: subdomain })
     const scope = await this.reportScope(subdomain)
+    // The workspace check covers every cohort in it; an instructor reads only the cohorts they teach.
+    const taught = await this.access.instructorCohortsIn(actor, scope.id)
+    if (taught && !taught.includes(cohortId)) throw new ForbiddenException('Insufficient role')
     const book = gradebook(cohortId, await this.enrollmentRows(scope), new Date())
     if (!book) throw new NotFoundException(`Cohort ${cohortId} not found for this agency`)
     return book
   }
 
-  async exitFile(subdomain: string): Promise<string> {
+  async exitFile(actor: Actor, subdomain: string): Promise<string> {
+    await this.access.authorize(actor, 'exit-file.read', { workspace: subdomain })
     const scope = await this.reportScope(subdomain)
     return exitFileCsv(await this.enrollmentRows(scope))
   }

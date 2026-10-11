@@ -127,6 +127,29 @@ export class ClerkService {
   }
 
   /**
+   * The person's primary email, only when Clerk has verified it (null otherwise, or when Clerk cannot be reached).
+   * Used to claim an invitation: an unverified address proves nothing about who owns it.
+   */
+  async getVerifiedEmail(userId: string, source: UserSource = 'learn'): Promise<string | null> {
+    const client = this.clientFor(source)
+    if (!client) return null
+    try {
+      const user = await client.users.getUser(userId)
+      const primary = user.primaryEmailAddressId
+        ? user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)
+        : user.emailAddresses[0]
+      return primary?.verification?.status === 'verified'
+        ? primary.emailAddress.trim().toLowerCase()
+        : null
+    } catch (err) {
+      this.logger.warn(
+        `Failed to fetch Clerk email ${userId}: ${err instanceof Error ? err.message : 'unknown'}`
+      )
+      return null
+    }
+  }
+
+  /**
    * Roles for many users at once (cohort member lists). Missing users map
    * to null. Clerk caps `userId` filters at 100 per call, so we page.
    */

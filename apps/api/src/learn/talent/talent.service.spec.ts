@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common'
 import type { PrismaService } from '../../prisma/prisma.service'
 import { DataAccessLogService } from '../data-access-log.service'
-import { LearnService } from '../learn.service'
+import { AccessService } from '../access/access.service'
 import type { LearnerService } from '../learner.service'
 import { ProviderAccessService } from '../provider-access.service'
 import { LocalDiskPrivateStorage } from '../../storage/local-disk-storage'
@@ -157,11 +157,29 @@ const prisma = {
     }),
   },
   membership: {
+    findMany: jest.fn(async ({ where }) =>
+      [
+        { userId: 'staff-p1', institutionId: 'P1', role: 'provider-admin' },
+        { userId: 'staff-h1', institutionId: 'H1', role: 'organization-admin' },
+        { userId: 'cm-p1', institutionId: 'P1', role: 'case-manager' },
+        { userId: 'agency-1', institutionId: 'A1', role: 'agency-admin' },
+      ]
+        .filter((m) => m.userId === where.userId)
+        .map((m) => ({
+          ...m,
+          cohortId: null,
+          institution: {
+            parentId: null,
+            subdomain: null,
+            kind: INSTITUTIONS[m.institutionId].kind,
+          },
+        }))
+    ),
+  },
+  institution: {
     findFirst: jest.fn(async ({ where }) =>
-      where.cohortId === null &&
-      ((where.userId === 'staff-p1' && where.institutionId === 'P1') ||
-        (where.userId === 'staff-h1' && where.institutionId === 'H1'))
-        ? { id: 'm' }
+      INSTITUTIONS[where.id]
+        ? { id: where.id, parentId: null, kind: INSTITUTIONS[where.id].kind }
         : null
     ),
   },
@@ -261,7 +279,7 @@ const storage = {
 const learner = { syncProfileState: jest.fn(async () => undefined) }
 
 const db = prisma as unknown as PrismaService
-const access = new ProviderAccessService(db, new LearnService(db))
+const access = new ProviderAccessService(db, new AccessService(db))
 const audit = new DataAccessLogService(db, access)
 const service = new TalentService(
   db,
@@ -676,8 +694,8 @@ describe('staff access', () => {
   let who: { userId: string; role: string | undefined } = staff
   it.each([
     ['a learner', { userId: 'L1', role: undefined }],
-    ['a case manager', { userId: 'staff-p1', role: 'case-manager' }],
-    ['an agency admin', { userId: 'staff-p1', role: 'agency-admin' }],
+    ['a case manager', { userId: 'cm-p1', role: 'case-manager' }],
+    ['an agency admin', { userId: 'agency-1', role: 'agency-admin' }],
     ['staff of another provider', { userId: 'staff-p2', role: 'provider-admin' }],
     [
       'an organization admin without the provider membership',

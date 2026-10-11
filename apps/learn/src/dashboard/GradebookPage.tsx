@@ -3,13 +3,13 @@ import { useLoad } from './api'
 import { Meter, StatTile } from './charts'
 import { dateOnly, dateShort, pct, points, score } from './format'
 import { useApp } from './app-context'
-import { errorNotice, useRole } from './shared'
+import { errorNotice, useWorkspaceRole } from './shared'
 
 export function GradebookPage({ tenant, cohortId }: { tenant: string; cohortId: string }) {
   const { data, error, loading } = useLoad<Gradebook>(
     `/learn/agency/cohorts/${encodeURIComponent(cohortId)}/gradebook?tenant=${encodeURIComponent(tenant)}`
   )
-  const role = useRole()
+  const role = useWorkspaceRole(tenant)
   if (error) return errorNotice(error)
   if (loading || !data) return <p className="dash-loading">Loading gradebook…</p>
   return <GradebookView data={data} role={role} />

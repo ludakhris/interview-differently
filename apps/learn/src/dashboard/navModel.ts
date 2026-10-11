@@ -1,5 +1,14 @@
 import type { LearnWorkspace } from '@id/types'
-import { canSeeActivity, canSeeTalent } from './roleAccess'
+import {
+  canManageMembers,
+  canManageWorkspace,
+  canSeeActivity,
+  canSeeCohorts,
+  canSeeOutcomes,
+  canSeeTalent,
+  staffPageLabel,
+  SYSTEM_ADMIN,
+} from './roleAccess'
 
 export interface NavLink {
   label: string
@@ -20,6 +29,7 @@ export interface NavModel {
 }
 
 export interface NavInput {
+  /** The person's overall role (only used for the Admin toolbox); each workspace's own role is on `current`. */
   role: string | undefined
   /** null until loaded */
   workspaces: LearnWorkspace[] | null
@@ -31,25 +41,26 @@ export interface NavInput {
   workspacesHref: string
 }
 
-const SYSTEM_ADMIN = 'system-admin'
-
 function staffItems(i: NavInput): NavItem[] {
-  const { current, role, href } = i
+  const { current, href } = i
   const items: NavItem[] = [{ label: 'My workspaces', href: i.workspacesHref }]
   if (!current) return items
+  // What the person may do here depends on their role in this workspace, not their highest overall.
+  const role = current.role
   items.push({ heading: current.name, caption: 'Currently selected' })
+  const people = canManageMembers(role)
   if (current.kind === 'agency') {
     items.push({ label: 'Outcomes dashboard', href: href('/lms/dashboard') })
     if (current.subdomain === 'delaware') {
       items.push({ label: 'Career Readiness Tool', href: href('/') })
     }
+    if (people) items.push({ label: staffPageLabel(current.kind), href: href('/lms/members') })
     return items
   }
-  items.push(
-    { label: 'Outcomes', href: href('/lms/dashboard') },
-    { label: 'Cohorts', href: href('/lms/cohorts') },
-    { label: 'Courses', href: href('/lms/courses') }
-  )
+  if (canSeeOutcomes(role)) items.push({ label: 'Outcomes', href: href('/lms/dashboard') })
+  if (canSeeCohorts(role)) items.push({ label: 'Cohorts', href: href('/lms/cohorts') })
+  if (canManageWorkspace(role)) items.push({ label: 'Courses', href: href('/lms/courses') })
+  if (people) items.push({ label: staffPageLabel(current.kind), href: href('/lms/members') })
   const talent =
     canSeeTalent(role) && (current.kind === 'provider' || current.kind === 'organization')
   const activity = canSeeActivity(role)

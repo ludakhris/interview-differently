@@ -8,7 +8,7 @@
  *   compare                                              ts-node scripts/tenant-e2e.ts --compare plain.json rls.json
  *
  * Someone who may see everything must get the same answers either way; someone confined to one agency must
- * be refused or shown nothing from another. It creates a few `e2e-*` users, some with staff grants, in the database
+ * be refused or shown nothing from another. It creates a few `e2e-*` users, some with a role at a workspace, in the database
  * it points at, and replaces sign-in with a header anyone can send. NEVER run it against production: both
  * DATABASE_URL and SCHEMA_DATABASE_URL must be the development database, and --confirm-host must name it.
  */
@@ -52,16 +52,16 @@ async function setup(owner: PrismaClient): Promise<{ learnerId: string; chCohort
   const provider = await owner.institution.findFirstOrThrow({
     where: { parentId: de, kind: 'provider' },
   })
-  const grant = async (userId: string, institutionId: string) => {
+  const grant = async (userId: string, institutionId: string, role: string) => {
     const where = { userId, institutionId, cohortId: null }
     const have = await owner.membership.findFirst({ where })
-    if (!have) await owner.membership.create({ data: { ...where, role: 'e2e-grant' } })
-    else if (!have.role)
-      await owner.membership.update({ where: { id: have.id }, data: { role: 'e2e-grant' } })
+    if (!have) await owner.membership.create({ data: { ...where, role } })
+    else if (have.role !== role)
+      await owner.membership.update({ where: { id: have.id }, data: { role } })
   }
-  await grant(WHO.agencyDE.id, de)
-  await grant(WHO.agencyCH.id, ch)
-  await grant(WHO.providerDE.id, provider.id)
+  await grant(WHO.agencyDE.id, de, 'agency-admin')
+  await grant(WHO.agencyCH.id, ch, 'agency-admin')
+  await grant(WHO.providerDE.id, provider.id, 'provider-admin')
   const learner = await owner.enrollment.findFirstOrThrow({
     where: {
       user: { source: 'learn', id: { not: { startsWith: 'e2e-' } } },

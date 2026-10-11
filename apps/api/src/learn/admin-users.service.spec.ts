@@ -1,29 +1,23 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common'
 import type { ClerkService } from '../auth/clerk.service'
 import { AdminUsersService } from './admin-users.service'
-import { LEARN_ROLE_ORDER, LEARN_ROLES, LearnService } from './learn.service'
+import { AccessService } from './access/access.service'
+import { SYSTEM_ADMIN } from './access/permissions'
 
 const searchUsers = jest.fn()
 const getUserSummary = jest.fn()
 const setRole = jest.fn()
 const clerk = { searchUsers, getUserSummary, setRole } as unknown as ClerkService
-const service = new AdminUsersService(clerk, new LearnService({} as never))
+const service = new AdminUsersService(clerk, new AccessService({} as never))
 
-const SYSADMIN = LEARN_ROLES.systemAdmin
+const SYSADMIN = SYSTEM_ADMIN
 const target = { id: 'u2', email: 'ann@example.com', displayName: 'Ann', role: 'agency-admin' }
 
 describe('AdminUsersService', () => {
   beforeEach(() => jest.clearAllMocks())
 
-  it('offers every role LEARN_ROLES defines, least access first', () => {
-    const roles = service.roles(SYSADMIN)
-    expect([...roles].sort()).toEqual(Object.values<string>(LEARN_ROLES).sort())
-    expect(roles).toEqual(LEARN_ROLE_ORDER)
-    expect(roles[roles.length - 1]).toBe(SYSADMIN)
-  })
-
-  it('ranks every role in LEARN_ROLE_ORDER (add new roles there too)', () => {
-    expect([...LEARN_ROLE_ORDER].sort()).toEqual(Object.values<string>(LEARN_ROLES).sort())
+  it('offers only the platform administrator role: every other role is held at a workspace', () => {
+    expect(service.roles(SYSADMIN)).toEqual([SYSADMIN])
   })
 
   it('refuses everyone but system admins', async () => {
@@ -43,7 +37,7 @@ describe('AdminUsersService', () => {
     expect(searchUsers).toHaveBeenCalledWith('ann', 'learn')
   })
 
-  it('sets a known role on the LearnDifferently instance', async () => {
+  it('gives the platform administrator role on the LearnDifferently instance', async () => {
     getUserSummary.mockResolvedValue(target)
     const out = await service.setRole('u1', SYSADMIN, 'u2', SYSADMIN)
     expect(setRole).toHaveBeenCalledWith('u2', SYSADMIN, 'learn')
@@ -56,10 +50,10 @@ describe('AdminUsersService', () => {
     expect(setRole).toHaveBeenCalledWith('u2', null, 'learn')
   })
 
-  it('rejects a role LEARN_ROLES does not define', async () => {
-    await expect(service.setRole('u1', SYSADMIN, 'u2', 'admin')).rejects.toThrow(
-      BadRequestException
-    )
+  it('will not give any other account role: those are held at a workspace', async () => {
+    for (const role of ['admin', 'agency-admin', 'provider-admin', 'case-manager']) {
+      await expect(service.setRole('u1', SYSADMIN, 'u2', role)).rejects.toThrow(BadRequestException)
+    }
     expect(setRole).not.toHaveBeenCalled()
   })
 

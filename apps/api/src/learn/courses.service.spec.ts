@@ -3,7 +3,7 @@ import { BadRequestException, ConflictException, ForbiddenException } from '@nes
 import type { PrismaService } from '../prisma/prisma.service'
 import { managedTools, setStoredTools } from '../lti/platform/lti-platform-config'
 import { CoursesService } from './courses.service'
-import type { LearnService } from './learn.service'
+import type { AccessService } from './access/access.service'
 
 const prisma = {
   course: { findUnique: jest.fn(), create: jest.fn(), findMany: jest.fn(), delete: jest.fn() },
@@ -25,13 +25,13 @@ const prisma = {
   institution: { findFirst: jest.fn(), findUnique: jest.fn() },
   $transaction: jest.fn(),
 }
-const learn = {
-  assertRole: jest.fn(),
-  assertWorkspace: jest.fn(),
+const access = {
+  authorize: jest.fn(),
+  authorizeAnywhere: jest.fn(),
 }
 const service = new CoursesService(
   prisma as unknown as PrismaService,
-  learn as unknown as LearnService
+  access as unknown as AccessService
 )
 
 const provider = { id: 'p1', name: 'Harbor Point', subdomain: 'harborpoint' }
@@ -58,17 +58,42 @@ beforeEach(() => {
 
 describe('CoursesService access', () => {
   it('stops callers without a managing role before touching data', async () => {
-    learn.assertRole.mockImplementation(() => {
-      throw new ForbiddenException('Insufficient role')
-    })
+    access.authorizeAnywhere.mockRejectedValue(new ForbiddenException('Insufficient role'))
     await expect(service.detail('u', 'case-manager', 'c1')).rejects.toThrow(ForbiddenException)
+    expect(access.authorizeAnywhere).toHaveBeenCalledWith(
+      { userId: 'u', role: 'case-manager' },
+      'course.manage'
+    )
     expect(prisma.course.findUnique).not.toHaveBeenCalled()
   })
 
-  it('checks the caller can open the provider that owns the course', async () => {
-    learn.assertWorkspace.mockRejectedValue(new ForbiddenException('No access to this workspace'))
+  it('checks the caller can manage the provider that owns the course', async () => {
+    access.authorize.mockRejectedValue(new ForbiddenException('No access to this workspace'))
     await expect(service.detail('u', 'provider-admin', 'c1')).rejects.toThrow(ForbiddenException)
-    expect(learn.assertWorkspace).toHaveBeenCalledWith('u', 'provider-admin', 'harborpoint')
+    expect(access.authorize).toHaveBeenCalledWith(
+      { userId: 'u', role: 'provider-admin' },
+      'course.manage',
+      { institutionId: 'p1' }
+    )
+  })
+
+  it('authorizes course.manage for a workspace on list and create', async () => {
+    access.authorize.mockRejectedValue(new ForbiddenException('No access to this workspace'))
+    await expect(service.list('u', 'provider-admin', 'nowhere')).rejects.toThrow(ForbiddenException)
+    await expect(service.create('u', 'provider-admin', 'nowhere', {})).rejects.toThrow(
+      ForbiddenException
+    )
+    expect(access.authorize).toHaveBeenCalledWith(
+      { userId: 'u', role: 'provider-admin' },
+      'course.manage',
+      { workspace: 'nowhere' }
+    )
+  })
+
+  it('refuses the catalogs to callers without a managing role', async () => {
+    access.authorizeAnywhere.mockRejectedValue(new ForbiddenException('Insufficient role'))
+    await expect(service.assessmentCatalog('u', 'case-manager')).rejects.toThrow(ForbiddenException)
+    await expect(service.scenarioCatalog('u', 'case-manager')).rejects.toThrow(ForbiddenException)
   })
 })
 

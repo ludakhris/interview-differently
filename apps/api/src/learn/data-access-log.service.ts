@@ -1,7 +1,7 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { LEARN_ROLES } from './learn.service'
-import { PROVIDER_STAFF_ROLES, ProviderAccessService } from './provider-access.service'
+import { SYSTEM_ADMIN } from './access/permissions'
+import { ProviderAccessService } from './provider-access.service'
 import type { DataAccessAction, DataAccessLogPage, DataAccessResource } from './talent-types'
 
 export const DATA_ACCESS_RESOURCES: DataAccessResource[] = [
@@ -95,9 +95,8 @@ export class DataAccessLogService {
     query: AccessLogQuery
   ): Promise<DataAccessLogPage> {
     // A system admin may name any provider, or none (all of them). Provider staff must name their own.
-    if (role !== LEARN_ROLES.systemAdmin) {
-      if (!role || !PROVIDER_STAFF_ROLES.includes(role))
-        throw new ForbiddenException('Insufficient role')
+    await this.access.assertStaffAnywhere(userId, role)
+    if (role !== SYSTEM_ADMIN) {
       if (!query.providerId) throw new BadRequestException('providerId is required')
       await this.access.assertProviderStaff(userId, role, query.providerId)
     }

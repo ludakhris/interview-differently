@@ -1,20 +1,20 @@
 import type { PrismaService } from '../../prisma/prisma.service'
 import type { AttentionItem } from '../attention-types'
-import { LEARN_ROLES } from '../learn.service'
 
 /**
  * Follow-ups assigned to the person that are open or in progress and overdue or due today, one
- * alert item per institution whose queue they may open (ProviderAccessService.assertProviderStaff:
- * a system admin anywhere, a provider-admin with a workspace membership). Counts and the
+ * alert item per institution whose queue they may open (`institutionIds`, the ones where they hold
+ * `participant.records`; null for a system admin, who may open any). Counts and the
  * institution's name only, for the "needs your attention" alert (#74); this folder is the only
  * place that reads the staff tables.
  */
 export async function dueSupportFollowUps(
   prisma: PrismaService,
   userId: string,
-  role: string | undefined,
+  institutionIds: string[] | null,
   now: Date
 ): Promise<AttentionItem[]> {
+  if (institutionIds && institutionIds.length === 0) return []
   const endOfToday = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
   )
@@ -24,14 +24,12 @@ export async function dueSupportFollowUps(
       assigneeId: userId,
       status: { in: ['open', 'in_progress'] },
       dueDate: { lt: endOfToday },
-      ...(role === LEARN_ROLES.systemAdmin
-        ? {}
-        : {
-            provider: {
-              kind: { in: ['provider', 'organization'] },
-              memberships: { some: { userId, cohortId: null } },
-            },
-          }),
+      ...(institutionIds
+        ? {
+            providerId: { in: institutionIds },
+            provider: { kind: { in: ['provider', 'organization'] } },
+          }
+        : {}),
     },
     _count: { _all: true },
   })

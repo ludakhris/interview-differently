@@ -4,6 +4,8 @@ import { PrismaModule } from '../prisma/prisma.module'
 import { StorageModule } from '../storage/storage.module'
 import { AdminUsersController } from './admin-users.controller'
 import { AdminUsersService } from './admin-users.service'
+import { MembersController } from './members.controller'
+import { MembersService } from './members.service'
 import { CoursesController } from './courses.controller'
 import { CoursesService } from './courses.service'
 import { ActivityModule } from './activity/activity.module'
@@ -50,6 +52,7 @@ import { ScormService } from './scorm.service'
     ItemImageController,
     PublicCatalogController,
     AdminUsersController,
+    MembersController,
   ],
   exports: [LearnerService],
   providers: [
@@ -62,6 +65,7 @@ import { ScormService } from './scorm.service'
     PublicCatalogService,
     InterviewScoringService,
     AdminUsersService,
+    MembersService,
   ],
 })
 export class LearnModule {}

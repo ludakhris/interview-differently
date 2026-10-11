@@ -6,7 +6,7 @@ export type KindFilter = 'all' | 'featured' | 'agency' | 'provider' | 'organizat
 export const kindOf = (kind: string): Exclude<KindFilter, 'all' | 'featured'> =>
   kind === 'agency' ? 'agency' : kind === 'provider' ? 'provider' : 'organization'
 
-type Searchable = Omit<LearnWorkspace, 'featuredDemo'> & {
+type Searchable = Omit<LearnWorkspace, 'featuredDemo' | 'role'> & {
   parentName?: string | null
   featuredDemo?: boolean
 }

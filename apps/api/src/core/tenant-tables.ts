@@ -22,6 +22,7 @@ export const TENANT_TABLES: ReadonlySet<string> = new Set([
   'CourseModule',
   'CourseItem',
   'CourseOffer',
+  'RoleInvite',
 ])
 
 type Fields = Map<string, string> // relation field name -> the model it points at

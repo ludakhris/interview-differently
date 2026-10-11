@@ -1,5 +1,6 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common'
 import { LearnGuard } from '../auth/learn.guard'
+import { Access } from './access/access.decorator'
 import { DataAccessLogService } from './data-access-log.service'
 
 interface LearnRequest {
@@ -14,6 +15,7 @@ export class DataAccessLogController {
   constructor(private readonly log: DataAccessLogService) {}
 
   @Get('data-access-log')
+  @Access('participant.records')
   list(
     @Req() req: LearnRequest,
     @Query('providerId') providerId?: string,

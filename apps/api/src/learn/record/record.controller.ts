@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common'
 import { LearnGuard } from '../../auth/learn.guard'
+import { Access } from '../access/access.decorator'
 import { RecordService } from './record.service'
 
 interface LearnRequest {
@@ -14,6 +15,7 @@ export class RecordController {
   constructor(private readonly service: RecordService) {}
 
   @Get('cohorts/:cohortId/learners/:userId/record')
+  @Access('cohort.staff')
   record(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,

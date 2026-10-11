@@ -79,7 +79,7 @@ exhibits:
         items:
           - 'BEV owners install a Level 2 home charger ~70% of the time; the remaining 30% rely on Level 1 wall outlets or public DCFC.'
           - 'Installed equipment + labour averages $1,800 per home charger today, projected to $1,400 in year 5.'
-          - "About 64% of US households live in single-family homes where a Level 2 install is structurally feasible (SAM filter)."
+          - 'About 64% of US households live in single-family homes where a Level 2 install is structurally feasible (SAM filter).'
 
   - id: ev-adoption-table
     kind: data-table
@@ -97,9 +97,19 @@ exhibits:
       - { year: 'Y2', share: 22, parc: 7.4, newhomes: 2.0 }
       - { year: 'Y3', share: 30, parc: 10.5, newhomes: 3.1 }
       - { year: 'Y4', share: 36, parc: 14.5, newhomes: 4.0 }
-      - { year: 'Y5', share: { value: 40, tone: accent, emphasis: true }, parc: 19.0, newhomes: 4.5 }
+      - {
+          year: 'Y5',
+          share: { value: 40, tone: accent, emphasis: true },
+          parc: 19.0,
+          newhomes: 4.5,
+        }
     totalRow:
-      { year: { value: 'Cumulative Y1-Y5', emphasis: true }, share: '', parc: '', newhomes: { value: 14.8, tone: accent } }
+      {
+        year: { value: 'Cumulative Y1-Y5', emphasis: true },
+        share: '',
+        parc: '',
+        newhomes: { value: 14.8, tone: accent },
+      }
 
   - id: ev-adoption-chart
     kind: chart
@@ -209,8 +219,20 @@ nodes:
         display: 'TAM = new BEV homes × 70% attach;  SAM = TAM × 64% single-fam;  SOM = SAM × 10% share'
         expression: '{newhomes} * {attach}'
         variables:
-          - { name: newhomes, label: Cumulative new BEV homes Y1-Y5, unit: M, format: decimal, defaultValue: 14.8 }
-          - { name: attach, label: Home charger attach rate, unit: '%', format: percent, defaultValue: 0.7 }
+          - {
+              name: newhomes,
+              label: Cumulative new BEV homes Y1-Y5,
+              unit: M,
+              format: decimal,
+              defaultValue: 14.8,
+            }
+          - {
+              name: attach,
+              label: Home charger attach rate,
+              unit: '%',
+              format: percent,
+              defaultValue: 0.7,
+            }
       fields:
         - id: tam
           label: TAM (cumulative units)

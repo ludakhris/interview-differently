@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { LearnGuard } from '../../auth/learn.guard'
+import { Access } from '../access/access.decorator'
 import type { NoteInput, SupportItemInput } from '../talent-types'
 import { ParticipantNotesService } from './participant-notes.service'
 
@@ -33,11 +34,13 @@ export class ParticipantNotesController {
   }
 
   @Get('staff-members')
+  @Access('participant.records')
   staff(@Req() req: LearnRequest, @Param('providerId') providerId: string) {
     return this.service.staff(this.actor(req), providerId)
   }
 
   @Get('support-items')
+  @Access('participant.records')
   queue(
     @Req() req: LearnRequest,
     @Param('providerId') providerId: string,
@@ -49,6 +52,7 @@ export class ParticipantNotesController {
   }
 
   @Get('participants/:userId/notes')
+  @Access('participant.records')
   listNotes(
     @Req() req: LearnRequest,
     @Param('providerId') providerId: string,
@@ -58,6 +62,7 @@ export class ParticipantNotesController {
   }
 
   @Post('participants/:userId/notes')
+  @Access('participant.records')
   createNote(
     @Req() req: LearnRequest,
     @Param('providerId') providerId: string,
@@ -68,6 +73,7 @@ export class ParticipantNotesController {
   }
 
   @Put('participants/:userId/notes/:noteId')
+  @Access('participant.records')
   updateNote(
     @Req() req: LearnRequest,
     @Param('providerId') providerId: string,
@@ -79,6 +85,7 @@ export class ParticipantNotesController {
   }
 
   @Delete('participants/:userId/notes/:noteId')
+  @Access('participant.records')
   deleteNote(
     @Req() req: LearnRequest,
     @Param('providerId') providerId: string,
@@ -89,6 +96,7 @@ export class ParticipantNotesController {
   }
 
   @Get('participants/:userId/support-items')
+  @Access('participant.records')
   listItems(
     @Req() req: LearnRequest,
     @Param('providerId') providerId: string,
@@ -98,6 +106,7 @@ export class ParticipantNotesController {
   }
 
   @Post('participants/:userId/support-items')
+  @Access('participant.records')
   createItem(
     @Req() req: LearnRequest,
     @Param('providerId') providerId: string,
@@ -108,6 +117,7 @@ export class ParticipantNotesController {
   }
 
   @Put('participants/:userId/support-items/:itemId')
+  @Access('participant.records')
   updateItem(
     @Req() req: LearnRequest,
     @Param('providerId') providerId: string,
@@ -119,6 +129,7 @@ export class ParticipantNotesController {
   }
 
   @Delete('participants/:userId/support-items/:itemId')
+  @Access('participant.records')
   deleteItem(
     @Req() req: LearnRequest,
     @Param('providerId') providerId: string,

@@ -1,11 +1,13 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { ClerkService, type ClerkUserSummary } from '../auth/clerk.service'
-import { LEARN_ROLE_ORDER, LEARN_ROLES, LearnService } from './learn.service'
+import { AccessService } from './access/access.service'
+import { SYSTEM_ADMIN } from './access/permissions'
 
 /**
- * System admin tool: change which LearnDifferently role a user holds
- * (Clerk `publicMetadata.role` on the LearnDifferently instance). A user holds
- * one role, or none. The assignable roles are whatever LEARN_ROLES defines.
+ * System admin tool: make someone a platform administrator, or take it away (Clerk `publicMetadata.role` on
+ * the LearnDifferently instance). It is the only role kept on the account: every other role is a membership
+ * at a workspace (members.service.ts, GitHub issue #84). A person may still carry an older account role until
+ * their access has been moved onto memberships; it can be cleared here but not given.
  */
 @Injectable()
 export class AdminUsersService {
@@ -13,18 +15,17 @@ export class AdminUsersService {
 
   constructor(
     private readonly clerk: ClerkService,
-    private readonly learn: LearnService
+    private readonly access: AccessService
   ) {}
 
-  /** Assignable roles, least access first. A role missing from LEARN_ROLE_ORDER sorts lowest. */
+  /** The roles that can be given on an account: only the platform administrator. */
   roles(actorRole: string | undefined): string[] {
-    this.learn.assertRole(actorRole, [LEARN_ROLES.systemAdmin])
-    const unranked = Object.values<string>(LEARN_ROLES).filter((r) => !LEARN_ROLE_ORDER.includes(r))
-    return [...unranked, ...LEARN_ROLE_ORDER]
+    this.access.requireSystemAdmin({ userId: '', role: actorRole })
+    return [SYSTEM_ADMIN]
   }
 
   search(actorRole: string | undefined, query: string | undefined): Promise<ClerkUserSummary[]> {
-    this.learn.assertRole(actorRole, [LEARN_ROLES.systemAdmin])
+    this.access.requireSystemAdmin({ userId: '', role: actorRole })
     return this.clerk.searchUsers((query ?? '').trim(), 'learn')
   }
 
@@ -35,10 +36,11 @@ export class AdminUsersService {
     targetId: string,
     role: string | null
   ): Promise<ClerkUserSummary> {
-    this.learn.assertRole(actorRole, [LEARN_ROLES.systemAdmin])
-    const allowed: string[] = Object.values(LEARN_ROLES)
-    if (role !== null && !allowed.includes(role)) {
-      throw new BadRequestException(`Role must be one of: ${allowed.join(', ')} (or null to clear)`)
+    this.access.requireSystemAdmin({ userId: actorId, role: actorRole })
+    if (role !== null && role !== SYSTEM_ADMIN) {
+      throw new BadRequestException(
+        `Only ${SYSTEM_ADMIN} can be given on an account (or null to clear). Give other roles at a workspace.`
+      )
     }
     // Self-changes are blocked so the platform can never lose its last system admin.
     if (targetId === actorId) throw new BadRequestException('You cannot change your own role')

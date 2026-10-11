@@ -23,9 +23,8 @@ import { PrismaService } from '../prisma/prisma.service'
 import { slugify, validateCourseFields, validateItemInput } from './course-config'
 import { imageUrl, isImageKey } from './item-image'
 import { parseSkills } from './skills'
-import { LEARN_ROLES, LearnService } from './learn.service'
-
-const MANAGERS = [LEARN_ROLES.agencyAdmin, LEARN_ROLES.providerAdmin]
+import { AccessService } from './access/access.service'
+import { SYSTEM_ADMIN } from './access/permissions'
 
 type CourseRow = {
   id: string
@@ -62,20 +61,21 @@ const settings = (c: CourseRow) => ({
 export class CoursesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly learn: LearnService
+    private readonly access: AccessService
   ) {}
 
   // ── access ────────────────────────────────────────────────────────────────
 
   /** The caller may manage courses and can open the provider that owns this one. */
   private async courseFor(userId: string, role: string | undefined, courseId: string) {
-    this.learn.assertRole(role, MANAGERS)
+    const actor = { userId, role }
+    await this.access.authorizeAnywhere(actor, 'course.manage')
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
       include: { provider: { select: { id: true, name: true, subdomain: true } } },
     })
     if (!course) throw new NotFoundException('Course not found')
-    await this.learn.assertWorkspace(userId, role, course.provider.subdomain as string)
+    await this.access.authorize(actor, 'course.manage', { institutionId: course.provider.id })
     return course
   }
 
@@ -163,8 +163,7 @@ export class CoursesService {
     role: string | undefined,
     workspace: string
   ): Promise<CourseSummary[]> {
-    this.learn.assertRole(role, MANAGERS)
-    await this.learn.assertWorkspace(userId, role, workspace)
+    await this.access.authorize({ userId, role }, 'course.manage', { workspace })
     const provider = await this.providerBySubdomain(workspace)
     const rows = await this.prisma.course.findMany({
       where: { providerId: provider.id },
@@ -186,8 +185,7 @@ export class CoursesService {
   }
 
   async create(userId: string, role: string | undefined, workspace: string, body: unknown) {
-    this.learn.assertRole(role, MANAGERS)
-    await this.learn.assertWorkspace(userId, role, workspace)
+    await this.access.authorize({ userId, role }, 'course.manage', { workspace })
     const provider = await this.providerBySubdomain(workspace)
     const fields = validateCourseFields(body, false)
     const base = slugify(fields.title as string)
@@ -353,7 +351,7 @@ export class CoursesService {
       select: { id: true, parentId: true },
     })
     const scope = provider ? scopeOf(provider) : [course.provider.id]
-    const canManage = role === LEARN_ROLES.systemAdmin
+    const canManage = role === SYSTEM_ADMIN
     return {
       tools: managedTools()
         .filter((t) => t.enabled && toolAllowedFor(t, scope))
@@ -432,8 +430,8 @@ export class CoursesService {
 
   // ── pickers ───────────────────────────────────────────────────────────────
 
-  async assessmentCatalog(role: string | undefined): Promise<CatalogEntry[]> {
-    this.learn.assertRole(role, MANAGERS)
+  async assessmentCatalog(userId: string, role: string | undefined): Promise<CatalogEntry[]> {
+    await this.access.authorizeAnywhere({ userId, role }, 'course.manage')
     const rows = await this.prisma.assessment.findMany({
       select: { slug: true, title: true },
       orderBy: { title: 'asc' },
@@ -441,8 +439,8 @@ export class CoursesService {
     return rows.map((r) => ({ id: r.slug, title: r.title }))
   }
 
-  async scenarioCatalog(role: string | undefined): Promise<CatalogEntry[]> {
-    this.learn.assertRole(role, MANAGERS)
+  async scenarioCatalog(userId: string, role: string | undefined): Promise<CatalogEntry[]> {
+    await this.access.authorizeAnywhere({ userId, role }, 'course.manage')
     const rows = await this.prisma.scenario.findMany({
       where: { status: 'published' },
       select: { scenarioId: true, data: true },

@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import type { AttentionItem, AttentionSummary } from './attention-types'
-import { LEARN_ROLES, LearnService } from './learn.service'
+import { AccessService } from './access/access.service'
+import { allows } from './access/permissions'
+import { LearnService } from './learn.service'
 import { dueSupportFollowUps } from './talent/support-followups'
-import { COHORT_STAFF_ROLES, PROVIDER_STAFF_ROLES } from './provider-access.service'
 import {
   loadProfileFacts,
   refreshMonthsOf,
@@ -27,7 +28,8 @@ const site = (path: string, subdomain: string) => `${path}?site=${encodeURICompo
 export class AttentionService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly learn: LearnService
+    private readonly learn: LearnService,
+    private readonly access: AccessService
   ) {}
 
   async forUser(
@@ -35,21 +37,28 @@ export class AttentionService {
     role: string | undefined,
     now = new Date()
   ): Promise<AttentionSummary> {
-    const isStaff = (allowed: string[]) =>
-      role === LEARN_ROLES.systemAdmin || (!!role && allowed.includes(role))
+    const actor = { userId, role }
+    const system = this.access.isSystemAdmin(actor)
+    const workspaces = await this.learn.workspaces(userId, role)
     const [joins, support, platforms, profile] = await Promise.all([
-      isStaff(COHORT_STAFF_ROLES) ? this.joinRequests(userId, role) : [],
-      isStaff(PROVIDER_STAFF_ROLES) ? dueSupportFollowUps(this.prisma, userId, role, now) : [],
-      role === LEARN_ROLES.systemAdmin ? this.platforms() : [],
+      this.joinRequests(
+        system ? workspaces : workspaces.filter((w) => allows([w.role], 'cohort.manage'))
+      ),
+      dueSupportFollowUps(
+        this.prisma,
+        userId,
+        system ? null : await this.access.recordInstitutions(actor),
+        now
+      ),
+      system ? this.platforms() : [],
       this.profile(userId, now),
     ])
     const items = [...joins, ...support, ...platforms, ...profile]
     return { items, total: items.reduce((n, i) => n + (i.count ?? 1), 0) }
   }
 
-  /** Pending join requests, one item per cohort in a workspace the person may open (LearnCohortsService.cohortFor). */
-  private async joinRequests(userId: string, role: string | undefined): Promise<AttentionItem[]> {
-    const workspaces = await this.learn.workspaces(userId, role)
+  /** Pending join requests, one item per cohort in a workspace the person may manage (LearnCohortsService.cohortFor). */
+  private async joinRequests(workspaces: { id: string }[]): Promise<AttentionItem[]> {
     if (workspaces.length === 0) return []
     const counts = await this.prisma.joinRequest.groupBy({
       by: ['cohortId'],

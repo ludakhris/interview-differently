@@ -112,7 +112,7 @@ exhibits:
           - 'Three weeks of fieldwork get us regional survey data — design your framework so we know what data is decisive.'
           - 'Watch for the easy trap: assuming uptake. We have signal, not proof.'
       - kind: quote
-        text: 'If the answer doesn''t change the Foundation''s capital allocation, it''s not the answer they hired us for.'
+        text: "If the answer doesn't change the Foundation's capital allocation, it's not the answer they hired us for."
         attribution: Engagement Manager
 
   # 2 — data-table (Sizing): rural population breakdown by region. Sortable.
@@ -128,13 +128,31 @@ exhibits:
       - { key: share, label: Share, format: percent, sortable: true }
       - { key: stores, label: Network stores, format: number, sortable: true }
     rows:
-      - { region: Northern Highlands, pop: 4200000, benefits: { value: 2300000, tone: accent }, share: 55, stores: 3100 }
+      - {
+          region: Northern Highlands,
+          pop: 4200000,
+          benefits: { value: 2300000, tone: accent },
+          share: 55,
+          stores: 3100,
+        }
       - { region: Central Plains, pop: 8900000, benefits: 4100000, share: 46, stores: 7200 }
       - { region: Eastern Coast, pop: 5600000, benefits: 2800000, share: 50, stores: 4500 }
-      - { region: Western Delta, pop: 6100000, benefits: { value: 3400000, tone: accent, emphasis: true }, share: 56, stores: 4800 }
+      - {
+          region: Western Delta,
+          pop: 6100000,
+          benefits: { value: 3400000, tone: accent, emphasis: true },
+          share: 56,
+          stores: 4800,
+        }
       - { region: Southern Range, pop: 3200000, benefits: 1400000, share: 44, stores: 2400 }
     totalRow:
-      { region: { value: Total, emphasis: true }, pop: 28000000, benefits: 14000000, share: 50, stores: 22000 }
+      {
+        region: { value: Total, emphasis: true },
+        pop: 28000000,
+        benefits: 14000000,
+        share: 50,
+        stores: 22000,
+      }
 
   # 3 — profit-tree (Sizing): savings opportunity decomposition.
   - id: savings-profit-tree
@@ -409,7 +427,7 @@ nodes:
         next: biz-case-001-n5-fb-b
         signals: { Data Interpretation: proficient }
       - id: C
-        text: '53% by month 6 means the curve still hasn''t plateaued — launch nationally now to capture the same trajectory everywhere.'
+        text: "53% by month 6 means the curve still hasn't plateaued — launch nationally now to capture the same trajectory everywhere."
         next: biz-case-001-n5-fb-c
         signals: { Data Interpretation: developing, Synthesis & Recommendation: developing }
       - id: D
