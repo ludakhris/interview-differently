@@ -48,3 +48,23 @@ outside production. The switch is the environment name that `GET /health` report
 
 The dev API accepts the browser origins of those preview deployments through `PREVIEW_ORIGIN_PATTERN` (a regular
 expression, set only on `api-dev`, ignored in production). CORS and the Learn Differently token check both use it.
+
+### Testing an LTI launch from a Learn preview
+
+**To test a Learn Differently LTI session (a connected tool such as an Interview Differently scenario), start the
+Interview Differently web app locally, pointed at the dev API:**
+
+```bash
+VITE_API_URL=<dev API address, without /api> npm run dev -w @id/web
+```
+
+Then open the Learn preview and launch the item. The preview talks to the dev API, the dev API signs the session, and
+the launch lands on `http://localhost:5173` (`LTI_ID_WEB_URL` on `api-dev`), where the web app now calls the same API
+that signed it. Without the `VITE_API_URL` override the web app calls your local API, which cannot verify a session
+signed by the dev API, and the page says "We could not load this scenario".
+
+Why it is this way: the API cannot derive the web app's address from the Learn preview, because the two projects'
+preview hostnames are unrelated (branch names are shortened with a different hash for each project). The browser is
+sent to localhost, so this only works on the machine running the web app. To use a hosted web preview instead, the
+`interview-differently-web` project must build previews (its Ignored Build Step must not skip them); then set
+`ID_WEB_URL` to that branch's web preview address, rerun `railway-dev-vars.sh --apply` and redeploy `api-dev`.

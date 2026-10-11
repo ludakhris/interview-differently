@@ -50,7 +50,7 @@ When the user wants to compare options for how something looks or is laid out (a
 
 ## Trying a branch on Railway dev
 
-`api-dev` runs beside the dev database with dev keys only; deploy a branch with `apps/api/scripts/deploy-dev.sh`. Preview deployments on Vercel point at it. Setup, the scripts and the safety rules are in `docs/dev-api.md`. Never put production secrets (live Clerk keys, the real R2 buckets) on it.
+`api-dev` runs beside the dev database with dev keys only; deploy a branch with `apps/api/scripts/deploy-dev.sh`. Preview deployments on Vercel point at it. Setup, the scripts and the safety rules are in `docs/dev-api.md`. Never put production secrets (live Clerk keys, the real R2 buckets) on it. **To test a Learn Differently LTI launch from a Learn preview, run the Interview Differently web app locally against it: `VITE_API_URL=<dev API address, without /api> npm run dev -w @id/web`** (details in `docs/dev-api.md`).
 
 ## Reviewing larger PRs
 

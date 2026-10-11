@@ -121,7 +121,10 @@ fi
 # URLs of this API and of the front ends that call it (localhost for local work; previews are matched by pattern).
 set_var LTI_API_BASE "https://$API_DOMAIN/api"
 set_var FRONTEND_URL "http://localhost:5173"
-set_var LTI_ID_WEB_URL "http://localhost:5173"
+# Where a launched Interview Differently scenario opens. The dev API cannot work this out from a Learn preview (the two
+# front ends have unrelated preview hostnames), so it is one fixed address: your local web app by default (run it with
+# VITE_API_URL set to this API), or a web preview you choose: ID_WEB_URL=https://<web preview> railway-dev-vars.sh --apply
+set_var LTI_ID_WEB_URL "${ID_WEB_URL:-http://localhost:5173}"
 set_var LTI_LEARN_URL "http://localhost:5174"
 set_var LTI_RETURN_URL "http://localhost:5173"
 
