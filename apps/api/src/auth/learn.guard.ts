@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common'
+import { identifyCaller } from '../core/tenant-context'
 import { ClerkService, type UserSource } from './clerk.service'
 
 /**
@@ -28,7 +29,9 @@ export class LearnGuard implements CanActivate {
 
     request.userId = userId
     request.userSource = 'learn'
+    identifyCaller({ userId })
     request.userRole = (await this.clerk.getRole(userId, 'learn')) ?? undefined
+    identifyCaller({ userId, allAgencies: request.userRole === 'system-admin' })
     return true
   }
 }

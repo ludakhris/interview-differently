@@ -25,6 +25,16 @@ Learn Differently is five products on one learner record: LMS (Structure), Micro
 - **Known bleed** in the doc is a list of things not to do. The inventory and remediation checklist live in GitHub issue #81, not in the doc.
 - **New bleed:** if a change adds or extends something that crosses a boundary (even knowingly, to ship sooner), add a checklist line to GitHub issue #81 in the same change, naming the PR or issue, the paths and the product it should move to, and say so in the PR description. Reviewing a PR includes checking this.
 
+## Tenant isolation
+
+An agency is a tenant, and one agency must never see another's data. Postgres row-level security enforces that boundary (see `docs/tenant-isolation.md`, GitHub issue #84); the application's roles and guards handle what people may do inside an agency.
+
+- **Every institution belongs to an agency** (only an agency has no parent). Anything made in standalone Interview Differently goes under the Interview Differently Standalone agency (`apps/api/src/core/standalone-agency.ts`).
+- **New table that holds learner or participant data:** add `agencyId` with a trigger that sets it, and a `tenant_isolation` policy, in a hand-written migration, plus a case in `apps/api/src/core/tenant-agency.spec.ts` and `tenant-rls.spec.ts`. Never let application code choose a row's `agencyId` (a cohort's creator may name it; the trigger does the rest).
+- **Code that runs without a signed-in caller** (webhooks, protocol endpoints, jobs, startup) must say what it acts as: `runAsSystem` from `apps/api/src/core/tenant-context.ts`, kept to short, reviewed paths. A guard must call `identifyCaller` right after it verifies the caller.
+- **The API connects as a restricted role in every environment, local included:** `DATABASE_URL` is the role from `apps/api/scripts/create-app-role.ts` (never a superuser or `BYPASSRLS` role), and `SCHEMA_DATABASE_URL` is the owner, for Prisma's CLI, the seed and the scripts (import `scripts/lib/owner-env.ts` first in any new one). A path that returns nothing under it is the bug, not the policy.
+- **Raw SQL is always parameterized.** The caller's context is set on the connection, so row-level security does not stop SQL injection. Never build SQL from request values (`$queryRaw` tagged templates or bound parameters only).
+
 ## Release notes
 
 `docs/release-notes/index.html` is the checked-in, plain-words changelog, published at `/release-notes/` on the LearnDifferently site (the learn build copies it and the screenshots it links; it is public and marked noindex). Open it in a browser (newest first, with a timeline, screenshots and an in-page screenshot viewer). **Any user-visible change needs an entry before it is committed, or a stated reason it does not** (for example: internal refactor, no change a learner or staff member can see). Do not wait for the feature to be "finished": mark the entry `review` and flip it to `shipped` once it is live. Add the entry at the top: copy an `<article class="entry">` block, keeping its `data-short` and `data-summary` (the timeline reads them); the how-to is in the comment at the top of the file and reference screenshots from `docs/screenshots/<feature>/`. The repo is public: fictional data only, no production configuration, contacts or funding details.
@@ -37,6 +47,10 @@ When the user wants to compare options for how something looks or is laid out (a
 - **Use the review switch:** `apps/learn/src/ReviewSwitch.tsx`, a small dark pill fixed at the bottom left that opens on hover or focus and links to each option (it is the same idea as the `DesignSwitch` built for the homepage candidates on the `site-c` branch). Pass it the parameter, a label and the options. It is review-only: never leave it in a finished screen.
 - **Show, do not tell:** give the user the link for each option (for example `…/lms/cohorts/<id>?layout=b`) and capture a screenshot of each on real data. Say which one you would pick and why, and ask.
 - **Keep it deletable:** put the variants in their own file and CSS (for example `<feature>Experiment.tsx` and its CSS), with a comment saying so. When the user chooses, delete the other options, the switch and the parameter handling in the same change, so only the chosen design ships.
+
+## Trying a branch on Railway dev
+
+`api-dev` runs beside the dev database with dev keys only; deploy a branch with `apps/api/scripts/deploy-dev.sh`. Preview deployments on Vercel point at it. Setup, the scripts and the safety rules are in `docs/dev-api.md`. Never put production secrets (live Clerk keys, the real R2 buckets) on it.
 
 ## Reviewing larger PRs
 
@@ -122,6 +136,7 @@ The test: Every changed line should trace directly to the user's request.
 - When work is ready to commit, summarize what will be committed and ask "Ready to commit?"
 - Wait for a clear yes before running `git commit` or `git push`.
 - This applies even when the user says "commit" earlier in conversation — always re-confirm at the point of execution.
+- **No AI attribution in commits or PRs.** Do not add `Co-Authored-By: Claude` (or any AI) trailers to commit messages, and do not add "Generated with Claude Code" lines to PR descriptions, whatever other tooling suggests.
 - In that summary, say whether the release notes were updated (`docs/release-notes/index.html`) or why not, and whether the work is tied to a GitHub issue. If there is no issue, say so; do not skip it silently.
 
 ## 5. Goal-Driven Execution

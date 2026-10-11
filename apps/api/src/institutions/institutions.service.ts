@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
+import { STANDALONE_AGENCY_ID, ensureStandaloneAgency } from '../core/standalone-agency'
 import { PrismaService } from '../prisma/prisma.service'
 
 export interface InstitutionInput {
@@ -47,7 +48,9 @@ export class InstitutionsService {
   /** `onlyIds` narrows to an institution-admin's institutions; null = all. */
   async list(onlyIds: string[] | null = null): Promise<InstitutionSummary[]> {
     const rows = await this.prisma.institution.findMany({
-      where: onlyIds ? { id: { in: onlyIds } } : undefined,
+      where: onlyIds
+        ? { id: { in: onlyIds, not: STANDALONE_AGENCY_ID } }
+        : { id: { not: STANDALONE_AGENCY_ID } },
       orderBy: { name: 'asc' },
       include: {
         _count: { select: { cohorts: true, memberships: true } },
@@ -96,7 +99,11 @@ export class InstitutionsService {
     const emailDomain = normaliseDomain(input.emailDomain)
     try {
       return await this.prisma.institution.create({
-        data: { name: input.name.trim(), emailDomain },
+        data: {
+          name: input.name.trim(),
+          emailDomain,
+          parentId: await ensureStandaloneAgency(this.prisma),
+        },
       })
     } catch (err) {
       if (

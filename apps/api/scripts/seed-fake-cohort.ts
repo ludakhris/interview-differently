@@ -33,10 +33,11 @@
  * Clerk instance.
  */
 
-import 'dotenv/config'
+import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
 import { createClerkClient, type ClerkClient } from '@clerk/backend'
 import * as readline from 'readline'
+import { ensureStandaloneAgency } from '../src/core/standalone-agency'
 
 // ── arg parsing ─────────────────────────────────────────────────────────────
 
@@ -180,7 +181,11 @@ async function add(args: Args, prisma: PrismaClient, clerk: ClerkClient): Promis
     console.log(`  • institution exists (id=${institution.id})`)
   } else {
     institution = await prisma.institution.create({
-      data: { name: institutionName, emailDomain: domain },
+      data: {
+        name: institutionName,
+        emailDomain: domain,
+        parentId: await ensureStandaloneAgency(prisma),
+      },
     })
     console.log(`  • created institution (id=${institution.id}, domain=${domain})`)
   }

@@ -42,16 +42,28 @@ export class LearnService {
   }
 
   /**
-   * Workspaces the caller may open. Agency admins see every agency and the
-   * providers and organizations that report to one; anyone else sees the
-   * institutions they hold a membership in.
+   * Workspaces the caller may open. System admins see every agency and what reports to one. An
+   * agency admin sees the agencies they hold a workspace membership in and the providers and
+   * organizations under them. Anyone else sees the institutions they hold a membership in.
    */
   async workspaces(userId: string, role: string | undefined): Promise<LearnWorkspace[]> {
+    const member = { some: { userId, cohortId: null } }
+    // For an agency, only a grant (a membership with a role) opens it; the roles below it are bound by membership alone.
+    const grant = { some: { userId, cohortId: null, role: { not: null } } }
+    const where =
+      role === LEARN_ROLES.systemAdmin
+        ? { subdomain: { not: null }, OR: [{ kind: 'agency' }, { parent: { kind: 'agency' } }] }
+        : role === LEARN_ROLES.agencyAdmin
+          ? {
+              subdomain: { not: null },
+              OR: [
+                { kind: 'agency', memberships: grant },
+                { parent: { kind: 'agency', memberships: grant } },
+              ],
+            }
+          : { subdomain: { not: null }, memberships: member }
     const rows = await this.prisma.institution.findMany({
-      where:
-        role === LEARN_ROLES.agencyAdmin || role === LEARN_ROLES.systemAdmin
-          ? { subdomain: { not: null }, OR: [{ kind: 'agency' }, { parent: { kind: 'agency' } }] }
-          : { subdomain: { not: null }, memberships: { some: { userId, cohortId: null } } },
+      where,
       select: {
         id: true,
         name: true,

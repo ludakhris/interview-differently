@@ -34,7 +34,7 @@
  * missing.
  */
 
-import 'dotenv/config'
+import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
 
 interface Args {

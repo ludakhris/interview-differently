@@ -269,12 +269,12 @@ approvedAt, createdAt, source`); `source: 'built-in'` (id `built-in`, read-only)
   The `id_token` is RS256, iss=platform issuer, aud=client id, sub=learner user id, `nonce` echoed, exp 5 minutes, with claims:
   message_type `LtiResourceLinkRequest`, version `1.3.0`, deployment_id, target_link_uri, resource_link `{id: itemId}`,
   context `{id: cohortId}`, roles `[LEARNER_ROLE]`, custom `{ref, tool}` (the tool-specific reference stored on the item, and the LearnDifferently tool id; for an assessment tool also `attempt` and `timeLimitMinutes?`),
-  the `launch_presentation` claim `{document_target:'window', return_url}` (the LD item page, `${returnOrigin ?? LTI_LEARN_URL}/lms/learning/${cohortId}/${itemId}`; see "Return host"), and the AGS endpoint claim `{scope:[AGS_SCOPE_SCORE], lineitem: ${BASE}/lti/platform/ags/${cohortId}/lineitems/${itemId}}`, plus, when the cohort's tenant has one, the brand claim (see "Brand tokens").
+  the `launch_presentation` claim `{document_target:'window', return_url}` (the LD item page, `${returnOrigin ?? LTI_LEARN_URL}/lms/learning/${cohortId}/${itemId}`; see "Return host"), and the AGS endpoint claim `{scope:[AGS_SCOPE_SCORE], lineitem: ${BASE}/lti/platform/ags/${agencyId}.${mac}/${cohortId}/lineitems/${itemId}}`, plus, when the cohort's tenant has one, the brand claim (see "Brand tokens").
 - `POST /token` OAuth2 client_credentials with `client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer`,
   `client_assertion` (RS256 JWT signed by the tool: iss=sub=clientId, aud=tokenUrl, jti unique, exp no more than 10 minutes away), `scope`. Verifies against the
   tool's jwksUrl, rejects replayed `jti`, answers failures with a generic `invalid_client`, returns `{access_token, token_type:'Bearer', expires_in:3600, scope}` where access_token is an
   RS256 JWT signed by the platform (aud=clientId, scope claim).
-- `POST /ags/:cohortId/lineitems/:itemId/scores` Bearer access token with the score scope. Body is an LTI score
+- `POST /ags/:scope/:cohortId/lineitems/:itemId/scores` Bearer access token with the score scope. `:scope` is `<agencyId>.<mac>`, an HMAC the platform signed at launch over the agency, cohort and item; a score whose scope does not verify is a 404, and a verified one is recorded limited to that agency (tenant isolation, `docs/tenant-isolation.md`). Body is an LTI score
   (`userId`, `scoreGiven`, `scoreMaximum`, `activityProgress`, `gradingProgress`, `timestamp`, plus optional `DIMENSIONS_FIELD`).
   Content-Type must be `SCORE_CONTENT_TYPE` (nothing else is accepted; body at most 100 KB). `timestamp` is required: an ISO 8601
   date-time no more than 5 minutes in the future. Only accepts a score for a learner enrolled in that cohort and an item of type `tool` whose

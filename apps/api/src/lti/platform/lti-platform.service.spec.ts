@@ -16,6 +16,7 @@ import {
   verifyJwt,
 } from '../lti-spec'
 import { platformRegistration, registeredTools, setStoredTools } from './lti-platform-config'
+import { tenantContext } from '../../core/tenant-context'
 import { MemoryLtiStore } from '../lti-store'
 import { LtiPlatformService, autoSubmitForm, escapeHtml } from './lti-platform.service'
 
@@ -51,6 +52,7 @@ beforeEach(() => {
   process.env.LTI_LEARN_URL = 'http://learn.test/'
   jest.resetAllMocks()
   prisma.cohort.findUnique.mockResolvedValue({
+    agencyId: 'a1',
     courseId: 'c1',
     startsAt: PAST,
     endsAt: FUTURE,
@@ -80,6 +82,10 @@ const reject = async (p: Promise<unknown>, status: number, text?: string) => {
   expect((err as HttpException).getStatus()).toBe(status)
   if (text) expect(JSON.stringify((err as HttpException).getResponse())).toContain(text)
 }
+
+/** The signed score-URL segment a launch hands the tool for this cohort (agency a1). */
+const scopeOf = (svc: LtiPlatformService, cohortId: string, itemId: string) =>
+  `a1.${(svc as unknown as { scopeMac(a: string, c: string, i: string): string }).scopeMac('a1', cohortId, itemId)}`
 
 const hintOf = async () => (await service.startLaunch('u1', 'k1', 'i1')).fields.lti_message_hint
 const authParams = async (over: Record<string, unknown> = {}) => ({
@@ -168,7 +174,7 @@ describe('keys and secrets', () => {
       audience: tool.clientId,
       keyFor: async (kid) => keys.find((k) => k.kid === kid),
     })
-    await rotated.receiveScore(`Bearer ${oldToken}`, 'k1', 'i1', {
+    await rotated.receiveScore(`Bearer ${oldToken}`, scopeOf(rotated, 'k1', 'i1'), 'k1', 'i1', {
       userId: 'u1',
       scoreGiven: 5,
       scoreMaximum: 10,
@@ -328,6 +334,7 @@ describe('startLaunch', () => {
     await reject(service.startLaunch('u1', 'k1', 'i1'), 404)
     prisma.enrollment.findUnique.mockResolvedValue({ status: 'enrolled' })
     prisma.cohort.findUnique.mockResolvedValue({
+      agencyId: 'a1',
       courseId: 'c1',
       startsAt: PAST,
       endsAt: PAST,
@@ -335,6 +342,7 @@ describe('startLaunch', () => {
     })
     await reject(service.startLaunch('u1', 'k1', 'i1'), 409)
     prisma.cohort.findUnique.mockResolvedValue({
+      agencyId: 'a1',
       courseId: 'c1',
       startsAt: PAST,
       endsAt: FUTURE,
@@ -612,7 +620,9 @@ describe('auth', () => {
       return_url: 'http://learn.test/lms/learning/k1/i1',
     })
     expect(claims[CLAIM.agsEndpoint].scope).toEqual([AGS_SCOPE_SCORE])
-    expect(claims[CLAIM.agsEndpoint].lineitem).toMatch(/\/lti\/platform\/ags\/k1\/lineitems\/i1$/)
+    expect(claims[CLAIM.agsEndpoint].lineitem).toMatch(
+      /\/lti\/platform\/ags\/a1\.[\w-]+\/k1\/lineitems\/i1$/
+    )
     expect(claims.exp - claims.iat).toBe(300)
   })
 
@@ -681,6 +691,7 @@ describe('auth', () => {
     await reject(service.authenticate(params), 404)
     prisma.enrollment.findUnique.mockResolvedValue({ status: 'enrolled' })
     prisma.cohort.findUnique.mockResolvedValue({
+      agencyId: 'a1',
       courseId: 'c1',
       startsAt: PAST,
       endsAt: PAST,
@@ -689,6 +700,7 @@ describe('auth', () => {
     await reject(service.authenticate(params), 409)
     // the refused attempts did not burn the hint
     prisma.cohort.findUnique.mockResolvedValue({
+      agencyId: 'a1',
       courseId: 'c1',
       startsAt: PAST,
       endsAt: FUTURE,
@@ -909,13 +921,41 @@ describe('scores', () => {
 
   it('still records a score for work already done after the tool was switched off or limited', async () => {
     setStoredTools(withFirstTool({ enabled: false, workspaceIds: ['someone-else'] }))
-    await service.receiveScore(await bearer(), 'k1', 'i1', score())
+    await service.receiveScore(await bearer(), scopeOf(service, 'k1', 'i1'), 'k1', 'i1', score())
     expect(learner.recordToolResult).toHaveBeenCalledTimes(1)
+  })
+
+  it('records the score limited to the agency named in the signed URL', async () => {
+    let seen: string[] | undefined
+    learner.recordToolResult.mockImplementation(async () => {
+      seen = tenantContext()?.fixedAgencyIds
+      return {}
+    })
+    await service.receiveScore(await bearer(), scopeOf(service, 'k1', 'i1'), 'k1', 'i1', score())
+    expect(seen).toEqual(['a1'])
+  })
+
+  it('refuses a score URL whose agency or signature was changed', async () => {
+    const good = scopeOf(service, 'k1', 'i1')
+    const other = scopeOf(service, 'k2', 'i1')
+    await reject(
+      service.receiveScore(await bearer(), 'a2' + good.slice(2), 'k1', 'i1', score()),
+      404
+    )
+    await reject(service.receiveScore(await bearer(), other, 'k1', 'i1', score()), 404)
+    await reject(service.receiveScore(await bearer(), 'a1', 'k1', 'i1', score()), 404)
+    expect(learner.recordToolResult).not.toHaveBeenCalled()
   })
 
   it('records a score as a percentage, with dimensions', async () => {
     const dims = { Clarity: 80 }
-    await service.receiveScore(await bearer(), 'k1', 'i1', score({ [DIMENSIONS_FIELD]: dims }))
+    await service.receiveScore(
+      await bearer(),
+      scopeOf(service, 'k1', 'i1'),
+      'k1',
+      'i1',
+      score({ [DIMENSIONS_FIELD]: dims })
+    )
     expect(learner.recordToolResult).toHaveBeenCalledWith('u1', 'k1', 'i1', {
       scorePct: 70,
       reportedAt: expect.any(String),
@@ -925,26 +965,83 @@ describe('scores', () => {
 
   it('accepts a timestamp a little ahead of the clock', async () => {
     const timestamp = new Date(Date.now() + 4 * 60_000).toISOString()
-    await service.receiveScore(await bearer(), 'k1', 'i1', score({ timestamp }))
+    await service.receiveScore(
+      await bearer(),
+      scopeOf(service, 'k1', 'i1'),
+      'k1',
+      'i1',
+      score({ timestamp })
+    )
     expect(learner.recordToolResult).toHaveBeenCalled()
   })
 
   it('needs a Bearer token', async () => {
-    await reject(service.receiveScore(undefined, 'k1', 'i1', score()), 401)
-    await reject(service.receiveScore('Basic abc', 'k1', 'i1', score()), 401)
-    await reject(service.receiveScore('Bearer junk', 'k1', 'i1', score()), 401)
+    await reject(
+      service.receiveScore(undefined, scopeOf(service, 'k1', 'i1'), 'k1', 'i1', score()),
+      401
+    )
+    await reject(
+      service.receiveScore('Basic abc', scopeOf(service, 'k1', 'i1'), 'k1', 'i1', score()),
+      401
+    )
+    await reject(
+      service.receiveScore('Bearer junk', scopeOf(service, 'k1', 'i1'), 'k1', 'i1', score()),
+      401
+    )
     expect(learner.recordToolResult).not.toHaveBeenCalled()
   })
 
   it('rejects tokens signed by someone else, for another audience, expired, or without the scope', async () => {
-    await reject(service.receiveScore(await bearer({}, toolKeys), 'k1', 'i1', score()), 401)
-    await reject(service.receiveScore(await bearer({ aud: 'other' }), 'k1', 'i1', score()), 401)
     await reject(
-      service.receiveScore(await bearer({ exp: nowS() - 600 }), 'k1', 'i1', score()),
+      service.receiveScore(
+        await bearer({}, toolKeys),
+        scopeOf(service, 'k1', 'i1'),
+        'k1',
+        'i1',
+        score()
+      ),
       401
     )
-    await reject(service.receiveScore(await bearer({ sub: 'x' }), 'k1', 'i1', score()), 401)
-    await reject(service.receiveScore(await bearer({ scope: 'other' }), 'k1', 'i1', score()), 403)
+    await reject(
+      service.receiveScore(
+        await bearer({ aud: 'other' }),
+        scopeOf(service, 'k1', 'i1'),
+        'k1',
+        'i1',
+        score()
+      ),
+      401
+    )
+    await reject(
+      service.receiveScore(
+        await bearer({ exp: nowS() - 600 }),
+        scopeOf(service, 'k1', 'i1'),
+        'k1',
+        'i1',
+        score()
+      ),
+      401
+    )
+    await reject(
+      service.receiveScore(
+        await bearer({ sub: 'x' }),
+        scopeOf(service, 'k1', 'i1'),
+        'k1',
+        'i1',
+        score()
+      ),
+      401
+    )
+    await reject(
+      service.receiveScore(
+        await bearer({ scope: 'other' }),
+        scopeOf(service, 'k1', 'i1'),
+        'k1',
+        'i1',
+        score()
+      ),
+      403
+    )
     expect(learner.recordToolResult).not.toHaveBeenCalled()
   })
 
@@ -954,7 +1051,10 @@ describe('scores', () => {
       config: { toolId: 'other-tool', ref: 'x' },
       module: { courseId: 'c1' },
     })
-    await reject(service.receiveScore(await bearer(), 'k1', 'i1', score()), 409)
+    await reject(
+      service.receiveScore(await bearer(), scopeOf(service, 'k1', 'i1'), 'k1', 'i1', score()),
+      409
+    )
     expect(learner.recordToolResult).not.toHaveBeenCalled()
   })
 
@@ -964,14 +1064,18 @@ describe('scores', () => {
       config: { toolId: 'id-assessment', ref: 'cna-pre' },
       module: { courseId: 'c1' },
     })
-    await service.receiveScore(await bearer(), 'k1', 'i1', score())
+    await service.receiveScore(await bearer(), scopeOf(service, 'k1', 'i1'), 'k1', 'i1', score())
     expect(learner.recordToolResult).toHaveBeenCalled()
   })
 
   it('rejects the wrong cohort or item', async () => {
     prisma.cohort.findUnique.mockResolvedValue(null)
-    await reject(service.receiveScore(await bearer(), 'nope', 'i1', score()), 404)
+    await reject(
+      service.receiveScore(await bearer(), scopeOf(service, 'nope', 'i1'), 'nope', 'i1', score()),
+      404
+    )
     prisma.cohort.findUnique.mockResolvedValue({
+      agencyId: 'a1',
       courseId: 'c1',
       startsAt: PAST,
       endsAt: FUTURE,
@@ -982,9 +1086,15 @@ describe('scores', () => {
       config: { toolId: 'id-interview', ref: 'x' },
       module: { courseId: 'other' },
     })
-    await reject(service.receiveScore(await bearer(), 'k1', 'i1', score()), 404)
+    await reject(
+      service.receiveScore(await bearer(), scopeOf(service, 'k1', 'i1'), 'k1', 'i1', score()),
+      404
+    )
     prisma.courseItem.findUnique.mockResolvedValue(null)
-    await reject(service.receiveScore(await bearer(), 'k1', 'nope', score()), 404)
+    await reject(
+      service.receiveScore(await bearer(), scopeOf(service, 'k1', 'nope'), 'k1', 'nope', score()),
+      404
+    )
     expect(learner.recordToolResult).not.toHaveBeenCalled()
   })
 
@@ -1006,9 +1116,9 @@ describe('scores', () => {
       score({ timestamp: new Date(Date.now() + 6 * 60_000).toISOString() }),
     ],
   ])('rejects a bad score body: %s', async (_n, body) => {
-    await expect(service.receiveScore(await bearer(), 'k1', 'i1', body)).rejects.toBeInstanceOf(
-      HttpException
-    )
+    await expect(
+      service.receiveScore(await bearer(), scopeOf(service, 'k1', 'i1'), 'k1', 'i1', body)
+    ).rejects.toBeInstanceOf(HttpException)
     expect(learner.recordToolResult).not.toHaveBeenCalled()
   })
 })
@@ -1018,6 +1128,7 @@ describe('brand claim', () => {
   const brand = { name: 'Delaware DOL', primary: '#05405c', logoUrl: 'https://l.test/a.png' }
   const withInstitutions = (map: Record<string, Inst>, institutionId = 'child') => {
     prisma.cohort.findUnique.mockResolvedValue({
+      agencyId: 'a1',
       courseId: 'c1',
       startsAt: PAST,
       endsAt: FUTURE,

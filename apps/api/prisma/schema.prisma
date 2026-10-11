@@ -4,7 +4,10 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url       = env("DATABASE_URL")
+  // The owner connection, which Prisma's CLI (migrate, db execute) uses instead of `url`: DATABASE_URL is the API's
+  // restricted role, which cannot change the schema. See docs/tenant-isolation.md.
+  directUrl = env("SCHEMA_DATABASE_URL")
 }
 
 model Scenario {
@@ -254,8 +257,13 @@ model Cohort {
   requiresProfile     Boolean  @default(false)
   profileRefreshMonths Int?
 
+  // Tenant (GitHub issue #84): the agency this cohort belongs to. A trigger sets it from the institution that
+  // runs the cohort unless the creator names one (a provider working with several agencies); it never changes.
+  agencyId String?
+
   @@index([institutionId])
   @@index([courseId])
+  @@index([agencyId])
 }
 
 // #68: someone who entered the code of a cohort that needs approval. Deliberately
@@ -272,8 +280,12 @@ model JoinRequest {
   cohort    Cohort    @relation(fields: [cohortId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
   @@unique([cohortId, userId])
   @@index([cohortId, status])
+  @@index([agencyId])
 }
 
 model Membership {
@@ -286,10 +298,16 @@ model Membership {
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   cohort        Cohort?     @relation(fields: [cohortId], references: [id], onDelete: SetNull)
 
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+  // A staff grant when set (for example 'agency-admin'); a learner's cohort membership has none (GitHub issue #84).
+  role String?
+
   @@unique([userId, institutionId, cohortId])  // a user can only be in a given (institution, cohort) once
   @@index([userId])
   @@index([institutionId])
   @@index([cohortId])
+  @@index([agencyId])
 }
 
 model ScenarioMediaAsset {
@@ -469,7 +487,11 @@ model Course {
   offers      CourseOffer[]
   cohorts     Cohort[]
 
+  // Tenant (GitHub issue #84): the agency of the provider; a trigger sets it.
+  agencyId String?
+
   @@index([providerId])
+  @@index([agencyId])
 }
 
 model CourseModule {
@@ -480,7 +502,11 @@ model CourseModule {
   course   Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
   items    CourseItem[]
 
+  // Tenant (GitHub issue #84): the agency of the provider; a trigger sets it.
+  agencyId String?
+
   @@index([courseId])
+  @@index([agencyId])
 }
 
 // type: 'lesson' | 'knowledge_check' | 'interview' | 'scorm'.
@@ -500,7 +526,11 @@ model CourseItem {
   plan     PlanItem[]
   activity ActivitySession[]
 
+  // Tenant (GitHub issue #84): the agency of the provider; a trigger sets it.
+  agencyId String?
+
   @@index([moduleId])
+  @@index([agencyId])
 }
 
 // A provider makes a course available to a member institution.
@@ -529,8 +559,12 @@ model Enrollment {
   plan        PlanItem[]
   activity    ActivitySession[]
 
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
   @@unique([cohortId, userId])
   @@index([userId])
+  @@index([agencyId])
 }
 
 model ItemProgress {
@@ -547,8 +581,12 @@ model ItemProgress {
   enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   item         CourseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
   @@unique([enrollmentId, itemId])
   @@index([itemId])
+  @@index([agencyId])
 }
 
 // One row per counted score a connected tool sent back (#67), written in the same statement as the
@@ -564,7 +602,11 @@ model ItemAttempt {
   enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   item         CourseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
   @@index([enrollmentId, itemId, createdAt])
+  @@index([agencyId])
 }
 
 // Content added to one learner's plan because a skill was flagged. The author's outline is
@@ -580,8 +622,12 @@ model PlanItem {
   enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   item         CourseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
   @@unique([enrollmentId, itemId])
   @@index([itemId])
+  @@index([agencyId])
 }
 
 // ── Tools: SQL sandbox query log ────────────────────────────────────────────
@@ -759,7 +805,11 @@ model ParticipantNote {
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   cohort     Cohort?     @relation(fields: [cohortId], references: [id], onDelete: SetNull)
 
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
   @@index([providerId, userId, createdAt])
+  @@index([agencyId])
 }
 
 model SupportItem {
@@ -784,8 +834,12 @@ model SupportItem {
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   cohort        Cohort?     @relation(fields: [cohortId], references: [id], onDelete: SetNull)
 
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
   @@index([providerId, userId])
   @@index([providerId, status, dueDate])
+  @@index([agencyId])
 }
 
 // The learner's OWN data, one per person (not per provider). The resume is a private upload
@@ -876,7 +930,11 @@ model CohortSession {
   cohort    Cohort           @relation(fields: [cohortId], references: [id], onDelete: Cascade)
   marks     AttendanceMark[]
 
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
   @@index([cohortId, startsAt])
+  @@index([agencyId])
 }
 
 model AttendanceMark {
@@ -890,8 +948,12 @@ model AttendanceMark {
   session   CohortSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
   @@unique([sessionId, userId])
   @@index([userId])
+  @@index([agencyId])
 }
 
 // Time a learner spent in an online course. One row is a run of heartbeats on one item (or page)
@@ -913,7 +975,11 @@ model ActivitySession {
   enrollment   Enrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   item         CourseItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
 
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
   @@index([enrollmentId, day, itemId])
   @@index([userId, day])
   @@index([itemId])
+  @@index([agencyId])
 }

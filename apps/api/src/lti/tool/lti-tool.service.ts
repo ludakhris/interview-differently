@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { Inject, Injectable } from '@nestjs/common'
+import { runAsSystem } from '../../core/tenant-context'
 import { PrismaService } from '../../prisma/prisma.service'
 import { assertLtiProductionConfig, isLearnOrigin, loadSigningKeys } from '../lti-env'
 import { LTI_STORE } from '../lti-store'
@@ -348,7 +349,9 @@ export class LtiToolService {
     // the context is an LD cohort id; it only becomes a cohort here if that row exists
     const contextId = typeof l.contextId === 'string' && l.contextId ? l.contextId : null
     const cohort = contextId
-      ? await this.prisma.cohort.findUnique({ where: { id: contextId }, select: { id: true } })
+      ? await runAsSystem(() =>
+          this.prisma.cohort.findUnique({ where: { id: contextId }, select: { id: true } })
+        )
       : null
     const resourceLinkId =
       typeof l.resourceLinkId === 'string' && l.resourceLinkId ? l.resourceLinkId : 'default'
