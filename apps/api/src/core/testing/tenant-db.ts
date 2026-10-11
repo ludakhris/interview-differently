@@ -19,11 +19,17 @@ if (!dbTestsEnabled && process.env.CI) {
 
 const MIGRATIONS = join(__dirname, '../../../prisma/migrations')
 
-export async function migratedDb(): Promise<PGlite> {
+/** The real migrations on a fresh Postgres; `before` stops ahead of one (its directory name) to test it on its own. */
+export function migrationSql(dir: string): string {
+  return readFileSync(join(MIGRATIONS, dir, 'migration.sql'), 'utf8')
+}
+
+export async function migratedDb(opts: { before?: string } = {}): Promise<PGlite> {
   const db = new PGlite()
   const dirs = readdirSync(MIGRATIONS)
     .filter((n) => statSync(join(MIGRATIONS, n)).isDirectory())
     .sort()
+    .filter((n) => !opts.before || n < opts.before)
   for (const dir of dirs)
     await db.exec(readFileSync(join(MIGRATIONS, dir, 'migration.sql'), 'utf8'))
   return db

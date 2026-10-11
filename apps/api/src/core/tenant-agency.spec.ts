@@ -1,5 +1,6 @@
 import type { PGlite } from '@electric-sql/pglite'
-import { dbTestsEnabled, insert, migratedDb } from './testing/tenant-db'
+import { TENANT_TABLES } from './tenant-tables'
+import { dbTestsEnabled, insert, migratedDb, migrationSql } from './testing/tenant-db'
 
 // The database rules behind tenant isolation (GitHub issue #84), run on real Postgres.
 const suite = dbTestsEnabled ? describe : describe.skip
@@ -46,49 +47,46 @@ suite('agency structure and agencyId triggers', () => {
     })
   })
 
-  describe('rows that predate the agency columns (the window between the deploy and the backfill)', () => {
-    it('can still be written, are left without an agency, and are filled by the backfill, parents first', async () => {
-      // A legacy cohort, enrolment and progress row, as they were before the migration: no agencyId anywhere.
-      await insert(db, 'CourseModule', { id: 'mod-legacy', courseId: 'course-A' })
-      await insert(db, 'CourseItem', { id: 'item-legacy', moduleId: 'mod-legacy' })
-      await insert(db, 'Cohort', { id: 'coh-legacy', institutionId: 'org-A', name: 'legacy' })
-      await insert(db, 'Enrollment', {
-        id: 'en-legacy',
-        cohortId: 'coh-legacy',
-        userId: 'learner-A',
-      })
-      await insert(db, 'ItemProgress', {
-        id: 'ip-legacy',
-        enrollmentId: 'en-legacy',
-        itemId: 'item-legacy',
-      })
-      await db.query(`ALTER TABLE "Cohort" DISABLE TRIGGER USER`)
+  describe('a row must have an agency', () => {
+    it('every tenant table refuses a row without one, even when its trigger does not run', async () => {
+      const tables = await db.query<{ conrelid: string }>(
+        `SELECT conrelid::regclass::text AS conrelid FROM pg_constraint WHERE conname LIKE '%\\_agency\\_required' ESCAPE '\\'`
+      )
+      expect(tables.rows.map((r) => r.conrelid.replace(/"/g, '')).sort()).toEqual(
+        [...TENANT_TABLES].sort()
+      )
+      await insert(db, 'Cohort', { id: 'coh-noagency', institutionId: 'org-A', name: 'x' })
       await db.query(`ALTER TABLE "Enrollment" DISABLE TRIGGER USER`)
-      await db.query(`ALTER TABLE "ItemProgress" DISABLE TRIGGER USER`)
-      await db.query(`UPDATE "Cohort" SET "agencyId" = NULL WHERE id='coh-legacy'`)
-      await db.query(`UPDATE "Enrollment" SET "agencyId" = NULL WHERE id='en-legacy'`)
-      await db.query(`UPDATE "ItemProgress" SET "agencyId" = NULL WHERE id='ip-legacy'`)
-      await db.query(`ALTER TABLE "Cohort" ENABLE TRIGGER USER`)
-      await db.query(`ALTER TABLE "Enrollment" ENABLE TRIGGER USER`)
-      await db.query(`ALTER TABLE "ItemProgress" ENABLE TRIGGER USER`)
-      // The cohort's own trigger can fill its agency, but a child whose parent has none is not an error: it waits.
-      await db.query(`ALTER TABLE "Cohort" DISABLE TRIGGER USER`)
-      await db.query(`UPDATE "Enrollment" SET "status" = 'completed' WHERE id='en-legacy'`)
-      await db.query(`UPDATE "ItemProgress" SET "status" = 'completed' WHERE id='ip-legacy'`)
-      await db.query(`ALTER TABLE "Cohort" ENABLE TRIGGER USER`)
-      expect(
-        (await one(`SELECT "agencyId" FROM "Enrollment" WHERE id='en-legacy'`)).agencyId
-      ).toBeNull()
-      // The backfill touches every empty row, parents first, and the same triggers fill them in.
-      await db.query(`UPDATE "Cohort" SET "agencyId" = "agencyId" WHERE "agencyId" IS NULL`)
-      await db.query(`UPDATE "Enrollment" SET "agencyId" = "agencyId" WHERE "agencyId" IS NULL`)
-      await db.query(`UPDATE "ItemProgress" SET "agencyId" = "agencyId" WHERE "agencyId" IS NULL`)
-      for (const [t, id] of [
-        ['Cohort', 'coh-legacy'],
-        ['Enrollment', 'en-legacy'],
-        ['ItemProgress', 'ip-legacy'],
-      ]) {
-        expect((await one(`SELECT "agencyId" FROM "${t}" WHERE id='${id}'`)).agencyId).toBe('A')
+      try {
+        await expect(
+          db.query(
+            `INSERT INTO "Enrollment" ("id","cohortId","userId","agencyId") VALUES ('en-noagency','coh-noagency','learner-A',NULL)`
+          )
+        ).rejects.toThrow(/Enrollment_agency_required/)
+      } finally {
+        await db.query(`ALTER TABLE "Enrollment" ENABLE TRIGGER USER`)
+      }
+    })
+
+    it('the migration refuses to run on a database that has not been backfilled, and says what to do', async () => {
+      const old = await migratedDb({ before: '20261016090000_require_agency' })
+      try {
+        await old.query(
+          `INSERT INTO "Institution" ("id","name","kind","updatedAt") VALUES ('a1','A','agency', now())`
+        )
+        await old.query(
+          `INSERT INTO "Institution" ("id","name","kind","parentId","updatedAt") VALUES ('p1','P','provider','a1', now())`
+        )
+        // a cohort from before the agency columns existed: no agency, and no trigger to fill it
+        await old.query(`ALTER TABLE "Cohort" DISABLE TRIGGER USER`)
+        await old.query(
+          `INSERT INTO "Cohort" ("id","institutionId","name","joinKey","updatedAt") VALUES ('c1','p1','legacy','legacy-key', now())`
+        )
+        await expect(old.exec(migrationSql('20261016090000_require_agency'))).rejects.toThrow(
+          /1 rows in "Cohort" have no agency: run scripts\/assign-standalone-agency\.ts and scripts\/backfill-agency-id\.ts first/
+        )
+      } finally {
+        await old.close()
       }
     })
   })
@@ -179,11 +177,10 @@ suite('agency structure and agencyId triggers', () => {
       await db.query(`UPDATE "Enrollment" SET "agencyId" = 'B' WHERE id='en-A'`)
       expect((await one(`SELECT "agencyId" FROM "Enrollment" WHERE id='en-A'`)).agencyId).toBe('A')
     })
-    it('fills a missing value when an old row is touched', async () => {
-      await db.query(`ALTER TABLE "Enrollment" DISABLE TRIGGER "Enrollment_set_agency"`)
+    it('keeps the agency of its cohort whatever an update tries to set', async () => {
       await db.query(`UPDATE "Enrollment" SET "agencyId" = NULL WHERE id='en-A'`)
-      await db.query(`ALTER TABLE "Enrollment" ENABLE TRIGGER "Enrollment_set_agency"`)
-      await db.query(`UPDATE "Enrollment" SET "agencyId" = "agencyId" WHERE "agencyId" IS NULL`)
+      expect((await one(`SELECT "agencyId" FROM "Enrollment" WHERE id='en-A'`)).agencyId).toBe('A')
+      await db.query(`UPDATE "Enrollment" SET "agencyId" = 'B' WHERE id='en-A'`)
       expect((await one(`SELECT "agencyId" FROM "Enrollment" WHERE id='en-A'`)).agencyId).toBe('A')
     })
   })
