@@ -1,4 +1,6 @@
 import { ForbiddenException } from '@nestjs/common'
+import { AccessService } from '../../learn/access/access.service'
+import type { PrismaService } from '../../prisma/prisma.service'
 import { ToolRegistryController } from './tool-registry.controller'
 import type { RegistrationService } from './registration.service'
 import type { ToolRegistryService } from './tool-registry.service'
@@ -14,7 +16,8 @@ describe('ToolRegistryController', () => {
   }
   const controller = new ToolRegistryController(
     registry as unknown as ToolRegistryService,
-    registration as unknown as RegistrationService
+    registration as unknown as RegistrationService,
+    new AccessService({} as PrismaService)
   )
 
   it('lists tools for a system administrator, with their connection settings', async () => {
@@ -32,6 +35,14 @@ describe('ToolRegistryController', () => {
   it('shows nothing to anyone else: agency and provider admins, staff, learners', async () => {
     for (const userRole of ['agency-admin', 'provider-admin', 'case-manager', 'student', undefined])
       await expect(controller.list({ userId: 'u', userRole })).rejects.toThrow(ForbiddenException)
+  })
+
+  it('refuses every other route to anyone but the platform administrator', async () => {
+    const other = { userId: 'u', userRole: 'agency-admin' }
+    await expect(controller.history(other)).rejects.toThrow(ForbiddenException)
+    await expect(controller.startRegistration(other, {})).rejects.toThrow(ForbiddenException)
+    await expect(controller.createTool(other, {})).rejects.toThrow(ForbiddenException)
+    await expect(controller.removeConnection(other, 'c1')).rejects.toThrow(ForbiddenException)
   })
 
   it('starts a registration for the signed-in admin and returns the link to open', async () => {

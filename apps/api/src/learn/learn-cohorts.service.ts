@@ -39,17 +39,16 @@ import {
 } from './cohort-config'
 import { CSV_BOM, csvLine } from './attendance/attendance-rules'
 import { LearnerService } from './learner.service'
-import { LEARN_ROLES, LearnService } from './learn.service'
+import { AccessService } from './access/access.service'
+import type { Action } from './access/permissions'
 import { ParticipantNotesService } from './talent/participant-notes.service'
-
-const MANAGERS = [LEARN_ROLES.agencyAdmin, LEARN_ROLES.providerAdmin]
 
 /** Cohorts of courses: created in the workspace that runs them (a provider, or an organization offered the course). */
 @Injectable()
 export class LearnCohortsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly learn: LearnService,
+    private readonly access: AccessService,
     private readonly learner: LearnerService,
     private readonly notes: ParticipantNotesService,
     @Inject(SIMULATOR_FEED) private readonly feed: SimulatorFeed
@@ -57,9 +56,13 @@ export class LearnCohortsService {
 
   // ── access ────────────────────────────────────────────────────────────────
 
-  private async workspaceFor(userId: string, role: string | undefined, subdomain: string) {
-    this.learn.assertRole(role, MANAGERS)
-    await this.learn.assertWorkspace(userId, role, subdomain)
+  private async workspaceFor(
+    userId: string,
+    role: string | undefined,
+    subdomain: string,
+    action: Action
+  ) {
+    await this.access.authorize({ userId, role }, action, { workspace: subdomain })
     const ws = await this.prisma.institution.findFirst({
       where: { subdomain },
       select: { id: true, name: true, kind: true, subdomain: true },
@@ -69,8 +72,13 @@ export class LearnCohortsService {
     return ws
   }
 
-  private async cohortFor(userId: string, role: string | undefined, cohortId: string) {
-    this.learn.assertRole(role, MANAGERS)
+  private async cohortFor(
+    userId: string,
+    role: string | undefined,
+    cohortId: string,
+    action: Action
+  ) {
+    await this.access.authorize({ userId, role }, action, { cohortId })
     const cohort = await this.prisma.cohort.findUnique({
       where: { id: cohortId },
       include: {
@@ -87,7 +95,6 @@ export class LearnCohortsService {
       },
     })
     if (!cohort || !cohort.course) throw new NotFoundException('Cohort not found')
-    await this.learn.assertWorkspace(userId, role, cohort.institution.subdomain as string)
     return { ...cohort, course: cohort.course }
   }
 
@@ -98,7 +105,7 @@ export class LearnCohortsService {
     role: string | undefined,
     workspace: string
   ): Promise<RunnableCourse[]> {
-    const ws = await this.workspaceFor(userId, role, workspace)
+    const ws = await this.workspaceFor(userId, role, workspace, 'cohort.manage')
     const rows = await this.prisma.course.findMany({
       where: {
         status: 'published',
@@ -122,9 +129,15 @@ export class LearnCohortsService {
     role: string | undefined,
     workspace: string
   ): Promise<CohortListItem[]> {
-    const ws = await this.workspaceFor(userId, role, workspace)
+    const ws = await this.workspaceFor(userId, role, workspace, 'cohort.read')
+    // An instructor sees only the cohorts they teach; null means all of them.
+    const taught = await this.access.instructorCohortsIn({ userId, role }, ws.id)
     const rows = await this.prisma.cohort.findMany({
-      where: { institutionId: ws.id, courseId: { not: null } },
+      where: {
+        institutionId: ws.id,
+        courseId: { not: null },
+        ...(taught ? { id: { in: taught } } : {}),
+      },
       include: {
         course: { select: { id: true, title: true } },
         _count: {
@@ -162,7 +175,7 @@ export class LearnCohortsService {
     workspace: string,
     body: unknown
   ): Promise<CohortDetail> {
-    const ws = await this.workspaceFor(userId, role, workspace)
+    const ws = await this.workspaceFor(userId, role, workspace, 'cohort.manage')
     const fields = validateCohortFields(body, false)
     const runnable = await this.runnableCourses(userId, role, workspace)
     const course = runnable.find((c) => c.id === fields.courseId)
@@ -208,7 +221,7 @@ export class LearnCohortsService {
   }
 
   async detail(userId: string, role: string | undefined, cohortId: string): Promise<CohortDetail> {
-    const c = await this.cohortFor(userId, role, cohortId)
+    const c = await this.cohortFor(userId, role, cohortId, 'cohort.read')
     const itemsTotal = c.course.modules.reduce((n, m) => n + m._count.items, 0)
     const pendingRequests = await this.prisma.joinRequest.count({
       where: { cohortId, status: 'pending' },
@@ -275,7 +288,7 @@ export class LearnCohortsService {
     cohortId: string,
     body: unknown
   ): Promise<CohortDetail> {
-    const c = await this.cohortFor(userId, role, cohortId)
+    const c = await this.cohortFor(userId, role, cohortId, 'cohort.manage')
     const fields = validateCohortFields(body, true)
     const data: {
       name?: string
@@ -343,7 +356,7 @@ export class LearnCohortsService {
     cohortId: string,
     body: unknown
   ): Promise<CohortDetail> {
-    const c = await this.cohortFor(userId, role, cohortId)
+    const c = await this.cohortFor(userId, role, cohortId, 'cohort.manage')
     const email = validateEmail((body as { email?: unknown } | null)?.email)
     const learner = await this.prisma.user.findUnique({
       where: { email_source: { email, source: 'learn' } },
@@ -390,7 +403,7 @@ export class LearnCohortsService {
     role: string | undefined,
     cohortId: string
   ): Promise<CohortJoinRequestRow[]> {
-    await this.cohortFor(userId, role, cohortId)
+    await this.cohortFor(userId, role, cohortId, 'cohort.read')
     const rows = await this.prisma.joinRequest.findMany({
       where: { cohortId, status: 'pending' },
       include: { user: { select: { displayName: true, email: true } } },
@@ -409,7 +422,7 @@ export class LearnCohortsService {
   private async requestFor(userId: string, role: string | undefined, requestId: string) {
     const r = await this.prisma.joinRequest.findUnique({ where: { id: requestId } })
     if (!r) throw new NotFoundException('Join request not found')
-    const cohort = await this.cohortFor(userId, role, r.cohortId)
+    const cohort = await this.cohortFor(userId, role, r.cohortId, 'cohort.manage')
     if (r.status !== 'pending') throw new ConflictException('That request was already decided.')
     return { request: r, cohort }
   }
@@ -487,7 +500,7 @@ export class LearnCohortsService {
   ): Promise<CohortDetail> {
     const e = await this.prisma.enrollment.findUnique({ where: { id: enrollmentId } })
     if (!e) throw new NotFoundException('Enrollment not found')
-    await this.cohortFor(userId, role, e.cohortId)
+    await this.cohortFor(userId, role, e.cohortId, 'cohort.manage')
     await this.prisma.enrollment.update({
       where: { id: enrollmentId },
       data: { status: 'withdrawn' },
@@ -503,7 +516,7 @@ export class LearnCohortsService {
   ): Promise<{ change: 'completed' | 'reopened' | 'date' | null; cohort: CohortDetail }> {
     const e = await this.prisma.enrollment.findUnique({ where: { id: enrollmentId } })
     if (!e) throw new NotFoundException('Enrollment not found')
-    await this.cohortFor(userId, role, e.cohortId)
+    await this.cohortFor(userId, role, e.cohortId, 'cohort.manage')
     const { change } = await this.learner.recomputeCompletion(enrollmentId)
     return { change, cohort: await this.detail(userId, role, e.cohortId) }
   }
@@ -532,7 +545,7 @@ export class LearnCohortsService {
     role: string | undefined,
     cohortId: string
   ): Promise<AssessmentSummary> {
-    const cohort = await this.cohortFor(userId, role, cohortId)
+    const cohort = await this.cohortFor(userId, role, cohortId, 'cohort.read')
     const items = await this.assessmentItems(cohort.course.id)
     const generatedAt = new Date().toISOString()
     if (items.length === 0) return { generatedAt, items: [] }
@@ -629,7 +642,7 @@ export class LearnCohortsService {
     cohortId: string,
     itemId: string
   ): Promise<AssessmentResults> {
-    const cohort = await this.cohortFor(userId, role, cohortId)
+    const cohort = await this.cohortFor(userId, role, cohortId, 'cohort.read')
     const items = await this.assessmentItems(cohort.course.id)
     const item = items.find((i) => i.id === itemId)
     if (!item) throw new NotFoundException('Assessment not found')
@@ -763,7 +776,7 @@ export class LearnCohortsService {
     role: string | undefined,
     cohortId: string
   ): Promise<string> {
-    const cohort = await this.cohortFor(userId, role, cohortId)
+    const cohort = await this.cohortFor(userId, role, cohortId, 'cohort.read')
     const items = await this.assessmentItems(cohort.course.id)
     const all = await Promise.all(items.map((i) => this.resultsFor(cohort, items, i)))
     const lines = [
@@ -810,7 +823,7 @@ export class LearnCohortsService {
     role: string | undefined,
     cohortId: string
   ): Promise<CohortAssessmentMonitor> {
-    const cohort = await this.cohortFor(userId, role, cohortId)
+    const cohort = await this.cohortFor(userId, role, cohortId, 'cohort.read')
     const monitor = await this.feed.assessmentMonitor(cohort.institution.id, cohortId)
     // The course decides what is listed: one card per assessment item, in course order, even
     // before anyone has started it. What the Simulator knows is matched to the item by its launch.
@@ -903,7 +916,7 @@ export class LearnCohortsService {
     role: string | undefined,
     cohortId: string
   ): Promise<CohortSqlMonitor> {
-    await this.cohortFor(userId, role, cohortId)
+    await this.cohortFor(userId, role, cohortId, 'cohort.read')
     return this.feed.sqlMonitor(cohortId)
   }
 
@@ -919,7 +932,7 @@ export class LearnCohortsService {
   ): Promise<{ cohortId: string; itemId: string; learnerUserId: string }> {
     const e = await this.prisma.enrollment.findUnique({ where: { id: enrollmentId } })
     if (!e) throw new NotFoundException('Enrollment not found')
-    const cohort = await this.cohortFor(userId, role, e.cohortId)
+    const cohort = await this.cohortFor(userId, role, e.cohortId, 'cohort.staff')
     if (!itemId) throw new BadRequestException('itemId is required')
     const item = await this.prisma.courseItem.findUnique({
       where: { id: itemId },
@@ -939,7 +952,7 @@ export class LearnCohortsService {
   ): Promise<{ attempts: ToolAttempt[]; attemptsBeforeLog: number }> {
     const e = await this.prisma.enrollment.findUnique({ where: { id: enrollmentId } })
     if (!e) throw new NotFoundException('Enrollment not found')
-    const cohort = await this.cohortFor(userId, role, e.cohortId)
+    const cohort = await this.cohortFor(userId, role, e.cohortId, 'cohort.staff')
     if (!itemId) throw new BadRequestException('itemId is required')
     const item = await this.prisma.courseItem.findUnique({
       where: { id: itemId },
@@ -1032,13 +1045,14 @@ export class LearnCohortsService {
   }
 
   private async courseOwnedBy(userId: string, role: string | undefined, courseId: string) {
-    this.learn.assertRole(role, MANAGERS)
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
       include: { provider: { select: { id: true, subdomain: true, parentId: true } } },
     })
     if (!course) throw new NotFoundException('Course not found')
-    await this.learn.assertWorkspace(userId, role, course.provider.subdomain as string)
+    await this.access.authorize({ userId, role }, 'course.manage', {
+      workspace: course.provider.subdomain as string,
+    })
     return course
   }
 }

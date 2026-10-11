@@ -11,7 +11,8 @@ import { CohortConfigModal } from './CohortConfigModal'
 import { CohortAttendanceChip, CohortDeliveryChip, CohortStatusChip } from './CohortsPage'
 import { dateOnly, dateShort } from './format'
 import type { PendingJoinRequest } from './joinRequests'
-import { errorNotice } from './shared'
+import { canManageMembers, canManageWorkspace } from './roleAccess'
+import { errorNotice, useWorkspaceRole } from './shared'
 import { NoteIndicators } from './talent/NoteIndicators'
 
 /** People who joined with the code on an approval cohort, waiting for Approve or Decline. */
@@ -115,7 +116,11 @@ function Cohort({
   cohort: CohortDetail
   onChange: (c: CohortDetail) => void
 }) {
-  const { href } = useApp()
+  const { href, tenant } = useApp()
+  // Instructors see the roster and take attendance; changing who is in the cohort is for admins.
+  const workspaceRole = useWorkspaceRole(tenant)
+  const canManage = canManageWorkspace(workspaceRole)
+  const staffHref = `${href('/lms/members')}${href('/lms/members').includes('?') ? '&' : '?'}cohort=${encodeURIComponent(cohort.id)}`
   const send = useApiSend()
   const apiFetch = useApiFetch()
   const [busy, setBusy] = useState(false)
@@ -236,25 +241,40 @@ function Cohort({
       )}
 
       <div className="co-sections">
-        <section className="dash-card dash-joincode" aria-labelledby="h-code">
-          <div>
-            <h2 className="dash-card-title" id="h-code">
-              Join code
-            </h2>
-            <p className="dash-sub">Share this with learners. They sign in and enter it to join.</p>
-          </div>
-          <div className="dash-joincode-box">
-            <span className="dash-code dash-code-big">{cohort.joinKey ?? '—'}</span>
-            <button type="button" className="dash-btn-secondary" onClick={copyCode}>
-              {copied ? 'Copied' : 'Copy'}
-            </button>
-          </div>
-        </section>
+        {(canManage || cohort.joinKey) && (
+          <section className="dash-card dash-joincode" aria-labelledby="h-code">
+            <div>
+              <h2 className="dash-card-title" id="h-code">
+                Join code
+              </h2>
+              <p className="dash-sub">
+                Share this with learners. They sign in and enter it to join.
+              </p>
+            </div>
+            <div className="dash-joincode-box">
+              <span className="dash-code dash-code-big">{cohort.joinKey ?? '—'}</span>
+              <button type="button" className="dash-btn-secondary" onClick={copyCode}>
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+          </section>
+        )}
 
         <div className="dash-cohort-actions co-actions">
-          <button type="button" className="dash-btn-secondary" onClick={() => setConfigOpen(true)}>
-            <span aria-hidden="true">⚙️</span> Edit cohort configuration
-          </button>
+          {canManage && (
+            <button
+              type="button"
+              className="dash-btn-secondary"
+              onClick={() => setConfigOpen(true)}
+            >
+              <span aria-hidden="true">⚙️</span> Edit cohort configuration
+            </button>
+          )}
+          {canManageMembers(workspaceRole) && (
+            <a className="dash-btn-secondary dash-btn-link" href={staffHref}>
+              <span aria-hidden="true">👥</span> Manage staff
+            </a>
+          )}
           <a
             className="dash-btn-secondary dash-btn-link"
             href={href(`/lms/activity/${encodeURIComponent(cohort.id)}`)}
@@ -283,26 +303,34 @@ function Cohort({
             </div>
           </div>
 
-          <PendingRequests cohortId={cohort.id} onApproved={() => void refetchRoster()} />
+          {canManage && (
+            <>
+              <PendingRequests cohortId={cohort.id} onApproved={() => void refetchRoster()} />
 
-          <form className="dash-inline-form" onSubmit={addLearner}>
-            <label className="dash-field">
-              <span>Add a learner by email</span>
-              <input name="email" type="email" required placeholder="name@example.com" />
-            </label>
-            <button type="submit" className="dash-btn-secondary" disabled={busy}>
-              Add learner
-            </button>
-          </form>
-          <p className="dash-muted dash-hint">
-            Only people who have already signed in can be added by email. Everyone else joins with
-            the code.
-          </p>
+              <form className="dash-inline-form" onSubmit={addLearner}>
+                <label className="dash-field">
+                  <span>Add a learner by email</span>
+                  <input name="email" type="email" required placeholder="name@example.com" />
+                </label>
+                <button type="submit" className="dash-btn-secondary" disabled={busy}>
+                  Add learner
+                </button>
+              </form>
+              <p className="dash-muted dash-hint">
+                Only people who have already signed in can be added by email. Everyone else joins
+                with the code.
+              </p>
+            </>
+          )}
 
           {cohort.roster.length === 0 ? (
             <div className="dash-empty">
               <h3 className="dash-card-title">No learners yet</h3>
-              <p>Share the join code above, or add someone by email.</p>
+              <p>
+                {canManage
+                  ? 'Share the join code above, or add someone by email.'
+                  : 'Learners appear here once they join.'}
+              </p>
             </div>
           ) : (
             <div className="dash-tablewrap">
@@ -375,23 +403,27 @@ function Cohort({
                               >
                                 Attempts
                               </button>{' '}
-                              <button
-                                type="button"
-                                className="dash-btn-quiet"
-                                disabled={busy}
-                                title="Check this learner's course status and completion date against the current rules"
-                                onClick={() => void recompute(r.enrollmentId, r.name)}
-                              >
-                                Recompute
-                              </button>{' '}
-                              <button
-                                type="button"
-                                className="dash-btn-quiet"
-                                disabled={busy}
-                                onClick={() => withdraw(r.enrollmentId, r.name)}
-                              >
-                                Withdraw
-                              </button>
+                              {canManage && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="dash-btn-quiet"
+                                    disabled={busy}
+                                    title="Check this learner's course status and completion date against the current rules"
+                                    onClick={() => void recompute(r.enrollmentId, r.name)}
+                                  >
+                                    Recompute
+                                  </button>{' '}
+                                  <button
+                                    type="button"
+                                    className="dash-btn-quiet"
+                                    disabled={busy}
+                                    onClick={() => withdraw(r.enrollmentId, r.name)}
+                                  >
+                                    Withdraw
+                                  </button>
+                                </>
+                              )}
                             </>
                           )}
                         </td>

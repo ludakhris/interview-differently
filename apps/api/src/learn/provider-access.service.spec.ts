@@ -1,6 +1,6 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import type { PrismaService } from '../prisma/prisma.service'
-import { LearnService } from './learn.service'
+import { AccessService } from './access/access.service'
 import { ProviderAccessService } from './provider-access.service'
 
 // Two providers (P1, P2), an organization (O1) that runs P1's course, and an agency (A1) over all of them.
@@ -11,13 +11,19 @@ const institutions = [
   { id: 'O1', kind: 'organization', subdomain: 'org-one', parentId: 'A1' },
 ]
 // Workspace-level memberships (cohortId null) and a learner's cohort membership.
-const memberships = [
-  { userId: 'staff-p1', institutionId: 'P1', cohortId: null },
-  { userId: 'staff-p2', institutionId: 'P2', cohortId: null },
-  { userId: 'staff-o1', institutionId: 'O1', cohortId: null },
+const memberships: {
+  userId: string
+  institutionId: string
+  cohortId: string | null
+  role?: string | null
+}[] = [
+  { userId: 'staff-p1', institutionId: 'P1', cohortId: null, role: 'provider-admin' },
+  { userId: 'staff-p2', institutionId: 'P2', cohortId: null, role: 'provider-admin' },
+  { userId: 'staff-o1', institutionId: 'O1', cohortId: null, role: 'organization-admin' },
   // An agency admin who was also given a membership on the provider: the role still excludes them.
-  { userId: 'agency-1', institutionId: 'P1', cohortId: null },
-  { userId: 'learner-1', institutionId: 'O1', cohortId: 'C1' },
+  { userId: 'agency-1', institutionId: 'P1', cohortId: null, role: null },
+  { userId: 'agency-1', institutionId: 'A1', cohortId: null, role: 'agency-admin' },
+  { userId: 'learner-1', institutionId: 'O1', cohortId: 'C1', role: null },
 ]
 // C1 runs P1's course and is hosted by O1.
 const cohorts = [
@@ -40,21 +46,38 @@ const enrollments = [{ id: 'E1', cohortId: 'C1', userId: 'learner-1', providerId
 
 const prisma = {
   membership: {
+    findMany: jest.fn(async ({ where }) =>
+      memberships
+        .filter((m) => m.userId === where.userId)
+        .map((m) => {
+          const i = institutions.find((x) => x.id === m.institutionId)
+          return {
+            ...m,
+            role: (m as { role?: string }).role ?? null,
+            institution: { kind: i?.kind, parentId: i?.parentId, subdomain: i?.subdomain },
+          }
+        })
+    ),
+  },
+  institution: {
     findFirst: jest.fn(
       async ({ where }) =>
-        memberships.find(
-          (m) =>
-            m.userId === where.userId &&
-            m.institutionId === where.institutionId &&
-            m.cohortId === where.cohortId &&
-            where.institution.kind.in.includes(
-              institutions.find((i) => i.id === m.institutionId)?.kind
-            )
+        institutions.find((i) =>
+          where.id ? i.id === where.id : i.subdomain === where.subdomain
         ) ?? null
     ),
   },
   cohort: {
-    findUnique: jest.fn(async ({ where }) => cohorts.find((c) => c.id === where.id) ?? null),
+    findUnique: jest.fn(async ({ where }) => {
+      const c = cohorts.find((k) => k.id === where.id)
+      if (!c) return null
+      const host = institutions.find((i) => i.id === c.institution.id)
+      return {
+        ...c,
+        institutionId: host?.id,
+        institution: { ...c.institution, parentId: host?.parentId },
+      }
+    }),
   },
   enrollment: {
     findFirst: jest.fn(
@@ -81,15 +104,7 @@ const prisma = {
   },
 } as unknown as PrismaService
 
-const learn = new LearnService(prisma)
-// What each person may open, as LearnService.workspaces decides it (tested in learn.service.spec.ts).
-jest.spyOn(learn, 'workspaces').mockImplementation(async (userId, role) => {
-  const all = institutions.map((i) => ({ ...i, name: i.id, featuredDemo: false }))
-  if (role === 'agency-admin' || role === 'system-admin') return all
-  const mine = memberships.filter((m) => m.userId === userId && m.cohortId === null)
-  return all.filter((i) => mine.some((m) => m.institutionId === i.id))
-})
-const access = new ProviderAccessService(prisma, learn)
+const access = new ProviderAccessService(prisma, new AccessService(prisma))
 
 describe('assertProviderStaff', () => {
   it('lets staff of the provider in', async () => {
@@ -127,8 +142,13 @@ describe('assertProviderStaff', () => {
       ForbiddenException
     )
   })
+  it('refuses an unknown institution', async () => {
+    await expect(access.assertProviderStaff('staff-p1', 'provider-admin', 'nope')).rejects.toThrow(
+      ForbiddenException
+    )
+  })
   it('refuses a case manager, even with a membership', async () => {
-    memberships.push({ userId: 'cm', institutionId: 'P1', cohortId: null })
+    memberships.push({ userId: 'cm', institutionId: 'P1', cohortId: null, role: 'case-manager' })
     await expect(access.assertProviderStaff('cm', 'case-manager', 'P1')).rejects.toThrow(
       ForbiddenException
     )
@@ -138,21 +158,31 @@ describe('assertProviderStaff', () => {
     await expect(access.assertProviderStaff('learner-1', undefined, 'P1')).rejects.toThrow(
       ForbiddenException
     )
-    memberships.push({ userId: 'learner-1', institutionId: 'P1', cohortId: null })
+    memberships.push({ userId: 'learner-1', institutionId: 'P1', cohortId: null, role: null })
     await expect(access.assertProviderStaff('learner-1', undefined, 'P1')).rejects.toThrow(
       ForbiddenException
     )
     memberships.pop()
   })
   it('does not accept a cohort-level membership as workspace staff', async () => {
-    memberships.push({ userId: 'staff-x', institutionId: 'P1', cohortId: 'C1' })
+    memberships.push({
+      userId: 'staff-x',
+      institutionId: 'P1',
+      cohortId: 'C1',
+      role: 'provider-admin',
+    })
     await expect(access.assertProviderStaff('staff-x', 'provider-admin', 'P1')).rejects.toThrow(
       ForbiddenException
     )
     memberships.pop()
   })
   it('does not accept a membership on an agency', async () => {
-    memberships.push({ userId: 'staff-a1', institutionId: 'A1', cohortId: null })
+    memberships.push({
+      userId: 'staff-a1',
+      institutionId: 'A1',
+      cohortId: null,
+      role: 'agency-admin',
+    })
     await expect(access.assertProviderStaff('staff-a1', 'provider-admin', 'A1')).rejects.toThrow(
       ForbiddenException
     )
@@ -209,10 +239,17 @@ describe('assertCohortStaff (the roster guard)', () => {
       ForbiddenException
     )
   })
+  it('is not found for an unknown cohort', async () => {
+    await expect(access.assertCohortStaff('root', 'system-admin', 'nope')).rejects.toThrow(
+      NotFoundException
+    )
+  })
   it('refuses a case manager, as the roster does', async () => {
-    await expect(access.assertCohortStaff('staff-o1', 'case-manager', 'C1')).rejects.toThrow(
+    memberships.push({ userId: 'cm-o1', institutionId: 'O1', cohortId: null, role: 'case-manager' })
+    await expect(access.assertCohortStaff('cm-o1', 'case-manager', 'C1')).rejects.toThrow(
       ForbiddenException
     )
+    memberships.pop()
   })
 })
 

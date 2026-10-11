@@ -9,11 +9,24 @@ const ws = (over: Partial<LearnWorkspace>): LearnWorkspace => ({
   subdomain: 'w',
   parentId: null,
   featuredDemo: false,
+  role: 'provider-admin',
   ...over,
 })
 const provider = ws({ id: 'p', name: 'Cedar Mill', kind: 'provider', subdomain: 'cedar' })
-const org = ws({ id: 'o', name: 'Harbor', kind: 'organization', subdomain: 'harbor' })
-const agency = ws({ id: 'a', name: 'Delaware', kind: 'agency', subdomain: 'delaware' })
+const org = ws({
+  id: 'o',
+  name: 'Harbor',
+  kind: 'organization',
+  subdomain: 'harbor',
+  role: 'organization-admin',
+})
+const agency = ws({
+  id: 'a',
+  name: 'Delaware',
+  kind: 'agency',
+  subdomain: 'delaware',
+  role: 'agency-admin',
+})
 
 const input = (over: Partial<NavInput>): NavInput => ({
   role: 'provider-admin',
@@ -69,13 +82,14 @@ describe('buildNav', () => {
     expect(h).toEqual({ heading: 'Cedar Mill', caption: 'Currently selected' })
   })
 
-  it('a provider-admin of a provider gets outcomes, cohorts, courses, then talent, activity and support', () => {
+  it('a provider-admin of a provider gets outcomes, cohorts, courses, then talent, activity, support and people', () => {
     expect(labels(buildNav(input({})).staff)).toEqual([
       'My workspaces',
       '# Cedar Mill',
       'Outcomes',
       'Cohorts',
       'Courses',
+      'Manage Provider Staff',
       '—',
       'Talent',
       'Learner activity',
@@ -90,6 +104,7 @@ describe('buildNav', () => {
       'Outcomes',
       'Cohorts',
       'Courses',
+      'Manage Organization Staff',
       '—',
       'Talent',
       'Learner activity',
@@ -104,19 +119,47 @@ describe('buildNav', () => {
       '# Delaware',
       'Outcomes dashboard',
       'Career Readiness Tool',
+      'Manage Agency Staff',
     ])
-    const other = ws({ id: 'c', name: 'Chesapeake', kind: 'agency', subdomain: 'chesapeake' })
+    const other = ws({
+      id: 'c',
+      name: 'Chesapeake',
+      kind: 'agency',
+      subdomain: 'chesapeake',
+      role: 'agency-admin',
+    })
     expect(
       labels(buildNav(input({ role: 'agency-admin', workspaces: [other], current: other })).staff)
-    ).toEqual(['My workspaces', '# Chesapeake', 'Outcomes dashboard'])
+    ).toEqual(['My workspaces', '# Chesapeake', 'Outcomes dashboard', 'Manage Agency Staff'])
   })
 
-  it('hides Talent and Support from roles that cannot open them, and Activity from those who cannot', () => {
-    const l = labels(buildNav(input({ role: 'case-manager' })).staff)
-    expect(l).not.toContain('Talent')
-    expect(l).not.toContain('Learner support')
-    expect(l).not.toContain('Learner activity')
-    expect(l).not.toContain('—')
+  it('shows each role in a workspace only what it may open', () => {
+    const as = (role: string) => labels(buildNav(input({ current: { ...provider, role } })).staff)
+    // Case managers read outcomes only.
+    expect(as('case-manager')).toEqual(['My workspaces', '# Cedar Mill', 'Outcomes'])
+    // Instructors have their cohorts and the activity log; no courses, talent or people.
+    expect(as('instructor')).toEqual([
+      'My workspaces',
+      '# Cedar Mill',
+      'Cohorts',
+      '—',
+      'Learner activity',
+    ])
+    // Organization admins can open talent and support like provider admins.
+    expect(as('organization-admin')).toContain('Talent')
+    expect(as('organization-admin')).toContain('Manage Provider Staff')
+  })
+
+  it('uses the role in the current workspace, not the highest overall', () => {
+    const n = buildNav(
+      input({
+        role: 'agency-admin',
+        workspaces: [agency, { ...provider, role: 'instructor' }],
+        current: { ...provider, role: 'instructor' },
+      })
+    )
+    expect(labels(n.staff)).not.toContain('Courses')
+    expect(labels(n.staff)).not.toContain('Manage Provider Staff')
   })
 
   it('offers Admin toolbox only to system admins, and even when they have no workspace', () => {

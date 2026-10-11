@@ -11,8 +11,16 @@ import { useApp } from './app-context'
 import { AttentionBell } from './AttentionBell'
 import { DelawareSkinPromo } from './DelawareSkinPromo'
 import { buildNav } from './navModel'
-import { canSeeActivity, canSeeTalent } from './roleAccess'
-import { useRole } from './shared'
+import {
+  canManageMembers,
+  canManageWorkspace,
+  canSeeActivity,
+  canSeeCohorts,
+  canSeeOutcomes,
+  canSeeTalent,
+  staffPageLabel,
+} from './roleAccess'
+import { useRole, useWorkspaceRole } from './shared'
 import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 
 // Two skins, one set of parts. Only the header markup (logo, prototype bar,
@@ -29,7 +37,7 @@ function useNav(): MenuLink[] {
 
 function useWorkspaceNav(): MenuLink[] {
   const { href, tenant, current } = useApp()
-  const role = useRole()
+  const role = useWorkspaceRole(tenant)
   if (window.location.pathname.startsWith('/lms/catalog')) {
     return [
       { label: 'Training catalog', href: href('/lms/catalog') },
@@ -43,31 +51,37 @@ function useWorkspaceNav(): MenuLink[] {
       { label: 'My profile', href: href('/lms/learning/profile') },
     ]
   }
-  if (current?.kind === 'provider') {
+  if (
+    current?.kind === 'provider' ||
+    current?.kind === 'organization' ||
+    current?.kind === 'academic'
+  ) {
+    const provider = current.kind === 'provider'
     return [
-      { label: 'Courses', href: href('/lms/courses') },
-      { label: 'Cohorts', href: href('/lms/cohorts') },
-      ...(canSeeTalent(role)
+      ...(provider && canManageWorkspace(role)
+        ? [{ label: 'Courses', href: href('/lms/courses') }]
+        : []),
+      ...(canSeeCohorts(role) ? [{ label: 'Cohorts', href: href('/lms/cohorts') }] : []),
+      ...(canManageMembers(role)
+        ? [{ label: staffPageLabel(current.kind), href: href('/lms/members') }]
+        : []),
+      ...(current.kind !== 'academic' && canSeeTalent(role)
         ? [
             { label: 'Talent', href: href('/lms/talent') },
             { label: 'Support', href: href('/lms/talent/support') },
           ]
         : []),
       ...(canSeeActivity(role) ? [{ label: 'Activity', href: href('/lms/activity') }] : []),
-      { label: 'Outcomes', href: href('/lms/dashboard') },
-    ]
-  }
-  if (current?.kind === 'organization' || current?.kind === 'academic') {
-    return [
-      { label: 'Cohorts', href: href('/lms/cohorts') },
-      ...(canSeeActivity(role) ? [{ label: 'Activity', href: href('/lms/activity') }] : []),
-      { label: 'Outcomes', href: href('/lms/dashboard') },
+      ...(canSeeOutcomes(role) ? [{ label: 'Outcomes', href: href('/lms/dashboard') }] : []),
     ]
   }
   if (current?.kind === 'agency') {
     return [
       { label: 'Outcomes dashboard', href: href('/lms/dashboard') },
       ...(tenant === 'delaware' ? [{ label: 'Career Readiness Tool', href: href('/') }] : []),
+      ...(canManageMembers(role)
+        ? [{ label: staffPageLabel(current.kind), href: href('/lms/members') }]
+        : []),
     ]
   }
   return []

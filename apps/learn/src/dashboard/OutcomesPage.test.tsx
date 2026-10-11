@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 let app: Record<string, unknown> = {}
 vi.mock('./app-context', () => ({ useApp: () => app }))
-vi.mock('./shared', () => ({ errorNotice: () => null, useRole: () => 'agency-admin' }))
+vi.mock('./shared', () => ({ errorNotice: () => null, useWorkspaceRole: () => 'agency-admin' }))
 vi.mock('./api', () => ({
   downloadFile: vi.fn(),
   useApiFetch: () => vi.fn(),

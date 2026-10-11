@@ -12,7 +12,7 @@ import type { Prisma } from '@prisma/client'
 import { randomBytes } from 'node:crypto'
 import { ClerkService } from '../../auth/clerk.service'
 import type { LearnRegistryChange } from '../../learn/learn-types'
-import { LEARN_ROLES } from '../../learn/learn.service'
+import { SYSTEM_ADMIN } from '../../learn/access/permissions'
 import { PrismaService } from '../../prisma/prisma.service'
 import {
   managedConnections,
@@ -157,7 +157,7 @@ export class ToolRegistryService implements OnModuleInit {
    * agency or provider role does not grant it.
    */
   canManage(role: string | undefined): boolean {
-    return role === LEARN_ROLES.systemAdmin
+    return role === SYSTEM_ADMIN
   }
 
   assertManage(role: string | undefined): void {
@@ -169,7 +169,7 @@ export class ToolRegistryService implements OnModuleInit {
 
   /** Whether this person is still a system administrator (their role can change after they start something). */
   async isSystemAdmin(userId: string): Promise<boolean> {
-    return (await this.clerk.getRole(userId, 'learn')) === LEARN_ROLES.systemAdmin
+    return (await this.clerk.getRole(userId, 'learn')) === SYSTEM_ADMIN
   }
 
   /** Who is making a change, as it should read in the history later. */

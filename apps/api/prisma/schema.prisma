@@ -205,6 +205,7 @@ model Institution {
   children    Institution[] @relation("InstitutionParent")
   cohorts     Cohort[]
   memberships Membership[]
+  roleInvites RoleInvite[]
   datasets    Dataset[]
   assessments Assessment[]
   scenarios   Scenario[]
@@ -245,6 +246,7 @@ model Cohort {
   institution   Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   course        Course?      @relation(fields: [courseId], references: [id], onDelete: SetNull)
   memberships   Membership[]
+  roleInvites   RoleInvite[]
   datasets      CohortDataset[]
   tools         CohortToolConfig[]
   deliveries    AssessmentDelivery[]
@@ -307,6 +309,27 @@ model Membership {
   @@index([userId])
   @@index([institutionId])
   @@index([cohortId])
+  @@index([agencyId])
+}
+
+// A role offered to an email address before the person has an account here (GitHub issue #84). It becomes a
+// membership with that role the first time they open Learn Differently signed in with that (verified) email.
+model RoleInvite {
+  id            String      @id @default(uuid())
+  email         String                          // lower case
+  institutionId String
+  cohortId      String?                          // for an instructor: the cohort they will teach
+  role          String
+  invitedById   String?
+  createdAt     DateTime    @default(now())
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  cohort        Cohort?     @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
+  @@index([email])
+  @@index([institutionId])
   @@index([agencyId])
 }
 

@@ -2,10 +2,11 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import { useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { Notice } from './DashboardShell'
+import { SYSTEM_ADMIN } from './roleAccess'
 import { errorNotice, useRole } from './shared'
 
 /** The one role that may open the admin toolbox (API enforces it too). */
-export const SYSTEM_ADMIN = 'system-admin'
+export { SYSTEM_ADMIN }
 
 const ICON = { viewBox: '0 0 48 48', 'aria-hidden': true } as const
 
@@ -82,23 +83,36 @@ const avatarColors = (id: string): (typeof AVATARS)[number] => {
   return AVATARS[h]
 }
 
-/** Role colours (solid, tint) and what each role can do. A role added to LEARN_ROLES later falls back to the avatar palette and no description. */
+/** Role colours (solid, tint) and what each role can do. Roles older accounts may still carry stay visible so they can be cleared. */
 const ROLE_INFO: Record<string, { solid: string; tint: string; about: string }> = {
   '': { solid: '#4b5563', tint: '#eef0f3', about: 'Takes courses only' },
-  'case-manager': { solid: '#b4380f', tint: '#ffe0d6', about: 'Reads outcomes and gradebooks' },
-  'provider-admin': { solid: '#0b6b5c', tint: '#d9f2ec', about: 'Runs courses and cohorts' },
-  'agency-admin': { solid: '#0d5a94', tint: '#d8ecfb', about: 'Sees every workspace' },
+  'case-manager': {
+    solid: '#b4380f',
+    tint: '#ffe0d6',
+    about: 'Older account role: no longer used',
+  },
+  'provider-admin': {
+    solid: '#0b6b5c',
+    tint: '#d9f2ec',
+    about: 'Older account role: no longer used',
+  },
+  'agency-admin': {
+    solid: '#0d5a94',
+    tint: '#d8ecfb',
+    about: 'Older account role: no longer used',
+  },
   'system-admin': {
     solid: '#5b3fd9',
     tint: '#ece6ff',
-    about: 'Everything an agency admin can, plus system tools',
+    about: 'Can open every workspace and the admin tools',
   },
 }
 const roleInfo = (r: string) =>
   ROLE_INFO[r] ?? { solid: avatarColors(r)[1], tint: avatarColors(r)[0], about: '' }
 
-/** "system-admin" reads as "System admin". */
+/** "system-admin" reads as "Platform administrator"; others read as plain words. */
 const roleLabel = (r: string): string => {
+  if (r === SYSTEM_ADMIN) return 'Platform administrator'
   const words = r.replace(/-/g, ' ')
   return words.charAt(0).toUpperCase() + words.slice(1)
 }
@@ -142,7 +156,7 @@ export function AdminPage() {
             </span>
             <span className="dash-tool-name">User permissions</span>
             <span className="dash-tool-desc">
-              Find a user and change the role they hold. Upgrade or downgrade their access.
+              Find a user and make them a platform administrator, or take that away.
             </span>
             <span className="dash-tool-open">Open tool →</span>
           </a>
@@ -172,7 +186,7 @@ export function AdminPage() {
 function NoAccess() {
   return (
     <Notice title="Your account does not have access">
-      The admin tools are only open to system admins.
+      The admin tools are only open to platform administrators.
     </Notice>
   )
 }
@@ -203,7 +217,8 @@ export function AdminUsersPage() {
         <div>
           <h1 className="dash-h2">User permissions</h1>
           <p className="dash-sub">
-            A user holds one role, or none. Changes apply on their next page load.
+            Only platform administrators are set here, and they can open every workspace. Everyone
+            else is added to a workspace from its staff page. Changes apply on their next page load.
           </p>
         </div>
       </div>
@@ -461,7 +476,7 @@ function UserRow({ user, roles }: { user: AdminUser; roles: string[] }) {
             setConfirming(false)
           }}
           options={[
-            // A role set outside this list (e.g. by hand in Clerk) stays visible.
+            // An older account role stays visible so it can be cleared.
             ...(saved && !roles.includes(saved) ? [{ value: saved, label: roleLabel(saved) }] : []),
             ...[...roles].reverse().map((r) => ({ value: r, label: roleLabel(r) })),
             { value: '', label: 'Learner' },

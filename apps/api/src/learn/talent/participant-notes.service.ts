@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
-import { LEARN_ROLES } from '../learn.service'
+import { SYSTEM_ADMIN } from '../access/permissions'
 import { PrismaService } from '../../prisma/prisma.service'
 import { DataAccessLogService } from '../data-access-log.service'
 import { institutionCohortWhere, ProviderAccessService } from '../provider-access.service'
@@ -289,7 +289,7 @@ export class ParticipantNotesService {
       select: { id: true, authorId: true },
     })
     if (!n) throw new NotFoundException('Note not found')
-    if (n.authorId !== actor.userId && actor.role !== LEARN_ROLES.systemAdmin)
+    if (n.authorId !== actor.userId && actor.role !== SYSTEM_ADMIN)
       throw new ForbiddenException('Only the author of a note can change or delete it.')
   }
 

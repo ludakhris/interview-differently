@@ -106,14 +106,32 @@ exhibits:
       - { key: cost, label: Cost / fellow ($), format: currency, sortable: true }
       - { key: employer, label: Employer partners, format: number, sortable: true }
     rows:
-      - { city: Chicago, fellows: 900, placement: { value: 72, tone: accent }, cost: 7800, employer: 28 }
+      - {
+          city: Chicago,
+          fellows: 900,
+          placement: { value: 72, tone: accent },
+          cost: 7800,
+          employer: 28,
+        }
       - { city: Newark, fellows: 720, placement: 64, cost: 7600, employer: 18 }
       - { city: San Antonio, fellows: 680, placement: 58, cost: 7400, employer: 14 }
       - { city: Atlanta, fellows: 740, placement: 66, cost: 7500, employer: 22 }
-      - { city: Bay Area, fellows: 540, placement: { value: 74, tone: accent, emphasis: true }, cost: 8400, employer: 35 }
+      - {
+          city: Bay Area,
+          fellows: 540,
+          placement: { value: 74, tone: accent, emphasis: true },
+          cost: 8400,
+          employer: 35,
+        }
       - { city: Boston, fellows: 620, placement: 68, cost: 8100, employer: 24 }
     totalRow:
-      { city: { value: Network total, emphasis: true }, fellows: 4200, placement: 67, cost: 7800, employer: 141 }
+      {
+        city: { value: Network total, emphasis: true },
+        fellows: 4200,
+        placement: 67,
+        cost: 7800,
+        employer: 141,
+      }
 
   - id: program-matrix
     kind: segmentation-matrix
@@ -131,8 +149,14 @@ exhibits:
       topLeft:
         - { label: At-cost content licensing, caption: '20k+ fellows reached, but 0-2 pt lift' }
       topRight:
-        - { label: Deepen current cities + employer expansion, caption: 'Same 4.2k fellows, +8-12 pt placement lift' }
-        - { label: Geographic expansion (2 new cities), caption: '+1.4k fellows, +0 pt placement lift' }
+        - {
+            label: Deepen current cities + employer expansion,
+            caption: 'Same 4.2k fellows, +8-12 pt placement lift',
+          }
+        - {
+            label: Geographic expansion (2 new cities),
+            caption: '+1.4k fellows, +0 pt placement lift',
+          }
       bottomLeft:
         - { label: National brand campaign, caption: Awareness only, no programmatic touch }
       bottomRight:
@@ -170,7 +194,14 @@ nodes:
       - { label: Strong placement, value: '67', unit: '%', type: info, tone: accent, group: Cohort }
       - { label: Cost / fellow, value: '$7.8', unit: k, type: info, group: Cohort }
       - { label: Growth $, value: '$20', unit: 'M', type: alert, tone: danger, group: Constraint }
-      - { label: Board read-out, value: '3', unit: weeks, type: alert, tone: danger, group: Constraint }
+      - {
+          label: Board read-out,
+          value: '3',
+          unit: weeks,
+          type: alert,
+          tone: danger,
+          group: Constraint,
+        }
     choices:
       - id: A
         text: Score the four paths on (reach × depth × mission fit), then size the top two before deciding.
@@ -286,7 +317,13 @@ nodes:
         display: 'cohort × 5 cohorts × placement lift (pts) ÷ 100'
         expression: '{cohort} * 5 * {lift} / 100'
         variables:
-          - { name: cohort, label: Fellows / cohort, unit: fellows, format: integer, defaultValue: 4200 }
+          - {
+              name: cohort,
+              label: Fellows / cohort,
+              unit: fellows,
+              format: integer,
+              defaultValue: 4200,
+            }
           - { name: lift, label: Placement rate lift, unit: pts, format: integer, defaultValue: 10 }
       fields:
         - id: incremental

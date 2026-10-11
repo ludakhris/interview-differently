@@ -17,7 +17,12 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Syne', sans-serif;
   }
 }
@@ -37,19 +42,40 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes pulse-ring {
-  0% { transform: scale(0.95); opacity: 0.7; }
-  50% { transform: scale(1.02); opacity: 1; }
-  100% { transform: scale(0.95); opacity: 0.7; }
+  0% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
 }
 
 .pulse-ring {
@@ -68,7 +94,7 @@
 
 .choice-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
 
 .choice-card.selected {
@@ -77,9 +103,16 @@
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #b0bec5; border-radius: 3px; }
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #b0bec5;
+  border-radius: 3px;
+}
 
 /* ── Print styles ──────────────────────────────────────────────────────────
  * Optimised for the heatmap PDF use case (#20). Forces a light background,
@@ -93,7 +126,8 @@
  * ────────────────────────────────────────────────────────────────────────── */
 @media print {
   /* Light page so it doesn't burn ink. */
-  html, body {
+  html,
+  body {
     background: #ffffff !important;
     color: #111111 !important;
   }
@@ -101,7 +135,8 @@
   /* Global app chrome — hide Nav and any element opted out of print via
    * either the standard `.no-print` class or Tailwind's `print:hidden`
    * (already handled by Tailwind, but listed here for clarity). */
-  nav, .no-print {
+  nav,
+  .no-print {
     display: none !important;
   }
 
@@ -119,13 +154,20 @@
   }
 
   /* Tables: keep rows together when possible, no orphan cohort labels. */
-  thead { display: table-header-group; }
-  tr, td, th { page-break-inside: avoid; }
+  thead {
+    display: table-header-group;
+  }
+  tr,
+  td,
+  th {
+    page-break-inside: avoid;
+  }
 
   /* Heatmap cell text is set via inline `style={{ color: ... }}` for the
    * dark UI, which is too light to read on the lightened-by-alpha print
    * backgrounds. Force readable dark text in print. */
-  table td, table th {
+  table td,
+  table th {
     color: #111111 !important;
   }
   /* But keep the score-band colours visible on the leading "name" + "Avg"
@@ -142,11 +184,32 @@
 }
 
 /* Syntax tokens in assessment prompts (PromptMarkdown) */
-.prompt-md .token.comment { color: rgb(255 255 255 / 0.4); font-style: italic; }
-.prompt-md .token.keyword { color: #7cc4ff; }
-.prompt-md .token.function { color: #e5c07b; }
-.prompt-md .token.string { color: #98c379; }
-.prompt-md .token.number, .prompt-md .token.boolean { color: #d19a66; }
-.prompt-md .token.operator, .prompt-md .token.punctuation { color: rgb(245 243 238 / 0.6); }
-.prompt-md .token.symbol, .prompt-md .token.data-field { color: #c792ea; }
-.prompt-md .token.constant, .prompt-md .token.measure { color: #56d4bc; }
+.prompt-md .token.comment {
+  color: rgb(255 255 255 / 0.4);
+  font-style: italic;
+}
+.prompt-md .token.keyword {
+  color: #7cc4ff;
+}
+.prompt-md .token.function {
+  color: #e5c07b;
+}
+.prompt-md .token.string {
+  color: #98c379;
+}
+.prompt-md .token.number,
+.prompt-md .token.boolean {
+  color: #d19a66;
+}
+.prompt-md .token.operator,
+.prompt-md .token.punctuation {
+  color: rgb(245 243 238 / 0.6);
+}
+.prompt-md .token.symbol,
+.prompt-md .token.data-field {
+  color: #c792ea;
+}
+.prompt-md .token.constant,
+.prompt-md .token.measure {
+  color: #56d4bc;
+}

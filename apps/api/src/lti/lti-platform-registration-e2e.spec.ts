@@ -12,6 +12,7 @@ import { LTI_STORE, MemoryLtiStore } from './lti-store'
 import { limitRegistrationBody } from './registration-limit'
 import { RegistrationController } from './platform/registration.controller'
 import { RegistrationService } from './platform/registration.service'
+import { AccessService } from '../learn/access/access.service'
 import { ToolRegistryController } from './platform/tool-registry.controller'
 import { ToolRegistryService } from './platform/tool-registry.service'
 import { resetToDefaults } from './platform/tool-test-helpers'
@@ -103,6 +104,7 @@ describe('Interview Differently registers itself with a platform (end to end)', 
         LtiToolController,
       ],
       providers: [
+        AccessService,
         RegistrationService,
         ToolRegistryService,
         ToolRegistrationService,

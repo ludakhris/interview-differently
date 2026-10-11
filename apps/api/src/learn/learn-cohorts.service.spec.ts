@@ -12,7 +12,7 @@ import {
   improvementOf,
   launchedItem,
 } from './learn-cohorts.service'
-import type { LearnService } from './learn.service'
+import type { AccessService } from './access/access.service'
 import type { LearnerService } from './learner.service'
 import type { DataAccessLogService } from './data-access-log.service'
 import type { ProviderAccessService } from './provider-access.service'
@@ -23,6 +23,7 @@ const prisma = {
   course: { findMany: jest.fn(), findUnique: jest.fn() },
   cohort: {
     findUnique: jest.fn(),
+    findMany: jest.fn(),
     findFirst: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -54,17 +55,17 @@ const prisma = {
   supportItem: { groupBy: jest.fn() },
   courseOffer: { findMany: jest.fn(), upsert: jest.fn(), deleteMany: jest.fn() },
 }
-const learn = { assertRole: jest.fn(), assertWorkspace: jest.fn() }
+const access = { authorize: jest.fn(), instructorCohortsIn: jest.fn() }
 const learner = { recomputeCompletion: jest.fn(), attemptLogOf: jest.fn() }
-const access = { assertProviderStaff: jest.fn(), scopeForCohort: jest.fn() }
+const providerAccess = { assertProviderStaff: jest.fn(), scopeForCohort: jest.fn() }
 const feed = { assessmentMonitor: jest.fn(), sqlMonitor: jest.fn(), assessmentResults: jest.fn() }
 const service = new LearnCohortsService(
   prisma as unknown as PrismaService,
-  learn as unknown as LearnService,
+  access as unknown as AccessService,
   learner as unknown as LearnerService,
   new ParticipantNotesService(
     prisma as unknown as PrismaService,
-    access as unknown as ProviderAccessService,
+    providerAccess as unknown as ProviderAccessService,
     {} as unknown as DataAccessLogService
   ),
   feed as unknown as SimulatorFeed
@@ -96,6 +97,7 @@ function cohortRow(over: object = {}) {
 
 beforeEach(() => {
   jest.resetAllMocks()
+  access.instructorCohortsIn.mockResolvedValue(null)
   prisma.institution.findFirst.mockResolvedValue(ws)
   prisma.course.findMany.mockResolvedValue(runnable)
   prisma.cohort.findFirst.mockResolvedValue(null) // join key free
@@ -246,14 +248,17 @@ describe('attempts', () => {
 
   it('returns the learner log after the same staff checks as recompute', async () => {
     const out = await service.attempts('u', 'agency-admin', 'e1', 'i1')
-    expect(learn.assertRole).toHaveBeenCalled()
-    expect(learn.assertWorkspace).toHaveBeenCalledWith('u', 'agency-admin', 'harborpoint')
+    expect(access.authorize).toHaveBeenCalledWith(
+      { userId: 'u', role: 'agency-admin' },
+      'cohort.staff',
+      { cohortId: 'k1' }
+    )
     expect(learner.attemptLogOf).toHaveBeenCalledWith('e1', toolItem, 4, null)
     expect(out).toEqual({ attempts: [], attemptsBeforeLog: 4 })
   })
 
   it('refuses staff of another workspace, reading nothing', async () => {
-    learn.assertWorkspace.mockRejectedValue(new ForbiddenException())
+    access.authorize.mockRejectedValue(new ForbiddenException())
     await expect(service.attempts('u', 'agency-admin', 'e1', 'i1')).rejects.toThrow(
       ForbiddenException
     )
@@ -261,9 +266,7 @@ describe('attempts', () => {
   })
 
   it('refuses a role that may not manage cohorts', async () => {
-    learn.assertRole.mockImplementation(() => {
-      throw new ForbiddenException()
-    })
+    access.authorize.mockRejectedValue(new ForbiddenException())
     await expect(service.attempts('u', 'learner', 'e1', 'i1')).rejects.toThrow(ForbiddenException)
     expect(learner.attemptLogOf).not.toHaveBeenCalled()
   })
@@ -392,11 +395,11 @@ describe('assessmentSummary', () => {
   it('checks the staff member first, and reads nothing for a course with no assessments', async () => {
     prisma.courseItem.findMany.mockResolvedValue([])
     const out = await service.assessmentSummary('u', 'agency-admin', 'k1')
-    expect(learn.assertWorkspace).toHaveBeenCalled()
-    expect(out.items).toEqual([])
-    learn.assertRole.mockImplementationOnce(() => {
-      throw new ForbiddenException()
+    expect(access.authorize).toHaveBeenCalledWith(expect.anything(), 'cohort.read', {
+      cohortId: 'k1',
     })
+    expect(out.items).toEqual([])
+    access.authorize.mockRejectedValueOnce(new ForbiddenException())
     await expect(service.assessmentSummary('u', 'learner', 'k1')).rejects.toThrow(
       ForbiddenException
     )
@@ -529,7 +532,7 @@ describe('assessment results', () => {
     await expect(service.assessmentResults('u', 'agency-admin', 'k1', 'nope')).rejects.toThrow(
       NotFoundException
     )
-    learn.assertWorkspace.mockRejectedValueOnce(new ForbiddenException())
+    access.authorize.mockRejectedValueOnce(new ForbiddenException())
     await expect(service.assessmentResults('u', 'agency-admin', 'k1', 'post1')).rejects.toThrow(
       ForbiddenException
     )
@@ -607,15 +610,17 @@ describe('live monitors', () => {
     feed.assessmentMonitor.mockResolvedValue(monitorOf([]))
     prisma.courseItem.findMany.mockResolvedValue([])
     await service.assessmentMonitor('u', 'agency-admin', 'k1')
-    expect(learn.assertWorkspace).toHaveBeenCalled()
+    expect(access.authorize).toHaveBeenCalledWith(expect.anything(), 'cohort.read', {
+      cohortId: 'k1',
+    })
     expect(feed.assessmentMonitor).toHaveBeenCalledWith(expect.any(String), 'k1')
-    learn.assertWorkspace.mockRejectedValueOnce(new ForbiddenException())
+    access.authorize.mockRejectedValueOnce(new ForbiddenException())
     feed.assessmentMonitor.mockClear()
     await expect(service.assessmentMonitor('u', 'agency-admin', 'k1')).rejects.toThrow(
       ForbiddenException
     )
     expect(feed.assessmentMonitor).not.toHaveBeenCalled()
-    learn.assertWorkspace.mockRejectedValueOnce(new ForbiddenException())
+    access.authorize.mockRejectedValueOnce(new ForbiddenException())
     await expect(service.sqlMonitor('u', 'agency-admin', 'k1')).rejects.toThrow(ForbiddenException)
     expect(feed.sqlMonitor).not.toHaveBeenCalled()
   })
@@ -716,7 +721,7 @@ describe('reviewTarget', () => {
   })
 
   it('refuses another workspace, an unknown enrollment, and an item outside the course', async () => {
-    learn.assertWorkspace.mockRejectedValueOnce(new ForbiddenException())
+    access.authorize.mockRejectedValueOnce(new ForbiddenException())
     await expect(service.reviewTarget('u', 'agency-admin', 'e1', 'i1')).rejects.toThrow(
       ForbiddenException
     )
@@ -757,6 +762,87 @@ describe('unoffer', () => {
     await expect(service.unoffer('u', 'agency-admin', 'c1', 'nope')).rejects.toThrow(
       NotFoundException
     )
+  })
+})
+
+describe('access checks', () => {
+  const actor = { userId: 'u', role: 'provider-admin' }
+
+  it('creating a cohort needs cohort.manage in the workspace; a refusal reads nothing', async () => {
+    prisma.cohort.create.mockResolvedValue({ id: 'k1' })
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    await service.create('u', 'provider-admin', 'harborpoint', {
+      courseId: 'c1',
+      name: 'Fall',
+      startsAt: '2099-01-01',
+    })
+    expect(access.authorize).toHaveBeenCalledWith(actor, 'cohort.manage', {
+      workspace: 'harborpoint',
+    })
+    access.authorize.mockRejectedValueOnce(new ForbiddenException('No access to this workspace'))
+    prisma.course.findMany.mockClear()
+    await expect(service.create('u', 'provider-admin', 'nowhere', {})).rejects.toThrow(
+      ForbiddenException
+    )
+    expect(prisma.course.findMany).not.toHaveBeenCalled()
+  })
+
+  it('lists a workspace with cohort.read, narrowed to the cohorts an instructor teaches', async () => {
+    prisma.cohort.findMany.mockResolvedValue([])
+    await service.list('u', 'provider-admin', 'harborpoint')
+    expect(access.authorize).toHaveBeenCalledWith(actor, 'cohort.read', {
+      workspace: 'harborpoint',
+    })
+    expect(prisma.cohort.findMany.mock.calls[0][0].where).toEqual({
+      institutionId: 'w1',
+      courseId: { not: null },
+    })
+    access.instructorCohortsIn.mockResolvedValue(['k2'])
+    await service.list('u', 'provider-admin', 'harborpoint')
+    expect(access.instructorCohortsIn).toHaveBeenCalledWith(actor, 'w1')
+    expect(prisma.cohort.findMany.mock.calls[1][0].where.id).toEqual({ in: ['k2'] })
+  })
+
+  it('refuses a role that may not read cohorts, and an unknown workspace, before reading', async () => {
+    access.authorize.mockRejectedValue(new ForbiddenException('Insufficient role'))
+    await expect(service.list('u', 'case-manager', 'harborpoint')).rejects.toThrow(
+      ForbiddenException
+    )
+    await expect(service.list('u', 'agency-admin', 'nowhere')).rejects.toThrow(ForbiddenException)
+    expect(prisma.cohort.findMany).not.toHaveBeenCalled()
+  })
+
+  it('reads a cohort with cohort.read and writes with cohort.manage, both at the cohort', async () => {
+    prisma.cohort.findUnique.mockResolvedValue(cohortRow())
+    await service.detail('u', 'provider-admin', 'k1')
+    expect(access.authorize).toHaveBeenCalledWith(actor, 'cohort.read', { cohortId: 'k1' })
+    prisma.enrollment.findUnique.mockResolvedValue({ id: 'e1', cohortId: 'k1' })
+    await service.withdraw('u', 'provider-admin', 'e1')
+    expect(access.authorize).toHaveBeenCalledWith(actor, 'cohort.manage', { cohortId: 'k1' })
+  })
+
+  it('answers a missing cohort with not found, and a refused role with forbidden', async () => {
+    prisma.cohort.findUnique.mockResolvedValue(null)
+    await expect(service.detail('u', 'provider-admin', 'nope')).rejects.toThrow(NotFoundException)
+    access.authorize.mockRejectedValue(new ForbiddenException('Insufficient role'))
+    await expect(service.update('u', 'case-manager', 'k1', {})).rejects.toThrow(ForbiddenException)
+    expect(prisma.cohort.update).not.toHaveBeenCalled()
+  })
+
+  it('offers need course.manage in the course provider workspace', async () => {
+    prisma.course.findUnique.mockResolvedValue({
+      id: 'c1',
+      provider: { id: 'w1', subdomain: 'harborpoint', parentId: 'a1' },
+    })
+    prisma.courseOffer.findMany.mockResolvedValue([])
+    prisma.institution.findMany.mockResolvedValue([])
+    await service.offers('u', 'provider-admin', 'c1')
+    expect(access.authorize).toHaveBeenCalledWith(actor, 'course.manage', {
+      workspace: 'harborpoint',
+    })
+    access.authorize.mockRejectedValue(new ForbiddenException('Insufficient role'))
+    await expect(service.offer('u', 'case-manager', 'c1', {})).rejects.toThrow(ForbiddenException)
+    expect(prisma.courseOffer.upsert).not.toHaveBeenCalled()
   })
 })
 
@@ -908,7 +994,7 @@ describe('join requests (#68)', () => {
   })
 
   it('refuses staff of another workspace, as for adding a learner', async () => {
-    learn.assertWorkspace.mockRejectedValue(new ForbiddenException('No access to this workspace'))
+    access.authorize.mockRejectedValue(new ForbiddenException('No access to this workspace'))
     await expect(service.approveRequest('u', 'agency-admin', 'r1')).rejects.toThrow(
       ForbiddenException
     )
@@ -1056,10 +1142,10 @@ describe('roster note indicators', () => {
   })
   beforeEach(() => {
     // The scope is the course's provider when the caller is its staff (as the real service decides it).
-    access.scopeForCohort.mockImplementation(
+    providerAccess.scopeForCohort.mockImplementation(
       async (u: string, r: string, ctx: { providerId: string }) => {
         try {
-          await access.assertProviderStaff(u, r, ctx.providerId)
+          await providerAccess.assertProviderStaff(u, r, ctx.providerId)
           return ctx.providerId
         } catch {
           return null
@@ -1083,7 +1169,7 @@ describe('roster note indicators', () => {
 
   it('counts notes (plus attendance notes in this cohort) and open follow-ups, one grouped query per kind', async () => {
     const d = await service.detail('me', 'provider-admin', 'k1')
-    expect(access.assertProviderStaff).toHaveBeenCalledWith('me', 'provider-admin', 'w1')
+    expect(providerAccess.assertProviderStaff).toHaveBeenCalledWith('me', 'provider-admin', 'w1')
     const by = Object.fromEntries(d.roster.map((r) => [r.userId, r.noteSummary]))
     expect(by.a).toEqual({ notes: 3, openFollowUps: 0 })
     expect(by.b).toEqual({ notes: 1, openFollowUps: 1 })
@@ -1107,7 +1193,7 @@ describe('roster note indicators', () => {
   })
 
   it('is null on every row, with no counting, for cohort staff who are not provider staff', async () => {
-    access.assertProviderStaff.mockRejectedValue(new ForbiddenException('No access'))
+    providerAccess.assertProviderStaff.mockRejectedValue(new ForbiddenException('No access'))
     const d = await service.detail('x', 'agency-admin', 'k1')
     expect(d.roster).toHaveLength(3)
     expect(d.roster.every((r) => r.noteSummary === null)).toBe(true)

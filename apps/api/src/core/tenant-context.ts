@@ -14,6 +14,10 @@ export interface TenantContext {
   allAgencies?: boolean
   /** Agencies the caller is limited to when it is not a grants lookup (for example standalone Interview Differently). */
   fixedAgencyIds?: string[]
+  /** Answers computed once for this request (for example a person's memberships), so they are not read again. */
+  memo?: Map<string, unknown>
+  /** The access checks (see learn/access) that passed during this request. */
+  authorized?: Set<string>
 }
 
 const store = new AsyncLocalStorage<TenantContext>()
@@ -49,3 +53,22 @@ export function runAsSystem<T>(fn: () => T): T {
 export function runAsAgency<T>(agencyId: string, fn: () => T): T {
   return store.run({ fixedAgencyIds: [agencyId] }, fn)
 }
+
+/** Computes `fn` once per request and key; outside a request it just runs. */
+export async function memoPerRequest<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const ctx = store.getStore()
+  if (!ctx) return fn()
+  ctx.memo ??= new Map()
+  if (!ctx.memo.has(key)) ctx.memo.set(key, fn())
+  return ctx.memo.get(key) as Promise<T>
+}
+
+/** Notes that an access check passed during this request (the interceptor in learn/access reads it). */
+export function noteAuthorized(action: string): void {
+  const ctx = store.getStore()
+  if (!ctx) return
+  ;(ctx.authorized ??= new Set()).add(action)
+}
+
+export const wasAuthorized = (action: string): boolean =>
+  !!store.getStore()?.authorized?.has(action)

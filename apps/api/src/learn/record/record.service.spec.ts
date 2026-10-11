@@ -3,22 +3,33 @@ import type { PrismaService } from '../../prisma/prisma.service'
 import type { ActivityService } from '../activity/activity.service'
 import type { AttendanceService } from '../attendance/attendance.service'
 import { DataAccessLogService } from '../data-access-log.service'
+import { AccessService } from '../access/access.service'
 import { LearnService } from '../learn.service'
 import { ParticipantNotesService } from '../talent/participant-notes.service'
 import type { TalentService } from '../talent/talent.service'
 import { ProviderAccessService } from '../provider-access.service'
 import { RecordService } from './record.service'
 
-// Cohort C1 is run by organization ORG1 for a course of provider P1. learner-1 is enrolled in it.
-// staff-p1 is staff of P1 (and is also enrolled in C1, to test "not your own record").
+// Cohort C1 is run by organization ORG1 (under agency AG1) for a course of provider P1. learner-1 is enrolled
+// in it. staff-p1 is provider admin of P1 and of ORG1 (and is also enrolled in C1, to test "not your own
+// record"); staff-o1 is organization admin of ORG1; staff-p1-away only holds P1; cm-1 is a case manager at
+// ORG1; agency-1 is admin of AG1; teacher-1 teaches C1.
 const memberships = [
-  { userId: 'staff-p1', institutionId: 'P1', kind: 'provider' },
-  { userId: 'staff-p2', institutionId: 'P2', kind: 'provider' },
-  { userId: 'staff-o1', institutionId: 'ORG1', kind: 'organization' },
-  { userId: 'staff-p1-away', institutionId: 'P1', kind: 'provider' },
+  { userId: 'staff-p1', institutionId: 'P1', kind: 'provider', role: 'provider-admin' },
+  { userId: 'staff-p1', institutionId: 'ORG1', kind: 'organization', role: 'provider-admin' },
+  { userId: 'staff-p1-away', institutionId: 'P1', kind: 'provider', role: 'provider-admin' },
+  { userId: 'staff-o1', institutionId: 'ORG1', kind: 'organization', role: 'organization-admin' },
+  { userId: 'cm-1', institutionId: 'ORG1', kind: 'organization', role: 'case-manager' },
+  { userId: 'agency-1', institutionId: 'AG1', kind: 'agency', role: 'agency-admin' },
+  {
+    userId: 'teacher-1',
+    institutionId: 'ORG1',
+    kind: 'organization',
+    role: 'instructor',
+    cohortId: 'C1',
+  },
 ]
-// Who may open the host workspace of C1 (LearnService.assertWorkspace).
-const opensOrg1 = new Set(['staff-p1', 'staff-p2', 'staff-o1', 'agency-1', 'root'])
+const parents: Record<string, string | null> = { ORG1: 'AG1', P1: 'AG1', AG1: null }
 
 const users: Record<string, { displayName: string | null; email: string }> = {
   'learner-1': { displayName: 'Lena Learner', email: 'lena@x.org' },
@@ -48,17 +59,34 @@ const prisma = {
     ),
     findUnique: jest.fn(async () => ({
       id: 'C1',
+      institutionId: 'ORG1',
       delivery: 'live',
       courseId: 'CO1',
-      institution: { id: 'ORG1', subdomain: 'org1' },
+      institution: { id: 'ORG1', parentId: 'AG1', subdomain: 'org1' },
       course: { id: 'CO1', providerId: 'P1' },
     })),
   },
+  institution: {
+    findFirst: jest.fn(async ({ where }: { where: { id: string } }) => ({
+      id: where.id,
+      parentId: parents[where.id] ?? null,
+      kind: memberships.find((m) => m.institutionId === where.id)?.kind ?? 'provider',
+    })),
+  },
   membership: {
-    findFirst: jest.fn(async ({ where }: { where: { userId: string; institutionId: string } }) =>
-      memberships.find((m) => m.userId === where.userId && m.institutionId === where.institutionId)
-        ? { id: 'm' }
-        : null
+    findMany: jest.fn(async ({ where }: { where: { userId: string } }) =>
+      memberships
+        .filter((m) => m.userId === where.userId)
+        .map((m) => ({
+          institutionId: m.institutionId,
+          cohortId: m.cohortId ?? null,
+          role: m.role,
+          institution: {
+            kind: m.kind,
+            parentId: parents[m.institutionId] ?? null,
+            subdomain: null,
+          },
+        }))
     ),
   },
   enrollment: {
@@ -168,10 +196,7 @@ const prisma = {
   },
 } as unknown as PrismaService
 
-const learn = new LearnService(prisma)
-jest.spyOn(learn, 'assertWorkspace').mockImplementation(async (userId: string) => {
-  if (!opensOrg1.has(userId)) throw new ForbiddenException('No access to this workspace')
-})
+const learn = new LearnService(prisma, new AccessService(prisma))
 jest.spyOn(learn, 'enrollmentRows').mockResolvedValue([
   {
     cohortId: 'C1',
@@ -188,7 +213,7 @@ jest.spyOn(learn, 'enrollmentRows').mockResolvedValue([
   } as never,
 ])
 
-const access = new ProviderAccessService(prisma, learn)
+const access = new ProviderAccessService(prisma, new AccessService(prisma))
 const notes = new ParticipantNotesService(prisma, access, new DataAccessLogService(prisma, access))
 
 const attendance = {
@@ -255,7 +280,7 @@ describe('who may open a learner record', () => {
   })
 
   it('refuses a case manager', async () => {
-    await expect(ask('staff-p1', 'case-manager')).rejects.toBeInstanceOf(ForbiddenException)
+    await expect(ask('cm-1', undefined)).rejects.toBeInstanceOf(ForbiddenException)
   })
 
   it('refuses staff who cannot open the cohort workspace', async () => {
@@ -280,9 +305,9 @@ describe('who may open a learner record', () => {
 })
 
 describe('restricted callers (cohort staff who are not staff of the provider)', () => {
-  const restricted: [string, string, string][] = [
+  const restricted: [string, string, string | undefined][] = [
     ['an agency admin', 'agency-1', 'agency-admin'],
-    ['staff of another provider', 'staff-p2', 'provider-admin'],
+    ['an instructor of the cohort', 'teacher-1', undefined],
   ]
   for (const [who, userId, role] of restricted) {
     it(`${who}: gets attendance and activity, no participant notes, no audit rows`, async () => {

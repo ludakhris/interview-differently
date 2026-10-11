@@ -9,6 +9,7 @@ import { limitRegistrationBody } from './registration-limit'
 import { registeredTools, toolById } from './platform/lti-platform-config'
 import { RegistrationController } from './platform/registration.controller'
 import { RegistrationService } from './platform/registration.service'
+import { AccessService } from '../learn/access/access.service'
 import { ToolRegistryController } from './platform/tool-registry.controller'
 import { ToolRegistryService } from './platform/tool-registry.service'
 import { resetToDefaults } from './platform/tool-test-helpers'
@@ -76,6 +77,7 @@ describe('LTI Dynamic Registration over HTTP', () => {
     const mod = await Test.createTestingModule({
       controllers: [RegistrationController, ToolRegistryController],
       providers: [
+        AccessService,
         RegistrationService,
         ToolRegistryService,
         LearnGuard,

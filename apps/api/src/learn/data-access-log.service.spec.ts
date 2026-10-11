@@ -2,35 +2,49 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common'
 import type { PrismaService } from '../prisma/prisma.service'
 import { DataAccessLogService } from './data-access-log.service'
 import type { ProviderAccessService } from './provider-access.service'
-import { LearnService } from './learn.service'
+import { AccessService } from './access/access.service'
 import { ProviderAccessService as RealAccess } from './provider-access.service'
 
 const create = jest.fn()
 const findMany = jest.fn()
 const userFindUnique = jest.fn()
 const userFindMany = jest.fn()
-const membershipFindFirst = jest.fn()
+const institutions = [
+  { id: 'A1', kind: 'agency', parentId: null, subdomain: 'agency' },
+  { id: 'P1', kind: 'provider', parentId: 'A1', subdomain: 'prov-one' },
+  { id: 'P2', kind: 'provider', parentId: 'A1', subdomain: 'prov-two' },
+  { id: 'O1', kind: 'organization', parentId: 'A1', subdomain: 'org-one' },
+]
+// A fake membership table: 'staff-p1' belongs to P1, 'staff-p2' to P2, 'staff-o1' to O1, 'agency-1' to A1.
+const memberships = [
+  { userId: 'staff-p1', institutionId: 'P1', cohortId: null, role: 'provider-admin' },
+  { userId: 'staff-p2', institutionId: 'P2', cohortId: null, role: 'provider-admin' },
+  { userId: 'staff-o1', institutionId: 'O1', cohortId: null, role: 'organization-admin' },
+  { userId: 'agency-1', institutionId: 'A1', cohortId: null, role: 'agency-admin' },
+]
 const prisma = {
   dataAccessLog: { create, findMany },
   user: { findUnique: userFindUnique, findMany: userFindMany },
-  membership: { findFirst: membershipFindFirst },
+  membership: {
+    findMany: jest.fn(async ({ where }) =>
+      memberships
+        .filter((m) => m.userId === where.userId)
+        .map((m) => ({
+          ...m,
+          institution: institutions.find((i) => i.id === m.institutionId),
+        }))
+    ),
+  },
+  institution: {
+    findFirst: jest.fn(async ({ where }) => institutions.find((i) => i.id === where.id) ?? null),
+  },
 } as unknown as PrismaService
-// The real access rules over a fake membership table: only 'staff-p1' belongs to P1.
-membershipFindFirst.mockImplementation(async ({ where }) =>
-  where.userId === 'staff-p1' && where.institutionId === 'P1' && where.cohortId === null
-    ? { id: 'm' }
-    : null
-)
-const access: ProviderAccessService = new RealAccess(prisma, new LearnService(prisma))
+// The real access rules over the fake table.
+const access: ProviderAccessService = new RealAccess(prisma, new AccessService(prisma))
 const log = new DataAccessLogService(prisma, access)
 
 beforeEach(() => {
   jest.clearAllMocks()
-  membershipFindFirst.mockImplementation(async ({ where }) =>
-    where.userId === 'staff-p1' && where.institutionId === 'P1' && where.cohortId === null
-      ? { id: 'm' }
-      : null
-  )
   findMany.mockResolvedValue([])
   userFindMany.mockResolvedValue([])
 })
@@ -135,6 +149,11 @@ describe('DataAccessLogService.list', () => {
       ForbiddenException
     )
     expect(findMany).not.toHaveBeenCalled()
+  })
+  it('refuses provider staff naming an unknown provider', async () => {
+    await expect(log.list('staff-p1', 'provider-admin', { providerId: 'nope' })).rejects.toThrow(
+      ForbiddenException
+    )
   })
   it('makes provider staff name a provider', async () => {
     await expect(log.list('staff-p1', 'provider-admin', {})).rejects.toThrow(BadRequestException)

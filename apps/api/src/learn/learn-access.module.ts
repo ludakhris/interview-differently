@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common'
+import { APP_INTERCEPTOR } from '@nestjs/core'
 import { PrismaModule } from '../prisma/prisma.module'
 import { DataAccessLogController } from './data-access-log.controller'
 import { DataAccessLogService } from './data-access-log.service'
+import { AccessInterceptor } from './access/access.interceptor'
+import { AccessService } from './access/access.service'
 import { LearnService } from './learn.service'
 import { ProviderAccessService } from './provider-access.service'
 
@@ -13,7 +16,13 @@ import { ProviderAccessService } from './provider-access.service'
 @Module({
   imports: [PrismaModule],
   controllers: [DataAccessLogController],
-  providers: [LearnService, ProviderAccessService, DataAccessLogService],
-  exports: [LearnService, ProviderAccessService, DataAccessLogService],
+  providers: [
+    AccessService,
+    { provide: APP_INTERCEPTOR, useClass: AccessInterceptor },
+    LearnService,
+    ProviderAccessService,
+    DataAccessLogService,
+  ],
+  exports: [AccessService, LearnService, ProviderAccessService, DataAccessLogService],
 })
 export class LearnAccessModule {}

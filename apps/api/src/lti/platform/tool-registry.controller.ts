@@ -11,6 +11,8 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { LearnGuard } from '../../auth/learn.guard'
+import { Access } from '../../learn/access/access.decorator'
+import { AccessService } from '../../learn/access/access.service'
 import type { LearnToolList } from '../../learn/learn-types'
 import { openIdConfigurationUrl, registrationEndpoint } from './dynamic-registration'
 import { connectionView, toolView } from './tool-config'
@@ -42,18 +44,27 @@ const view = (r: Registry): LearnToolList => ({
 export class ToolRegistryController {
   constructor(
     private readonly registry: ToolRegistryService,
-    private readonly registration: RegistrationService
+    private readonly registration: RegistrationService,
+    private readonly access: AccessService
   ) {}
 
+  /** Connected tools are platform administration: only the platform administrator (action `platform.admin`). */
+  private admin(req: LearnRequest): void {
+    this.access.requireSystemAdmin({ userId: req.userId, role: req.userRole })
+  }
+
   @Get()
+  @Access('platform.admin')
   async list(@Req() req: LearnRequest) {
-    this.registry.assertManage(req.userRole)
+    this.admin(req)
     return view(await this.registry.list())
   }
 
   /** Who changed what, newest first. `?subjectId=` limits it to one tool or connection. */
   @Get('history')
-  history(@Req() req: LearnRequest, @Query('subjectId') subjectId?: string) {
+  @Access('platform.admin')
+  async history(@Req() req: LearnRequest, @Query('subjectId') subjectId?: string) {
+    this.admin(req)
     return this.registry.history(req.userRole, subjectId || undefined)
   }
 
@@ -62,7 +73,9 @@ export class ToolRegistryController {
    * carries the platform's configuration URL and a one-time token (LTI Dynamic Registration).
    */
   @Post('registrations')
+  @Access('platform.admin')
   async startRegistration(@Req() req: LearnRequest, @Body() body: { initiationUrl?: unknown }) {
+    this.admin(req)
     const who = await this.registry.whoIs(req.userId)
     return this.registration.start(req.userRole, who, body?.initiationUrl)
   }
@@ -70,32 +83,44 @@ export class ToolRegistryController {
   // Connection routes come before `:id` so "connections" is never read as a tool id.
 
   @Post('connections')
+  @Access('platform.admin')
   async createConnection(@Req() req: LearnRequest, @Body() body: unknown) {
+    this.admin(req)
     return view(await this.registry.createConnection(req.userRole, req.userId, body))
   }
 
   @Put('connections/:id')
+  @Access('platform.admin')
   async updateConnection(@Req() req: LearnRequest, @Param('id') id: string, @Body() body: unknown) {
+    this.admin(req)
     return view(await this.registry.updateConnection(req.userRole, req.userId, id, body))
   }
 
   @Delete('connections/:id')
+  @Access('platform.admin')
   async removeConnection(@Req() req: LearnRequest, @Param('id') id: string) {
+    this.admin(req)
     return view(await this.registry.removeConnection(req.userRole, req.userId, id))
   }
 
   @Post()
+  @Access('platform.admin')
   async createTool(@Req() req: LearnRequest, @Body() body: unknown) {
+    this.admin(req)
     return view(await this.registry.createTool(req.userRole, req.userId, body))
   }
 
   @Put(':id')
+  @Access('platform.admin')
   async updateTool(@Req() req: LearnRequest, @Param('id') id: string, @Body() body: unknown) {
+    this.admin(req)
     return view(await this.registry.updateTool(req.userRole, req.userId, id, body))
   }
 
   @Delete(':id')
+  @Access('platform.admin')
   async removeTool(@Req() req: LearnRequest, @Param('id') id: string) {
+    this.admin(req)
     return view(await this.registry.removeTool(req.userRole, req.userId, id))
   }
 }

@@ -16,6 +16,7 @@ import type { Response } from 'express'
 import { LearnGuard } from '../auth/learn.guard'
 import { CoursesService } from './courses.service'
 import { ScormService } from './scorm.service'
+import { Access } from './access/access.decorator'
 
 interface LearnRequest {
   userId: string
@@ -34,6 +35,7 @@ export class ScormController {
     private readonly scorm: ScormService
   ) {}
 
+  @Access('course.manage')
   @Post('modules/:id/scorm')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD } }))
   async upload(

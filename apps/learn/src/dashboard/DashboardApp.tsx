@@ -16,10 +16,19 @@ import { LearningCoursePage } from './LearningCoursePage'
 import { MonitorPage } from './monitor/MonitorPage'
 import { LearningItemPage } from './LearningItemPage'
 import { LearningPage } from './LearningPage'
-import { canSeeActivity, canSeeTalent } from './roleAccess'
+import { MembersPage } from './MembersPage'
+import {
+  canManageMembers,
+  canManageWorkspace,
+  canSeeActivity,
+  canSeeCohorts,
+  canSeeOutcomes,
+  canSeeTalent,
+  homePath,
+} from './roleAccess'
 import { LearnerOutcomesPage } from './outcomes/LearnerOutcomesPage'
 import { OutcomesPage } from './OutcomesPage'
-import { errorNotice, useRole } from './shared'
+import { errorNotice, useWorkspaceRole } from './shared'
 import { LearnerRecordPage } from './learnerRecord/LearnerRecordPage'
 import { MyProfilePage } from './talent/MyProfilePage'
 import { TalentPage } from './talent/TalentPage'
@@ -73,7 +82,7 @@ function Gate({ pathname, search }: { pathname: string; search: string }) {
 /** Picks the page by the workspace's kind: agencies report, providers set up courses. */
 function Routes({ pathname }: { pathname: string }) {
   const { tenant, workspaces, workspacesError, current, href } = useApp()
-  const role = useRole()
+  const role = useWorkspaceRole(tenant)
   // Learner pages need no workspace: any signed-in LearnDifferently account can use them.
   const learnerItem = /^\/lms\/learning\/([^/]+)\/([^/]+)\/?$/.exec(pathname)
   const learnerCourse = /^\/lms\/learning\/([^/]+)\/?$/.exec(pathname)
@@ -149,6 +158,13 @@ function Routes({ pathname }: { pathname: string }) {
       This page is not available for your role in this workspace.
     </Notice>
   )
+  if (/^\/lms\/members\/?$/.test(pathname)) {
+    return (
+      <DashboardShell>
+        {canManageMembers(role) ? <MembersPage workspace={current.subdomain} /> : notFound}
+      </DashboardShell>
+    )
+  }
   const course = /^\/lms\/courses\/([^/]+)\/?$/.exec(pathname)
   const cohort = /^\/lms\/dashboard\/cohorts\/([^/]+)\/?$/.exec(pathname)
   const runCohort = /^\/lms\/cohorts\/([^/]+)\/?$/.exec(pathname)
@@ -168,6 +184,14 @@ function Routes({ pathname }: { pathname: string }) {
     const isProvider = current.kind === 'provider'
     // Providers and organizations see the results of their own cohorts too.
     if (pathname === '/lms/dashboard' || pathname.startsWith('/lms/dashboard/')) {
+      // Outcomes are for admins and case managers; an instructor's way in is a cohort's gradebook.
+      if (!canSeeOutcomes(role) && !canSeeCohorts(role)) {
+        return <DashboardShell>{notFound}</DashboardShell>
+      }
+      if (!cohort && !canSeeOutcomes(role)) {
+        window.location.replace(href(homePath(role, isProvider)))
+        return null
+      }
       return (
         <DashboardShell>
           {cohort ? (
@@ -226,6 +250,7 @@ function Routes({ pathname }: { pathname: string }) {
       )
     }
     if (onCohorts) {
+      if (!canSeeCohorts(role)) return <DashboardShell>{notFound}</DashboardShell>
       return (
         <DashboardShell>
           {monitorCohort ? (
@@ -239,6 +264,7 @@ function Routes({ pathname }: { pathname: string }) {
       )
     }
     if (onCourses) {
+      if (!canManageWorkspace(role)) return <DashboardShell>{notFound}</DashboardShell>
       return (
         <DashboardShell>
           {!isProvider ? (
@@ -251,7 +277,7 @@ function Routes({ pathname }: { pathname: string }) {
         </DashboardShell>
       )
     }
-    window.location.replace(href(isProvider ? '/lms/courses' : '/lms/cohorts'))
+    window.location.replace(href(homePath(role, isProvider)))
     return null
   }
 

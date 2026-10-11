@@ -14,6 +14,7 @@ import { LearnGuard } from '../auth/learn.guard'
 import { CoursesService } from './courses.service'
 import { ItemImageService } from './item-image.service'
 import { MAX_IMAGE_BYTES } from './item-image'
+import { Access } from './access/access.decorator'
 
 interface LearnRequest {
   userId: string
@@ -29,6 +30,7 @@ export class ItemImageController {
     private readonly images: ItemImageService
   ) {}
 
+  @Access('course.manage')
   @Post()
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_IMAGE_BYTES } }))
   async upload(
@@ -42,6 +44,7 @@ export class ItemImageController {
     return this.courses.setItemImage(req.userId, req.userRole, itemId, key)
   }
 
+  @Access('course.manage')
   @Delete()
   remove(@Req() req: LearnRequest, @Param('id') itemId: string) {
     return this.courses.setItemImage(req.userId, req.userRole, itemId, null)

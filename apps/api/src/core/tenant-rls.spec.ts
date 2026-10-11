@@ -200,6 +200,86 @@ suite('row-level security', () => {
     })
   })
 
+  it('counts an instructor’s cohort membership as access to its agency, and a learner’s as none', async () => {
+    await db.exec('BEGIN')
+    try {
+      await insert(db, 'User', { id: 'instr-A' })
+      await insert(db, 'User', { id: 'learn-B' })
+      await db.query(
+        `INSERT INTO "Membership" ("id","userId","institutionId","cohortId","role") VALUES ('m-instr','instr-A','org-A','coh-A','instructor')`
+      )
+      await db.query(
+        `INSERT INTO "Membership" ("id","userId","institutionId","cohortId") VALUES ('m-learn','learn-B','org-A','coh-A')`
+      )
+      expect((await db.query(`SELECT "agencies_of_user"('instr-A') AS a`)).rows[0]).toEqual({
+        a: ['A'],
+      })
+      expect((await db.query(`SELECT "agencies_of_user"('learn-B') AS a`)).rows[0]).toEqual({
+        a: [],
+      })
+    } finally {
+      await db.exec('ROLLBACK')
+    }
+  })
+
+  it('lets a cohort with members be deleted, and an instructor left without a cohort grants nothing', async () => {
+    await db.exec('BEGIN')
+    try {
+      await insert(db, 'User', { id: 'instr-gone' })
+      await insert(db, 'Cohort', { id: 'coh-doomed', institutionId: 'org-A', name: 'doomed' })
+      await db.query(
+        `INSERT INTO "Membership" ("id","userId","institutionId","cohortId","role") VALUES ('m-gone','instr-gone','org-A','coh-doomed','instructor')`
+      )
+      expect((await db.query(`SELECT "agencies_of_user"('instr-gone') AS a`)).rows[0]).toEqual({
+        a: ['A'],
+      })
+      // deleting the cohort clears the link on its memberships; the delete must go through
+      await db.query(`DELETE FROM "Cohort" WHERE id = 'coh-doomed'`)
+      expect(
+        (await db.query(`SELECT "cohortId" FROM "Membership" WHERE id = 'm-gone'`)).rows[0]
+      ).toEqual({ cohortId: null })
+      expect((await db.query(`SELECT "agencies_of_user"('instr-gone') AS a`)).rows[0]).toEqual({
+        a: [],
+      })
+    } finally {
+      await db.exec('ROLLBACK')
+    }
+  })
+
+  it('shows an invitation only to people holding a role in its agency', async () => {
+    await db.exec('BEGIN')
+    try {
+      await insert(db, 'RoleInvite', {
+        id: 'inv-rls',
+        email: 'x@example.test',
+        institutionId: 'org-A',
+        role: 'case-manager',
+      })
+      await as({ agencies: ['A'] }, async () => {
+        expect((await db.query(`SELECT 1 FROM "RoleInvite" WHERE id='inv-rls'`)).rows).toHaveLength(
+          1
+        )
+      })
+      await as({ agencies: ['B'] }, async () => {
+        expect((await db.query(`SELECT 1 FROM "RoleInvite" WHERE id='inv-rls'`)).rows).toHaveLength(
+          0
+        )
+        expect(
+          (
+            await attempt(
+              `INSERT INTO "RoleInvite" ("id","email","institutionId","role") VALUES ('inv-x','y@example.test','org-A','case-manager')`
+            )
+          ).error
+        ).toBeDefined()
+      })
+      await as({ user: 'learner-A' }, async () => {
+        expect((await db.query(`SELECT 1 FROM "RoleInvite"`)).rows).toHaveLength(0)
+      })
+    } finally {
+      await db.exec('ROLLBACK')
+    }
+  })
+
   it('does not apply to the database owner (migrations, seeds)', async () => {
     expect(await ids('Cohort')).toEqual(['coh-A', 'coh-B'])
   })

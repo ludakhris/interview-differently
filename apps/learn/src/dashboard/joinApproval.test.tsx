@@ -15,7 +15,13 @@ vi.mock('./api', () => ({
     reload: vi.fn(),
   }),
 }))
-vi.mock('./app-context', () => ({ useApp: () => ({ href: (p: string) => p }) }))
+vi.mock('./app-context', () => ({
+  useApp: () => ({
+    href: (p: string) => p,
+    tenant: 'cedar',
+    workspaces: [{ subdomain: 'cedar', role: 'provider-admin' }],
+  }),
+}))
 
 import { JoinRequestList, LearningPage } from './LearningPage'
 import { CohortPage, PendingRequests } from './CohortPage'

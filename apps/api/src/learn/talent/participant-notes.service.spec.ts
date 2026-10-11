@@ -3,18 +3,42 @@ import { join } from 'path'
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common'
 import type { PrismaService } from '../../prisma/prisma.service'
 import { DataAccessLogService } from '../data-access-log.service'
-import { LearnService } from '../learn.service'
+import { AccessService } from '../access/access.service'
 import { ProviderAccessService } from '../provider-access.service'
 import { ParticipantNotesService } from './participant-notes.service'
 
 // P1 and P2 are providers. staff-p1/staff-p1b belong to P1, staff-p2 to P2, staff-o1 to organization O1.
 // learner-1 is in P1's cohort C1 (withdrawn: still a participant), learner-2 only in P2's cohort C2.
 const memberships = [
-  { userId: 'staff-p1', institutionId: 'P1', cohortId: null, kind: 'provider' },
-  { userId: 'staff-p1b', institutionId: 'P1', cohortId: null, kind: 'provider' },
-  { userId: 'staff-p2', institutionId: 'P2', cohortId: null, kind: 'provider' },
-  { userId: 'staff-o1', institutionId: 'O1', cohortId: null, kind: 'organization' },
-  { userId: 'agency-1', institutionId: 'A1', cohortId: null, kind: 'agency' },
+  {
+    userId: 'staff-p1',
+    institutionId: 'P1',
+    cohortId: null,
+    kind: 'provider',
+    role: 'provider-admin',
+  },
+  {
+    userId: 'staff-p1b',
+    institutionId: 'P1',
+    cohortId: null,
+    kind: 'provider',
+    role: 'provider-admin',
+  },
+  {
+    userId: 'staff-p2',
+    institutionId: 'P2',
+    cohortId: null,
+    kind: 'provider',
+    role: 'provider-admin',
+  },
+  {
+    userId: 'staff-o1',
+    institutionId: 'O1',
+    cohortId: null,
+    kind: 'organization',
+    role: 'organization-admin',
+  },
+  { userId: 'agency-1', institutionId: 'A1', cohortId: null, kind: 'agency', role: 'agency-admin' },
 ]
 const users: Record<string, { displayName: string | null; email: string }> = {
   'staff-p1': { displayName: 'Dana Reyes', email: 'dana@p1.org' },
@@ -86,26 +110,41 @@ function make(store: () => Row[], extra: (r: Row) => Row = (r) => r) {
 
 const prisma = {
   membership: {
-    findFirst: jest.fn(
-      async ({
-        where,
-      }: {
-        where: { userId: string; institutionId: string; institution?: unknown }
-      }) =>
-        memberships.find(
-          (m) =>
-            m.userId === where.userId &&
-            m.institutionId === where.institutionId &&
-            m.cohortId === null &&
-            (!where.institution || m.kind === 'provider')
-        )
-          ? { id: 'm' }
-          : null
+    // The assignee check: a workspace-level membership in the provider.
+    findFirst: jest.fn(async ({ where }: { where: { userId: string; institutionId: string } }) =>
+      memberships.find(
+        (m) =>
+          m.userId === where.userId &&
+          m.institutionId === where.institutionId &&
+          m.cohortId === null
+      )
+        ? { id: 'm' }
+        : null
     ),
-    findMany: jest.fn(async ({ where }: { where: { institutionId: string } }) =>
-      memberships
-        .filter((m) => m.institutionId === where.institutionId && m.cohortId === null)
-        .map((m) => ({ user: { id: m.userId, ...users[m.userId] } }))
+    findMany: jest.fn(async ({ where }: { where: { institutionId?: string; userId?: string } }) =>
+      where.userId
+        ? // AccessService: every membership of one person, with its institution.
+          memberships
+            .filter((m) => m.userId === where.userId)
+            .map((m) => ({
+              ...m,
+              role: m.role,
+              institution: { kind: m.kind, parentId: null, subdomain: null },
+            }))
+        : memberships
+            .filter((m) => m.institutionId === where.institutionId && m.cohortId === null)
+            .map((m) => ({ user: { id: m.userId, ...users[m.userId] } }))
+    ),
+  },
+  institution: {
+    findFirst: jest.fn(async ({ where }: { where: { id: string } }) =>
+      memberships.some((m) => m.institutionId === where.id) || ['P1', 'P2'].includes(where.id)
+        ? {
+            id: where.id,
+            parentId: null,
+            kind: memberships.find((m) => m.institutionId === where.id)?.kind ?? 'provider',
+          }
+        : null
     ),
   },
   enrollment: {
@@ -146,7 +185,7 @@ const prisma = {
   },
 } as unknown as PrismaService
 
-const access = new ProviderAccessService(prisma, new LearnService(prisma))
+const access = new ProviderAccessService(prisma, new AccessService(prisma))
 const service = new ParticipantNotesService(
   prisma,
   access,
@@ -179,18 +218,31 @@ const calls: Record<string, Call> = {
 }
 
 describe('who may call', () => {
+  // A case manager at P1 joins the roster only for the refusal check, so the staff list stays the admins.
+  const caseManager = {
+    userId: 'cm-p1',
+    institutionId: 'P1',
+    cohortId: null,
+    kind: 'provider',
+    role: 'case-manager',
+  }
   const refused: [string, { userId: string; role?: string }][] = [
     ['a learner with no role', { userId: 'learner-1' }],
     ['an agency admin', { userId: 'agency-1', role: 'agency-admin' }],
     ['organization staff', { userId: 'staff-o1', role: 'provider-admin' }],
     ['staff of another provider', { userId: 'staff-p2', role: 'provider-admin' }],
-    ['a case manager', { userId: 'staff-p1', role: 'case-manager' }],
+    ['a case manager', { userId: 'cm-p1', role: 'case-manager' }],
   ]
   for (const [who, actor] of refused) {
     it(`refuses ${who} on every handler, and writes nothing`, async () => {
-      for (const [name, call] of Object.entries(calls)) {
-        await expect(call(actor)).rejects.toBeInstanceOf(ForbiddenException)
-        expect(name).toBeTruthy()
+      if (actor.userId === caseManager.userId) memberships.push(caseManager)
+      try {
+        for (const [name, call] of Object.entries(calls)) {
+          await expect(call(actor)).rejects.toBeInstanceOf(ForbiddenException)
+          expect(name).toBeTruthy()
+        }
+      } finally {
+        if (actor.userId === caseManager.userId) memberships.pop()
       }
       expect(audit).toHaveLength(0)
       expect(notes).toHaveLength(0)
@@ -263,7 +315,13 @@ describe('notes', () => {
 
   it('a provider admin who is also a participant cannot read or write records about themselves', async () => {
     const self = { userId: 'learner-1', role: 'provider-admin' }
-    memberships.push({ userId: 'learner-1', institutionId: 'P1', cohortId: null, kind: 'provider' })
+    memberships.push({
+      userId: 'learner-1',
+      institutionId: 'P1',
+      cohortId: null,
+      kind: 'provider',
+      role: 'provider-admin',
+    })
     try {
       await expect(service.listNotes(self, 'P1', 'learner-1')).rejects.toBeInstanceOf(
         ForbiddenException

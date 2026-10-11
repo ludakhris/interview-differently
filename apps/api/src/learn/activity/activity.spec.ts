@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common'
 import type { PrismaService } from '../../prisma/prisma.service'
 import { ProviderAccessService } from '../provider-access.service'
-import { LearnService } from '../learn.service'
+import { AccessService } from '../access/access.service'
 import {
   activityCsv,
   computeAverages,
@@ -576,20 +576,41 @@ describe('tz on the reports', () => {
 })
 
 describe('access', () => {
-  // The real guards, with the same fakes as the roster rule: role first, then workspace.
-  const learn = {
-    assertRole: LearnService.prototype.assertRole,
-    assertWorkspace: jest.fn(async (_u: string, _r: string, sub: string) => {
-      if (sub !== 'org-one') throw new ForbiddenException('No access to this workspace')
-    }),
+  // The real guards over a fake of the database: who holds which role where (O1 is under agency AG1).
+  const members: Record<string, [string, string, string, string?]> = {
+    x: ['AG1', 'agency', 'agency-admin'],
+    away: ['O2', 'organization', 'provider-admin'],
+    cm: ['O1', 'organization', 'case-manager'],
+    teacher: ['O1', 'organization', 'instructor', 'C1'],
+    'teacher-other': ['O1', 'organization', 'instructor', 'C9'],
   }
   const p = {
+    membership: {
+      findMany: jest.fn(async ({ where }: { where: { userId: string } }) => {
+        const m = members[where.userId]
+        return m
+          ? [
+              {
+                institutionId: m[0],
+                cohortId: m[3] ?? null,
+                role: m[2],
+                institution: {
+                  kind: m[1],
+                  parentId: m[1] === 'agency' ? null : 'AG1',
+                  subdomain: null,
+                },
+              },
+            ]
+          : []
+      }),
+    },
     cohort: {
       findUnique: jest.fn(async () => ({
         id: 'C1',
         delivery: 'online',
         courseId: 'c',
-        institution: { id: 'O1', subdomain: 'org-one' },
+        institutionId: 'O1',
+        institution: { id: 'O1', parentId: 'AG1', subdomain: 'org-one' },
         course: { id: 'c', providerId: 'P1' },
       })),
     },
@@ -601,7 +622,7 @@ describe('access', () => {
   }
   const real = new ProviderAccessService(
     p as unknown as PrismaService,
-    learn as unknown as LearnService
+    new AccessService(p as unknown as PrismaService)
   )
   const guarded = new ActivityService(prisma as unknown as PrismaService, real, {} as never)
 
@@ -610,7 +631,7 @@ describe('access', () => {
       guarded.cohortReport('learner', undefined, 'C1', undefined, undefined)
     ).rejects.toThrow(ForbiddenException)
     await expect(
-      guarded.cohortReport('learner', 'case-manager', 'C1', undefined, undefined)
+      guarded.cohortReport('cm', 'case-manager', 'C1', undefined, undefined)
     ).rejects.toThrow(ForbiddenException)
     await expect(
       guarded.learnerReport('learner', undefined, 'C1', 'learner', undefined, undefined)
@@ -620,11 +641,16 @@ describe('access', () => {
     ).rejects.toThrow(ForbiddenException)
   })
   it('staff of another workspace is refused by the roster guard', async () => {
-    learn.assertWorkspace.mockRejectedValueOnce(
-      new ForbiddenException('No access to this workspace')
-    )
     await expect(
-      guarded.cohortReport('x', 'provider-admin', 'C1', undefined, undefined)
+      guarded.cohortReport('away', 'provider-admin', 'C1', undefined, undefined)
+    ).rejects.toThrow(ForbiddenException)
+  })
+  it('an instructor reads their own cohort and no other', async () => {
+    await expect(
+      guarded.cohortReport('teacher', undefined, 'C1', 'bad', undefined)
+    ).rejects.toThrow(BadRequestException)
+    await expect(
+      guarded.cohortReport('teacher-other', undefined, 'C1', undefined, undefined)
     ).rejects.toThrow(ForbiddenException)
   })
   it('own report: 404 for a cohort the caller is not in, so a learner never reads another cohort', async () => {

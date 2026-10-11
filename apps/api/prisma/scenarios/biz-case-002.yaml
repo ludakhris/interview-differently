@@ -31,7 +31,7 @@ display:
     - title: Key Facts
       style: list
       items:
-        - { label: Customers, value: 2,800 grocers }
+        - { label: Customers, value: 2, 800 grocers }
         - { label: Revenue, value: '$1.4B' }
         - { label: Margin 2 yr ago, value: 8% }
         - { label: Margin today, value: 4% }
@@ -106,15 +106,30 @@ exhibits:
           label: Gross margin compression
           value: '-90 bps'
           children:
-            - { id: cogs, label: COGS inflation (pass-through partial), value: '-110 bps', tone: danger }
+            - {
+                id: cogs,
+                label: COGS inflation (pass-through partial),
+                value: '-110 bps',
+                tone: danger,
+              }
             - { id: mix, label: Customer mix shift (more discount), value: '-40 bps' }
-            - { id: pricing, label: Price increases (partial offset), value: '+60 bps', tone: accent }
+            - {
+                id: pricing,
+                label: Price increases (partial offset),
+                value: '+60 bps',
+                tone: accent,
+              }
         - id: opex
           label: Operating cost expansion
           value: '-310 bps'
           tone: danger
           children:
-            - { id: fleet, label: Delivery fleet cost (fuel + drivers), value: '-180 bps', tone: danger }
+            - {
+                id: fleet,
+                label: Delivery fleet cost (fuel + drivers),
+                value: '-180 bps',
+                tone: danger,
+              }
             - { id: warehouse, label: Warehouse labour, value: '-70 bps' }
             - { id: tech, label: Tech / ERP rollover, value: '-40 bps' }
             - { id: ga, label: G&A drift, value: '-20 bps' }
@@ -131,8 +146,20 @@ exhibits:
       - { key: marginThen, label: Margin 2y ago, format: percent, sortable: true }
       - { key: delta, label: Δ (bps), format: number, sortable: true }
     rows:
-      - { cat: Center store dry, rev: 520, marginNow: 5, marginThen: 9, delta: { value: -400, tone: danger } }
-      - { cat: Perimeter fresh, rev: 410, marginNow: 3, marginThen: 8, delta: { value: -500, tone: danger, emphasis: true } }
+      - {
+          cat: Center store dry,
+          rev: 520,
+          marginNow: 5,
+          marginThen: 9,
+          delta: { value: -400, tone: danger },
+        }
+      - {
+          cat: Perimeter fresh,
+          rev: 410,
+          marginNow: 3,
+          marginThen: 8,
+          delta: { value: -500, tone: danger, emphasis: true },
+        }
       - { cat: Frozen, rev: 220, marginNow: 6, marginThen: 7, delta: -100 }
       - { cat: HBC / GM, rev: 180, marginNow: 9, marginThen: 11, delta: -200 }
       - { cat: Specialty / ethnic, rev: 70, marginNow: 12, marginThen: 12, delta: 0 }

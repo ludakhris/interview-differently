@@ -1,6 +1,8 @@
 import { useUser } from '@clerk/clerk-react'
 import { ApiError } from './api'
+import { useApp } from './app-context'
 import { Notice } from './DashboardShell'
+import { overallRole, roleIn } from './roleAccess'
 
 export function errorNotice(error: Error) {
   if (error instanceof ApiError && error.status === 403) {
@@ -21,7 +23,20 @@ export function errorNotice(error: Error) {
   )
 }
 
+/**
+ * What the signed-in person is across the app: 'system-admin' for a platform administrator (the
+ * only role kept on the account), otherwise the highest role they hold in any workspace. The
+ * workspace list is loaded once and shared, so this costs no request.
+ */
 export function useRole(): string | undefined {
   const { user } = useUser()
-  return (user?.publicMetadata as { role?: string } | undefined)?.role
+  const { workspaces } = useApp()
+  const accountRole = (user?.publicMetadata as { role?: string } | undefined)?.role
+  return overallRole(accountRole, workspaces)
+}
+
+/** The person's role in one workspace (by subdomain), for pages about that workspace. */
+export function useWorkspaceRole(subdomain: string | null | undefined): string | undefined {
+  const { workspaces } = useApp()
+  return roleIn(workspaces, subdomain)
 }

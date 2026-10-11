@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common'
 import { LearnGuard } from '../auth/learn.guard'
+import { SelfOnly } from './access/access.decorator'
 import { LtiPlatformService } from '../lti/platform/lti-platform.service'
 import { LearnerService } from './learner.service'
 
@@ -17,26 +18,31 @@ export class LearnerController {
   ) {}
 
   @Get('learning')
+  @SelfOnly()
   learning(@Req() req: LearnRequest) {
     return this.learner.cards(req.userId)
   }
 
   @Get('join-requests')
+  @SelfOnly()
   joinRequests(@Req() req: LearnRequest) {
     return this.learner.joinRequests(req.userId)
   }
 
   @Post('join')
+  @SelfOnly()
   join(@Req() req: LearnRequest, @Body() body: { code?: unknown }) {
     return this.learner.join(req.userId, body?.code)
   }
 
   @Get('cohorts/:cohortId')
+  @SelfOnly()
   outline(@Req() req: LearnRequest, @Param('cohortId') cohortId: string) {
     return this.learner.outline(req.userId, cohortId)
   }
 
   @Get('cohorts/:cohortId/items/:itemId')
+  @SelfOnly()
   item(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
@@ -46,6 +52,7 @@ export class LearnerController {
   }
 
   @Post('cohorts/:cohortId/items/:itemId/complete')
+  @SelfOnly()
   complete(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
@@ -55,6 +62,7 @@ export class LearnerController {
   }
 
   @Post('cohorts/:cohortId/items/:itemId/video')
+  @SelfOnly()
   video(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
@@ -65,6 +73,7 @@ export class LearnerController {
   }
 
   @Post('cohorts/:cohortId/items/:itemId/external')
+  @SelfOnly()
   external(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
@@ -74,6 +83,7 @@ export class LearnerController {
   }
 
   @Post('cohorts/:cohortId/items/:itemId/scorm')
+  @SelfOnly()
   scorm(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
@@ -84,6 +94,7 @@ export class LearnerController {
   }
 
   @Post('cohorts/:cohortId/items/:itemId/interview')
+  @SelfOnly()
   interview(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
@@ -94,6 +105,7 @@ export class LearnerController {
   }
 
   @Post('cohorts/:cohortId/items/:itemId/answers')
+  @SelfOnly()
   answers(
     @Req() req: LearnRequest,
     @Param('cohortId') cohortId: string,
@@ -104,6 +116,7 @@ export class LearnerController {
   }
 
   @Post('cohorts/:cohortId/items/:itemId/tool-launch')
+  @SelfOnly()
   toolLaunch(
     @Req() req: LearnRequest & { headers: Record<string, string | string[] | undefined> },
     @Param('cohortId') cohortId: string,

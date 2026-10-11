@@ -94,8 +94,7 @@ Do each step on development first. Every script that writes needs `--confirm-hos
 3. Deploy. The deployment needs `SCHEMA_DATABASE_URL` (the owner) set before this deploy: the schema's `directUrl`
    reads it.
 4. Run `scripts/backfill-agency-id.ts` (dry run, then `--apply`). It fills `agencyId` on rows that predate the column
-   and refuses to run as a role the policies bind. It lists the memberships that would become staff grants and marks
-   none until you pass `--promote-grants`, so read that list first.
+   and refuses to run as a role the policies bind.
 5. Give new agency admins a grant with `scripts/grant-agency.ts`.
 6. Create the restricted role, set `DATABASE_URL` to it and `REQUIRE_TENANT_RLS=on`. `SCHEMA_DATABASE_URL` stays the
    owner, so the start command does not change.
@@ -145,3 +144,14 @@ purpose, because they load before anyone signs in.
 Isolation between schools inside the standalone agency (the application keeps that), instructor-level (single
 cohort) access, which is a role inside an agency, and a provider running its courses in another agency, which needs
 that agency to accept the course (#87). Until then a cohort is created in the agency its workspace reports to.
+
+## Roles inside an agency
+
+- A role is a membership: a person, the institution it applies to and, for an instructor, the cohort they teach.
+  What each role may do is one table, `apps/api/src/learn/access/permissions.ts`.
+- An agency admin covers whatever reports to their agency (its providers and organizations). Only the platform
+  administrator stays on the person's account instead of a membership.
+- The database treats any membership that carries a role as access to its whole agency. It does not know about
+  cohorts, so an instructor's narrowing to one cohort is done by the application, not by row-level security.
+- To give a role: the People page in the workspace, or `apps/api/scripts/grant-agency.ts` (`--role`, and `--cohort` for
+  an instructor).

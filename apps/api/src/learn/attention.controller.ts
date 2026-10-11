@@ -1,5 +1,6 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common'
 import { LearnGuard } from '../auth/learn.guard'
+import { SelfOnly } from './access/access.decorator'
 import { AttentionService } from './attention.service'
 
 interface LearnRequest {
@@ -14,6 +15,7 @@ export class AttentionController {
   constructor(private readonly attention: AttentionService) {}
 
   @Get('attention')
+  @SelfOnly()
   mine(@Req() req: LearnRequest) {
     return this.attention.forUser(req.userId, req.userRole)
   }

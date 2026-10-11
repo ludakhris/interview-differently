@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import type { PrismaService } from '../../prisma/prisma.service'
-import { LearnService, LEARN_ROLES } from '../learn.service'
+import { AccessService } from '../access/access.service'
 import { ProviderAccessService } from '../provider-access.service'
 import type { DataAccessLogService } from '../data-access-log.service'
 import { AttendanceService } from './attendance.service'
@@ -56,20 +56,27 @@ function build(delivery: 'online' | 'live' | 'hybrid' = 'live') {
     { id: 'e9', cohortId: 'c2', userId: 'outsider', status: 'enrolled' },
   ].map((e) => ({ ...e, enrolledAt: past(1000), user: users[e.userId] }))
   let seq = 0
-  const workspaces: Record<string, string[]> = {
-    'prov-staff': ['host'],
-    'org-staff': ['host'],
-    'other-org': ['elsewhere'],
-    'agency-in': ['host'],
-    'agency-out': ['elsewhere'],
-    sys: ['host', 'elsewhere'],
+  // Memberships by person: the institution (the cohort's host is hostId, under agency AG1), its kind and the role.
+  const members: Record<string, [string, string, string | null, string?][]> = {
+    'prov-staff': [['hostId', 'organization', 'provider-admin']],
+    'org-staff': [['hostId', 'organization', null]],
+    'other-org': [['elsewhereId', 'organization', 'provider-admin']],
+    'agency-in': [['AG1', 'agency', 'agency-admin']],
+    'agency-out': [['AG2', 'agency', 'agency-admin']],
+    cm: [['hostId', 'organization', 'case-manager']],
+    teacher: [['hostId', 'organization', 'instructor', 'c1']],
+    'teacher-other': [['hostId', 'organization', 'instructor', 'c9']],
   }
   const prisma = {
-    institution: {
-      findMany: jest.fn(async ({ where }: { where: unknown }) => {
-        void where
-        return []
-      }),
+    membership: {
+      findMany: jest.fn(async ({ where }: { where: { userId: string } }) =>
+        (members[where.userId] ?? []).map(([institutionId, kind, role, cohortId]) => ({
+          institutionId,
+          cohortId: cohortId ?? null,
+          role,
+          institution: { kind, parentId: kind === 'agency' ? null : 'AG1', subdomain: null },
+        }))
+      ),
     },
     cohort: {
       findUnique: jest.fn(async ({ where }: { where: { id: string } }) =>
@@ -78,7 +85,8 @@ function build(delivery: 'online' | 'live' | 'hybrid' = 'live') {
               id: 'c1',
               delivery,
               courseId: 'course',
-              institution: { id: 'hostId', subdomain: 'host' },
+              institutionId: 'hostId',
+              institution: { id: 'hostId', parentId: 'AG1', subdomain: 'host' },
               course: { id: 'course', providerId: 'P1' },
             }
           : null
@@ -163,14 +171,10 @@ function build(delivery: 'online' | 'live' | 'hybrid' = 'live') {
       }
     }),
   }
-  const learn = new LearnService(prisma as unknown as PrismaService)
-  jest
-    .spyOn(learn, 'workspaces')
-    .mockImplementation(
-      async (userId: string) =>
-        (workspaces[userId] ?? []).map((sub) => ({ subdomain: sub })) as never
-    )
-  const access = new ProviderAccessService(prisma as unknown as PrismaService, learn)
+  const access = new ProviderAccessService(
+    prisma as unknown as PrismaService,
+    new AccessService(prisma as unknown as PrismaService)
+  )
   const svc = new AttendanceService(prisma as unknown as PrismaService, access, {
     record: jest.fn(),
   } as unknown as DataAccessLogService)
@@ -191,14 +195,16 @@ function build(delivery: 'online' | 'live' | 'hybrid' = 'live') {
   return { svc, db, addSession, prisma, enrollments }
 }
 
-const A = LEARN_ROLES.agencyAdmin
-const P = LEARN_ROLES.providerAdmin
+const A = 'agency-admin'
+const P = 'provider-admin'
+const SYSTEM = 'system-admin'
 
 describe('staff access matrix (same rule as the roster)', () => {
   const allowed: [string, string][] = [
     ['prov-staff', P],
     ['agency-in', A],
-    ['sys', LEARN_ROLES.systemAdmin],
+    ['sys', SYSTEM],
+    ['teacher', 'instructor'],
   ]
   it.each(allowed)('%s as %s can read the sessions', async (user, role) => {
     const { svc } = build()
@@ -209,8 +215,8 @@ describe('staff access matrix (same rule as the roster)', () => {
     ['agency-out', A],
     ['org-staff', undefined],
     ['learner-1', undefined],
-    ['prov-staff', 'case-manager'],
-    ['prov-staff', 'learner'],
+    ['cm', 'case-manager'],
+    ['teacher-other', 'instructor'],
   ]
   it.each(refused)('%s as %s is refused on every staff endpoint', async (user, role) => {
     const { svc, addSession } = build()
@@ -230,9 +236,7 @@ describe('staff access matrix (same rule as the roster)', () => {
   })
   it('an unknown cohort is 404', async () => {
     const { svc } = build()
-    await expect(svc.listSessions('sys', LEARN_ROLES.systemAdmin, 'nope')).rejects.toBeInstanceOf(
-      NotFoundException
-    )
+    await expect(svc.listSessions('sys', SYSTEM, 'nope')).rejects.toBeInstanceOf(NotFoundException)
   })
 })
 
@@ -277,9 +281,7 @@ describe('sessions', () => {
   it('a session of another cohort is not reachable through this cohort', async () => {
     const { svc, addSession } = build()
     const s = addSession({ cohortId: 'c2' })
-    await expect(svc.sheet('sys', LEARN_ROLES.systemAdmin, 'c1', s.id)).rejects.toBeInstanceOf(
-      NotFoundException
-    )
+    await expect(svc.sheet('sys', SYSTEM, 'c1', s.id)).rejects.toBeInstanceOf(NotFoundException)
   })
   it('writes are 409 on an online cohort, reads still work', async () => {
     const { svc, addSession } = build('online')

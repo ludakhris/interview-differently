@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common'
 import { AuthModule } from '../../auth/auth.module'
 import { ActivityModule } from '../../learn/activity/activity.module'
+import { LearnAccessModule } from '../../learn/learn-access.module'
 import { LearnModule } from '../../learn/learn.module'
 import { PrismaModule } from '../../prisma/prisma.module'
 import { LtiStoreModule } from '../lti-store.module'
@@ -20,6 +21,7 @@ import { ToolRegistryService } from './tool-registry.service'
   imports: [
     ActivityModule,
     AuthModule,
+    LearnAccessModule,
     PrismaModule,
     LtiStoreModule,
     forwardRef(() => LearnModule),

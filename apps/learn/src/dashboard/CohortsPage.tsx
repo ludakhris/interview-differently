@@ -4,7 +4,8 @@ import { useState, type FormEvent } from 'react'
 import { useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { dateOnly } from './format'
-import { errorNotice } from './shared'
+import { canManageWorkspace } from './roleAccess'
+import { errorNotice, useWorkspaceRole } from './shared'
 
 const STATUS_LABEL = { upcoming: 'Upcoming', running: 'Running', completed: 'Completed' } as const
 
@@ -60,9 +61,10 @@ const addWeeks = (iso: string, weeks: number): string | null => {
 /** Cohorts a workspace runs, with a form to start a new one. */
 export function CohortsPage({ workspace }: { workspace: string }) {
   const { href, current } = useApp()
+  const canManage = canManageWorkspace(useWorkspaceRole(workspace))
   const base = `/learn/workspaces/${encodeURIComponent(workspace)}`
   const cohorts = useLoad<CohortListItem[]>(`${base}/cohorts`)
-  const courses = useLoad<RunnableCourse[]>(`${base}/runnable-courses`)
+  const courses = useLoad<RunnableCourse[]>(canManage ? `${base}/runnable-courses` : null)
   const send = useApiSend()
   const [creating, setCreating] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -111,7 +113,7 @@ export function CohortsPage({ workspace }: { workspace: string }) {
             course&apos;s full length.
           </p>
         </div>
-        {!creating && (
+        {canManage && !creating && (
           <button type="button" className="dash-btn" onClick={() => setCreating(true)}>
             New cohort
           </button>

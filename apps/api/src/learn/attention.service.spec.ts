@@ -1,5 +1,6 @@
 import type { PrismaService } from '../prisma/prisma.service'
 import { AttentionService } from './attention.service'
+import type { AccessService } from './access/access.service'
 import type { LearnService } from './learn.service'
 
 const NOW = new Date('2026-10-07T15:00:00Z')
@@ -65,12 +66,12 @@ const prisma = {
   },
   supportItem: {
     groupBy: jest.fn(async ({ where }: { where: Where }) => {
-      const restricted = 'provider' in where
+      const restricted = 'providerId' in where
       const byProvider = new Map<string, number>()
       for (const s of supportItems) {
         if (s.assigneeId !== where.assigneeId || !where.status.in.includes(s.status)) continue
         if (!s.dueDate || s.dueDate >= where.dueDate.lt) continue
-        if (restricted && !(staffOf[where.assigneeId] ?? []).includes(s.providerId)) continue
+        if (restricted && !where.providerId.in.includes(s.providerId)) continue
         byProvider.set(s.providerId, (byProvider.get(s.providerId) ?? 0) + 1)
       }
       return [...byProvider].map(([providerId, n]) => ({ providerId, _count: { _all: n } }))
@@ -86,13 +87,23 @@ const prisma = {
   talentProfile: { findUnique: jest.fn() },
 }
 const learn = {
-  workspaces: jest.fn(async (userId: string) =>
-    institutions.filter((i) => (workspacesOf[userId] ?? []).includes(i.id))
+  workspaces: jest.fn(async (userId: string, role?: string) =>
+    institutions
+      .filter((i) => (workspacesOf[userId] ?? []).includes(i.id))
+      .map((i) => ({ ...i, role }))
+  ),
+}
+// Who holds `participant.records` where: provider-admins in the institutions they belong to (staffOf).
+const access = {
+  isSystemAdmin: (a: { role?: string }) => a.role === 'system-admin',
+  recordInstitutions: jest.fn(async (a: { userId: string; role?: string }) =>
+    a.role === 'provider-admin' ? (staffOf[a.userId] ?? []) : []
   ),
 }
 const service = new AttentionService(
   prisma as unknown as PrismaService,
-  learn as unknown as LearnService
+  learn as unknown as LearnService,
+  access as unknown as AccessService
 )
 
 beforeEach(() => {
@@ -147,6 +158,12 @@ describe('AttentionService', () => {
       count: 2,
       href: '/lms/admin/tools',
     })
+  })
+
+  it('shows join requests only for roles that manage cohorts, and support items only for those who read participant records', async () => {
+    const instructor = await service.forUser('me', 'instructor', NOW)
+    expect(instructor.items).toEqual([])
+    expect(access.recordInstitutions).toHaveBeenCalledWith({ userId: 'me', role: 'instructor' })
   })
 
   it('leaves out staff items and the platform item for other roles', async () => {

@@ -103,13 +103,17 @@ exhibits:
       - { key: price, label: Price ($/30d), format: currency, sortable: true }
       - { key: share, label: Share, format: percent, sortable: true }
     rows:
-      - { drug: Levostatin generic, manufacturer: GenoMed, price: 21.00, share: { value: 35, tone: accent, emphasis: true } }
+      - {
+          drug: Levostatin generic,
+          manufacturer: GenoMed,
+          price: 21.00,
+          share: { value: 35, tone: accent, emphasis: true },
+        }
       - { drug: Atorvastatin generic, manufacturer: TevaSpark, price: 6.50, share: 28 }
       - { drug: Rosuvastatin generic, manufacturer: MylanCore, price: 8.20, share: 22 }
       - { drug: Pravastatin generic, manufacturer: Sandoz USA, price: 5.10, share: 10 }
       - { drug: Simvastatin generic, manufacturer: Apotex Sun, price: 4.40, share: 5 }
-    totalRow:
-      { drug: { value: Total, emphasis: true }, manufacturer: '', price: '', share: 100 }
+    totalRow: { drug: { value: Total, emphasis: true }, manufacturer: '', price: '', share: 100 }
 
   - id: price-share-chart
     kind: chart
@@ -142,9 +146,23 @@ nodes:
       Before any HHI or elasticity work — how do you define the relevant
       product market for this case?
     contextPanels:
-      - { label: Price increase, value: '+400', unit: '%', type: alert, tone: danger, group: Allegation }
+      - {
+          label: Price increase,
+          value: '+400',
+          unit: '%',
+          type: alert,
+          tone: danger,
+          group: Allegation,
+        }
       - { label: Patients affected, value: '1.4', unit: 'M', type: info, group: Allegation }
-      - { label: Volume share now, value: '35', unit: '%', type: info, tone: accent, group: Defense signal }
+      - {
+          label: Volume share now,
+          value: '35',
+          unit: '%',
+          type: info,
+          tone: accent,
+          group: Defense signal,
+        }
       - { label: Share pre-acquisition, value: '60', unit: '%', type: info, group: Defense signal }
       - { label: Substitute molecules, value: '4', type: info, group: Defense signal }
       - { label: Hearing in, value: '6', unit: weeks, type: alert, tone: danger, group: Constraint }
@@ -258,11 +276,41 @@ nodes:
         display: 'sum of share² across all competitors'
         expression: '{geno}*{geno} + {teva}*{teva} + {mylan}*{mylan} + {sandoz}*{sandoz} + {apotex}*{apotex}'
         variables:
-          - { name: geno, label: GenoMed (Levostatin) share, unit: '%', format: integer, defaultValue: 35 }
-          - { name: teva, label: TevaSpark (Atorvastatin) share, unit: '%', format: integer, defaultValue: 28 }
-          - { name: mylan, label: MylanCore (Rosuvastatin) share, unit: '%', format: integer, defaultValue: 22 }
-          - { name: sandoz, label: Sandoz (Pravastatin) share, unit: '%', format: integer, defaultValue: 10 }
-          - { name: apotex, label: Apotex (Simvastatin) share, unit: '%', format: integer, defaultValue: 5 }
+          - {
+              name: geno,
+              label: GenoMed (Levostatin) share,
+              unit: '%',
+              format: integer,
+              defaultValue: 35,
+            }
+          - {
+              name: teva,
+              label: TevaSpark (Atorvastatin) share,
+              unit: '%',
+              format: integer,
+              defaultValue: 28,
+            }
+          - {
+              name: mylan,
+              label: MylanCore (Rosuvastatin) share,
+              unit: '%',
+              format: integer,
+              defaultValue: 22,
+            }
+          - {
+              name: sandoz,
+              label: Sandoz (Pravastatin) share,
+              unit: '%',
+              format: integer,
+              defaultValue: 10,
+            }
+          - {
+              name: apotex,
+              label: Apotex (Simvastatin) share,
+              unit: '%',
+              format: integer,
+              defaultValue: 5,
+            }
       field:
         id: hhi
         label: HHI
