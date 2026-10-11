@@ -122,8 +122,10 @@ export default defineRailway((ctx) => {
       CLERK_SECRET_KEY: preserve(),
       DATABASE_URL: preserve(),
       // Prisma's CLI (migrate deploy in the start command) connects with this one: the owner. DATABASE_URL is the
-      // same owner until the API moves to the restricted role (docs/tenant-isolation.md).
+      // restricted role the API runs as (docs/tenant-isolation.md).
       SCHEMA_DATABASE_URL: '${{Postgres.DATABASE_URL}}',
+      // Refuse to start unless DATABASE_URL is the restricted role, so row-level security is never silently off.
+      REQUIRE_TENANT_RLS: 'on',
       DID_API_KEY: preserve(),
       FRONTEND_URL: preserve(),
       LTI_API_BASE: preserve(),

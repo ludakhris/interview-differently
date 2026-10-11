@@ -86,26 +86,39 @@ Connected as the owner or a superuser (tests, a fresh checkout) it is the plain 
 
 ## Rollout (per environment)
 
-Do each step on development first. Every script that writes needs `--confirm-host <host>`.
+Do each step on development first. Every script that writes needs `--confirm-host <host:port>`, which must be the
+database the script actually connects to (it refuses otherwise). A script connects as the owner: it reads
+`SCHEMA_DATABASE_URL` when that is set, else `DATABASE_URL`, so against another environment set both to its owner URL
+in the same command, never rely on a local `.env`. Never run `scripts/tenant-e2e.ts` anywhere but development.
 
-1. Take a snapshot or backup.
-2. **Before merging**, run `scripts/assign-standalone-agency.ts` (dry run, then `--apply`). The deploy applies the
+1. **Check before starting.** No one but platform administrators holds a role on their Learn Differently account
+   (roles are memberships now, and an account role grants nothing). Count workspace-level memberships that appear more
+   than once for the same person and institution; the migrations remove such duplicates, keeping the one with a role.
+2. **Snapshot** the database (point-in-time recovery on, and a locked manual backup if you want one). Note the time.
+3. **Before merging:** run `scripts/assign-standalone-agency.ts` (dry run, then `--apply`). The deploy applies the
    migrations on merge, and they refuse institutions that have no agency.
-3. Deploy. The deployment needs `SCHEMA_DATABASE_URL` (the owner) set before this deploy: the schema's `directUrl`
-   reads it.
-4. Run `scripts/backfill-agency-id.ts` (dry run, then `--apply`). It fills `agencyId` on rows that predate the column
-   and refuses to run as a role the policies bind.
-5. Give new agency admins a grant with `scripts/grant-agency.ts`.
-6. Create the restricted role, set `DATABASE_URL` to it and `REQUIRE_TENANT_RLS=on`. `SCHEMA_DATABASE_URL` stays the
-   owner, so the start command does not change.
-7. Verify with `scripts/tenant-e2e.ts` on development (plain against restricted must match, and cross-agency requests
-   must be refused).
-8. Later migration: validate the institution constraint, and require `agencyId` on the tenant tables.
+4. **Merge.** CI applies `.railway/railway.ts` (it gives the API service `SCHEMA_DATABASE_URL`, the owner, which the
+   schema's `directUrl` reads), deploys the API (`prisma migrate deploy` runs as the owner) and the web apps. Check the
+   first API deploy log, and that `GET /api/health` reports `"environment":"production"` (the test-system banner and
+   the LTI address override both key off it).
+5. **Backfill:** `scripts/backfill-agency-id.ts` (dry run, then `--apply`). It fills `agencyId` on rows that predate
+   the column and refuses to run as a role the policies bind. It must end with every row having an agency.
+6. **Restricted role:** `scripts/create-app-role.ts` with `APP_ROLE_PASSWORD` (24 or more characters). It prints the
+   connection string; on the API service set `DATABASE_URL` to it using the database's private host, and set
+   `REQUIRE_TENANT_RLS=on`. `SCHEMA_DATABASE_URL` stays the owner, so the start command does not change. Redeploy: the
+   log must say row-level security is on.
+7. **Check it signed in** as a platform administrator (the dashboard, a cohort page, the live monitor), as a learner
+   (sign in and join), and an LTI launch.
+8. **Give the first roles:** the Manage Agency/Provider/Organization Staff page (a role can be given to an email
+   address before the person has an account), or `scripts/grant-agency.ts`.
+9. **Later migration:** validate the institution constraint, and require `agencyId` on the tenant tables.
 
-**Rollback.** Code can be rolled back, but migrations stay applied and the triggers and policies do not bind the
-owner. To stop enforcement, point `DATABASE_URL` at the owner and redeploy. To remove the schema changes, run the
-files in `prisma/rollbacks/` in the order their headers give, each as one transaction; the second one drops the staff
-grants, so export them first.
+**Rollback.** Code can be rolled back, but migrations stay applied, and the triggers and policies do not bind the
+owner. To stop enforcement, point `DATABASE_URL` back at the owner connection (and unset `REQUIRE_TENANT_RLS`) and
+redeploy. To remove the schema changes, run the files in `prisma/rollbacks/` newest first, each as one transaction, and
+delete the matching rows from `_prisma_migrations`; the `agency_id` one drops `Membership.role` (every role given on the
+staff page) and the `role_invite` one drops pending invitations, so export those first. `assign-standalone-agency.ts
+--rollback <file>` undoes the first step. Or restore the snapshot.
 
 ## Cost
 
