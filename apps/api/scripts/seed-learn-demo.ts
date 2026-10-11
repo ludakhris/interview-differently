@@ -17,7 +17,7 @@
  * database. Never pass --allow-host for production without the owner's OK.
  */
 
-import 'dotenv/config'
+import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
 import {
   interviewQuestions,
@@ -30,7 +30,7 @@ import {
 import { planItem, toolConfig } from './demo-assessment-bank'
 import { resolveLearnOrigin } from '../src/lti/lti-env'
 
-const DEV_HOSTS = ['localhost', '127.0.0.1', 'zephyr.proxy.rlwy.net']
+const DEV_HOSTS = ['localhost', '127.0.0.1']
 const TODAY = new Date('2026-10-04T12:00:00Z')
 const DAY = 24 * 60 * 60 * 1000
 const WEEK = 7 * DAY
