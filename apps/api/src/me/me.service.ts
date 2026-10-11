@@ -1,3 +1,4 @@
+import { runAsSystem } from '../core/tenant-context'
 import {
   BadRequestException,
   ConflictException,
@@ -126,10 +127,13 @@ export class MeService {
 
     if (input.joinKey?.trim()) {
       const key = input.joinKey.trim()
-      const cohort = await this.prisma.cohort.findUnique({
-        where: { joinKey: key },
-        select: { id: true, institutionId: true },
-      })
+      // The one lookup made before the caller is in the cohort's agency.
+      const cohort = await runAsSystem(() =>
+        this.prisma.cohort.findUnique({
+          where: { joinKey: key },
+          select: { id: true, institutionId: true },
+        })
+      )
       if (!cohort) throw new NotFoundException(`No cohort found for join key "${key}"`)
       institutionId = cohort.institutionId
       cohortId = cohort.id

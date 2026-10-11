@@ -24,17 +24,21 @@ const delaware = {
 describe('LearnService workspaces', () => {
   beforeEach(() => jest.clearAllMocks())
 
-  it('gives agency admins every agency and the institutions under one', async () => {
+  it('gives agency admins only the agencies they are a member of, and what is under them', async () => {
     findMany.mockResolvedValue([delaware])
     await expect(service.workspaces('u1', 'agency-admin')).resolves.toEqual([delaware])
+    const member = { some: { userId: 'u1', cohortId: null, role: { not: null } } }
     expect(findMany.mock.calls[0][0].where).toEqual({
       subdomain: { not: null },
-      OR: [{ kind: 'agency' }, { parent: { kind: 'agency' } }],
+      OR: [
+        { kind: 'agency', memberships: member },
+        { parent: { kind: 'agency', memberships: member } },
+      ],
     })
     expect(findMany.mock.calls[0][0].select.featuredDemo).toBe(true)
   })
 
-  it('gives a system admin everything an agency admin has, and passes any role check', async () => {
+  it('gives a system admin every agency and the institutions under one, and passes any role check', async () => {
     findMany.mockResolvedValue([delaware])
     await service.workspaces('u1', 'system-admin')
     expect(findMany.mock.calls[0][0].where).toEqual({

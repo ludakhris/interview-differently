@@ -59,18 +59,15 @@ export class LtiPlatformController {
     return this.platform.token(body)
   }
 
-  @Post('ags/:cohortId/lineitems/:itemId/scores')
+  @Post('ags/:scope/:cohortId/lineitems/:itemId/scores')
   @HttpCode(200)
   async scores(
     @Req() req: RawRequest,
+    @Param('scope') scope: string,
     @Param('cohortId') cohortId: string,
     @Param('itemId') itemId: string
   ) {
-    return this.platform.receiveScore(
-      req.headers['authorization'],
-      cohortId,
-      itemId,
-      await scoreBody(req)
-    )
+    const body = await scoreBody(req)
+    return this.platform.receiveScore(req.headers['authorization'], scope, cohortId, itemId, body)
   }
 }

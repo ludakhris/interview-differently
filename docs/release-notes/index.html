@@ -512,6 +512,75 @@
 
     <main id="entries">
       <p class="empty-note" id="none" hidden>No updates match. Clear the search or choose All.</p>
+      <!-- ======================= IN REVIEW (agency isolation) ======================= -->
+
+      <article
+        class="entry"
+        id="agency-isolation"
+        data-status="review"
+        data-short="Agencies kept apart by the database"
+        data-summary="One agency can never see another agency's learners, notes or results: the database itself enforces it, and an agency admin must be given access to an agency."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-10">Oct 10, 2026</time>
+        </div>
+        <h2>Each agency's data is kept apart, and the database enforces it</h2>
+        <p>
+          Learn Differently serves many agencies from one platform. An agency's learners, cohorts,
+          progress, notes and results now belong to that agency alone, and the database itself
+          refuses to show them to anyone working for a different agency. Before, that rule lived
+          only in the application, so a mistake in one screen could have shown too much. Now a
+          mistake there can, at worst, show something from within the same agency.
+        </p>
+        <p>
+          An agency admin now sees the agencies they have been given access to, and the providers
+          and organizations under them, instead of every agency. Asking for a cohort or record that
+          belongs to another agency answers "not found", as if it did not exist. Learners still see
+          their own records, wherever they are enrolled, and only change their own. A course, with
+          its modules, drafts and answer keys, is private to its agency: other agencies cannot read
+          it, apart from an organization the course is offered to or runs. The public catalog still
+          shows published courses as before.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>
+              Every provider and organization now belongs to an agency. Institutions made in
+              standalone Interview Differently sit under one agency called Interview Differently
+              Standalone, which never appears as a workspace.
+            </li>
+            <li>
+              Staff access is a grant: a membership with a role. A learner joining a cohort never
+              receives one, and the database refuses to let anyone grant themselves access to an
+              agency.
+            </li>
+            <li>
+              Nothing changes on screen for people who already had the right access. We compared
+              more than 300 requests from eight kinds of user with and without the protection and
+              the answers matched, apart from the "not found" above.
+            </li>
+            <li>
+              Pages that read a lot of cohort and learner data can take a little longer, because the
+              database now checks each of those queries. We are measuring how much, and working on
+              ways to cut it, before this is switched on for everyone.
+            </li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../screenshots/tenant-isolation/01-e2e-report.png"
+              ><img
+                loading="lazy"
+                src="../screenshots/tenant-isolation/01-e2e-report.png"
+                alt="A table of an end-to-end test: requests made as eight kinds of user, how many were allowed or refused, and that none of the requests across agencies returned data"
+            /></a>
+            <figcaption>
+              The test: the same requests with and without the protection, as eight kinds of user.
+            </figcaption>
+          </figure>
+        </div>
+      </article>
+
       <!-- ======================= SHIPPED (assessment answers and status) ======================= -->
 
       <article

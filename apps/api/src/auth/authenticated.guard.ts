@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common'
+import { identifyCaller } from '../core/tenant-context'
 import { ClerkService } from './clerk.service'
 
 /**
@@ -31,6 +32,7 @@ export class AuthenticatedGuard implements CanActivate {
     }
 
     request.userId = userId
+    identifyCaller({ userId })
     return true
   }
 }

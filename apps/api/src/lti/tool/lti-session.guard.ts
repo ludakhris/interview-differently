@@ -1,3 +1,4 @@
+import { identifyCaller } from '../../core/tenant-context'
 import {
   CanActivate,
   ExecutionContext,
@@ -138,6 +139,7 @@ function authorizeLti(req: LtiRequest, token: string): true {
     throw new ForbiddenException('This session cannot be used here')
   }
   req.userId = session.sub
+  identifyCaller({ userId: session.sub })
   const lti: Partial<LtiSession> = { ...session }
   delete lti.sub
   req.lti = lti as Omit<LtiSession, 'sub'>

@@ -312,6 +312,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
     cohort: {
       findUnique: jest.fn(async () => ({
         institutionId: 'inst-child',
+        agencyId: 'agency-1',
         courseId: 'c1',
         startsAt: new Date('2020-01-01T00:00:00Z'),
         endsAt: new Date('2099-01-01T00:00:00Z'),
@@ -1293,7 +1294,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
   })
 
   it('does not accept a score as application/json', async () => {
-    const res = await fetch(`${base}/lti/platform/ags/k1/lineitems/i1/scores`, {
+    const res = await fetch(`${base}/lti/platform/ags/a1.x/k1/lineitems/i1/scores`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer x' },
       body: '{}',
@@ -1302,7 +1303,7 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
   })
 
   it('does not accept a score posted without a platform-issued token', async () => {
-    const res = await fetch(`${base}/lti/platform/ags/k1/lineitems/i1/scores`, {
+    const res = await fetch(`${base}/lti/platform/ags/a1.x/k1/lineitems/i1/scores`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/vnd.ims.lis.v1.score+json' },
       body: JSON.stringify({

@@ -1,3 +1,4 @@
+import '../scripts/lib/owner-env'
 import { PrismaClient } from '@prisma/client'
 import { readFileSync, readdirSync } from 'fs'
 import { join, resolve } from 'path'

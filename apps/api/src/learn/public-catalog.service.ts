@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import type { CatalogCourse, CatalogOffering } from './learn-types'
 import { PrismaService } from '../prisma/prisma.service'
+import { runAsSystem } from '../core/tenant-context'
 import { cohortStatus } from './cohort-config'
 
 /** What an agency's public catalog shows: published courses of the providers it lists. No sign-in needed. */
@@ -52,52 +53,59 @@ export class PublicCatalogService {
   async catalog(subdomain: string, q?: string): Promise<CatalogCourse[]> {
     const agencyId = await this.agencyId(subdomain)
     const term = q?.trim()
-    const rows = await this.prisma.course.findMany({
-      where: {
-        status: 'published',
-        provider: { parentId: agencyId },
-        ...(term
-          ? {
-              OR: [
-                { title: { contains: term, mode: 'insensitive' } },
-                { sector: { contains: term, mode: 'insensitive' } },
-                { credential: { contains: term, mode: 'insensitive' } },
-                { provider: { name: { contains: term, mode: 'insensitive' } } },
-              ],
-            }
-          : {}),
-      },
-      include: {
-        provider: { select: { name: true } },
-        cohorts: { select: { startsAt: true, endsAt: true } },
-      },
-      orderBy: [{ sector: 'asc' }, { title: 'asc' }],
-    })
+    // Public by design: published course cards only. Read as the system, since no one is signed in.
+    const rows = await runAsSystem(() =>
+      this.prisma.course.findMany({
+        where: {
+          status: 'published',
+          provider: { parentId: agencyId },
+          ...(term
+            ? {
+                OR: [
+                  { title: { contains: term, mode: 'insensitive' } },
+                  { sector: { contains: term, mode: 'insensitive' } },
+                  { credential: { contains: term, mode: 'insensitive' } },
+                  { provider: { name: { contains: term, mode: 'insensitive' } } },
+                ],
+              }
+            : {}),
+        },
+        include: {
+          provider: { select: { name: true } },
+          cohorts: { where: { agencyId }, select: { startsAt: true, endsAt: true } },
+        },
+        orderBy: [{ sector: 'asc' }, { title: 'asc' }],
+      })
+    )
     return rows.map((c) => this.card(c))
   }
 
   async offering(subdomain: string, courseId: string): Promise<CatalogOffering> {
     const agencyId = await this.agencyId(subdomain)
-    const c = await this.prisma.course.findFirst({
-      where: { id: courseId, status: 'published', provider: { parentId: agencyId } },
-      include: {
-        provider: { select: { name: true } },
-        cohorts: {
-          select: {
-            name: true,
-            startsAt: true,
-            endsAt: true,
-            maxLearners: true,
-            _count: { select: { enrollments: { where: { status: { not: 'withdrawn' } } } } },
+    const c = await runAsSystem(() =>
+      this.prisma.course.findFirst({
+        where: { id: courseId, status: 'published', provider: { parentId: agencyId } },
+        include: {
+          provider: { select: { name: true } },
+          // Only this agency's own cohorts: a course another agency runs is not this catalog's to show.
+          cohorts: {
+            where: { agencyId },
+            select: {
+              name: true,
+              startsAt: true,
+              endsAt: true,
+              maxLearners: true,
+              _count: { select: { enrollments: { where: { status: { not: 'withdrawn' } } } } },
+            },
+            orderBy: { startsAt: 'asc' },
           },
-          orderBy: { startsAt: 'asc' },
+          modules: {
+            orderBy: { position: 'asc' },
+            select: { title: true, _count: { select: { items: true } } },
+          },
         },
-        modules: {
-          orderBy: { position: 'asc' },
-          select: { title: true, _count: { select: { items: true } } },
-        },
-      },
-    })
+      })
+    )
     if (!c) throw new NotFoundException('Offering not found')
     return {
       ...this.card(c),

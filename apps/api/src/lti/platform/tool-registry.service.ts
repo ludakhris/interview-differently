@@ -1,3 +1,4 @@
+import { runAsSystem } from '../../core/tenant-context'
 import {
   BadRequestException,
   ConflictException,
@@ -93,6 +94,10 @@ export class ToolRegistryService implements OnModuleInit {
 
   /** Reads the stored connections and tools into the cache. A failed read keeps what was loaded before. */
   async load(): Promise<boolean> {
+    return runAsSystem(() => this.read())
+  }
+
+  private async read(): Promise<boolean> {
     try {
       const [connections, tools] = await Promise.all([
         this.prisma.ltiConnection.findMany({ orderBy: { createdAt: 'asc' } }),

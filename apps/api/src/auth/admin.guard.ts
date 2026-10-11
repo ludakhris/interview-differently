@@ -8,6 +8,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
+import { STANDALONE_AGENCY_ID } from '../core/standalone-agency'
+import { identifyCaller } from '../core/tenant-context'
 import { ClerkService } from './clerk.service'
 import { PrismaService } from '../prisma/prisma.service'
 
@@ -54,6 +56,7 @@ export class AdminGuard implements CanActivate {
       throw new UnauthorizedException('Invalid or expired token')
     }
 
+    identifyCaller({ userId })
     const role = await this.clerk.getRole(userId)
     const allowInstitutionAdmin = this.reflector.get<boolean>(
       'allowInstitutionAdmin',
@@ -76,6 +79,14 @@ export class AdminGuard implements CanActivate {
 
     request.userId = userId
     request.userRole = role ?? undefined
+    // The platform admin sees every agency (it also runs the scheduler for deliveries into Learn Differently
+    // cohorts). An institution-admin works in standalone Interview Differently, and the application limits it
+    // to its own institutions.
+    identifyCaller(
+      role === 'admin'
+        ? { userId, allAgencies: true }
+        : { userId, fixedAgencyIds: [STANDALONE_AGENCY_ID] }
+    )
     return true
   }
 }

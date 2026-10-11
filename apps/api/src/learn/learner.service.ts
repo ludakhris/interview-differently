@@ -1,3 +1,4 @@
+import { runAsSystem } from '../core/tenant-context'
 import {
   BadRequestException,
   ConflictException,
@@ -196,13 +197,16 @@ export class LearnerService {
   async join(userId: string, code: unknown): Promise<LearnerCohortCard | LearnerJoinPending> {
     const key = typeof code === 'string' ? code.trim() : ''
     if (!key) throw new NotFoundException('Enter a join code')
-    const cohort = await this.prisma.cohort.findFirst({
-      where: { joinKey: { equals: key, mode: 'insensitive' }, courseId: { not: null } },
-      include: {
-        institution: { select: { id: true, name: true } },
-        course: { select: { id: true, title: true } },
-      },
-    })
+    // The one lookup made before the learner is in the cohort's agency.
+    const cohort = await runAsSystem(() =>
+      this.prisma.cohort.findFirst({
+        where: { joinKey: { equals: key, mode: 'insensitive' }, courseId: { not: null } },
+        include: {
+          institution: { select: { id: true, name: true } },
+          course: { select: { id: true, title: true } },
+        },
+      })
+    )
     if (!cohort)
       throw new NotFoundException('That code does not match a cohort. Check it and try again.')
     if (cohortStatus(cohort.startsAt, cohort.endsAt) === 'completed') {

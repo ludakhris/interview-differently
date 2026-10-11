@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common'
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { HealthModule } from './health/health.module'
 import { ScenariosModule } from './scenarios/scenarios.module'
 import { PrismaModule } from './prisma/prisma.module'
@@ -22,6 +22,7 @@ import { UsageModule } from './usage/usage.module'
 import { LearnModule } from './learn/learn.module'
 import { LtiPlatformModule } from './lti/platform/lti-platform.module'
 import { LtiToolModule } from './lti/tool/lti-tool.module'
+import { TenantMiddleware } from './core/tenant.middleware'
 
 @Module({
   imports: [
@@ -50,4 +51,8 @@ import { LtiToolModule } from './lti/tool/lti-tool.module'
     LtiToolModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(TenantMiddleware).forRoutes('*')
+  }
+}

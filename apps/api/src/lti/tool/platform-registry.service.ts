@@ -1,3 +1,4 @@
+import { runAsSystem } from '../../core/tenant-context'
 import {
   BadRequestException,
   Injectable,
@@ -111,7 +112,7 @@ export class PlatformRegistryService implements OnModuleInit {
 
   /** Reads every platform (switched on or off) into the cache. A failed read keeps what was loaded. */
   load(): Promise<boolean> {
-    this.inflight ??= this.read().finally(() => {
+    this.inflight ??= runAsSystem(() => this.read()).finally(() => {
       this.inflight = null
     })
     return this.inflight

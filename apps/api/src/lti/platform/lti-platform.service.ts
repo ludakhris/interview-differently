@@ -8,6 +8,7 @@ import {
   forwardRef,
 } from '@nestjs/common'
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
+import { runAsAgency, runAsSystem } from '../../core/tenant-context'
 import { PrismaService } from '../../prisma/prisma.service'
 import { assertLtiProductionConfig, isLearnOrigin, loadSigningKeys } from '../lti-env'
 import { LTI_STORE } from '../lti-store'
@@ -241,6 +242,7 @@ export class LtiPlatformService {
     const cohort = await this.prisma.cohort.findUnique({
       where: { id: cohortId },
       select: {
+        agencyId: true,
         courseId: true,
         startsAt: true,
         endsAt: true,
@@ -274,7 +276,30 @@ export class LtiPlatformService {
       throw new ConflictException(
         'This tool is not available to this program. Tell your instructor.'
       )
-    return { tool, ref: config.ref, config: item.config, label: item.label, enrollmentId }
+    return {
+      tool,
+      ref: config.ref,
+      config: item.config,
+      label: item.label,
+      enrollmentId,
+      agencyId: cohort.agencyId,
+    }
+  }
+
+  private scopeMac(agencyId: string, cohortId: string, itemId: string): string {
+    return createHmac('sha256', this.hintSecret)
+      .update(`ags:${agencyId}:${cohortId}:${itemId}`)
+      .digest('base64url')
+  }
+
+  /** The agency a score URL was issued for, or undefined when the signature does not match. */
+  private agencyOfScope(scope: string, cohortId: string, itemId: string): string | undefined {
+    const dot = scope.indexOf('.')
+    if (dot <= 0) return undefined
+    const agencyId = scope.slice(0, dot)
+    const want = Buffer.from(this.scopeMac(agencyId, cohortId, itemId))
+    const got = Buffer.from(scope.slice(dot + 1))
+    return got.length === want.length && timingSafeEqual(got, want) ? agencyId : undefined
   }
 
   private signHint(claims: {
@@ -362,33 +387,39 @@ export class LtiPlatformService {
       ref,
       config: itemConfig,
       label: itemLabel,
-    } = await this.toolItem(
-      hint.cohortId,
-      hint.itemId,
-      // a staff review is not the staff member's own enrollment
-      hint.reviewUserId ? undefined : hint.userId,
-      !!hint.reviewUserId
+      agencyId,
+    } = await runAsSystem(() =>
+      this.toolItem(
+        hint.cohortId,
+        hint.itemId,
+        // a staff review is not the staff member's own enrollment
+        hint.reviewUserId ? undefined : hint.userId,
+        !!hint.reviewUserId
+      )
     )
     if (itemTool.clientId !== tool.clientId)
       throw new HttpException('This item does not launch that client', 400)
     // An assessment's attempts may have run out since the hint was minted (another tab); a hint is not a way around the cap.
     let used = 0
-    if (hint.reviewUserId) {
-      used = await this.attemptsUsed(hint.reviewUserId, hint.cohortId, hint.itemId)
+    const reviewUserId = hint.reviewUserId
+    if (reviewUserId) {
+      used = await runAsSystem(() => this.attemptsUsed(reviewUserId, hint.cohortId, hint.itemId))
       if (used < 1) throw new ConflictException('This learner has not submitted this assessment.')
     } else if (hint.mode === 'review') {
-      await this.assertCanReview(
-        hint.userId,
-        hint.cohortId,
-        hint.itemId,
-        itemTool,
-        itemConfig,
-        itemLabel
+      await runAsSystem(() =>
+        this.assertCanReview(
+          hint.userId,
+          hint.cohortId,
+          hint.itemId,
+          itemTool,
+          itemConfig,
+          itemLabel
+        )
       )
-      used = await this.attemptsUsed(hint.userId, hint.cohortId, hint.itemId)
+      used = await runAsSystem(() => this.attemptsUsed(hint.userId, hint.cohortId, hint.itemId))
     } else if (itemTool.kind === 'assessment') {
       const { maxAttempts } = assessmentLimits(itemConfig)
-      used = await this.attemptsUsed(hint.userId, hint.cohortId, hint.itemId)
+      used = await runAsSystem(() => this.attemptsUsed(hint.userId, hint.cohortId, hint.itemId))
       if (used >= maxAttempts)
         throw new ConflictException(`You have used all ${maxAttempts} attempts.`)
     }
@@ -409,10 +440,13 @@ export class LtiPlatformService {
       const { timeLimitMinutes } = assessmentLimits(itemConfig)
       custom = { ...custom, attempt: used + 1, ...(timeLimitMinutes ? { timeLimitMinutes } : {}) }
     }
-    const brand = await this.brandOf(hint.cohortId)
+    const brand = await runAsSystem(() => this.brandOf(hint.cohortId))
     const reg = platformRegistration()
     const iat = nowS()
-    const lineitem = `${apiBase()}/lti/platform/ags/${hint.cohortId}/lineitems/${hint.itemId}`
+    // The score comes back with no signed-in person, so the URL carries the cohort's agency under our
+    // signature; the score is then recorded limited to that agency.
+    if (!agencyId) throw new ConflictException('This cohort has no agency yet.')
+    const lineitem = `${apiBase()}/lti/platform/ags/${agencyId}.${this.scopeMac(agencyId, hint.cohortId, hint.itemId)}/${hint.cohortId}/lineitems/${hint.itemId}`
     const idToken = signJwt(
       {
         iss: reg.issuer,
@@ -578,12 +612,17 @@ export class LtiPlatformService {
   /** An LTI AGS score for a tool item. Returns nothing the tool does not already know. */
   async receiveScore(
     authorization: string | undefined,
+    scope: string,
     cohortId: string,
     itemId: string,
     body: unknown
   ): Promise<{ recorded: true }> {
     const client = await this.clientOf(authorization)
-    const { tool } = await this.toolItem(cohortId, itemId, undefined, true)
+    const agencyId = this.agencyOfScope(scope, cohortId, itemId)
+    if (!agencyId) throw new NotFoundException('Item not found')
+    const { tool } = await runAsAgency(agencyId, () =>
+      this.toolItem(cohortId, itemId, undefined, true)
+    )
     if (tool.clientId !== client.clientId)
       throw new HttpException('Token is not for this tool', 403)
 
@@ -610,11 +649,13 @@ export class LtiPlatformService {
     if (reportedMs > Date.now() + MAX_SCORE_CLOCK_AHEAD_MS)
       throw new HttpException('timestamp is in the future', 422)
     const dims = s[DIMENSIONS_FIELD]
-    await this.learner.recordToolResult(s.userId, cohortId, itemId, {
-      scorePct: Math.round((given / max) * 100),
-      reportedAt: s.timestamp as string,
-      ...(dims && typeof dims === 'object' ? { dimensions: dims } : {}),
-    })
+    await runAsAgency(agencyId, () =>
+      this.learner.recordToolResult(s.userId as string, cohortId, itemId, {
+        scorePct: Math.round((given / max) * 100),
+        reportedAt: s.timestamp as string,
+        ...(dims && typeof dims === 'object' ? { dimensions: dims } : {}),
+      })
+    )
     return { recorded: true }
   }
 }
