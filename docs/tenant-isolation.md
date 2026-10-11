@@ -36,8 +36,8 @@ database does refuse a self-enrolment into an approval-only or full cohort.)
 - **Learner and course data carry `agencyId`.** A database trigger fills it in (a cohort takes its institution's
   agency unless its creator names one; everything under a cohort copies the cohort's; a course takes its provider's,
   and its modules, items and offers copy it), so application code cannot forget it or set it wrongly. A cohort never
-  changes agency. A row whose parent has no agency yet simply gets none, which never blocks a write; a later migration
-  requires it.
+  changes agency. A row without an agency is refused (a `CHECK`
+  constraint on every tenant table), and so is a provider or organization without a parent agency.
 - **Grants are memberships with a role.** A person's agencies are the agencies of their workspace-level memberships
   (`cohortId` null) that carry a `role`. A learner's own memberships have no role, so they never grant an agency, and
   a policy stops anyone writing a role-bearing membership unless they are already in that agency. A system
@@ -102,7 +102,9 @@ in the same command, never rely on a local `.env`. Never run `scripts/tenant-e2e
    first API deploy log, and that `GET /api/health` reports `"environment":"production"` (the test-system banner and
    the LTI address override both key off it).
 5. **Backfill:** `scripts/backfill-agency-id.ts` (dry run, then `--apply`). It fills `agencyId` on rows that predate
-   the column and refuses to run as a role the policies bind. It must end with every row having an agency.
+   the column and refuses to run as a role the policies bind. It must end with every row having an agency. The last
+   migration (`require_agency`) makes the agency required and refuses to run on a database that has not been backfilled,
+   saying which script to run, so on an environment with older data run steps 3 and 5 before deploying it.
 6. **Restricted role:** `scripts/create-app-role.ts` with `APP_ROLE_PASSWORD` (24 or more characters). It prints the
    connection string; on the API service set `DATABASE_URL` to it using the database's private host, and set
    `REQUIRE_TENANT_RLS=on`. `SCHEMA_DATABASE_URL` stays the owner, so the start command does not change. Redeploy: the
@@ -111,7 +113,6 @@ in the same command, never rely on a local `.env`. Never run `scripts/tenant-e2e
    (sign in and join), and an LTI launch.
 8. **Give the first roles:** the Manage Agency/Provider/Organization Staff page (a role can be given to an email
    address before the person has an account), or `scripts/grant-agency.ts`.
-9. **Later migration:** validate the institution constraint, and require `agencyId` on the tenant tables.
 
 **Rollback.** Code can be rolled back, but migrations stay applied, and the triggers and policies do not bind the
 owner. To stop enforcement, point `DATABASE_URL` back at the owner connection (and unset `REQUIRE_TENANT_RLS`) and
