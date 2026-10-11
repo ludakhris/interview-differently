@@ -5,6 +5,7 @@ import { beforeSend } from './analytics'
 import { resolveContext } from './brand'
 import { resolveSite } from './site'
 import { AuthProvider } from './auth'
+import { EnvironmentBanner } from './EnvironmentBanner'
 import { HomePage } from './pages/HomePage'
 import { DelawarePage } from './pages/DelawarePage'
 import { PrivacyPage } from './pages/PrivacyPage'
@@ -63,6 +64,7 @@ function page(): ReactNode {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AuthProvider>{page()}</AuthProvider>
+    <EnvironmentBanner />
     <Analytics beforeSend={beforeSend} />
   </React.StrictMode>
 )
