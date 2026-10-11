@@ -1,4 +1,5 @@
 import type { PlatformRegistration, ToolRegistration } from '../lti-spec'
+import { environmentName } from '../../health/health.controller'
 
 const env = (name: string): string | undefined => process.env[name]?.trim() || undefined
 
@@ -20,6 +21,26 @@ export function platformRegistration(): PlatformRegistration {
     authUrl: `${base}/lti/platform/auth`,
     tokenUrl: `${base}/lti/platform/token`,
     jwksUrl: `${base}/lti/platform/jwks`,
+  }
+}
+
+/**
+ * Whether a connection's addresses come from this API instead of what is stored. Only Interview
+ * Differently's own tool (the connection whose client id is the platform's own) outside production: its
+ * addresses are this API's own, and the dev database is shared by several APIs (local, the shared dev API),
+ * so one stored value could only be right for one of them. Production, and every other connection, use the
+ * stored addresses.
+ */
+export const urlsFromEnvironment = (clientId: string): boolean =>
+  environmentName() !== 'production' && clientId === platformRegistration().clientId
+
+/** This API's own tool endpoints (Interview Differently as an LTI tool). */
+export function ownToolUrls(): { loginUrl: string; launchUrl: string; jwksUrl: string } {
+  const base = apiBase()
+  return {
+    loginUrl: `${base}/lti/tool/login`,
+    launchUrl: `${base}/lti/tool/launch`,
+    jwksUrl: `${base}/lti/tool/jwks`,
   }
 }
 

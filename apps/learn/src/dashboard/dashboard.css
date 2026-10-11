@@ -71,6 +71,18 @@
 .dash-notice p {
   margin-top: 10px;
 }
+.dash-tl-envwarn {
+  margin: -4px 0 16px;
+  padding: 12px 16px;
+  border: 2px solid #fff;
+  border-radius: 6px;
+  background: #c2410c;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  box-shadow: 0 0 0 2px #c2410c;
+}
 .dash-account {
   display: flex;
   gap: 14px;

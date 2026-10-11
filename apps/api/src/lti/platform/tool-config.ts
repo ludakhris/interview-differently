@@ -1,6 +1,6 @@
 import { bad, text, internalHost, publicHttpsUrl } from '../public-url'
 import type { LearnConnection, LearnTool } from '../../learn/learn-types'
-import type { StoredConnection, StoredTool } from './lti-platform-config'
+import { urlsFromEnvironment, type StoredConnection, type StoredTool } from './lti-platform-config'
 
 export { internalHost, publicHttpsUrl }
 
@@ -96,7 +96,11 @@ export function connectionView(
   c: StoredConnection,
   tools: { connectionId: string }[]
 ): LearnConnection {
-  return { ...c, toolCount: tools.filter((t) => t.connectionId === c.id).length }
+  return {
+    ...c,
+    toolCount: tools.filter((t) => t.connectionId === c.id).length,
+    urlsFromEnvironment: urlsFromEnvironment(c.clientId),
+  }
 }
 
 type Diff = Record<string, { from: unknown; to: unknown }>

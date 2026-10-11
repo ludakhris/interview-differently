@@ -16,8 +16,10 @@ import { PrismaService } from '../../prisma/prisma.service'
 import {
   managedConnections,
   managedTools,
+  ownToolUrls,
   setStoredConnections,
   setStoredTools,
+  urlsFromEnvironment,
   type StoredConnection,
   type StoredTool,
 } from './lti-platform-config'
@@ -115,9 +117,14 @@ export class ToolRegistryService implements OnModuleInit {
           // Where it launches comes from its connection.
           clientId: t.connection.clientId,
           deploymentId: t.connection.deploymentId,
-          loginUrl: t.connection.loginUrl,
-          launchUrl: t.connection.launchUrl,
-          jwksUrl: t.connection.jwksUrl,
+          // Outside production, Interview Differently's own tool launches through this API (see urlsFromEnvironment).
+          ...(urlsFromEnvironment(t.connection.clientId)
+            ? ownToolUrls()
+            : {
+                loginUrl: t.connection.loginUrl,
+                launchUrl: t.connection.launchUrl,
+                jwksUrl: t.connection.jwksUrl,
+              }),
         }))
       )
       this.loadedAt = Date.now()

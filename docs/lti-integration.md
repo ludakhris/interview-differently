@@ -188,6 +188,10 @@ admin does not copy client ids and URLs by hand. Many platforms can do this; eac
 `LTI_TOOL_CLIENT_ID`, `LTI_DEPLOYMENT_ID`) stays as a built-in fallback, used only while the table has no row for its
 issuer and client id.
 
+Outside production, Interview Differently's own tool connection (client id equal to the platform's own) launches through
+this API's own address instead of the stored login, launch and key URLs, because the development database is shared by
+several APIs (see `docs/dev-api.md`). Production uses the stored values.
+
 `GET /api/lti/platforms` (full admins) also returns `endpoints: { registrationUrl, loginUrl, launchUrl, jwksUrl }`, the real
 public addresses this tool serves, built from the same config as the launch itself (`LTI_API_BASE`, `LTI_TOOL_LAUNCH_URL`).
 
