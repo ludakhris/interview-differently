@@ -402,6 +402,58 @@ describe('ToolRegistryService', () => {
       expect(service.canManage(role)).toBe(false)
   })
 
+  describe('addresses outside production', () => {
+    const envBefore = process.env.RAILWAY_ENVIRONMENT_NAME
+    afterEach(() => {
+      if (envBefore === undefined) delete process.env.RAILWAY_ENVIRONMENT_NAME
+      else process.env.RAILWAY_ENVIRONMENT_NAME = envBefore
+    })
+
+    const own = () => ({ ...defaultConnections()[0], launchUrl: 'https://stored.example/launch' })
+    const thirdParty = () => connection({ id: 'acme', clientId: 'acme-client' })
+
+    it("use this API's own for Interview Differently's own tool, and say so on its connection", async () => {
+      process.env.RAILWAY_ENVIRONMENT_NAME = 'dev'
+      const mine = own()
+      prisma.ltiConnection.findMany.mockResolvedValue([mine])
+      prisma.ltiTool.findMany.mockResolvedValue(
+        defaultTools().map((t) => ({ ...t, connection: mine }))
+      )
+      await service.load()
+      const tool = registeredTools()[0]
+      expect(tool.launchUrl).toBe('http://localhost:3000/api/lti/tool/launch')
+      expect(tool.loginUrl).toBe('http://localhost:3000/api/lti/tool/login')
+      expect(tool.jwksUrl).toBe('http://localhost:3000/api/lti/tool/jwks')
+      expect(connectionView(mine, managedTools()).urlsFromEnvironment).toBe(true)
+      // what is stored is left as it is, for the admin to see
+      expect(managedConnections()[0].launchUrl).toBe('https://stored.example/launch')
+    })
+
+    it('use the stored addresses in production', async () => {
+      process.env.RAILWAY_ENVIRONMENT_NAME = 'production'
+      const mine = own()
+      prisma.ltiConnection.findMany.mockResolvedValue([mine])
+      prisma.ltiTool.findMany.mockResolvedValue(
+        defaultTools().map((t) => ({ ...t, connection: mine }))
+      )
+      await service.load()
+      expect(registeredTools()[0].launchUrl).toBe('https://stored.example/launch')
+      expect(connectionView(mine, managedTools()).urlsFromEnvironment).toBe(false)
+    })
+
+    it('never change another connection, in any environment', async () => {
+      process.env.RAILWAY_ENVIRONMENT_NAME = 'dev'
+      const other = thirdParty()
+      prisma.ltiConnection.findMany.mockResolvedValue([other])
+      prisma.ltiTool.findMany.mockResolvedValue([
+        { ...defaultTools()[0], toolId: 'acme-labs', connectionId: 'acme', connection: other },
+      ])
+      await service.load()
+      expect(registeredTools()[0].launchUrl).toBe(other.launchUrl)
+      expect(connectionView(other, managedTools()).urlsFromEnvironment).toBe(false)
+    })
+  })
+
   describe('start', () => {
     it('loads the stored connections and tools, and nothing is written', async () => {
       setStoredConnections([])

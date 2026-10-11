@@ -583,6 +583,8 @@ export interface LearnConnection {
   jwksUrl: string
   /** How many tools use it. */
   toolCount: number
+  /** True in a test environment for Interview Differently's own tool: its saved addresses are ignored. */
+  urlsFromEnvironment: boolean
 }
 
 /** One change to a connection or tool: who made it, when, and each field's old and new value. */

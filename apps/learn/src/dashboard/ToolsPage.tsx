@@ -420,6 +420,13 @@ export function ToolsPage() {
             className="dash-card dash-tl-section-card"
             aria-labelledby={`h-conn-${c.id}`}
           >
+            {c.urlsFromEnvironment && (
+              <p className="dash-tl-envwarn" role="note">
+                ⚠️ TEST SYSTEM: this connection&apos;s saved addresses are ignored here. It uses
+                this API&apos;s own address instead, so editing them has no effect in this
+                environment.
+              </p>
+            )}
             <div className="dash-tl-head dash-tl-connhead">
               <div className="dash-tl-main">
                 <h2 className="dash-card-title" id={`h-conn-${c.id}`}>
