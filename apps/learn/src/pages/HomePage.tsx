@@ -533,7 +533,7 @@ export function HomePage() {
             <footer className="ld-footer">
               <div className="ld-footer-brand">
                 <span className="ld-footer-name">learn/differently</span>
-                <span>Training that behaves like the job.</span>
+                <span>Training that adapts. Admin work, automated.</span>
                 <span className="ld-mono">learndifferently.tech</span>
               </div>
               <nav aria-label="Footer" className="ld-footer-links">
