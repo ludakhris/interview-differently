@@ -73,6 +73,9 @@ jobs:
         with:
           node-version: '22'
       - run: npm install -g @railway/cli
-      - run: railway up --service interview-differently
+      # --detach: upload and return. Without it (CI=true) the job waits for the
+      # build, and a push that touches no API files skips the build (watch
+      # paths), so the job waited until the timeout and was cancelled.
+      - run: railway up --service interview-differently --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
