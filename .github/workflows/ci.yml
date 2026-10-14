@@ -69,13 +69,35 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-      - run: npm install -g @railway/cli
-      # --detach: upload and return. Without it (CI=true) the job waits for the
-      # build, and a push that touches no API files skips the build (watch
-      # paths), so the job waited until the timeout and was cancelled.
-      - run: railway up --service interview-differently --detach
+      # Railway rebuilds the API only when a file in its watch paths changed
+      # (.railway/railway.ts: apps/api/** and packages/types/**; keep this list in
+      # step with that one). A push that changed one waits for the build (--ci),
+      # so a failed build fails this job; any other push uploads nothing, since
+      # Railway would build nothing and --ci would wait until the timeout. A
+      # re-run, or a push whose previous commit is unknown, uploads without waiting.
+      - name: Did this push change the API?
+        id: api
+        run: |
+          before='${{ github.event.before }}'
+          if [ "${{ github.run_attempt }}" != "1" ] || ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+            echo "deploy=detach" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$before" "${{ github.sha }}" | grep -qE '^(apps/api/|packages/types/)'; then
+            echo "deploy=wait" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=skip" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.api.outputs.deploy != 'skip'
+        run: npm install -g @railway/cli
+      - if: steps.api.outputs.deploy == 'wait'
+        run: railway up --service interview-differently --ci
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      - if: steps.api.outputs.deploy == 'detach'
+        run: railway up --service interview-differently --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
