@@ -1120,6 +1120,39 @@ describe('adaptive plan', () => {
       })
     })
 
+    it('keeps help the learner finished after it was added (done, not optional) when the gap closes', async () => {
+      withRules({ testOut: true })
+      prisma.courseItem.findUnique.mockResolvedValue(check)
+      prisma.itemProgress.findUnique.mockResolvedValue(null)
+      outlineOf(check, lesson, video)
+      const added = new Date('2026-10-15T10:00:00Z')
+      prisma.itemProgress.findMany.mockResolvedValue([
+        {
+          itemId: 'k1',
+          status: 'completed',
+          score: 100,
+          data: { results: tagged.map((q) => ({ id: q.id, correct: true })) },
+        },
+        {
+          itemId: 'r1',
+          status: 'completed',
+          score: 100,
+          data: null,
+          completedAt: new Date('2026-10-15T10:05:00Z'),
+        },
+      ])
+      prisma.planItem.findMany.mockResolvedValue([
+        { itemId: 'r1', reason: { skill: 'safety', pct: 50, n: 2 }, createdAt: added },
+        { itemId: video.id, reason: { skill: 'safety', pct: 50, n: 2 }, createdAt: added },
+      ])
+      await service.submitQuiz('u1', 'k1', 'k1', [0, 0])
+      // only the help left unfinished becomes optional
+      expect(prisma.planSkip.createMany).toHaveBeenCalledWith({
+        data: [expect.objectContaining({ itemId: video.id })],
+        skipDuplicates: true,
+      })
+    })
+
     it('skips nothing unless the course allows it', async () => {
       withRules({})
       prisma.courseItem.findUnique.mockResolvedValue(check)

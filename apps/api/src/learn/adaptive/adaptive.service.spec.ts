@@ -1,5 +1,7 @@
+import { ConflictException } from '@nestjs/common'
 import type { CheckpointHistoryEntry } from '../../core/monitor-types'
 import { AdaptiveService } from './adaptive.service'
+import { PERSONAS, T } from './demo-course'
 
 const answer = (ref: string, correct: boolean, min: number): CheckpointHistoryEntry => ({
   kind: 'answer',
@@ -289,5 +291,171 @@ describe('AdaptiveService: AI content on the board', () => {
       await service.review(actor, 'c', 'p-pending', true)
       expect(practice.review).toHaveBeenCalledWith('p-pending', true, 'staff-1', 'c')
     })
+  })
+})
+
+describe('AdaptiveService: video titles on the board path', () => {
+  const item = (over: Record<string, unknown>) => ({
+    itemId: 'v1',
+    moduleTitle: 'M',
+    title: 'Video made for you: filters',
+    type: 'spark_lesson',
+    minutes: 2,
+    skill: 's',
+    state: 'added_done',
+    reason: null,
+    at: null,
+    evidence: null,
+    ...over,
+  })
+  function titles(lessonTitle: jest.Mock) {
+    const service = new AdaptiveService(
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      { lessonTitle } as never,
+      {} as never
+    )
+    return (path: ReturnType<typeof item>[]) =>
+      (
+        service as unknown as {
+          withLessonTitles: (c: string, u: string, p: unknown[]) => Promise<void>
+        }
+      ).withLessonTitles('c', 'u', path)
+  }
+
+  it('shows the title Spark gave the learner’s video, and asks only for videos still on the path', async () => {
+    const lessonTitle = jest.fn(async () => 'Finding Missing Values: IS NULL')
+    const path = [
+      item({}),
+      item({ itemId: 'v2', state: 'skipped' }),
+      item({ itemId: 'x', type: 'lesson' }),
+    ]
+    await titles(lessonTitle)(path)
+    expect(path.map((p) => p.title)).toEqual([
+      'Finding Missing Values: IS NULL',
+      'Video made for you: filters',
+      'Video made for you: filters',
+    ])
+    expect(lessonTitle).toHaveBeenCalledTimes(1)
+    expect(lessonTitle).toHaveBeenCalledWith({ cohortId: 'c', userId: 'u', itemId: 'v1' })
+  })
+
+  it('keeps the slot’s title when Spark has none yet or cannot answer', async () => {
+    const none = [item({})]
+    await titles(jest.fn(async () => null))(none)
+    expect(none[0].title).toBe('Video made for you: filters')
+    const failing = [item({})]
+    await titles(jest.fn(async () => Promise.reject(new Error('down'))))(failing)
+    expect(failing[0].title).toBe('Video made for you: filters')
+  })
+})
+
+describe('AdaptiveService.demoStep: working through practice', () => {
+  const theo = PERSONAS.find((p) => p.id === 'theo')!
+  const at = theo.steps.findIndex((s) => s.do === 'solve' && s.item === T.practice.aggregate)
+
+  it('gives Theo’s grouping gap both pieces of help, done, before the retry that proves it', () => {
+    const miss = theo.steps.findIndex(
+      (s) => s.do === 'submit' && s.ref === '3.4' && s.sql.includes('WHERE COUNT')
+    )
+    const retry = theo.steps.findIndex(
+      (s) => s.do === 'submit' && s.ref === '3.4' && s.sql.includes('HAVING')
+    )
+    const after = theo.steps
+      .slice(miss + 1, retry)
+      .filter((s) => s.do !== 'help')
+      .map((s) => [s.do, 'item' in s ? s.item : null])
+    expect(after).toEqual([
+      ['practice', T.practice.aggregate],
+      ['solve', T.practice.aggregate],
+      ['video', T.video.aggregate],
+      ['watch', T.video.aggregate],
+    ])
+  })
+
+  function demo(solved: { status: string; done: boolean; scorePct: number | null }) {
+    const course = { id: 'course', skills: [], adaptive: {} }
+    const items = [
+      {
+        id: 'diag',
+        type: 'tool',
+        title: T.diagnostic,
+        config: { toolId: 'id-checkpoint', ref: 'bank', diagnostic: true, tasks: [] },
+      },
+      {
+        id: 'prac',
+        type: 'tool',
+        title: T.practice.aggregate,
+        config: {
+          toolId: 'id-checkpoint',
+          ref: 'bank',
+          generated: { skill: 'aggregate' },
+          remediationFor: 'aggregate',
+          tasks: [],
+        },
+      },
+    ]
+    const prisma = {
+      cohort: {
+        findUnique: jest.fn(async () => ({ id: 'c', course, institution: { featuredDemo: true } })),
+      },
+      courseItem: { findMany: jest.fn(async () => items) },
+      enrollment: {
+        findUnique: jest.fn(async () => ({
+          id: 'en',
+          progress: [{ itemId: 'diag', data: { demo: { step: at } } }],
+        })),
+      },
+      itemProgress: {
+        findUnique: jest.fn(async () => ({ data: { demo: { step: at } } })),
+        upsert: jest.fn(async () => ({})),
+      },
+    }
+    const access = { authorize: jest.fn(async () => undefined) }
+    const learner = { recordToolResult: jest.fn(async () => ({})) }
+    const practice = { demoSolve: jest.fn(async () => solved) }
+    const service = new AdaptiveService(
+      prisma as never,
+      access as never,
+      learner as never,
+      practice as never,
+      {} as never,
+      {} as never
+    )
+    const sync = jest
+      .spyOn(service, 'sync')
+      .mockResolvedValue({ completed: true, at: '', planAdded: [], planSkipped: [] })
+    return { service, prisma, learner, practice, sync }
+  }
+
+  it('finishes the practice slot and sends its score to the course, as a finished checkpoint does', async () => {
+    const t = demo({ status: 'ready', done: true, scorePct: 100 })
+    const out = await t.service.demoStep({ userId: 'staff' }, 'c', 'theo')
+    expect(t.practice.demoSolve).toHaveBeenCalledWith(
+      { cohortId: 'c', userId: theo.userId, itemId: 'prac' },
+      expect.objectContaining({ refs: [], practice: expect.objectContaining({ evidenceRefs: [] }) })
+    )
+    expect(t.learner.recordToolResult).toHaveBeenCalledWith(theo.userId, 'c', 'prac', {
+      scorePct: 100,
+    })
+    expect(t.sync).toHaveBeenCalledWith(theo.userId, 'c', 'prac', expect.any(String))
+    expect(out).toMatchObject({ done: false, step: 'solve', say: theo.steps[at].say })
+    expect(t.prisma.itemProgress.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: { data: { demo: { step: at + 1 } } } })
+    )
+  })
+
+  it('stops, without counting the step, while the practice waits for staff review', async () => {
+    const t = demo({ status: 'pending', done: false, scorePct: null })
+    await expect(t.service.demoStep({ userId: 'staff' }, 'c', 'theo')).rejects.toThrow(
+      ConflictException
+    )
+    await expect(t.service.demoStep({ userId: 'staff' }, 'c', 'theo')).rejects.toThrow(
+      'waiting for review'
+    )
+    expect(t.learner.recordToolResult).not.toHaveBeenCalled()
+    expect(t.prisma.itemProgress.upsert).not.toHaveBeenCalled()
   })
 })

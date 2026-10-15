@@ -89,14 +89,34 @@
   font-style: normal;
   color: var(--pt-note);
 }
-.pt-chip {
+/* Help added for a gap: a soft green band across the row, the real title with an "Added" pill, and the gap it is for. */
+.pt-seg.is-added,
+.pt-seg.is-added_done {
+  margin: 2px 0;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #e3f4ea, #f1faf5 70%, transparent);
+}
+.pt-added-name {
+  display: block;
+  font-weight: 700;
+}
+.pt-added-pill {
   display: inline-block;
-  margin: 3px 0 4px;
-  padding: 1px 8px;
+  margin-left: 6px;
+  padding: 0 8px;
   border-radius: 999px;
-  background: #e3f4ea;
+  background: var(--pt-green);
+  color: #fff;
+  font: 800 10px/1.8 var(--pt-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+}
+.pt-added-why {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
   color: #1d7a55;
-  font: 700 11px/1.6 var(--pt-mono);
 }
 .pt-seg.is-entering {
   animation: pt-pop 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;

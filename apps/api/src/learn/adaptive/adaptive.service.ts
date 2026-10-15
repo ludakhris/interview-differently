@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
@@ -24,6 +25,7 @@ import type {
   AdaptiveBoard,
   AdaptiveSyncResult,
   BoardLearner,
+  BoardPathItem,
   BoardPractice,
   IntakeLevel,
   LearnerSeen,
@@ -58,6 +60,8 @@ interface Actor {
  */
 @Injectable()
 export class AdaptiveService {
+  private readonly logger = new Logger(AdaptiveService.name)
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AccessService,
@@ -446,6 +450,25 @@ export class AdaptiveService {
     return approveGenerated || status === 'pending'
   }
 
+  /**
+   * A video made for the learner shows under its own title (Spark's, once it is ready), not the slot's ("Video made
+   * for you: filters"), as on the learner's own course page. A title Spark cannot give keeps the slot's.
+   */
+  private async withLessonTitles(cohortId: string, userId: string, path: BoardPathItem[]) {
+    await Promise.all(
+      path
+        .filter((p) => p.type === 'spark_lesson' && p.state !== 'skipped')
+        .map(async (p) => {
+          try {
+            p.title =
+              (await this.spark.lessonTitle({ cohortId, userId, itemId: p.itemId })) ?? p.title
+          } catch (err) {
+            this.logger.warn(`Lesson title for ${p.itemId} unavailable: ${(err as Error).message}`)
+          }
+        })
+    )
+  }
+
   /** The AI content made for the cohort's learners that staff review on the board (`forStaff`). */
   private async contentOf(
     cohortId: string,
@@ -513,6 +536,7 @@ export class AdaptiveService {
       const progress = new Map(e.progress.map((p) => [p.itemId, p]))
       const results = skillResults(skills, items, progress)
       const path = learnerPath(items, progress, e.plan, e.skips, labels)
+      await this.withLessonTitles(cohortId, e.userId, path)
       const intake = diag ? checkpointData(progress.get(diag.id)?.data).intake : undefined
       const persona = cohort.institution.featuredDemo
         ? PERSONAS.find((p) => p.userId === e.userId)
@@ -788,6 +812,25 @@ export class AdaptiveService {
       case 'practice': {
         const item = itemOf(step.item)
         result = await this.practice.demoPractice(slot(item.id), placement(item))
+        break
+      }
+      case 'solve': {
+        const item = itemOf(step.item)
+        const solved = await this.practice.demoSolve(slot(item.id), placement(item))
+        // Practice that is not ready (held for staff review) cannot be worked: stop here, without counting the step.
+        if (solved.status !== 'ready')
+          throw new ConflictException(
+            solved.status === 'pending'
+              ? `${persona.name}’s practice is waiting for review: approve it on the board, then play again`
+              : `${persona.name} has no practice ready to work through yet`
+          )
+        // Finished, its score goes to the course as a finished checkpoint's does (see 'submit').
+        if (solved.done && solved.scorePct !== null)
+          await this.learner.recordToolResult(u, cohortId, item.id, { scorePct: solved.scorePct })
+        result = {
+          solved,
+          ...(await this.sync(u, cohortId, item.id, new Date(Date.now() - 5_000).toISOString())),
+        }
         break
       }
       case 'video':

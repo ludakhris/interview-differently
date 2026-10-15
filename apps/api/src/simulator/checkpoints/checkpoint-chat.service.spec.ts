@@ -534,6 +534,91 @@ describe('the demo autoplay (PracticePort)', () => {
     })
   })
 
+  describe('solving a practice slot', () => {
+    const practice: CheckpointPlacement = {
+      ...diagnostic,
+      refs: [],
+      diagnostic: false,
+      practice: { skill: 'Grouping', evidenceRefs: ['3.4'], review: false },
+    }
+    const use = (status: string) => ({
+      sentBackAt: null,
+      practiceSet: {
+        id: 'p1',
+        status,
+        intro: 'Try these',
+        tasks: [
+          { prompt: 'a', referenceSql: 'select a', ordered: false },
+          { prompt: 'b', referenceSql: 'select b', ordered: true },
+        ],
+      },
+    })
+    // Recorded answers are read back, as the database would.
+    const live = (events: object[]) => {
+      const s = setup(events)
+      ;(s.prisma.practiceEvent.create as jest.Mock).mockImplementation(async (arg: unknown) => {
+        events.push((arg as { data: object }).data)
+        return {}
+      })
+      return s
+    }
+
+    it('answers each request with its own reference query, so the slot is done with its score', async () => {
+      const { svc, prisma, engine } = live([])
+      prisma.practiceSetUse.findFirst.mockResolvedValue(use('approved'))
+      const out = await svc.demoSolve(slot, practice)
+      expect(engine.grade.mock.calls).toEqual([
+        ['bank', 'gen:p1:0', 'select a'],
+        ['bank', 'gen:p1:1', 'select b'],
+      ])
+      expect(prisma.practiceEvent.create).toHaveBeenCalledTimes(2)
+      expect(prisma.practiceEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          ...slot,
+          deliveryId: 'd1',
+          kind: 'answer',
+          ref: 'gen:p1:1',
+        }),
+      })
+      expect(out).toEqual({ status: 'ready', done: true, scorePct: 100 })
+      // the key stays in the Simulator
+      expect(JSON.stringify(out)).not.toContain('select')
+    })
+
+    it('leaves a request already answered right alone', async () => {
+      const { svc, prisma, engine } = live([answer('gen:p1:0', true)])
+      prisma.practiceSetUse.findFirst.mockResolvedValue(use('approved'))
+      const out = await svc.demoSolve(slot, practice)
+      expect(engine.grade.mock.calls).toEqual([['bank', 'gen:p1:1', 'select b']])
+      expect(out).toEqual({ status: 'ready', done: true, scorePct: 100 })
+    })
+
+    it('answers nothing while the practice is not ready, and says why instead of failing', async () => {
+      for (const [found, status] of [
+        [null, 'none'],
+        [use('pending'), 'pending'],
+        [use('rejected'), 'rejected'],
+      ] as const) {
+        const { svc, prisma, engine } = live([])
+        prisma.practiceSetUse.findFirst.mockResolvedValue(found)
+        await expect(svc.demoSolve(slot, practice)).resolves.toEqual({
+          status,
+          done: false,
+          scorePct: null,
+        })
+        expect(engine.grade).not.toHaveBeenCalled()
+        expect(prisma.practiceEvent.create).not.toHaveBeenCalled()
+      }
+    })
+
+    it('refuses a checkpoint that is not a practice slot', async () => {
+      const { svc } = setup()
+      await expect(svc.demoSolve(slot, { ...diagnostic, diagnostic: false })).rejects.toThrow(
+        BadRequestException
+      )
+    })
+  })
+
   it("forgets demo learners' answers, help and practice uses in the cohort, not the library", async () => {
     const { svc, prisma } = setup()
     await svc.demoForget('k1', ['u1', 'u2'])

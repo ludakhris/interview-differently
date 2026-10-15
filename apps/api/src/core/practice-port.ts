@@ -128,6 +128,20 @@ export interface PracticePort {
     placement: CheckpointPlacement
   ): Promise<{ status: 'pending' | 'ready' | 'rejected'; refs: string[] }>
   /**
+   * Demo autoplay: the learner works through the practice slot's requests, each answered with its own reference query
+   * inside the Simulator (the key never leaves it), so the slot is finished with its score. Only practice that is ready
+   * can be solved: with none written yet ('none'), held for staff review ('pending') or sent back ('rejected'), nothing
+   * is answered and `done` is false.
+   */
+  demoSolve(
+    slot: LearnerSlot,
+    placement: CheckpointPlacement
+  ): Promise<{
+    status: 'none' | 'pending' | 'ready' | 'rejected'
+    done: boolean
+    scorePct: number | null
+  }>
+  /**
    * Demo reset: forgets what these demo learners did in the cohort's checkpoints (their answers, help and practice
    * uses). The practice itself stays in the library.
    */

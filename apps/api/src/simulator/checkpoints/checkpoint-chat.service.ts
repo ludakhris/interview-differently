@@ -552,6 +552,30 @@ export class CheckpointChatService implements PracticePort {
     }
   }
 
+  async demoSolve(slot: LearnerSlot, placement: CheckpointPlacement) {
+    if (!placement.practice)
+      throw new BadRequestException('This checkpoint has no practice to solve')
+    const ctx = await this.demoContext(slot, placement)
+    const set = await this.slotSet(slot)
+    const status = !set
+      ? ('none' as const)
+      : set.status === 'approved'
+        ? ('ready' as const)
+        : set.status === 'rejected'
+          ? ('rejected' as const)
+          : ('pending' as const)
+    if (status !== 'ready') return { status, done: false, scorePct: null }
+    const { questions } = await this.requests(ctx)
+    const answered = await this.answers(
+      ctx,
+      questions.map((q) => q.ref)
+    )
+    // Each request answered with its own reference query, graded and recorded as a sent answer.
+    for (const q of questions)
+      if (!answered[q.ref]?.correct) await this.answer(ctx, { ref: q.ref, sql: q.referenceSql })
+    return { status, ...(await this.score(ctx)) }
+  }
+
   async demoForget(cohortId: string, userIds: string[]): Promise<void> {
     if (userIds.length === 0) return
     const where = { cohortId, userId: { in: userIds } }

@@ -62,6 +62,7 @@ export type DemoStep =
   | { do: 'help'; item: string; ref: string; sql: string; kind: CheckpointHelpKind; say: string }
   | { do: 'lesson'; item: string; say: string }
   | { do: 'practice'; item: string; say: string }
+  | { do: 'solve'; item: string; say: string }
   | { do: 'video'; item: string; say: string }
   | { do: 'watch'; item: string; say: string }
 
@@ -240,6 +241,11 @@ export const PERSONAS: {
         say: 'Claude writes filtering practice aimed at Theo’s OR and NULL mistakes',
       },
       {
+        do: 'solve',
+        item: T.practice.filter,
+        say: 'Theo works through the filtering practice made for him',
+      },
+      {
         do: 'video',
         item: T.video.filter,
         say: 'New to SQL, Theo gets a video instead of reading: Claude writes one on AND vs OR and NULL',
@@ -310,11 +316,31 @@ export const PERSONAS: {
         say: 'Theo asks the coach for a hint',
       },
       {
+        do: 'practice',
+        item: T.practice.aggregate,
+        say: 'Claude writes grouping practice aimed at Theo’s WHERE-on-a-count mistake',
+      },
+      {
+        do: 'solve',
+        item: T.practice.aggregate,
+        say: 'Theo works through the grouping practice made for him',
+      },
+      {
+        do: 'video',
+        item: T.video.aggregate,
+        say: 'Claude writes Theo a short video on GROUP BY and HAVING',
+      },
+      {
+        do: 'watch',
+        item: T.video.aggregate,
+        say: 'Theo watches the video on GROUP BY and HAVING',
+      },
+      {
         do: 'submit',
         item: T.check.aggregate,
         ref: '3.4',
         sql: 'SELECT state, COUNT(*) FROM customers GROUP BY state HAVING COUNT(*) >= 6;',
-        say: 'Theo moves the count into HAVING: summarizing is proven, the extra help is no longer needed',
+        say: 'Theo moves the count into HAVING: summarizing is proven, and the practice and video he finished stay on his path',
       },
       { do: 'lesson', item: T.lesson.join, say: 'Theo reads the JOIN lesson' },
       {
