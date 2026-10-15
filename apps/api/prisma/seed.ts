@@ -6,6 +6,8 @@ import { createHash } from 'crypto'
 import * as yaml from 'js-yaml'
 import { seedSimulations } from './seed-simulations'
 import { SqlRunnerService } from '../src/simulator/sql-runner/sql-runner.service'
+import { GradingFailureLog } from '../src/simulator/sql-runner/grading-failure-log'
+import type { PrismaService } from '../src/prisma/prisma.service'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Scenario = any
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -230,7 +232,8 @@ async function seedDatasets() {
   const files = readdirSync(dir).filter((f) => f.endsWith('.sql'))
   if (files.length === 0) return
   console.log('🌱 Seeding SQL datasets...')
-  const runner = new SqlRunnerService()
+  // the seed only reads dataset schemas (introspect); nothing here grades, so the failure log is never written
+  const runner = new SqlRunnerService(new GradingFailureLog(prisma as unknown as PrismaService))
   for (const file of files) {
     const slug = file.replace(/\.sql$/, '')
     const setupSql = readFileSync(join(dir, file), 'utf-8')
