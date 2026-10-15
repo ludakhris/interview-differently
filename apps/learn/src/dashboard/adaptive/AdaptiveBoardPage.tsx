@@ -417,11 +417,14 @@ export function AdaptiveBoardPage({ cohortId }: { cohortId: string }) {
 // The homepage's learner colours: Maya blue, Theo orange.
 const LANE_COLORS = ['#4aaee8', '#f26a2e', '#7a5cc7', '#2a9d6f']
 const PLAN_A_COLOR = '#8a9aa6'
+/** Room kept free at the right of a lane for a finish flag. */
+const FLAG_ROOM_PX = 36
 
 /**
  * Time to job-ready, side by side, on one time scale. Each bar is the learner's path in order: done (solid), what
  * their evidence let them skip (a short green jump, softly pulsing), then what is left
- * (pale). So a bar is as long as the time the learner actually spends; the marker is the course as written.
+ * (pale). So a bar is as long as the time the learner actually spends; the marker is the course as written. A
+ * learner who is job ready gets a finish flag at the end of their own bar instead of the marker.
  */
 function ReadyRace({
   learners,
@@ -437,7 +440,8 @@ function ReadyRace({
     return { l, runs, jumps: runs.filter((r) => r.kind === 'proved').length, span: l.minutesTotal }
   })
   const longest = Math.max(1, planA, ...rows.map((r) => r.span))
-  const pct = (m: number) => `${(m / longest) * 100}%`
+  // the lane keeps FLAG_ROOM_PX free on the right, so a finish flag never runs into the label column
+  const pct = (m: number) => `calc((100% - ${FLAG_ROOM_PX}px) * ${m / longest})`
   return (
     <section aria-labelledby="h-race" className="ad-race">
       <h2 className="dash-card-title ad-section-title" id="h-race">
@@ -450,9 +454,7 @@ function ReadyRace({
             <span className="ad-race-track" aria-hidden="true">
               <span
                 className="ad-race-bar"
-                style={{
-                  width: `calc(${pct(span)} + ${jumps * JUMP_ADDS_PX}px)`,
-                }}
+                style={{ width: `calc(${pct(span)} + ${jumps * JUMP_ADDS_PX}px)` }}
               >
                 {runs.map((r, i) => (
                   <span
@@ -464,7 +466,16 @@ function ReadyRace({
                   />
                 ))}
               </span>
-              <span className="ad-race-a" style={{ left: pct(planA) }} />
+              {l.ready ? (
+                <span
+                  className="ad-race-flag"
+                  style={{ left: `calc(${pct(span)} + ${jumps * JUMP_ADDS_PX}px)` }}
+                >
+                  🏁
+                </span>
+              ) : (
+                <span className="ad-race-a" style={{ left: pct(planA) }} />
+              )}
             </span>
             <span className="ad-race-label">
               {l.ready ? (

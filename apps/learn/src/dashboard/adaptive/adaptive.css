@@ -665,6 +665,14 @@
   margin-left: -1px;
   background: var(--navy);
 }
+/* A job-ready learner's finish: a flag planted just past the end of their bar, its pole on the bar's line. */
+.ad-race-flag {
+  position: absolute;
+  bottom: 50%;
+  margin-left: 6px;
+  font-size: 22px;
+  line-height: 1;
+}
 .ad-race-key {
   display: flex;
   flex-wrap: wrap;
