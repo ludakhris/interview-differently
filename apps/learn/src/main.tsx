@@ -11,7 +11,7 @@ import { DelawarePage } from './pages/DelawarePage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { SignInPage } from './pages/SignInPage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import { ProductPage } from './pages/ProductPage'
+import { ProductPage } from './pages/products/ProductPage'
 import { CatalogApp } from './dashboard/CatalogApp'
 import { DashboardApp } from './dashboard/DashboardApp'
 

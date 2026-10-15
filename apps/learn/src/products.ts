@@ -1,192 +1,208 @@
 /**
  * The five connected apps. Every one will share a single learner record. The
  * list lives here once so menus, switchers, the homepage and each product page
- * read the same thing. Only list a piece as 'available' when it can be opened today.
+ * read the same thing. Only list a piece as 'available' when it is in use today.
  */
 export type ProductStatus = 'available' | 'soon'
 
-export interface ProductFeature {
+/** A callout for the institution at the end of a product page, with an emoji beside its title. */
+export interface ProductCallout {
+  emoji: string
   title: string
   body: string
+}
+
+/** One step in how a screenshot's subject was made; `optional` marks a step a team can switch off. */
+export interface ProductShotStep {
+  label: string
+  optional?: boolean
+}
+
+/** A screenshot on a product page (files in public/site/products/), beside what it shows. */
+export interface ProductShot {
+  src: string
+  width: number
+  height: number
+  alt: string
+  /** A few words in small caps over the title. */
+  eyebrow: string
+  title: string
+  /** One or two short paragraphs. */
+  body: string[]
+  /** When set, the steps play in a rail over the screenshot, ending on it. */
+  pipeline?: ProductShotStep[]
 }
 
 export interface Product {
   id: 'lms' | 'micro-learning' | 'skill-simulator' | 'job-board-match' | 'talent-match'
   /** Display name. */
   name: string
+  /** Shown beside the name where the five are drawn together. */
+  emoji: string
   /** The framework role this piece plays (deck slide 6). */
   role: string
   tagline: string
   status: ProductStatus
-  /** Where it opens when available. `external` links leave this site. */
+  /** Where the signed-in app opens it, when it has screens of its own here. */
   href?: string
-  external?: boolean
-  /** The product page: a headline, what it does, what the learner gets, and four things it includes. */
+  /** The product page: a headline and pitch, then how it works and what it gives the institution. */
   headline: string
+  /** Phrases in the headline, exactly as written there, shown in the accent orange. */
+  highlight?: string[]
   pitch: string
-  forLearners: string
-  features: ProductFeature[]
+  /** The page's main call to action, when it is not booking a walkthrough. */
+  cta?: { label: string; href: string }
+  /** Screenshots of it at work today. */
+  shots?: ProductShot[]
+  /** How it works, one short line per step. */
+  steps?: string[]
+  /** What it gives the institution, in a callout at the end of the page. */
+  benefit?: ProductCallout
 }
 
 export const PRODUCTS: Product[] = [
   {
     id: 'lms',
-    name: 'Learning Management',
-    role: 'Structure',
+    name: 'Learning Management (LMS)',
+    emoji: '🏛️',
+    role: 'Foundation',
     tagline: 'Pathways, cohorts, progress and credentials.',
     status: 'available',
     href: '/lms/dashboard',
     headline: 'Run the whole program without the spreadsheets.',
+    highlight: ['without the spreadsheets'],
     pitch:
       'Partners build programs, enroll cohorts and track progress in one place. Every lesson, simulation and credential lands in the learner’s record.',
-    forLearners:
-      'Start where your skills already are, skip what you’ve proved, and see every gain land on your record.',
-    features: [
-      {
-        title: 'Pathways and cohorts',
-        body: 'Build career pathways and run cohorts on your own calendar.',
-      },
-      {
-        title: 'Attendance and activity',
-        body: 'Take attendance in a tap, export it, and see time on task for learners working on their own.',
-      },
-      {
-        title: 'Progress dashboards',
-        body: 'Instructors and case managers see who is thriving and who needs help.',
-      },
-      {
-        title: 'Credentials',
-        body: 'Issue badges and certificates tied to skills learners have shown.',
-      },
-      {
-        title: 'Outcome reporting',
-        body: 'Export the results funders and accreditors ask for.',
-      },
+    steps: [
+      'Build a pathway and open a cohort on your own calendar.',
+      'Learners work, and their progress is logged as they go.',
+      'Attendance and time on task are captured.',
+      'Dashboards show who is thriving and who needs help.',
+      'Credentials and outcome reports come from one record.',
     ],
+    benefit: {
+      emoji: '📊',
+      title: 'Outcome reports without the spreadsheets',
+      body: 'The results funders and accreditors ask for come from one record, ready to export, instead of being rebuilt by hand from a gradebook, a roster and an attendance sheet.',
+    },
   },
   {
     id: 'micro-learning',
     name: 'Micro Learning',
+    emoji: '💡',
     role: 'Spark',
-    tagline: 'Short lessons and live office hours.',
-    status: 'soon',
-    headline: 'Learning that fits in a scroll',
+    tagline: 'Short lessons made for each learner’s gap.',
+    status: 'available',
+    headline: 'A short lesson for the exact skill a learner needs',
+    highlight: ['exact skill'],
     pitch:
-      'Bite-sized "Micro-Lessons" from instructors and the education creators already going viral, brought into the pathway, plus live office hours. Every short lesson ends in a real-world exercise.',
-    forLearners: 'Learn on your phone, between shifts, and never get stuck alone.',
-    features: [
+      'When a knowledge gap is discovered, the next lesson is made for it, not a retake of the course. Spark makes a short lesson on that one skill, and it is added to the learner’s course path. Instructors monitor progress and oversee the lessons that are generated.',
+    shots: [
       {
-        title: 'Short-form lessons',
-        body: 'Videos that teach one skill, then put it to work.',
-      },
-      {
-        title: 'Lessons made for your gap',
-        body: 'When a check shows a gap, a short narrated lesson aimed at exactly what you missed.',
-      },
-      {
-        title: 'Connected content',
-        body: 'We are connecting to the platforms and providers creators already use, so their lessons can sit in the pathway instead of being rebuilt.',
-      },
-      {
-        title: 'Engaging creators',
-        body: 'Industry creators who make tough topics click, in a curated library.',
-      },
-      {
-        title: 'Office hours',
-        body: 'Live drop-in sessions with instructors and mentors to get unstuck.',
+        src: '/site/products/spark-lesson.png',
+        width: 782,
+        height: 502,
+        alt: 'A Spark lesson player showing “Counting Rows Per Group with GROUP BY”, 7 scenes, about 84 seconds, with Play and Voice on controls.',
+        eyebrow: 'One gap, one lesson',
+        title: 'A lesson made for one learner',
+        body: [
+          'A short narrated lesson in scenes, with a title made for the learner. This one teaches grouping, the skill a checkpoint showed the learner needed.',
+          'It takes a minute or two, plays inside the course, and who watched it is logged on the learner’s record.',
+        ],
+        pipeline: [
+          { label: 'Gap identified' },
+          { label: 'AI-generated' },
+          { label: 'Instructor reviews', optional: true },
+          { label: 'Video ready' },
+        ],
       },
     ],
+    steps: [
+      'The learner does a simulation.',
+      'A learning gap is detected.',
+      'A lesson is made for the gap.',
+      'It is added to their course path, as in the timeline above.',
+    ],
+    benefit: {
+      emoji: '📚',
+      title: 'A micro-learning library that grows',
+      body: 'Approved lessons are reused for the next learner with the same gap, so your library grows with every cohort, without an instructor writing each one.',
+    },
   },
   {
     id: 'skill-simulator',
     name: 'Skill Simulator',
+    emoji: '🕹️',
     role: 'Practice',
     tagline: 'AI-powered scenarios drawn from real jobs.',
     status: 'available',
-    href: 'https://interviewdifferently.com/dashboard',
-    external: true,
-    headline: 'Practice the job before day one',
+    headline: 'Simulate the actual job. Identify the skill gap.',
+    highlight: ['Simulate'],
     pitch:
-      'AI-powered simulations of real workplace scenarios, working alongside AI agents the way modern teams do. Short exercises build up to full simulations of the job.',
-    forLearners: 'Walk into interviews with proof, not just a certificate.',
-    features: [
-      {
-        title: 'Real-job scenarios',
-        body: 'A help desk queue, a data request, a client brief: tasks from actual roles.',
-      },
-      {
-        title: 'Work with AI agents',
-        body: 'Practice directing, checking and improving an agent’s work.',
-      },
-      {
-        title: 'Instant coaching',
-        body: 'Feedback on every attempt, with instructors looped in when it matters.',
-      },
-      {
-        title: 'Skills evidence',
-        body: 'Every exercise adds to a verified skills profile, starting in week one.',
-      },
+      'A simulation of the job, scored on the spot, with the work sample saved to the record. Real work alongside AI agents, from a growing catalogue of scenarios drawn from real jobs.',
+    cta: { label: 'Open Interview Differently', href: 'https://interviewdifferently.com' },
+    steps: [
+      'The learner is placed in a real-world scenario.',
+      'They use a skill they have been taught to take part.',
+      'Follow-ups drive them through a real exercise.',
+      'AI agents guide them along the way.',
+      'Their work is evaluated, with feedback on the spot.',
     ],
+    benefit: {
+      emoji: '🔁',
+      title: 'Practice outside the course, too',
+      body: 'Learners can open the same simulations on their own at Interview Differently, outside any course. The evidence lands on the learner’s record either way.',
+    },
   },
   {
     id: 'job-board-match',
     name: 'Job Board Match',
+    emoji: '🔎',
     role: 'Opportunity',
     tagline: 'Roles matched to the skills learners have proven.',
     status: 'soon',
     headline: 'Jobs that fit what you can actually do',
     pitch:
       'Roles from partner employers and the job sources we connect to, matched to the skills a learner has proven, not the titles on a resume. Each match shows the gap to the next job and the lessons that close it.',
-    forLearners: 'See the gap to your next role, and apply with your simulation work attached.',
-    features: [
-      {
-        title: 'Connected to job sources',
-        body: 'Postings come from partner employers and the job sources we connect to, so learners are not sent to yet another job site.',
-      },
-      {
-        title: 'Matched on proven skills',
-        body: 'Roles ranked against the verified skills profile, not keywords, with the gap to each role and the lesson that covers it.',
-      },
-      {
-        title: 'Apply with evidence',
-        body: 'Simulation work and verified skills travel with the application.',
-      },
-      {
-        title: 'Demand flows back',
-        body: 'What employers ask for most feeds the next pathway and lesson.',
-      },
+    steps: [
+      'Skills are proven on the learner’s record.',
+      'Roles from partner employers and job sources are matched to them.',
+      'The gap to each role is shown, with the lesson that closes it.',
+      'Learners apply with their proof attached.',
     ],
+    benefit: {
+      emoji: '🎯',
+      title: 'Placements you can show',
+      body: 'Every match is backed by skills learners proved, so you can show employers and funders the evidence behind each placement.',
+    },
   },
   {
     id: 'talent-match',
     name: 'Talent Match',
+    emoji: '🤝',
     role: 'Placement',
     tagline: 'Employers find and hire verified talent.',
     status: 'soon',
     headline: 'Hire from proof, not keywords',
     pitch:
       'Employers search candidates by verified skills, review real work samples from simulations, and hire from partner cohorts who are ready on day one.',
-    forLearners: 'Be found for what you have proven, by employers your program already works with.',
-    features: [
-      {
-        title: 'Search by verified skills',
-        body: 'Filter candidates by skills they have shown, not words on a resume.',
-      },
-      {
-        title: 'Real work samples',
-        body: 'Watch or read the simulation work behind every skill.',
-      },
-      {
-        title: 'Partner cohorts',
-        body: 'Hire from the programs you fund or sponsor, with the training record attached and the hire recorded.',
-      },
-      {
-        title: 'Learner-controlled sharing',
-        body: 'Learners choose which organizations may see their profile and resume.',
-      },
+    steps: [
+      'Learners prove skills in simulations and checkpoints.',
+      'Profiles are verified from that evidence.',
+      'Employers search verified talent, with work samples attached.',
+      'Hires and placements are recorded.',
     ],
+    benefit: {
+      emoji: '🤝',
+      title: 'Your graduates, found and hired',
+      body: 'Employer partners find your verified graduates by the skills they proved, and you see who was hired, on the same learner record.',
+    },
   },
 ]
 
 /** Public site: every piece, built or not, opens its own product page. */
 export const productPagePath = (p: Product): string => `/products/${p.id}`
+
+/** Signed-in app: an available piece opens its screens here, or its product page if it has none. */
+export const appProductPath = (p: Product): string | null =>
+  p.status === 'available' ? (p.href ?? productPagePath(p)) : null

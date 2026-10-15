@@ -2,23 +2,23 @@
 
 Learn Differently is five connected products that share one learner record and one learning loop:
 learn a little, practice it, prove it, then learn exactly what closes the gap. Each product owns one
-verb in that loop. This document says which product a feature belongs to, so the LMS does not grow a
+role in that loop. This document says which product a feature belongs to, so the LMS does not grow a
 job board, the simulator does not grow a cohort manager, and so on.
 
 Read it before scoping any non-trivial feature. If a request crosses a boundary, say so and propose
 the split before building. This applies to people and to agents.
 
-## The five pieces, one verb each
+## The five pieces, one role each
 
-| #   | Product                                 | Verb        | The one job                                                                   | Lives today                                          |
+| #   | Product                                 | Role        | The one job                                                                   | Lives today                                          |
 | --- | --------------------------------------- | ----------- | ----------------------------------------------------------------------------- | ---------------------------------------------------- |
-| 01  | Learning Management (LMS)               | Structure   | Pathways, cohorts, progress, credentials, institutional reporting             | `apps/learn` (`/lms/*`), `apps/api/src/learn`        |
+| 01  | Learning Management (LMS)               | Foundation  | Pathways, cohorts, progress, credentials, institutional reporting             | `apps/learn` (`/lms/*`), `apps/api/src/learn`        |
 | 02  | Micro Learning                          | Spark       | Short lessons that end in an exercise, plus integrations with outside content | `apps/spark` (lesson player), `apps/api/src/spark`   |
 | 03  | Skill Simulator (Interview Differently) | Practice    | Job simulations and exercises, AI co-work, scoring and coaching               | `apps/web`, `apps/api/src/simulator`; see section 03 |
 | 04  | Job Board Match                         | Opportunity | Roles from outside boards matched to proven skills; the gap; apply with proof | not built                                            |
 | 05  | Talent Match                            | Placement   | Employers search verified talent, profile sharing, hires                      | partly, inside the LMS (`/lms/talent`, see below)    |
 
-The test for any feature: **which verb does it serve, and who is the user?** A feature serves one verb.
+The test for any feature: **which role does it serve, and who is the user?** A feature serves one role.
 If it seems to serve two, it is two features, one per product, joined through the learner record.
 
 ## The shared core (not a product)
@@ -54,7 +54,7 @@ Talent Match rows, not core rows.
 
 ## What each product owns, reads, and must not grow
 
-### 01 Learning Management (Structure)
+### 01 Learning Management (Foundation)
 
 - **Owns:** courses and pathways, modules and items, cohorts and sessions, enrollment and join
   requests, attendance, gradebook and progress, credentials and badges, outcomes dashboards and
@@ -245,7 +245,7 @@ nothing across products.
 
 ## Five questions before building
 
-1. **Which verb?** Structure, Spark, Practice, Opportunity or Placement. Pick one.
+1. **Which role?** Foundation, Spark, Practice, Opportunity or Placement. Pick one.
 2. **Who is the user?** Learner, instructor or case manager, agency staff, creator, employer. An
    employer-facing screen is never in the LMS. An instructor-facing screen is never in Talent Match.
 3. **What does it write?** Find the slice of the learner record. The product that owns that slice

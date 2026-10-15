@@ -5,13 +5,10 @@ import { PRODUCTS, type Product } from '../products'
 /**
  * Header menu listing the five connected products. The caller decides where each
  * one goes: the public site sends every piece to its product page, the signed-in
- * app sends available pieces to the app itself. Return null for "not a link yet".
+ * app sends available pieces to their screens here (or their product page if they
+ * have none). Return null for "not a link yet".
  */
-export function ProductsMenu({
-  hrefFor,
-}: {
-  hrefFor: (p: Product) => { href: string; external?: boolean } | null
-}) {
+export function ProductsMenu({ hrefFor }: { hrefFor: (p: Product) => { href: string } | null }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -69,11 +66,7 @@ export function ProductsMenu({
               return (
                 <li key={p.id}>
                   {link ? (
-                    <a
-                      href={link.href}
-                      {...(link.external ? { rel: 'noopener' } : {})}
-                      className="dash-products-item"
-                    >
+                    <a href={link.href} className="dash-products-item">
                       {body}
                     </a>
                   ) : (

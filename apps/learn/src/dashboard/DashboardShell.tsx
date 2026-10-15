@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { AccountMenu, authConfigured, type MenuGroup, type MenuLink } from '../auth'
 import { NavDropdown } from '../components/NavDropdown'
 import { ProductsMenu } from '../components/ProductsMenu'
+import { appProductPath } from '../products'
 import { withBrand } from '../brand'
 import '../pages/delaware.css'
 import '../pages/home.css'
@@ -252,11 +253,10 @@ function LearnFrame({ children }: { children: ReactNode }) {
           <LearnNav
             productsMenu={
               <ProductsMenu
-                hrefFor={(p) =>
-                  p.status === 'available' && p.href
-                    ? { href: p.external ? p.href : href(p.href), external: p.external }
-                    : null
-                }
+                hrefFor={(p) => {
+                  const to = appProductPath(p)
+                  return to ? { href: href(to) } : null
+                }}
               />
             }
           />
