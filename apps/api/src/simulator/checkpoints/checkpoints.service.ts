@@ -271,10 +271,14 @@ export class CheckpointsService {
 
   /** Grading itself failing is nobody's wrong answer: refuse, so the learner can try again. */
   private refuseInfra(outcomes: QueryOutcome[]) {
-    if (outcomes.some((o) => !o.ok && o.infra))
+    const failed = outcomes.flatMap((o) => (!o.ok && o.infra ? [o.error] : []))
+    if (failed.length > 0) {
+      // the learner sees a generic message; the reason is only here
+      this.logger.warn(`Grading failed: ${[...new Set(failed)].join(' | ')}`)
       throw new ServiceUnavailableException(
         'Grading is unavailable right now. Try again in a moment.'
       )
+    }
   }
 
   async grade(
