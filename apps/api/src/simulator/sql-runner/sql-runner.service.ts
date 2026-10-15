@@ -131,7 +131,8 @@ export class SqlRunnerService {
     totalMs: 45_000,
     maxChildren: 2,
     queueMs: 10_000,
-    maxRssMb: 1_024,
+    // PGlite holds about 1.3 GB once the practice dataset is loaded, so the limit leaves room for a query above that
+    maxRssMb: 2_048,
     pollMs: 200,
   }
   spawn: () => ChildLike = forkWorker
