@@ -147,6 +147,9 @@ export default defineRailway((ctx) => {
       R2_SECRET_ACCESS_KEY: preserve(),
       REDIS_URL: preserve(),
       RESEND_API_KEY: preserve(),
+      // Spark's lesson player: its address and the secret that signs player links (docs/dev-api.md).
+      SPARK_SESSION_SECRET: preserve(),
+      SPARK_WEB_URL: preserve(),
       TRUST_PROXY: preserve(),
     },
   })
