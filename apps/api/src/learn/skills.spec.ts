@@ -109,6 +109,108 @@ describe('skillResults', () => {
     )
     expect(by(r, 'safety').status).toBe('unknown')
   })
+
+  const checkpoint = {
+    id: 'cp',
+    type: 'tool',
+    config: {
+      toolId: 'id-checkpoint',
+      ref: 'b',
+      tasks: [
+        { ref: '1.1', skill: 'safety' },
+        { ref: '1.2', skill: 'safety' },
+        { ref: '2.1', skill: 'comms' },
+      ],
+    },
+  }
+  const cpResults = (a: boolean, b: boolean, c?: boolean) => ({
+    results: [
+      { ref: '1.1', correct: a },
+      { ref: '1.2', correct: b },
+      ...(c === undefined ? [] : [{ ref: '2.1', correct: c }]),
+    ],
+  })
+
+  it('counts each SQL checkpoint task as evidence for its skill', () => {
+    const r = skillResults(
+      skills,
+      [checkpoint],
+      new Map([['cp', done(cpResults(true, false, true))]])
+    )
+    expect(by(r, 'safety')).toMatchObject({ pct: 50, n: 2, status: 'gap' })
+    expect(by(r, 'comms')).toMatchObject({ pct: 100, n: 1, status: 'demonstrated' })
+  })
+
+  it('calls a skill emerging, not shown, until it has the evidence the course asks for', () => {
+    const strict = skills.map((s) => ({ ...s, minEvidence: 2 }))
+    const r = skillResults(
+      strict,
+      [checkpoint],
+      new Map([['cp', done(cpResults(true, true, true))]])
+    )
+    expect(by(r, 'safety')).toMatchObject({ n: 2, status: 'demonstrated' })
+    expect(by(r, 'comms')).toMatchObject({ n: 1, status: 'emerging' })
+  })
+
+  it('flags a gap on a single piece of evidence even when more is asked for showing it', () => {
+    const strict = skills.map((s) => ({ ...s, minEvidence: 3 }))
+    const r = skillResults(
+      strict,
+      [checkpoint],
+      new Map([['cp', done(cpResults(true, true, false))]])
+    )
+    expect(by(r, 'comms')).toMatchObject({ n: 1, status: 'gap' })
+  })
+
+  it('judges a skill that asks for more evidence on its most recent answers', () => {
+    const strict = skills.map((s) => ({ ...s, minEvidence: 2 }))
+    const t = (ref: string, correct: boolean, at: string) => ({ ref, correct, at })
+    const early = { ...checkpoint, id: 'diag' }
+    const later = {
+      ...checkpoint,
+      id: 'mod',
+      config: {
+        toolId: 'id-checkpoint',
+        ref: 'b',
+        tasks: [
+          { ref: '1.3', skill: 'safety' },
+          { ref: '1.4', skill: 'safety' },
+        ],
+      },
+    }
+    const progress = new Map([
+      ['diag', done({ results: [t('1.1', false, '2026-01-01'), t('1.2', false, '2026-01-01')] })],
+      ['mod', done({ results: [t('1.3', true, '2026-01-02'), t('1.4', true, '2026-01-03')] })],
+    ])
+    const r = skillResults(strict, [early, later], progress)
+    expect(by(r, 'safety')).toMatchObject({ pct: 100, n: 4, status: 'demonstrated' })
+    // Without minEvidence every answer counts, as before.
+    expect(by(skillResults(skills, [early, later], progress), 'safety')).toMatchObject({
+      pct: 50,
+      status: 'gap',
+    })
+  })
+
+  it('counts a pass ("not learned this yet") as no evidence, not as a gap', () => {
+    const passed = {
+      results: [
+        { ref: '1.1', correct: false, passed: true },
+        { ref: '1.2', correct: false, passed: true },
+      ],
+    }
+    const r = skillResults(skills, [checkpoint], new Map([['cp', done(passed)]]))
+    expect(by(r, 'safety')).toMatchObject({ n: 0, status: 'unknown' })
+  })
+
+  it('does not count generated practice, which is remediation', () => {
+    const slot = {
+      ...checkpoint,
+      id: 'slot',
+      config: { ...checkpoint.config, remediationFor: 'safety' },
+    }
+    const r = skillResults(skills, [slot], new Map([['slot', done(cpResults(true, true))]]))
+    expect(by(r, 'safety').status).toBe('unknown')
+  })
 })
 
 describe('remediationOf and parseSkills', () => {
@@ -121,6 +223,9 @@ describe('remediationOf and parseSkills', () => {
   it('drops malformed skills', () => {
     expect(parseSkills([{ id: 'a', label: 'A', targetPct: 70 }, { id: 'b' }, 'x'])).toEqual([
       { id: 'a', label: 'A', targetPct: 70 },
+    ])
+    expect(parseSkills([{ id: 'a', label: 'A', targetPct: 70, minEvidence: 2 }])).toEqual([
+      { id: 'a', label: 'A', targetPct: 70, minEvidence: 2 },
     ])
     expect(parseSkills(undefined)).toEqual([])
   })

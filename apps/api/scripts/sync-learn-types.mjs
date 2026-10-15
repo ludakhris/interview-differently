@@ -23,10 +23,13 @@ export const NAMES = [
   'record',
   'attention',
   'monitor',
+  'checkpoint',
+  'lesson',
 ]
 
-/** Where each copy goes. The monitor types are the Simulator feed's contract, so they live in core, not in the LMS folder. */
-export const dirOf = (name) => (name === 'monitor' ? 'core' : 'learn')
+/** Where each copy goes. Contracts between products (the Simulator feed, the checkpoint page, the lesson player) live in core. */
+export const dirOf = (name) =>
+  ['monitor', 'checkpoint', 'lesson'].includes(name) ? 'core' : 'learn'
 
 export const header = (
   name

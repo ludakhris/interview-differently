@@ -37,6 +37,7 @@ import {
   validateCohortFields,
   validateEmail,
 } from './cohort-config'
+import { adaptiveCourseIds } from './course-config'
 import { CSV_BOM, csvLine } from './attendance/attendance-rules'
 import { LearnerService } from './learner.service'
 import { AccessService } from './access/access.service'
@@ -149,6 +150,10 @@ export class LearnCohortsService {
       },
       orderBy: { startsAt: 'desc' },
     })
+    const adaptive = await adaptiveCourseIds(
+      this.prisma,
+      rows.map((c) => c.course?.id as string)
+    )
     return rows.map((c) => ({
       id: c.id,
       name: c.name,
@@ -166,6 +171,7 @@ export class LearnCohortsService {
       delivery: c.delivery as CohortDelivery,
       requiresProfile: c.requiresProfile,
       profileRefreshMonths: c.profileRefreshMonths,
+      adaptive: adaptive.has(c.course?.id as string),
     }))
   }
 
@@ -271,6 +277,7 @@ export class LearnCohortsService {
       delivery: c.delivery as CohortDelivery,
       requiresProfile: c.requiresProfile,
       profileRefreshMonths: c.profileRefreshMonths,
+      adaptive: (await adaptiveCourseIds(this.prisma, [c.course.id])).has(c.course.id),
       host: {
         id: c.institution.id,
         name: c.institution.name,

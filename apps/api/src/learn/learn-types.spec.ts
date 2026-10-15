@@ -15,6 +15,8 @@ const NAMES = [
   'record',
   'attention',
   'monitor',
+  'checkpoint',
+  'lesson',
 ]
 
 describe('shared types copies', () => {
@@ -23,8 +25,10 @@ describe('shared types copies', () => {
       resolve(__dirname, `../../../../packages/types/src/${name}.ts`),
       'utf8'
     ).replace(/from '\.\/(learn|outcomes|talent|attendance|activity)'/g, "from './$1-types'")
-    // the monitor types are the Simulator feed's contract, so their copy lives in core
-    const dir = name === 'monitor' ? resolve(__dirname, '../core') : __dirname
+    // contracts between products (the Simulator feed, the checkpoint page, the lesson player) live in core
+    const dir = ['monitor', 'checkpoint', 'lesson'].includes(name)
+      ? resolve(__dirname, '../core')
+      : __dirname
     const copy = readFileSync(resolve(dir, `${name}-types.ts`), 'utf8')
     expect(copy.endsWith(original)).toBe(true)
     expect(copy.startsWith('// GENERATED COPY')).toBe(true)

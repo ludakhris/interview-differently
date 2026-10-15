@@ -1055,6 +1055,27 @@
   gap: 4px 14px;
   margin-bottom: 14px;
 }
+.dash-resume {
+  /* Under the readiness record, the width of the column. */
+  display: block;
+  margin-top: 12px;
+  text-align: center;
+  text-decoration: none;
+}
+/* A learner's own courses: an orange edge and orange progress, so their learning stands out from staff pages. */
+.dash-mycourse,
+.dash-learner-modules > .dash-card,
+.dash-learner-modules ~ .dash-card {
+  border-left: 6px solid var(--orange);
+}
+.dash-mycourse .dash-meter-fill,
+.dash-mycourse-head .dash-meter-fill {
+  background: var(--orange);
+}
+/* The item the learner picks up next, in the course outline: its status in orange. */
+.dash-item.is-next .dash-item-status {
+  color: var(--orange-text);
+}
 .dash-course-head .dash-card-title,
 .dash-course-head p {
   margin: 0;
@@ -1081,6 +1102,11 @@
 }
 .dash-brand-delaware .dash-chip {
   border-radius: 0;
+}
+.dash-chip-adaptive {
+  border-color: #2a9d6f;
+  background: #e3f4ea;
+  color: #1d7a55;
 }
 .dash-chip-on {
   border-color: var(--navy);
@@ -1280,11 +1306,25 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+.dash-item-body {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+}
 .dash-item-title {
   flex: 1;
   min-width: 0;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+.dash-item-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.dash-item-chips:empty {
+  display: none;
 }
 .dash-itemeditor {
   display: grid;
@@ -1614,6 +1654,12 @@
   letter-spacing: 0;
   text-transform: none;
 }
+/* Added to the learner's plan by their results: green, like added content everywhere on the adaptive pages. */
+.dash-chip-added {
+  border-color: var(--ad-add, #17784a);
+  background: var(--ad-add-bg, #e3f4ea);
+  color: var(--ad-add, #17784a);
+}
 .dash-item-added {
   /* The same row as any other; an accent bar marks it (kept above the hover background). */
   position: relative;
@@ -1624,7 +1670,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 4px;
-  background: var(--navy);
+  background: var(--ad-add, #17784a);
   pointer-events: none;
 }
 .dash-plan-list {
@@ -3329,4 +3375,22 @@ a.dash-tool:focus-visible {
 .co-sections > .dash-section + .dash-section {
   padding-top: 36px;
   border-top: 4px solid var(--orange);
+}
+
+/* A link-looking action (fetches a link, then opens it), styled like a `details` summary such as "Show the 7 scenes". */
+.dash-text-link {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+}
+.dash-text-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+.dash-text-link > span[aria-hidden] {
+  font-size: 0.75em;
 }

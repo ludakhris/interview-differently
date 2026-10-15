@@ -16,6 +16,7 @@ import type { LtiStore } from '../lti-store'
 import { cohortStatus } from '../../learn/cohort-config'
 import { LearnerService } from '../../learn/learner.service'
 import { ActivityService } from '../../learn/activity/activity.service'
+import { placementOf } from '../../learn/adaptive/placement'
 import { sanitizeBrand } from '../lti-brand'
 import {
   AGS_SCOPE_SCORE,
@@ -36,6 +37,7 @@ import type { JwtClaims, KeyPair, ToolRegistration } from '../lti-spec'
 import {
   apiBase,
   assessmentLimits,
+  idWebOrigin,
   learnUrl,
   platformRegistration,
   reviewAllowed,
@@ -124,13 +126,20 @@ export class LtiPlatformService {
 
   // ── launch ──────────────────────────────────────────────────────────────────
 
-  /** Checks the learner may open this tool item and returns the form that starts the OIDC login. */
+  /**
+   * Checks the learner may open this tool item and returns the form that starts the OIDC login. `embed`: the tool
+   * opens in a frame on the course page (a checkpoint): the launch asks for `document_target: iframe`, the login asks
+   * the tool to keep its state in the page (LTI platform storage, `lti_storage_target`), and the result says which
+   * origins the page should trust (`embed.storageOrigin` for the tool's login and launch pages, `embed.frameOrigin`
+   * for the Interview Differently page that follows).
+   */
   async startLaunch(
     userId: string,
     cohortId: string,
     itemId: string,
     returnOrigin?: string,
-    mode?: 'review'
+    mode?: 'review',
+    opts: { embed?: boolean } = {}
   ) {
     const { tool, config, label, enrollmentId } = await this.toolItem(cohortId, itemId, userId)
     if (mode === 'review') await this.assertCanReview(userId, cohortId, itemId, tool, config, label)
@@ -144,14 +153,22 @@ export class LtiPlatformService {
     const origin = isLearnOrigin(returnOrigin, learnUrl())
       ? new URL(returnOrigin!).origin
       : undefined
-    const hint = this.signHint({ userId, cohortId, itemId, returnOrigin: origin, mode })
+    const embed = opts.embed === true && mode !== 'review'
+    const hint = this.signHint({
+      userId,
+      cohortId,
+      itemId,
+      returnOrigin: origin,
+      mode,
+      ...(embed ? { embed: true } : {}),
+    })
     // #69 E: note the launch for tool time. Not awaited and never throws: it cannot slow or fail a launch.
     // Looking at answers is not tool time.
     if (this.activity && enrollmentId && mode !== 'review')
       void Promise.resolve()
         .then(() => this.activity?.openToolLaunch(enrollmentId, userId, itemId))
         .catch(() => undefined)
-    return this.loginForm(tool, userId, hint)
+    return this.loginForm(tool, userId, hint, embed)
   }
 
   /**
@@ -188,18 +205,26 @@ export class LtiPlatformService {
   private loginForm(
     tool: { loginUrl: string; launchUrl: string; clientId: string; deploymentId: string },
     loginHint: string,
-    hint: string
-  ) {
+    hint: string,
+    embed = false
+  ): {
+    action: string
+    fields: Record<string, string>
+    embed?: { storageOrigin: string; frameOrigin: string }
+  } {
+    const fields: Record<string, string> = {
+      iss: platformRegistration().issuer,
+      login_hint: loginHint,
+      target_link_uri: tool.launchUrl,
+      lti_message_hint: hint,
+      client_id: tool.clientId,
+      lti_deployment_id: tool.deploymentId,
+    }
+    if (!embed) return { action: tool.loginUrl, fields }
     return {
       action: tool.loginUrl,
-      fields: {
-        iss: platformRegistration().issuer,
-        login_hint: loginHint,
-        target_link_uri: tool.launchUrl,
-        lti_message_hint: hint,
-        client_id: tool.clientId,
-        lti_deployment_id: tool.deploymentId,
-      },
+      fields: { ...fields, lti_storage_target: '_parent' },
+      embed: { storageOrigin: new URL(tool.loginUrl).origin, frameOrigin: idWebOrigin() },
     }
   }
 
@@ -310,6 +335,8 @@ export class LtiPlatformService {
     mode?: 'review'
     /** Staff review: the learner whose submitted attempt `userId` (the staff member) opens. */
     reviewUserId?: string
+    /** The tool opens in a frame on the course page. */
+    embed?: true
   }): string {
     const body = b64url(JSON.stringify({ ...claims, jti: newId(), exp: nowS() + HINT_TTL_S }))
     const mac = createHmac('sha256', this.hintSecret).update(body).digest('base64url')
@@ -331,6 +358,7 @@ export class LtiPlatformService {
       returnOrigin?: unknown
       mode?: unknown
       reviewUserId?: unknown
+      embed?: unknown
       jti?: unknown
       exp?: unknown
     }
@@ -339,7 +367,7 @@ export class LtiPlatformService {
     } catch {
       throw new HttpException('Invalid lti_message_hint', 400)
     }
-    const { userId, cohortId, itemId, returnOrigin, mode, reviewUserId, jti, exp } = claims
+    const { userId, cohortId, itemId, returnOrigin, mode, reviewUserId, embed, jti, exp } = claims
     if (
       typeof userId !== 'string' ||
       typeof cohortId !== 'string' ||
@@ -347,6 +375,7 @@ export class LtiPlatformService {
       (returnOrigin !== undefined && typeof returnOrigin !== 'string') ||
       (mode !== undefined && mode !== 'review') ||
       (reviewUserId !== undefined && (typeof reviewUserId !== 'string' || mode !== 'review')) ||
+      (embed !== undefined && (embed !== true || mode !== undefined)) ||
       typeof jti !== 'string' ||
       typeof exp !== 'number'
     )
@@ -357,7 +386,17 @@ export class LtiPlatformService {
       typeof returnOrigin === 'string' && isLearnOrigin(returnOrigin, learnUrl())
         ? returnOrigin
         : undefined
-    return { userId, cohortId, itemId, returnOrigin: origin, mode, reviewUserId, jti, exp }
+    return {
+      userId,
+      cohortId,
+      itemId,
+      returnOrigin: origin,
+      mode,
+      reviewUserId,
+      embed: embed === true,
+      jti,
+      exp,
+    }
   }
 
   /** OIDC authentication request from a tool: replies with a form that posts the signed id_token. */
@@ -423,6 +462,11 @@ export class LtiPlatformService {
       if (used >= maxAttempts)
         throw new ConflictException(`You have used all ${maxAttempts} attempts.`)
     }
+    // A checkpoint tells the tool what to ask (the placement), read from the course here; the tool checks it again.
+    const checkpoint =
+      itemTool.kind === 'checkpoint'
+        ? await runAsSystem(() => this.checkpointPlacement(hint.itemId))
+        : null
     if (!(await this.store.claim('lti-hint', hint.jti, Math.max(1, hint.exp - nowS() + 5))))
       throw new HttpException('lti_message_hint was already used', 400)
 
@@ -439,6 +483,8 @@ export class LtiPlatformService {
     } else if (itemTool.kind === 'assessment') {
       const { timeLimitMinutes } = assessmentLimits(itemConfig)
       custom = { ...custom, attempt: used + 1, ...(timeLimitMinutes ? { timeLimitMinutes } : {}) }
+    } else if (checkpoint) {
+      custom = { ...custom, checkpoint: JSON.stringify(checkpoint) }
     }
     const brand = await runAsSystem(() => this.brandOf(hint.cohortId))
     const reg = platformRegistration()
@@ -464,18 +510,56 @@ export class LtiPlatformService {
         [CLAIM.context]: { id: hint.cohortId },
         [CLAIM.roles]: [hint.reviewUserId ? INSTRUCTOR_ROLE : LEARNER_ROLE],
         [CLAIM.custom]: custom,
-        [CLAIM.launchPresentation]: {
-          document_target: 'window',
-          return_url: hint.reviewUserId
-            ? `${hint.returnOrigin ?? learnUrl()}/lms/cohorts/${hint.cohortId}`
-            : `${hint.returnOrigin ?? learnUrl()}/lms/learning/${hint.cohortId}/${hint.itemId}`,
-        },
+        // In a frame the tool stays on the course page, so there is nowhere to return to.
+        [CLAIM.launchPresentation]: hint.embed
+          ? { document_target: 'iframe' }
+          : {
+              document_target: 'window',
+              return_url: hint.reviewUserId
+                ? `${hint.returnOrigin ?? learnUrl()}/lms/cohorts/${hint.cohortId}`
+                : `${hint.returnOrigin ?? learnUrl()}/lms/learning/${hint.cohortId}/${hint.itemId}`,
+            },
         [CLAIM.agsEndpoint]: { scope: [AGS_SCOPE_SCORE], lineitem },
         ...(brand ? { [BRAND_CLAIM]: brand } : {}),
       },
       this.keys
     )
     return autoSubmitForm(tool.launchUrl, { id_token: idToken, state })
+  }
+
+  /** A checkpoint item's placement (what the Simulator asks), from the item and its course. */
+  private async checkpointPlacement(itemId: string) {
+    const item = await this.prisma.courseItem.findUnique({
+      where: { id: itemId },
+      select: {
+        type: true,
+        title: true,
+        config: true,
+        module: {
+          select: {
+            course: {
+              select: {
+                skills: true,
+                adaptive: true,
+                modules: { select: { items: { select: { type: true, config: true } } } },
+              },
+            },
+          },
+        },
+      },
+    })
+    const course = item?.module.course
+    const placement =
+      item && course
+        ? placementOf(
+            item,
+            course,
+            course.modules.flatMap((m) => m.items)
+          )
+        : null
+    if (!placement || (!placement.practice && placement.refs.length === 0))
+      throw new ConflictException('This checkpoint has no requests set up.')
+    return placement
   }
 
   /** The cohort's institution brand, else the nearest ancestor's valid one (at most 5 hops up). */

@@ -7,6 +7,13 @@ const env = (name: string): string | undefined => process.env[name]?.trim() || u
 export const apiBase = (): string =>
   (env('LTI_API_BASE') ?? 'http://localhost:3000/api').replace(/\/+$/, '')
 
+/**
+ * Origin of the Interview Differently web app (LTI_ID_WEB_URL), where an embedded checkpoint's page runs: the LMS page
+ * trusts its frame messages from there.
+ */
+export const idWebOrigin = (): string =>
+  new URL(env('LTI_ID_WEB_URL') ?? 'http://localhost:5173').origin
+
 /** Where learners return to LearnDifferently from a tool (no trailing slash). */
 export const learnUrl = (): string =>
   (env('LTI_LEARN_URL') ?? 'http://localhost:5174').replace(/\/+$/, '')
@@ -46,8 +53,11 @@ export function ownToolUrls(): { loginUrl: string; launchUrl: string; jwksUrl: s
 
 /** A connected tool: its LTI registration plus how LearnDifferently treats it (never sent over LTI). */
 export interface PlatformTool extends ToolRegistration {
-  /** An interview is practice that can be retried; an assessment is a question bank taken once. */
-  kind: 'interview' | 'assessment'
+  /**
+   * An interview is practice that can be retried; an assessment is a question bank taken once; a checkpoint is a
+   * course checkpoint worked in the Simulator's chat page, embedded in the course (GitHub issue #90).
+   */
+  kind: 'interview' | 'assessment' | 'checkpoint'
   /** Whether a learner may launch it again after completing it. */
   retries: boolean
   /** Whether a course item for it may be labelled as the pre or post assessment. */

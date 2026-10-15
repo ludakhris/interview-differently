@@ -2,7 +2,7 @@ import type { SandboxResult } from './sandboxDb'
 
 /**
  * Result-set comparison for SQL questions — the browser-side twin of
- * apps/api/src/assessments/grade.ts (keep the rules in sync).
+ * apps/api/src/simulator/assessments/grade.ts (keep the rules in sync).
  *
  * Column names are ignored unless `strictColumns`; column count always
  * matters. Row order is ignored unless `ordered`. Numeric-looking cells

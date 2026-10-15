@@ -156,12 +156,29 @@ suite('agency structure and agencyId triggers', () => {
       await insert(db, 'ItemProgress', item)
       await insert(db, 'ItemAttempt', item)
       await insert(db, 'PlanItem', item)
+      await insert(db, 'PlanSkip', item)
+      const learner = { cohortId: cohortA, userId: 'learner-A', itemId: 'item-A' }
+      await insert(db, 'PracticeSet', { id: 'set-A' })
+      await insert(db, 'Lesson', { id: 'lesson-A' })
+      await insert(db, 'PracticeSetUse', { ...learner, practiceSetId: 'set-A' })
+      await insert(db, 'PracticeEvent', learner)
+      await insert(db, 'LessonUse', { ...learner, id: 'use-A', lessonId: 'lesson-A' })
+      await insert(db, 'LessonEvent', {
+        cohortId: cohortA,
+        userId: 'learner-A',
+        lessonUseId: 'use-A',
+      })
       await insert(db, 'ActivitySession', { ...item, userId: 'learner-A' })
       await insert(db, 'AttendanceMark', { sessionId: 'se-A', userId: 'learner-A' })
       for (const t of [
         'ItemProgress',
         'ItemAttempt',
         'PlanItem',
+        'PlanSkip',
+        'PracticeSetUse',
+        'PracticeEvent',
+        'LessonUse',
+        'LessonEvent',
         'ActivitySession',
         'AttendanceMark',
       ]) {

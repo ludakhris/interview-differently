@@ -3,29 +3,35 @@ import type { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 import type { AddressInfo } from 'node:net'
 import { AdminGuard } from '../auth/admin.guard'
-import { AssessmentsMeController } from '../assessments/assessments.controller'
-import { AssessmentsService } from '../assessments/assessments.service'
+import { AssessmentsMeController } from '../simulator/assessments/assessments.controller'
+import { AssessmentsService } from '../simulator/assessments/assessments.service'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
 import { ClerkService } from '../auth/clerk.service'
 import { InstitutionScope } from '../auth/scope'
-import { ImmersiveSessionsController } from '../immersive-sessions/immersive-sessions.controller'
-import { ImmersiveSessionsService } from '../immersive-sessions/immersive-sessions.service'
-import { InterviewEngineService } from '../interview-engine/interview-engine.service'
+import { ImmersiveSessionsController } from '../simulator/immersive-sessions/immersive-sessions.controller'
+import { ImmersiveSessionsService } from '../simulator/immersive-sessions/immersive-sessions.service'
+import { InterviewEngineService } from '../simulator/interview-engine/interview-engine.service'
 import { TranscriptionService } from '../transcription/transcription.service'
-import { DatasetsAdminController, DatasetsMeController } from '../datasets/datasets.controller'
-import { DatasetsService } from '../datasets/datasets.service'
-import { SqlRunnerService } from '../sql-runner/sql-runner.service'
+import {
+  DatasetsAdminController,
+  DatasetsMeController,
+} from '../simulator/datasets/datasets.controller'
+import { DatasetsService } from '../simulator/datasets/datasets.service'
+import { SqlRunnerService } from '../simulator/sql-runner/sql-runner.service'
 import { LearnerService } from '../learn/learner.service'
 import { PrismaService } from '../prisma/prisma.service'
-import { ResultsController } from '../results/results.controller'
-import { ResultsService } from '../results/results.service'
-import { ScenariosController } from '../scenarios/scenarios.controller'
-import { ScenariosService } from '../scenarios/scenarios.service'
+import { ResultsController } from '../simulator/results/results.controller'
+import { ResultsService } from '../simulator/results/results.service'
+import { ScenariosController } from '../simulator/scenarios/scenarios.controller'
+import { ScenariosService } from '../simulator/scenarios/scenarios.service'
 import { LTI_STORE, MemoryLtiStore } from './lti-store'
 import * as ltiSpec from './lti-spec'
 import { LtiPlatformController } from './platform/lti-platform.controller'
 import { LtiPlatformService } from './platform/lti-platform.service'
 import { LtiPlayService } from './tool/lti-play.service'
+import { LtiCheckpointService } from './tool/lti-checkpoint.service'
+import { CheckpointChatService } from '../simulator/checkpoints/checkpoint-chat.service'
+import { CheckpointsService } from '../simulator/checkpoints/checkpoints.service'
 import { LtiToolController } from './tool/lti-tool.controller'
 import { LtiToolService } from './tool/lti-tool.service'
 import { PlatformRegistryService } from './tool/platform-registry.service'
@@ -446,6 +452,9 @@ describe('LTI 1.3 launch and score return (end to end)', () => {
         LtiToolService,
         PlatformRegistryService,
         LtiPlayService,
+        LtiCheckpointService,
+        CheckpointChatService,
+        CheckpointsService,
         { provide: LTI_STORE, useValue: store },
         { provide: PrismaService, useValue: prisma },
         { provide: LearnerService, useValue: { recordToolResult } },

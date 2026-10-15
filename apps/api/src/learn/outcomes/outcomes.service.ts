@@ -49,6 +49,7 @@ export class OutcomesService {
         },
         progress: true,
         plan: true,
+        skips: { select: { itemId: true } },
       },
       orderBy: { enrolledAt: 'desc' },
     })
@@ -85,8 +86,11 @@ export class OutcomesService {
       if (!course) return []
       const all = itemsOf(course.id)
       const byItem = new Map(e.progress.map((p) => [p.itemId, p]))
-      const ordinary = all.filter((i) => !remediationOf(i.config))
+      // Items the learner was let past (adaptive checkpoints) are not required, so not listed.
+      const skipped = new Set(e.skips.map((k) => k.itemId))
+      const ordinary = all.filter((i) => !remediationOf(i.config) && !skipped.has(i.id))
       const added = e.plan.flatMap((p) => {
+        if (skipped.has(p.itemId)) return []
         const i = all.find((x) => x.id === p.itemId)
         return i ? [{ item: i, since: p.createdAt, review: !remediationOf(i.config) }] : []
       })

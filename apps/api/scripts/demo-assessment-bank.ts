@@ -1,5 +1,5 @@
-import { parseAssessmentMarkdown } from '../src/assessments/parse-markdown'
-import type { ParsedAssessment } from '../src/assessments/assessment.types'
+import { parseAssessmentMarkdown } from '../src/simulator/assessments/parse-markdown'
+import type { ParsedAssessment } from '../src/simulator/assessments/assessment.types'
 
 /**
  * Builds an Interview Differently assessment bank from a list of multiple-choice questions, for the

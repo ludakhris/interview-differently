@@ -9,6 +9,7 @@ import { AttendancePanel } from './attendance/AttendancePanel'
 import { Meter } from './charts'
 import { CohortConfigModal } from './CohortConfigModal'
 import { CohortAttendanceChip, CohortDeliveryChip, CohortStatusChip } from './CohortsPage'
+import { AdaptiveChip } from './CoursesPage'
 import { dateOnly, dateShort } from './format'
 import type { PendingJoinRequest } from './joinRequests'
 import { canManageMembers, canManageWorkspace } from './roleAccess'
@@ -224,11 +225,19 @@ function Cohort({
           <CohortDeliveryChip delivery={cohort.delivery} />
           <CohortAttendanceChip delivery={cohort.delivery} />
           <CohortStatusChip status={cohort.status} />
+          {cohort.adaptive && <AdaptiveChip />}
         </div>
         <p className="dash-sub">
           {cohort.courseTitle} · {dateOnly(cohort.startsAt)} to {dateOnly(cohort.endsAt)}
           {cohort.lengthWeeks ? ` (${cohort.lengthWeeks} weeks)` : ''}
         </p>
+        {cohort.adaptive && (
+          <p className="dash-sub">
+            <a href={href(`/lms/cohorts/${encodeURIComponent(cohort.id)}/adaptive`)}>
+              Adaptive Learner Monitoring →
+            </a>
+          </p>
+        )}
       </div>
 
       {message && (

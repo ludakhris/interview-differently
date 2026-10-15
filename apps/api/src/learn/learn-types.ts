@@ -130,6 +130,8 @@ export type CourseItemType =
   | 'tool'
   /** #69: the learner fills in their talent profile (resume, education, experience, targets). */
   | 'profile'
+  /** Adaptive checkpoints (#90): a slot for a short Spark lesson made for the learner's gap in a skill. */
+  | 'spark_lesson'
 export type CourseStatus = 'draft' | 'published'
 
 export interface KnowledgeCheckQuestion {
@@ -147,6 +149,11 @@ export interface CourseSkill {
   id: string
   label: string
   targetPct: number
+  /**
+   * Pieces of evidence needed before the skill counts as shown (default 1). A gap needs only one: help comes on
+   * a sign, moving on needs proof.
+   */
+  minEvidence?: number
 }
 
 /**
@@ -206,6 +213,8 @@ export interface CourseSummary extends CourseSettings {
   items: number
   cohorts: number
   updatedAt: string
+  /** Adaptive checkpoints (prototype): the course has a diagnostic that builds each learner's own path. */
+  adaptive: boolean
 }
 
 export interface CourseDetail extends CourseSettings {
@@ -267,6 +276,8 @@ export interface CohortListItem {
   requiresProfile: boolean
   /** Months before a saved profile counts as stale and must be refreshed (1-60). Null = never. */
   profileRefreshMonths: number | null
+  /** The cohort's course is adaptive (see CourseSummary.adaptive). */
+  adaptive: boolean
 }
 
 /** A pending join request as staff see it. */
@@ -431,6 +442,12 @@ export interface LearnerOutlineItem {
   attempts: number
   /** Short wording for a state the status cannot say, e.g. a profile that needs a refresh. */
   note?: string | null
+  /** The course skill the item teaches (config `teaches`), if any. */
+  skill?: string | null
+  /** Set when the learner was let past this item because they showed its skill: not required. */
+  skipped?: { skill: string; pct: number; n: number; at: string } | null
+  /** An adaptive checkpoint (a `tool` item run in the course page, GitHub issue #90). */
+  checkpoint?: boolean
 }
 
 /** What the learner's own record shows: the same measures the agency reports on. */
@@ -539,6 +556,8 @@ export interface LearnerItem {
     passScore: number | null
     /** True when the course can be finished without this item. */
     optional: boolean
+    /** The tool runs inside the course page (an adaptive checkpoint, GitHub issue #90), not in its own window. */
+    embedded: boolean
   } | null
   status: ProgressStatus
   score: number | null
@@ -562,7 +581,7 @@ export interface LearnTool {
   connectionId: string
   name: string
   /** An interview is a practice lab that can be retried; an assessment is a graded question bank. */
-  kind: 'interview' | 'assessment'
+  kind: 'interview' | 'assessment' | 'checkpoint'
   retries: boolean
   /** Whether an item for it can be the course's pre or post assessment. */
   labelable: boolean
@@ -662,4 +681,213 @@ export interface LearnerInterview {
   maxAttempts: number
   /** Earlier attempts, newest last. Answers are not kept, only scores and feedback. */
   attempts: InterviewAttempt[]
+}
+
+// ── Adaptive checkpoints (GitHub issue #90) ─────────────────────────────────
+//
+// The LMS places checkpoints and lessons and changes the plan; the Simulator runs the checkpoint (embedded by LTI,
+// see checkpoint.ts) and Spark plays the lesson (see lesson.ts).
+
+/**
+ * `config` of a checkpoint (a `tool` item whose tool is a checkpoint): { toolId, ref: question bank slug,
+ * tasks: [{ ref, skill }], scenario?, diagnostic?, teaches? }, where `ref` is a question number in the bank. A
+ * targeted-practice slot is { toolId, ref, generated: { skill }, remediationFor: skill }: the Simulator writes its
+ * requests for each learner.
+ */
+export interface CheckpointTaskConfig {
+  ref: string
+  skill: string
+}
+
+export type IntakeLevel = 'never' | 'some' | 'regular'
+
+/** What a checkpoint's answers changed in the learner's plan, after the LMS read them (POST .../adaptive/sync). */
+export interface AdaptiveSyncResult {
+  completed: boolean
+  /** The cursor to send as `since` next time (the server's clock). */
+  at: string
+  planAdded: PlanAddition[]
+  planSkipped: { itemId: string; title: string; skill: string }[]
+}
+
+/** A Spark lesson slot for one learner (GET or POST .../lesson): the player link once the lesson is ready. */
+export interface LessonSlot {
+  /** 'none': not made yet (POST makes it); 'pending': waiting for staff review. */
+  status: 'none' | 'pending' | 'ready' | 'rejected'
+  skillLabel: string
+  title: string | null
+  /** The Spark player to embed, signed for this learner. Null until ready. */
+  url: string | null
+  completed: boolean
+}
+
+export type SkillState = 'gap' | 'demonstrated' | 'emerging' | 'unknown'
+
+export interface BoardSkill {
+  id: string
+  label: string
+  targetPct: number
+  minEvidence: number
+}
+
+export interface BoardLearnerSkill {
+  skillId: string
+  pct: number | null
+  n: number
+  status: SkillState
+}
+
+/** One item on a learner's path, as the board draws it. */
+export interface BoardPathItem {
+  itemId: string
+  moduleTitle: string
+  title: string
+  type: string
+  /** Expected minutes, for time to job-ready. */
+  minutes: number
+  skill: string | null
+  state: 'todo' | 'done' | 'skipped' | 'added' | 'added_done' | 'review'
+  reason: string | null
+  at: string | null
+  /** For an item skipped or added: the evidence behind it and where it came from (for example the diagnostic). */
+  evidence: { pct: number | null; n: number; source: string | null } | null
+}
+
+export interface BoardLearner {
+  enrollmentId: string
+  userId: string
+  name: string
+  intake: IntakeLevel | null
+  skills: BoardLearnerSkill[]
+  path: BoardPathItem[]
+  needsHelp: string[]
+  ready: boolean
+  itemsDone: number
+  itemsTotal: number
+  /** Expected minutes of required work still to do, of all required work, and of work skipped as shown. */
+  minutesLeft: number
+  minutesTotal: number
+  minutesSaved: number
+  /** For the demo cohort: the persona whose script can be played, and the next step's description. */
+  demo: { persona: string; next: string | null } | null
+}
+
+export interface BoardPractice {
+  id: string
+  /** Practice requests, or a lesson made for the learner (a narrated storyboard). */
+  kind: 'practice' | 'lesson'
+  learnerName: string
+  skillLabel: string
+  status: 'pending' | 'approved' | 'rejected'
+  /** A person approved it (course staff here, or a system admin), so the library may reuse it. */
+  reviewed: boolean
+  intro: string
+  tasks: string[]
+  model: string
+  createdAt: string
+}
+
+/**
+ * Which AI-written library rows the system admin's Content review lists (GitHub issue #90). 'needs-review': waiting
+ * for review, or shown to learners without a library approval. 'approved': approved for reuse.
+ */
+export type ContentReviewFilter = 'needs-review' | 'approved' | 'rejected' | 'all'
+
+/** One AI-written library row (Simulator practice or a Spark lesson), for the system admin's Content review. */
+export interface LibraryContent {
+  id: string
+  kind: 'practice' | 'lesson'
+  skillLabel: string
+  status: 'pending' | 'approved' | 'rejected'
+  /** A person approved it for the library, so it is reused for other learners. */
+  reusable: boolean
+  /** The practice intro, or the lesson title. */
+  title: string
+  /** Practice: the question bank it was written from. */
+  bankSlug: string | null
+  /** Lesson: the experience level it was written for, when it shaped the lesson. */
+  level: string | null
+  /** The practice requests (no heading), or the lesson's scenes. */
+  parts: { heading: string | null; text: string }[]
+  model: string
+  promptVersion: string
+  /** Tokens the Claude API reported for writing it (null on older rows). */
+  tokens: {
+    input: number | null
+    output: number | null
+    cacheRead: number | null
+    cacheWrite: number | null
+  }
+  createdAt: string
+  reviewedAt: string | null
+  /** Who made the last library decision (a name when known), or null. */
+  reviewedBy: string | null
+  /** Times it was given to a learner, in every cohort. */
+  uses: number
+  learners: number
+}
+
+export interface ContentLibrary {
+  practice: LibraryContent[]
+  lessons: LibraryContent[]
+  /** Rows matching the filter, before the cap on how many are listed (the newest 200). */
+  total: { practice: number; lessons: number }
+}
+
+export interface AdaptiveBoard {
+  cohortId: string
+  courseTitle: string
+  skills: BoardSkill[]
+  settings: { testOut: boolean; approveGenerated: boolean; canEdit: boolean }
+  learners: BoardLearner[]
+  practice: BoardPractice[]
+  /** The job the course prepares for (its first target role), the goal the board measures against. */
+  jobTitle: string | null
+  /** Plan A: the course as written, the path every learner starts with, in order. */
+  outline: { itemId: string; title: string; moduleTitle: string; type: string; minutes: number }[]
+}
+
+export type LessonVisual =
+  | { kind: 'title'; sub: string }
+  | { kind: 'sql'; code: string; highlight: string[] }
+  | { kind: 'table'; columns: string[]; rows: string[][]; highlightRows: number[] }
+  | { kind: 'compare'; leftLabel: string; left: string; rightLabel: string; right: string }
+  | { kind: 'bullets'; items: string[] }
+
+/** One thing a learner saw, in order, for staff to replay their view (adaptive checkpoints prototype). */
+export type SeenEntry =
+  | {
+      kind: 'request'
+      at: string
+      item: string
+      from: string | null
+      prompt: string
+      /** Their answer; null when they passed. */
+      sql: string | null
+      correct: boolean
+      passed: boolean
+      reason: string | null
+    }
+  | {
+      kind: 'help'
+      at: string
+      item: string
+      helpKind: 'hint' | 'explain' | 'example'
+      text: string
+      exampleSql: string | null
+    }
+  | {
+      kind: 'video'
+      at: string
+      item: string
+      title: string
+      scenes: { heading: string; narration: string; visual: LessonVisual }[]
+      /** How far they watched, for example "all 6 scenes · Mac voice"; null when not opened. */
+      watched: string | null
+    }
+  | { kind: 'practice'; at: string; item: string; intro: string; tasks: string[] }
+
+export interface LearnerSeen {
+  name: string
+  entries: SeenEntry[]
 }

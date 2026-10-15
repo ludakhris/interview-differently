@@ -2,6 +2,8 @@ import { Global, Module } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 import { ClerkService } from '../auth/clerk.service'
 import { SIMULATOR_FEED } from '../core/simulator-feed'
+import { PRACTICE_PORT } from '../core/practice-port'
+import { SPARK_PORT } from '../core/spark-port'
 import { PrismaService } from '../prisma/prisma.service'
 import { ActivityModule } from './activity/activity.module'
 import { ActivityService } from './activity/activity.service'
@@ -23,7 +25,14 @@ class FakeAuthModule {}
 
 // The real feed module is global too (the Simulator provides it); the LMS only needs the token.
 @Global()
-@Module({ providers: [{ provide: SIMULATOR_FEED, useValue: {} }], exports: [SIMULATOR_FEED] })
+@Module({
+  providers: [
+    { provide: SIMULATOR_FEED, useValue: {} },
+    { provide: PRACTICE_PORT, useValue: {} },
+    { provide: SPARK_PORT, useValue: {} },
+  ],
+  exports: [SIMULATOR_FEED, PRACTICE_PORT, SPARK_PORT],
+})
 class FakeFeedModule {}
 
 // The feature modules must wire up: each gets the shared access layer by injection.

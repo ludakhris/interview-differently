@@ -1,0 +1,117 @@
+/* Admin toolbox: Content review (/lms/admin/content) */
+.cr-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 20px;
+}
+.cr-tab {
+  padding: 7px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cr-tab:hover {
+  border-color: var(--navy);
+}
+.cr-tab-on {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: var(--on-dark);
+}
+.cr-list {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cr-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.cr-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e6defc;
+  color: #4b30b8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.cr-chip-lesson {
+  background: #d9f2ec;
+  color: #0b6b5c;
+}
+.cr-chip-skill {
+  background: #eef0f3;
+  color: #4b5563;
+}
+.cr-status {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.cr-status-pending,
+.cr-status-approved {
+  color: #8a5a00;
+}
+.cr-status-reusable {
+  color: #1d7a55;
+}
+.cr-status-rejected {
+  color: #b4380f;
+}
+.cr-title {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1.4;
+}
+.cr-meta {
+  margin: 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.cr-parts summary {
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cr-parts ol {
+  margin: 8px 0 0;
+  padding-left: 1.4em;
+  line-height: 1.5;
+}
+.cr-parts li + li {
+  margin-top: 6px;
+}
+.cr-hint {
+  margin: 0;
+  font-size: 13px;
+}
+.cr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+.cr-actions .dash-btn,
+.cr-actions .dash-btn-secondary {
+  padding: 8px 16px;
+  font-size: 14px;
+}

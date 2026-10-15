@@ -37,6 +37,21 @@ Preview deployments (every branch except `main`) get their API from the Vercel p
   `apps/api/scripts/vercel-preview-dev.sh` (dry run by default, `--apply` to change) takes Preview out of those two
   variables and adds Preview-only ones, leaving Production and Development untouched.
 
+## Spark lessons on dev
+
+Spark's lesson player (`apps/spark`) is embedded in the LMS with a link the API signs. It has no Vercel project or
+domain of its own: the Learn Differently build copies its build into the site at `/spark/` (`apps/learn/vite.config.ts`),
+so every Learn deployment, previews included, serves it at `<learn address>/spark/lesson`. Two variables, set only on the
+API service (Railway variables of `api-dev` and of the production API; nothing on Vercel):
+
+- `SPARK_WEB_URL`: where the player runs, with no trailing slash; the API adds `/lesson`. Locally
+  `http://localhost:5175` (the Spark dev server, `npm run dev -w @id/spark`, serves at the root). On `api-dev`,
+  `https://<Learn preview address>/spark`. In production `https://learndifferently.tech/spark`.
+- `SPARK_SESSION_SECRET`: the secret that signs lesson links, a random value made with `openssl rand -base64 48`, its
+  own value per environment and never the placeholder from `apps/api/.env.example`. With `NODE_ENV=production` and no real
+  secret, the API still starts but every lesson link request fails with "Lessons are not set up on this server", so
+  set it wherever `NODE_ENV` is production. Elsewhere a random secret per process stands in, and links break on restart.
+
 ## LTI on dev and local
 
 The local API and `api-dev` share one database, so they share the stored tool connections, and a stored address can only

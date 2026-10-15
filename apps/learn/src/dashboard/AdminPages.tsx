@@ -68,6 +68,26 @@ function ToolsIcon() {
   )
 }
 
+/** A yellow page with a green check: content approved for reuse. */
+function ContentIcon() {
+  return (
+    <svg {...ICON} width={40} height={40}>
+      <path d="M10 5h18l9 9v26a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z" fill="#ffc53d" />
+      <path d="M28 5v9h9z" fill="#e0a100" />
+      <path d="M13 20h16m-16 6h10" stroke="#8a5a00" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="33" cy="34" r="9" fill="#2a9d6f" />
+      <path
+        d="m29 34 3 3 5-6"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 /** Friendly avatar colours (background, initials), picked from the user id. */
 const AVATARS = [
   ['#ffe0d6', '#b4380f'],
@@ -170,6 +190,18 @@ export function AdminPage() {
             <span className="dash-tool-desc">
               Add the tools learners are sent to, and choose which agencies and providers can use
               each one.
+            </span>
+            <span className="dash-tool-open">Open tool →</span>
+          </a>
+        </li>
+        <li>
+          <a className="dash-tool" href={href('/lms/admin/content')}>
+            <span className="dash-tool-icon">
+              <ContentIcon />
+            </span>
+            <span className="dash-tool-name">Content review</span>
+            <span className="dash-tool-desc">
+              Approve AI-written practice and lessons for reuse with other learners, or reject them.
             </span>
             <span className="dash-tool-open">Open tool →</span>
           </a>

@@ -13,6 +13,7 @@ interface Row {
   courseId: string
   progress: Record<string, unknown>[]
   plan: Record<string, unknown>[]
+  skips: Record<string, unknown>[]
 }
 
 const PAST = new Date('2020-01-01T00:00:00Z')
@@ -94,6 +95,7 @@ const mine: Row = {
     done('int1', 85, 3),
   ],
   plan: [],
+  skips: [],
 }
 const mine2: Row = {
   id: 'e2',
@@ -104,6 +106,7 @@ const mine2: Row = {
   courseId: 'c2',
   progress: [{ ...done('l2', null, 1) }],
   plan: [],
+  skips: [],
 }
 const withdrawn: Row = { ...mine, id: 'e3', cohortId: 'k3', status: 'withdrawn' }
 const someoneElse: Row = {
@@ -235,6 +238,7 @@ describe('the profile requirement (#69)', () => {
             completedAt: null,
             progress: opts.progress ?? [],
             plan: [],
+            skips: [],
             cohort: {
               name: 'Cohort',
               startsAt: PAST,

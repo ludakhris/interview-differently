@@ -74,6 +74,19 @@ suite('row-level security', () => {
         userId: `learner-${a}`,
       })
       await insert(db, 'ItemProgress', { enrollmentId: `en-${a}`, itemId: `item-${a}` })
+      await insert(db, 'PlanSkip', { enrollmentId: `en-${a}`, itemId: `item-${a}` })
+      // Library content belongs to no tenant; a learner's use of it and what they did are tenant rows.
+      await insert(db, 'PracticeSet', { id: `set-${a}` })
+      await insert(db, 'Lesson', { id: `lesson-${a}` })
+      const learner = { cohortId: `coh-${a}`, userId: `learner-${a}`, itemId: `item-${a}` }
+      await insert(db, 'PracticeSetUse', { ...learner, practiceSetId: `set-${a}` })
+      await insert(db, 'PracticeEvent', learner)
+      await insert(db, 'LessonUse', { ...learner, id: `use-${a}`, lessonId: `lesson-${a}` })
+      await insert(db, 'LessonEvent', {
+        cohortId: `coh-${a}`,
+        userId: `learner-${a}`,
+        lessonUseId: `use-${a}`,
+      })
       await insert(db, 'ParticipantNote', { providerId: `prov-${a}`, userId: `learner-${a}` })
       // staff-X holds a workspace-level membership in agency X
       await insert(db, 'Membership', {
@@ -115,6 +128,63 @@ suite('row-level security', () => {
       expect((await db.query(`SELECT 1 FROM "ItemProgress"`)).rows).toHaveLength(1)
       expect((await db.query(`SELECT 1 FROM "ParticipantNote"`)).rows).toHaveLength(0)
     })
+  })
+
+  it('keeps plan skips to their agency and their own learner', async () => {
+    await as({ agencies: ['A'] }, async () =>
+      expect((await db.query(`SELECT "enrollmentId" FROM "PlanSkip"`)).rows).toEqual([
+        { enrollmentId: 'en-A' },
+      ])
+    )
+    await as({ user: 'learner-B' }, async () =>
+      expect((await db.query(`SELECT "enrollmentId" FROM "PlanSkip"`)).rows).toEqual([
+        { enrollmentId: 'en-B' },
+      ])
+    )
+    await as({ user: 'learner-A' }, async () =>
+      expect((await attempt(`DELETE FROM "PlanSkip"`)).rows).toBe(0)
+    )
+  })
+
+  it('keeps checkpoint and lesson history to their agency and their own learner', async () => {
+    for (const t of ['PracticeSetUse', 'PracticeEvent', 'LessonUse', 'LessonEvent']) {
+      await as({ agencies: ['A'] }, async () =>
+        expect((await db.query(`SELECT "userId" FROM "${t}"`)).rows).toEqual([
+          { userId: 'learner-A' },
+        ])
+      )
+      await as({ user: 'learner-A' }, async () =>
+        expect((await db.query(`SELECT "userId" FROM "${t}"`)).rows).toEqual([
+          { userId: 'learner-A' },
+        ])
+      )
+      await as({ user: 'learner-B' }, async () =>
+        expect((await db.query(`SELECT "userId" FROM "${t}"`)).rows).toEqual([
+          { userId: 'learner-B' },
+        ])
+      )
+      await as({}, async () =>
+        expect((await db.query(`SELECT 1 FROM "${t}"`)).rows).toHaveLength(0)
+      )
+    }
+    await as({ user: 'learner-A' }, async () => {
+      // A learner cannot rewrite or remove their history, nor add to someone else's.
+      expect((await attempt(`UPDATE "PracticeEvent" SET "correct"=true`)).rows).toBe(0)
+      expect((await attempt(`DELETE FROM "PracticeEvent"`)).rows).toBe(0)
+      expect(
+        (
+          await attempt(
+            `INSERT INTO "PracticeEvent" ("id","cohortId","userId","itemId","kind","ref","data") VALUES ('x','coh-B','learner-B','item-B','answer','1.1','{}')`
+          )
+        ).error
+      ).toBeDefined()
+    })
+  })
+
+  it('keeps generated content in a library every agency shares', async () => {
+    await as({ agencies: ['A'] }, async () =>
+      expect((await db.query(`SELECT 1 FROM "PracticeSet"`)).rows).toHaveLength(2)
+    )
   })
 
   it('keeps staff notes away from a learner even in their own agency', async () => {
@@ -281,7 +351,8 @@ suite('row-level security', () => {
   })
 
   it('does not apply to the database owner (migrations, seeds)', async () => {
-    expect(await ids('Cohort')).toEqual(['coh-A', 'coh-B'])
+    // Every database also holds the system cohort the migrations create (standalone Interview Differently).
+    expect(await ids('Cohort')).toEqual(['coh-A', 'coh-B', 'interview-differently-standalone'])
   })
 
   it('gives the restricted role only the functions the API needs', async () => {
@@ -289,7 +360,9 @@ suite('row-level security', () => {
       expect((await db.query(`SELECT "agencies_of_user"('staff-A') AS a`)).rows[0]).toEqual({
         a: ['A'],
       })
-      expect((await db.query(`SELECT "all_agency_ids"() AS a`)).rows[0]).toEqual({ a: ['A', 'B'] })
+      // A and B, plus the standalone agency the migrations create
+      const all = (await db.query<{ a: string[] }>(`SELECT "all_agency_ids"() AS a`)).rows[0].a
+      expect([...all].sort()).toEqual(['A', 'B', 'interview-differently-standalone'])
       for (const fn of [`"agency_of_institution"('org-A')`]) {
         expect((await attempt(`SELECT ${fn}`)).error).toMatch(/permission denied|does not exist/)
       }

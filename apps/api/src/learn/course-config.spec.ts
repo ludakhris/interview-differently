@@ -1,5 +1,11 @@
 import { BadRequestException } from '@nestjs/common'
-import { slugify, validateCourseFields, validateItemInput } from './course-config'
+import {
+  ADAPTIVE_COURSE,
+  adaptiveCourseIds,
+  slugify,
+  validateCourseFields,
+  validateItemInput,
+} from './course-config'
 
 describe('validateCourseFields', () => {
   it('requires a title on create and trims text', () => {
@@ -530,5 +536,23 @@ describe('tool items', () => {
       expect(() => validateItemInput({ ...base, label: 'pre' })).toThrow('cannot be a pre or post')
       expect(validateItemInput({ ...base, label: null })).toMatchObject({ label: null })
     })
+  })
+})
+
+describe('adaptiveCourseIds', () => {
+  it('asks once for the adaptive courses among the ids, without repeats', async () => {
+    const findMany = jest.fn().mockResolvedValue([{ id: 'c1' }])
+    const ids = await adaptiveCourseIds({ course: { findMany } } as never, ['c1', 'c2', 'c1'])
+    expect([...ids]).toEqual(['c1'])
+    expect(findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['c1', 'c2'] }, ...ADAPTIVE_COURSE },
+      select: { id: true },
+    })
+  })
+
+  it('does not query for no courses', async () => {
+    const findMany = jest.fn()
+    expect((await adaptiveCourseIds({ course: { findMany } } as never, [])).size).toBe(0)
+    expect(findMany).not.toHaveBeenCalled()
   })
 })

@@ -31,7 +31,22 @@ const SIMULATOR = [
   'immersive-sessions',
   'analytics',
   'simulator-feed',
-].map((d) => join(SRC, d))
+  'checkpoints',
+].map((d) => join(SRC, 'simulator', d))
+
+// Micro Learning (Spark) code. The LMS reaches it through the Spark port in core.
+const SPARK = [join(SRC, 'spark')]
+
+describe('product boundary: the LMS does not import Spark', () => {
+  it('nothing under learn/ imports Spark code', () => {
+    for (const file of sourceFiles(join(SRC, 'learn')))
+      for (const target of importsOf(file))
+        expect([file, SPARK.some((d) => target === d || target.startsWith(d + '/'))]).toEqual([
+          file,
+          false,
+        ])
+  })
+})
 
 describe('product boundary: the LMS does not import the Simulator', () => {
   it('nothing under learn/ imports Simulator code', () => {
@@ -44,9 +59,12 @@ describe('product boundary: the LMS does not import the Simulator', () => {
   })
 
   it('core/ imports no product code', () => {
-    const products = ['learn', 'lti', ...SIMULATOR.map((d) => d.slice(SRC.length + 1))].map((d) =>
-      join(SRC, d)
-    )
+    const products = [
+      'learn',
+      'lti',
+      'spark',
+      ...SIMULATOR.map((d) => d.slice(SRC.length + 1)),
+    ].map((d) => join(SRC, d))
     for (const file of sourceFiles(join(SRC, 'core')))
       for (const target of importsOf(file))
         expect([file, products.some((d) => target === d || target.startsWith(d + '/'))]).toEqual([

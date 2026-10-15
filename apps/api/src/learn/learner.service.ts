@@ -2,7 +2,9 @@ import { runAsSystem } from '../core/tenant-context'
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
+  Logger,
   NotFoundException,
   Optional,
 } from '@nestjs/common'
@@ -23,6 +25,10 @@ import type {
   ReadinessRecord,
 } from './learn-types'
 import { ClerkService } from '../auth/clerk.service'
+import { SIMULATOR_FEED, type SimulatorFeed } from '../core/simulator-feed'
+import { SPARK_PORT, type SparkPort } from '../core/spark-port'
+import { checkpointConfig } from './adaptive/placement'
+import { checkpointFromHistory } from './adaptive/sync'
 import { PrismaService } from '../prisma/prisma.service'
 import { cohortStatus } from './cohort-config'
 import { gradeQuiz, publicQuestions } from './grade-quiz'
@@ -42,7 +48,15 @@ import {
 } from '../lti/platform/lti-platform-config'
 import { imageUrl, isImageKey } from './item-image'
 import { isSupportedItemType } from './course-config'
-import { doneSince, parseSkills, remediationOf, reviewOf, skillResults } from './skills'
+import {
+  adaptiveRules,
+  doneSince,
+  parseSkills,
+  remediationOf,
+  reviewOf,
+  skillResults,
+  teachesOf,
+} from './skills'
 import { isVideoId, VIDEO_COMPLETE_PCT } from './youtube'
 import { ActivityService } from './activity/activity.service'
 import {
@@ -162,12 +176,35 @@ interface ProgressLite {
 /** The learner's own side: join a cohort, work through its course, see their record. */
 @Injectable()
 export class LearnerService {
+  private readonly logger = new Logger(LearnerService.name)
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly clerk: ClerkService,
     private readonly scoring: InterviewScoringService,
-    @Optional() private readonly activity?: ActivityService
+    @Optional() private readonly activity?: ActivityService,
+    @Optional() @Inject(SIMULATOR_FEED) private readonly feed?: SimulatorFeed,
+    @Optional() @Inject(SPARK_PORT) private readonly spark?: SparkPort
   ) {}
+
+  /**
+   * A lesson Spark made for the learner (GitHub issue #90) goes by its own title once it can be shown (approved);
+   * until then, the course's title for the slot. Null when the item is not a lesson slot or Spark has no title to
+   * show. A failure is logged and falls back to the course's title: a title is not worth failing the page.
+   */
+  private async lessonTitle(
+    cohortId: string,
+    userId: string,
+    item: { id: string; type: string }
+  ): Promise<string | null> {
+    if (item.type !== 'spark_lesson' || !this.spark) return null
+    try {
+      return await this.spark.lessonTitle({ cohortId, userId, itemId: item.id })
+    } catch (err) {
+      this.logger.warn(`Lesson title for item ${item.id} not read: ${(err as Error).message}`)
+      return null
+    }
+  }
 
   // ── joining ───────────────────────────────────────────────────────────────
 
@@ -338,6 +375,7 @@ export class LearnerService {
         },
         progress: { where: { status: 'completed' }, select: { itemId: true } },
         plan: { select: { itemId: true } },
+        skips: { select: { itemId: true } },
       },
       orderBy: { enrolledAt: 'desc' },
     })
@@ -361,7 +399,8 @@ export class LearnerService {
     for (const r of rows) {
       const t = totals.get(r.cohort.course?.id as string) ?? { n: 0, profileIds: new Set<string>() }
       let itemsDone = r.progress.length
-      let itemsTotal = t.n + r.plan.length
+      // Skipped items are outline items the learner was let past: not required.
+      let itemsTotal = t.n + r.plan.length - r.skips.length
       if (r.cohort.requiresProfile || t.profileIds.size > 0) {
         if (facts === undefined) facts = await loadProfileFacts(this.prisma, userId)
         const sat = isSatisfied(facts, refreshMonthsOf(r.cohort), now)
@@ -413,14 +452,27 @@ export class LearnerService {
   async outline(userId: string, cohortId: string): Promise<LearnerOutline> {
     const e = await this.enrollmentFor(userId, cohortId)
     const course = e.cohort.course
-    const [modules, firstProgress, plan] = await Promise.all([
+    const [modules, firstProgress, plan, skipRows] = await Promise.all([
       this.courseItems(course.id),
       this.prisma.itemProgress.findMany({ where: { enrollmentId: e.id } }),
       this.prisma.planItem.findMany({
         where: { enrollmentId: e.id },
         orderBy: { createdAt: 'asc' },
       }),
+      this.prisma.planSkip.findMany({ where: { enrollmentId: e.id } }),
     ])
+    const skips = new Map(skipRows.map((k) => [k.itemId, k]))
+    const skippedOf = (id: string): LearnerOutlineItem['skipped'] => {
+      const k = skips.get(id)
+      if (!k) return null
+      const r = (k.reason ?? {}) as { skillLabel?: string; pct?: number; n?: number }
+      return {
+        skill: r.skillLabel ?? '',
+        pct: r.pct ?? 0,
+        n: r.n ?? 0,
+        at: k.createdAt.toISOString(),
+      }
+    }
     const progress = firstProgress
     const allItems = modules.flatMap((m) => m.items)
     // The profile is done by the learner's profile (complete, and refreshed in time when the cohort
@@ -441,6 +493,14 @@ export class LearnerService {
     const byItem = new Map(progress.map((p) => [p.itemId, p]))
     // Remediation items are in the outline only for learners whose plan includes them.
     const items = allItems.filter((i) => !remediationOf(i.config))
+    const lessonTitles = new Map<string, string>()
+    await Promise.all(
+      plan.map(async (p) => {
+        const i = allItems.find((x) => x.id === p.itemId)
+        const t = i ? await this.lessonTitle(cohortId, userId, i) : null
+        if (t) lessonTitles.set(p.itemId, t)
+      })
+    )
     const addedItems = plan.flatMap((p): LearnerAddedItem[] => {
       const i = allItems.find((x) => x.id === p.itemId)
       const r = (p.reason ?? {}) as {
@@ -454,7 +514,7 @@ export class LearnerService {
         {
           id: i.id,
           type: i.type,
-          title: i.title,
+          title: lessonTitles.get(i.id) ?? i.title,
           label: i.label,
           // Done for the plan only if completed since it was added: a review means doing it again.
           status: doneSince(byItem.get(i.id), p.createdAt)
@@ -469,15 +529,18 @@ export class LearnerService {
             sourceItemId: r.sourceItemId ?? null,
           },
           review: !remediationOf(i.config),
+          skipped: skippedOf(i.id),
+          ...(checkpointConfig(i) ? { checkpoint: true } : {}),
         },
       ]
     })
     const statusOfItem = (id: string): ProgressStatus =>
       profileIds.has(id) ? profileStatus : this.statusOf(byItem.get(id))
     const synthetic = lead?.synthetic ? 1 : 0
+    const required = items.filter((i) => !skips.has(i.id))
     const done =
-      items.filter((i) => statusOfItem(i.id) === 'completed').length +
-      addedItems.filter((i) => i.status === 'completed').length +
+      required.filter((i) => statusOfItem(i.id) === 'completed').length +
+      addedItems.filter((i) => i.status === 'completed' && !i.skipped).length +
       (synthetic && profileStatus === 'completed' ? 1 : 0)
     return {
       cohort: {
@@ -490,7 +553,7 @@ export class LearnerService {
         endsAt: e.cohort.endsAt?.toISOString() ?? null,
         enrollmentStatus: e.status as LearnerCohortCard['enrollmentStatus'],
         itemsDone: done,
-        itemsTotal: items.length + addedItems.length + synthetic,
+        itemsTotal: required.length + addedItems.filter((i) => !i.skipped).length + synthetic,
       },
       added: addedItems,
       modules: this.outlineModules(
@@ -505,6 +568,9 @@ export class LearnerService {
           score: byItem.get(i.id)?.score ?? null,
           attempts: byItem.get(i.id)?.attempts ?? 0,
           ...(profileIds.has(i.id) ? { note: stateNote(pState) } : {}),
+          skill: teachesOf(i.config),
+          skipped: skippedOf(i.id),
+          ...(checkpointConfig(i) ? { checkpoint: true } : {}),
         }),
         {
           id: PROFILE_ITEM_ID,
@@ -705,6 +771,7 @@ export class LearnerService {
             timeLimitMinutes: limits ? limits.timeLimitMinutes : null,
             passScore: passScoreOf(config, item.label),
             optional: isPracticeItem(item),
+            embedded: registered.kind === 'checkpoint',
           }
         : null
     const log =
@@ -723,7 +790,7 @@ export class LearnerService {
       id: item.id,
       cohortId,
       type: item.type,
-      title: item.title,
+      title: (await this.lessonTitle(cohortId, userId, item)) ?? item.title,
       label: item.label,
       body: item.type === 'lesson' ? String(config.body ?? '') : null,
       questions:
@@ -1122,6 +1189,22 @@ export class LearnerService {
     // here never loses the score.
     if (this.activity)
       await this.activity.closeToolLaunch(e.id, itemId, new Date()).catch(() => undefined)
+    // A checkpoint's score arrives before the LMS has read its last answers: read them first, so the plan below
+    // judges the learner's skills on everything they did (GitHub issue #90).
+    if (this.feed && checkpointConfig(item)) {
+      const history = await this.feed.checkpointHistory(cohortId, userId)
+      const now = await this.prisma.itemProgress.findUnique({
+        where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
+      })
+      const data = {
+        ...((now?.data as object | null) ?? {}),
+        ...checkpointFromHistory(history, itemId),
+      }
+      await this.prisma.itemProgress.update({
+        where: { enrollmentId_itemId: { enrollmentId: e.id, itemId } },
+        data: { data: data as unknown as object },
+      })
+    }
     // Plan first, so a skill flagged by this result holds the course open.
     const added = await this.updatePlan(e.id, e.cohort.course, itemId)
     await this.completeIfDone(e.id, e.status, e.cohort.course.id)
@@ -1177,26 +1260,39 @@ export class LearnerService {
    */
   private async updatePlan(
     enrollmentId: string,
-    course: { id: string; skills: unknown },
+    course: { id: string; skills: unknown; adaptive?: unknown },
     sourceItemId: string
   ): Promise<PlanAddition[]> {
     const skills = parseSkills(course.skills)
     if (skills.length === 0) return []
-    const [modules, progress, existing] = await Promise.all([
+    const [modules, progress, existing, skipped] = await Promise.all([
       this.courseItems(course.id),
       this.prisma.itemProgress.findMany({ where: { enrollmentId } }),
-      this.prisma.planItem.findMany({ where: { enrollmentId }, select: { itemId: true } }),
+      this.prisma.planItem.findMany({
+        where: { enrollmentId },
+        select: { itemId: true, reason: true, createdAt: true },
+      }),
+      this.prisma.planSkip.findMany({ where: { enrollmentId }, select: { itemId: true } }),
     ])
     const items = modules.flatMap((m) => m.items)
     const have = new Set(existing.map((p) => p.itemId))
     const results = skillResults(skills, items, new Map(progress.map((p) => [p.itemId, p])))
     const rows: { enrollmentId: string; itemId: string; reason: object }[] = []
     const added: PlanAddition[] = []
+    // Adaptive checkpoints: what the learner said about their experience picks between pieces of help meant
+    // for different learners (config `forLevels`), for example a video for someone new, reading for the rest.
+    const intake = progress
+      .map((p) => (p.data as { intake?: unknown } | null)?.intake)
+      .find((v): v is string => typeof v === 'string')
+    const fits = (config: unknown) => {
+      const levels = (config as { forLevels?: unknown } | null)?.forLevels
+      return !intake || !Array.isArray(levels) || levels.includes(intake)
+    }
     for (const r of results.filter((x) => x.status === 'gap')) {
       for (const item of items) {
         const extra = remediationOf(item.config) === r.skillId
         const review = reviewOf(item.config) === r.skillId
-        if ((!extra && !review) || have.has(item.id)) continue
+        if ((!extra && !review) || have.has(item.id) || !fits(item.config)) continue
         have.add(item.id)
         const pct = r.pct as number
         rows.push({
@@ -1216,7 +1312,94 @@ export class LearnerService {
       }
     }
     if (rows.length > 0) await this.prisma.planItem.createMany({ data: rows, skipDuplicates: true })
+    await this.applySkips(
+      enrollmentId,
+      course,
+      results,
+      items,
+      progress,
+      existing,
+      skipped,
+      sourceItemId
+    )
     return added
+  }
+
+  /**
+   * Adaptive checkpoints (prototype): when the course allows it (`adaptive.testOut`), lets the learner past
+   * outline items that teach a skill they have now shown, on the evidence the course asks for, and past help
+   * their plan added for that skill that they have not done yet (it stays open as optional review). Never skips
+   * something they finished or remediation that is not in their plan. A skip is kept: a later gap adds content
+   * through the plan instead of taking the skip back.
+   */
+  private async applySkips(
+    enrollmentId: string,
+    course: { adaptive?: unknown },
+    results: ReturnType<typeof skillResults>,
+    items: { id: string; config: unknown }[],
+    progress: { itemId: string; status: string; completedAt: Date | null }[],
+    plan: { itemId: string; reason: unknown; createdAt: Date }[],
+    skipped: { itemId: string }[],
+    sourceItemId: string
+  ): Promise<void> {
+    if (!adaptiveRules(course.adaptive).testOut) return
+    const shown = new Map(
+      results.filter((r) => r.status === 'demonstrated').map((r) => [r.skillId, r])
+    )
+    const done = new Set(progress.filter((p) => p.status === 'completed').map((p) => p.itemId))
+    const already = new Set(skipped.map((k) => k.itemId))
+    const inPlan = new Set(plan.map((p) => p.itemId))
+    const reasonOf = (r: (typeof results)[number]) => ({
+      skill: r.skillId,
+      skillLabel: r.label,
+      pct: r.pct,
+      n: r.n,
+      sourceItemId,
+    })
+    const byItem = new Map(progress.map((p) => [p.itemId, p]))
+    // Help added for a gap the learner has since closed: no longer required.
+    const closed = plan.flatMap((p) => {
+      const skill = (p.reason as { skill?: unknown } | null)?.skill
+      const r = typeof skill === 'string' ? shown.get(skill) : undefined
+      if (!r || already.has(p.itemId) || doneSince(byItem.get(p.itemId), p.createdAt)) return []
+      already.add(p.itemId)
+      return [{ enrollmentId, itemId: p.itemId, reason: { ...reasonOf(r), closedGap: true } }]
+    })
+    const rows = items.flatMap((item) => {
+      const skill = teachesOf(item.config)
+      const r = skill ? shown.get(skill) : undefined
+      if (
+        !r ||
+        remediationOf(item.config) ||
+        done.has(item.id) ||
+        inPlan.has(item.id) ||
+        already.has(item.id)
+      )
+        return []
+      return [{ enrollmentId, itemId: item.id, reason: reasonOf(r) }]
+    })
+    if (rows.length + closed.length > 0)
+      await this.prisma.planSkip.createMany({ data: [...rows, ...closed], skipDuplicates: true })
+  }
+
+  /**
+   * After new evidence on an item (an adaptive checkpoint): updates the plan, then completes the course if the
+   * learner is done. Returns what was added, for the result screen.
+   */
+  async afterEvidence(
+    enrollmentId: string,
+    enrollmentStatus: string,
+    course: { id: string; skills: unknown; adaptive?: unknown },
+    sourceItemId: string
+  ): Promise<PlanAddition[]> {
+    const added = await this.updatePlan(enrollmentId, course, sourceItemId)
+    await this.completeIfDone(enrollmentId, enrollmentStatus, course.id)
+    return added
+  }
+
+  /** Completes the course if the learner is done (after finishing practice, which is not evidence). */
+  async settle(enrollmentId: string, enrollmentStatus: string, courseId: string): Promise<void> {
+    await this.completeIfDone(enrollmentId, enrollmentStatus, courseId)
   }
 
   /**
@@ -1227,12 +1410,13 @@ export class LearnerService {
     enrollmentId: string,
     courseId: string
   ): Promise<{ met: boolean; at: Date | null }> {
-    const [modules, plan, course, who] = await Promise.all([
+    const [modules, plan, skips, course, who] = await Promise.all([
       this.courseItems(courseId),
       this.prisma.planItem.findMany({
         where: { enrollmentId },
         select: { itemId: true, createdAt: true },
       }),
+      this.prisma.planSkip.findMany({ where: { enrollmentId }, select: { itemId: true } }),
       this.prisma.course.findUnique({
         where: { id: courseId },
         select: { readinessThreshold: true },
@@ -1248,8 +1432,10 @@ export class LearnerService {
     const items = modules.flatMap((m) => m.items)
     // The outline's required items, plus whatever this learner's results added. An item in both
     // (a review) must be done in the outline and again since it was added to the plan.
+    // Items the learner was let past (adaptive test-out) are not required.
+    const skipped = new Set(skips.map((k) => k.itemId))
     const outline = items
-      .filter((i) => !isPracticeItem(i) && !remediationOf(i.config))
+      .filter((i) => !isPracticeItem(i) && !remediationOf(i.config) && !skipped.has(i.id))
       .map((i) => i.id)
     const interviewIds = items.filter((i) => isInterviewLike(i)).map((i) => i.id)
     const [finished, scored] = await Promise.all([
@@ -1283,11 +1469,13 @@ export class LearnerService {
       profileDone = isSatisfied(facts, refreshMonthsOf(who.cohort), new Date())
       profileAt = profileDone ? (facts?.completedAt ?? facts?.updatedAt ?? null) : null
     }
-    const required = outline.length + plan.length + (synthetic ? 1 : 0)
+    // Help added for a gap the learner has since closed is skipped too: not required.
+    const owed = plan.filter((p) => !skipped.has(p.itemId))
+    const required = outline.length + owed.length + (synthetic ? 1 : 0)
     const done =
       outline.filter((id) => (profileIds.has(id) ? profileDone : byItem.has(id))).length +
       (synthetic && profileDone ? 1 : 0) +
-      plan.filter((p) => doneSince(byItem.get(p.itemId), p.createdAt)).length
+      owed.filter((p) => doneSince(byItem.get(p.itemId), p.createdAt)).length
     // Anything that counts as an interview must reach the course's readiness goal.
     const goal = course?.readinessThreshold ?? 70
     const reached = scored.filter((p) => (p.score as number) >= goal)

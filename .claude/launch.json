@@ -18,6 +18,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--workspace", "@id/learn"],
       "port": 5174
+    },
+    {
+      "name": "spark",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace", "@id/spark"],
+      "port": 5175
     }
   ]
 }

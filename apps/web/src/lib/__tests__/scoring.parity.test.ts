@@ -6,7 +6,7 @@ import {
   dimensionScore as apiDimensionScore,
   scoreRun as apiScoreRun,
   worstBand as apiWorstBand,
-} from '../../../../api/src/scoring/sim-scoring'
+} from '../../../../api/src/simulator/scoring/sim-scoring'
 import { classifyAnswer } from '../quant/formula'
 import {
   bandQuality,
@@ -17,7 +17,7 @@ import {
   type Run,
 } from '../scoring'
 
-// The server scores a launched play with apps/api/src/scoring/sim-scoring.ts. These tests run it and
+// The server scores a launched play with apps/api/src/simulator/scoring/sim-scoring.ts. These tests run it and
 // this app's scoring on the same plays, so the two cannot drift apart without a failure here.
 
 const band = { min: 80, max: 120, idealMin: 95, idealMax: 105 }

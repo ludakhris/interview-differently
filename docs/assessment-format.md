@@ -18,6 +18,7 @@ expected_minutes: 30 # optional: how long it's designed to take, shown against a
 ## Section 1: Querying Basics
 
 > draw: mc 4, sql 1 # optional per-section override (or a plain total: > draw: 5)
+> competency: Writing basic queries # optional: the skill's name on a learner's competency profile (work simulations)
 
 **1.1 (MC)** Which clause is used to filter individual rows before any grouping happens?
 A) SELECT B) WHERE C) HAVING D) ORDER BY
@@ -54,7 +55,7 @@ LIMIT 5;
 
 **Frontmatter** — required: `slug`, `title`, and `dataset` when the bank has any Hands-On SQL question (MC/Scenario-only banks omit it). Optional: `expected_minutes` — a positive whole number, how long the assessment is designed to take. It is shown next to students' actual start→submit times in the results and pre/post analytics; it is not a time limit (set that per delivery). Optional: `draw` — either a positive integer (questions of any type) or a per-type map `{ mc: 3, sql: 1 }` keyed by question type (`mc`, `scenario`, `sql`; a type not listed draws 0). Anything between the frontmatter and the first section heading is ignored, so delivery notes can stay at the top of the file.
 
-**Sections** — `## Section N: Title` (also accepts `—` or `-` as the separator). An optional `> draw: …` line directly under the heading overrides the frontmatter default — a plain total (`> draw: 5`) or per-type counts (`> draw: mc 4, sql 1`; `mc: 4, sql: 1` also accepted). With per-type counts every student's paper has the same shape per section; each type is drawn from its own pool and the picks are shuffled together. A section that draws more than it has (overall, or of one type) uses all it has and reports a warning — it never substitutes another type.
+**Sections** — `## Section N: Title` (also accepts `—` or `-` as the separator). An optional `> draw: …` line directly under the heading overrides the frontmatter default — a plain total (`> draw: 5`) or per-type counts (`> draw: mc 4, sql 1`; `mc: 4, sql: 1` also accepted). With per-type counts every student's paper has the same shape per section; each type is drawn from its own pool and the picks are shuffled together. A section that draws more than it has (overall, or of one type) uses all it has and reports a warning — it never substitutes another type. An optional `> competency: …` line under the heading names the skill on a learner's competency profile in standalone Interview Differently (work simulations); without it the profile uses the section title.
 
 **Questions** start with `**N.N (Type)**` followed by the prompt. `N.N` must be unique across the whole file. Backticked spans in prompts and options render as inline code. Scenario prompts additionally render as markdown (bold, italics, lists, tables); ```` ```sql ```` and ```` ```dax ```` fences are syntax-highlighted, other fences show as plain mono. MC and SQL prompts are plain text.
 

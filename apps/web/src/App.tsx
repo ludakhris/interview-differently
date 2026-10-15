@@ -5,6 +5,8 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { BriefingPage } from '@/pages/BriefingPage'
 import { LtiPlayPage } from '@/pages/LtiPlayPage'
 import { LtiAssessmentPage } from '@/pages/LtiAssessmentPage'
+import { LtiCheckpointPage } from '@/pages/LtiCheckpointPage'
+import { WorkSimulationPage } from '@/pages/WorkSimulationPage'
 import { SimulationPage } from '@/pages/SimulationPage'
 import { FeedbackPage } from '@/pages/FeedbackPage'
 import { ImmersiveSimulationPage } from '@/pages/ImmersiveSimulationPage'
@@ -87,6 +89,7 @@ export default function App() {
         {/* LTI launch from LearnDifferently — token in the URL fragment, no Clerk */}
         <Route path="/lti/play/:scenarioId" element={<LtiPlayPage />} />
         <Route path="/lti/assessment/:deliveryId" element={<LtiAssessmentPage />} />
+        <Route path="/lti/checkpoint/:deliveryId" element={<LtiCheckpointPage />} />
         <Route path="/request-scenario" element={<RequestScenarioPage />} />
         <Route path="/a/:code" element={<InvitePage />} />
 
@@ -166,6 +169,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <SqlSandboxPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/simulations/:deliveryId"
+          element={
+            <ProtectedRoute>
+              <WorkSimulationPage />
             </ProtectedRoute>
           }
         />

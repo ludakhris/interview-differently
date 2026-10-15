@@ -43,9 +43,11 @@ describe('parseSessionFromHash', () => {
 })
 
 describe('isLtiPath', () => {
-  it('matches only the LTI play and assessment routes', () => {
+  it('matches only the LTI play, assessment and checkpoint routes', () => {
     expect(isLtiPath('/lti/play/abc')).toBe(true)
     expect(isLtiPath('/lti/assessment/d1')).toBe(true)
+    expect(isLtiPath('/lti/checkpoint/d1')).toBe(true)
+    expect(isLtiPath('/lti/checkpoint/')).toBe(false)
     expect(isLtiPath('/lti/assessment/')).toBe(false)
     expect(isLtiPath('/lti/other/d1')).toBe(false)
     expect(isLtiPath('/tools/assessments/attempt/a1')).toBe(false)

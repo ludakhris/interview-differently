@@ -31,6 +31,7 @@ const prisma = {
   itemProgress: { findUnique: jest.fn(), upsert: jest.fn(), count: jest.fn(), findMany: jest.fn() },
   itemAttempt: { findMany: jest.fn(), count: jest.fn() },
   planItem: { findMany: jest.fn(), findUnique: jest.fn(), createMany: jest.fn() },
+  planSkip: { findMany: jest.fn(), createMany: jest.fn() },
   $queryRawUnsafe: jest.fn(),
 }
 const clerk = { getUserProfile: jest.fn() }
@@ -80,6 +81,7 @@ beforeEach(() => {
   prisma.itemProgress.findMany.mockResolvedValue([])
   prisma.itemAttempt.findMany.mockResolvedValue([])
   prisma.planItem.findMany.mockResolvedValue([])
+  prisma.planSkip.findMany.mockResolvedValue([])
   prisma.planItem.findUnique.mockResolvedValue(null)
 })
 
@@ -1042,6 +1044,112 @@ describe('adaptive plan', () => {
     ])
   })
 
+  describe('test-out (adaptive checkpoints)', () => {
+    const teaches = {
+      ...item('lesson', null, { body: 'x', teaches: 'safety' }),
+      id: 't1',
+      title: 'Safety lesson',
+    }
+    const done = {
+      ...item('lesson', null, { body: 'x', teaches: 'safety' }),
+      id: 't2',
+      title: 'Done already',
+    }
+    const withRules = (adaptive: object) =>
+      prisma.enrollment.findUnique.mockResolvedValue({
+        ...enrollment(),
+        cohort: {
+          ...enrollment().cohort,
+          course: { ...enrollment().cohort.course, skills, adaptive },
+        },
+      })
+    const shown = () =>
+      prisma.itemProgress.findMany.mockResolvedValue([
+        {
+          itemId: 'k1',
+          status: 'completed',
+          score: 100,
+          data: { results: tagged.map((q) => ({ id: q.id, correct: true })) },
+        },
+        { itemId: 't2', status: 'completed', score: null, data: null },
+      ])
+
+    it('lets the learner past unfinished items that teach a skill they have shown', async () => {
+      withRules({ testOut: true })
+      prisma.courseItem.findUnique.mockResolvedValue(check)
+      prisma.itemProgress.findUnique.mockResolvedValue(null)
+      outlineOf(check, teaches, done, lesson)
+      shown()
+      await service.submitQuiz('u1', 'k1', 'k1', [0, 0])
+      expect(prisma.planSkip.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            enrollmentId: 'e1',
+            itemId: 't1',
+            reason: {
+              skill: 'safety',
+              skillLabel: 'Workplace safety',
+              pct: 100,
+              n: 2,
+              sourceItemId: 'k1',
+            },
+          },
+        ],
+        skipDuplicates: true,
+      })
+    })
+
+    it('makes help added for a gap optional once the learner shows the skill', async () => {
+      withRules({ testOut: true })
+      prisma.courseItem.findUnique.mockResolvedValue(check)
+      prisma.itemProgress.findUnique.mockResolvedValue(null)
+      outlineOf(check, lesson)
+      shown()
+      prisma.planItem.findMany.mockResolvedValue([
+        { itemId: 'r1', reason: { skill: 'safety', pct: 0, n: 2 }, createdAt: new Date() },
+      ])
+      await service.submitQuiz('u1', 'k1', 'k1', [0, 0])
+      expect(prisma.planSkip.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            itemId: 'r1',
+            reason: expect.objectContaining({ skill: 'safety', pct: 100, closedGap: true }),
+          }),
+        ],
+        skipDuplicates: true,
+      })
+    })
+
+    it('skips nothing unless the course allows it', async () => {
+      withRules({})
+      prisma.courseItem.findUnique.mockResolvedValue(check)
+      prisma.itemProgress.findUnique.mockResolvedValue(null)
+      outlineOf(check, teaches)
+      shown()
+      await service.submitQuiz('u1', 'k1', 'k1', [0, 0])
+      expect(prisma.planSkip.createMany).not.toHaveBeenCalled()
+    })
+
+    it('does not count a skipped item toward the items the learner must do', async () => {
+      withRules({ testOut: true })
+      outlineOf(check, teaches)
+      prisma.itemProgress.findMany.mockResolvedValue([])
+      prisma.planSkip.findMany.mockResolvedValue([
+        {
+          itemId: 't1',
+          reason: { skillLabel: 'Workplace safety', pct: 100, n: 2 },
+          createdAt: new Date(),
+        },
+      ])
+      const o = await service.outline('u1', 'c1')
+      expect(o.cohort.itemsTotal).toBe(1)
+      expect(o.modules[0].items.find((i) => i.id === 't1')?.skipped).toMatchObject({
+        skill: 'Workplace safety',
+        pct: 100,
+      })
+    })
+  })
+
   it('adds nothing when the skill is met, or when the course has no skills', async () => {
     withSkills()
     prisma.courseItem.findUnique.mockResolvedValue(check)
@@ -1424,6 +1532,7 @@ describe('recordToolResult', () => {
       timeLimitMinutes: null,
       passScore: null,
       optional: false,
+      embedded: false,
     })
     expect(prisma.courseModule.findMany).toHaveBeenCalled() // plan and completion checks ran
   })
@@ -1726,6 +1835,7 @@ describe('recordToolResult', () => {
       timeLimitMinutes: null,
       passScore: null,
       optional: false,
+      embedded: false,
     })
   })
 
@@ -1776,6 +1886,7 @@ describe('recordToolResult', () => {
         timeLimitMinutes: null,
         passScore: null,
         optional: false,
+        embedded: false,
       })
       prisma.itemProgress.findUnique.mockResolvedValue({
         status: 'completed',
@@ -1931,5 +2042,42 @@ describe('recordToolResult', () => {
     finished('l1', 'i1')
     await service.recordToolResult('u1', 'k1', 'i1', { scorePct: 80 })
     expect(prisma.enrollment.update).toHaveBeenCalled()
+  })
+})
+
+describe('a lesson slot’s title', () => {
+  const lessonItem = { id: 'item-1', type: 'spark_lesson' }
+  const titleOf = (svc: LearnerService, item: { id: string; type: string }) =>
+    (
+      svc as unknown as {
+        lessonTitle: (c: string, u: string, i: { id: string; type: string }) => Promise<unknown>
+      }
+    ).lessonTitle('c1', 'u1', item)
+  const withSpark = (lessonTitle: jest.Mock) =>
+    new LearnerService(
+      prisma as unknown as PrismaService,
+      clerk as unknown as ClerkService,
+      scoring as unknown as InterviewScoringService,
+      undefined,
+      undefined,
+      { lessonTitle } as never
+    )
+
+  it("asks Spark for the title it may show (approved only), never signing the learner's link", async () => {
+    const lessonTitle = jest.fn(async () => 'Joining two tables')
+    const svc = withSpark(lessonTitle)
+    expect(await titleOf(svc, lessonItem)).toBe('Joining two tables')
+    expect(lessonTitle).toHaveBeenCalledWith({ cohortId: 'c1', userId: 'u1', itemId: 'item-1' })
+    expect(await titleOf(svc, { id: 'x', type: 'lesson' })).toBeNull()
+    expect(lessonTitle).toHaveBeenCalledTimes(1)
+  })
+
+  it('logs a failure and falls back to the course title instead of hiding it', async () => {
+    const svc = withSpark(jest.fn().mockRejectedValue(new Error('db down')))
+    const warn = jest
+      .spyOn((svc as unknown as { logger: { warn: (m: string) => void } }).logger, 'warn')
+      .mockImplementation(() => undefined)
+    expect(await titleOf(svc, lessonItem)).toBeNull()
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('db down'))
   })
 })

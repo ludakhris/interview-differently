@@ -1,20 +1,23 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
-import { Inject, Injectable } from '@nestjs/common'
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import { Inject, Injectable, Logger } from '@nestjs/common'
 import { runAsSystem } from '../../core/tenant-context'
 import { PrismaService } from '../../prisma/prisma.service'
 import { assertLtiProductionConfig, isLearnOrigin, loadSigningKeys } from '../lti-env'
 import { LTI_STORE } from '../lti-store'
 import type { LtiStore } from '../lti-store'
-import { InterviewEngineService } from '../../interview-engine/interview-engine.service'
+import { InterviewEngineService } from '../../simulator/interview-engine/interview-engine.service'
 import {
   averageScore,
   DEFAULT_RUBRIC,
   MAX_ANSWER_CHARS,
   type ScoredAnswer,
-} from '../../interview-engine/interview-engine'
-import { interviewOf, type InterviewSource } from '../../interview-engine/interview-scenario'
-import { overall } from '../../assessments/assessments.service'
-import type { SectionScore } from '../../assessments/assessment.types'
+} from '../../simulator/interview-engine/interview-engine'
+import {
+  interviewOf,
+  type InterviewSource,
+} from '../../simulator/interview-engine/interview-scenario'
+import { overall } from '../../simulator/assessments/assessments.service'
+import type { SectionScore } from '../../simulator/assessments/assessment.types'
 import { sanitizeBrand } from '../lti-brand'
 import {
   AGS_SCOPE_SCORE,
@@ -46,7 +49,21 @@ import {
   PlatformRegistryService,
   type ToolPlatform,
 } from './platform-registry.service'
-import { errorPage, interviewPage, resultPage } from './lti-tool.html'
+import {
+  errorPage,
+  interviewPage,
+  resultPage,
+  storageGetPage,
+  storagePutPage,
+  type StorageTarget,
+} from './lti-tool.html'
+import {
+  UNKNOWN_REFS_MESSAGE,
+  parsePlacement,
+  samePlacement,
+  unknownRefs,
+} from '../../simulator/checkpoints/checkpoint-placement'
+import type { CheckpointPlacement } from '../../core/practice-port'
 import {
   SESSION_TTL_S,
   signSession,
@@ -78,6 +95,28 @@ const COMPLETE_PER_MINUTE_PER_LEARNER = 10
 const DELIVERY_LOCK_TTL_S = 10
 const DELIVERY_LOCK_TRIES = 20
 const DELIVERY_LOCK_WAIT_MS = 100
+
+/** What a login keeps for its launch, by state. `storage`: the platform asked to keep the state in its page too. */
+interface LoginEntry {
+  nonce: string
+  platformId?: string
+  storage?: StorageTarget
+}
+
+/**
+ * A page the controller sends with a CSP that allows its one inline script (by nonce). `formAction`: origins besides
+ * the tool's own that its form's post may end at (a browser applies form-action to the redirects after the post too).
+ */
+export interface ScriptPage {
+  html: string
+  nonce: string
+  formAction?: string[]
+}
+
+/** `_parent`, or a frame name. */
+const STORAGE_TARGET = /^(_parent|[A-Za-z0-9_-]{1,64})$/
+/** The platform storage key for a login's state. */
+const storageKey = (state: string) => `state_${state}`
 
 interface SubmissionClaims {
   sub: string
@@ -139,6 +178,7 @@ export class LtiToolService {
   private readonly secret: string
   /** One cached key resolver per platform key-set URL. */
   private readonly platformKeys = new Map<string, ReturnType<typeof jwksKeyResolver>>()
+  private readonly logger = new Logger(LtiToolService.name)
 
   constructor(
     private readonly prisma: PrismaService,
@@ -166,11 +206,18 @@ export class LtiToolService {
       throw new LtiError('Too many requests. Wait a minute and try again.', 429)
   }
 
-  /** Third-party initiated login: stores state and nonce, returns the platform auth redirect and the state. */
+  /**
+   * Third-party initiated login: stores state and nonce, returns the platform auth redirect and the state. When the
+   * platform sends `lti_storage_target` (a launch in a frame, where the state cookie may never come back), it also
+   * returns `page`: it puts the state in the platform's page (`lti.put_data`, to `storageOrigin` only) and then goes
+   * to the platform. `parentOrigin` is where the login came from (the request's Origin or Referer); it is used as
+   * the platform page's origin only when it is one this platform may use (see `storageOriginFor`).
+   */
   async login(
     p: Record<string, string | undefined>,
-    ip = 'unknown'
-  ): Promise<{ url: string; state: string }> {
+    ip = 'unknown',
+    parentOrigin?: string
+  ): Promise<{ url: string; state: string; page?: ScriptPage }> {
     await this.limit('tool-login', ip, LOGIN_PER_MINUTE_PER_IP)
     const reg = await this.platforms.forLogin(p.iss, p.client_id)
     if (!reg) throw new LtiError('Unknown platform or client')
@@ -184,9 +231,16 @@ export class LtiToolService {
     if (p.lti_deployment_id && p.lti_deployment_id !== reg.deploymentId) {
       throw new LtiError('Unknown deployment')
     }
+    const target = p.lti_storage_target
+    if (target !== undefined && !STORAGE_TARGET.test(target))
+      throw new LtiError('Invalid lti_storage_target')
+    const storage: StorageTarget | undefined = target
+      ? { target, origin: this.storageOriginFor(reg, parentOrigin) }
+      : undefined
     const state = newId()
     const nonce = newId()
-    await this.store.put('lti-login', state, { nonce, platformId: reg.id }, STATE_TTL_S)
+    const entry: LoginEntry = { nonce, platformId: reg.id, ...(storage ? { storage } : {}) }
+    await this.store.put('lti-login', state, entry, STATE_TTL_S)
     const url = new URL(reg.authUrl)
     const q = url.searchParams
     q.set('scope', 'openid')
@@ -199,7 +253,34 @@ export class LtiToolService {
     q.set('nonce', nonce)
     q.set('response_mode', 'form_post')
     q.set('prompt', 'none')
-    return { url: url.toString(), state }
+    if (!storage) return { url: url.toString(), state }
+    const cspNonce = randomBytes(16).toString('base64')
+    return {
+      url: url.toString(),
+      state,
+      page: {
+        nonce: cspNonce,
+        html: storagePutPage({
+          ...storage,
+          nonce: cspNonce,
+          key: storageKey(state),
+          value: nonce,
+          next: url.toString(),
+        }),
+      },
+    }
+  }
+
+  /**
+   * The origin of the platform page that keeps a framed launch's state; storage messages go only there. Another
+   * platform's is the origin of its OIDC auth endpoint, as the 1EdTech platform storage spec says. LearnDifferently's
+   * is the login's own origin when it may use it (its site or a tenant host, as for return URLs), else its site.
+   */
+  private storageOriginFor(reg: ToolPlatform, candidate: string | undefined): string {
+    const learn = new URL(reg.issuer).origin === new URL(platformRegistration().issuer).origin
+    if (!learn) return new URL(reg.authUrl).origin
+    const ok = safeReturnUrl(candidate, reg.issuer)
+    return new URL(ok ?? learnUrl()).origin
   }
 
   /**
@@ -211,12 +292,67 @@ export class LtiToolService {
     idToken: string | undefined,
     state: string | undefined,
     cookieState: string | undefined
+  ): Promise<string | { redirect: string } | { page: ScriptPage }> {
+    if (!state) throw new LtiError('Login state does not match this browser')
+    if (cookieState !== state) {
+      // No cookie (a framed launch): when the login kept its state in the platform's page, ask the page for it. The
+      // state is not used up here; only `launchVerified` with the stored value can finish the launch.
+      const pending = await this.store.peek<LoginEntry>('lti-login', state)
+      if (!pending?.storage || !idToken)
+        throw new LtiError('Login state does not match this browser')
+      const cspNonce = randomBytes(16).toString('base64')
+      return {
+        page: {
+          nonce: cspNonce,
+          // the verified post answers with a redirect to the web app, which form-action must allow
+          formAction: [new URL(idWebUrl()).origin],
+          html: storageGetPage({
+            ...pending.storage,
+            nonce: cspNonce,
+            key: storageKey(state),
+            action: verifiedLaunchUrl(),
+            idToken,
+            state,
+          }),
+        },
+      }
+    }
+    // single use, even if the rest fails
+    const entry = await this.store.take<LoginEntry>('lti-login', state)
+    if (!entry) throw new LtiError('Unknown or expired state')
+    return this.launchWith(entry, idToken)
+  }
+
+  /**
+   * Finishes a framed launch whose state came back from the platform's page (`lti.get_data`) instead of a cookie.
+   * The post must come from the tool's own launch page (same origin), and `value` must be the login's nonce for that
+   * state: single use, and only for a login that asked for platform storage.
+   */
+  async launchVerified(
+    idToken: string | undefined,
+    state: string | undefined,
+    value: string | undefined,
+    requestOrigin: string | undefined
   ): Promise<string | { redirect: string }> {
-    if (!state || cookieState !== state)
+    if (requestOrigin !== new URL(launchUrl()).origin)
+      throw new LtiError('Login state does not match this browser', 403)
+    if (!state || !value) throw new LtiError('Login state does not match this browser')
+    // Checked before it is used up: someone who saw the state (it rides in URLs) cannot cancel the learner's launch
+    // by posting a wrong value.
+    const pending = await this.store.peek<LoginEntry>('lti-login', state)
+    if (!pending) throw new LtiError('Unknown or expired state')
+    if (!pending.storage || !sameSecret(value, pending.nonce))
       throw new LtiError('Login state does not match this browser')
     // single use, even if the rest fails
-    const entry = await this.store.take<{ nonce: string; platformId?: string }>('lti-login', state)
+    const entry = await this.store.take<LoginEntry>('lti-login', state)
     if (!entry) throw new LtiError('Unknown or expired state')
+    return this.launchWith(entry, idToken)
+  }
+
+  private async launchWith(
+    entry: LoginEntry,
+    idToken: string | undefined
+  ): Promise<string | { redirect: string }> {
     if (!idToken) throw new LtiError('Missing id_token')
     // The platform is the one the login was started for, never one the (unverified) token names.
     const reg = await this.platforms.forLaunch(entry.platformId)
@@ -244,12 +380,32 @@ export class LtiToolService {
       throw new LtiError('Score endpoint is not on the platform')
     if (typeof claims.sub !== 'string' || !claims.sub) throw new LtiError('Missing sub')
     const tool = claims[CLAIM.custom]?.tool
-    if (tool !== undefined && tool !== 'id-interview' && tool !== 'id-assessment')
+    if (
+      tool !== undefined &&
+      tool !== 'id-interview' &&
+      tool !== 'id-assessment' &&
+      tool !== 'id-checkpoint'
+    )
       throw new LtiError('Unsupported tool')
     // never trust the claim: the same validator the platform used, again
     const brand = sanitizeBrand(claims[BRAND_CLAIM])
     const sessionReturn = safeReturnUrl(claims[CLAIM.launchPresentation]?.return_url, reg.issuer)
     const who = identityOf(reg, claims.sub)
+    if (tool === 'id-checkpoint') {
+      // A checkpoint names an LMS cohort and item and rewrites that delivery's placement: LearnDifferently's only.
+      if (!keepsBareSub(reg))
+        throw new LtiError('Checkpoints can only be launched from LearnDifferently', 403)
+      return this.launchCheckpoint({
+        ref,
+        who,
+        lineitem,
+        returnUrl: sessionReturn,
+        brand,
+        contextId: claims[CLAIM.context]?.id,
+        resourceLinkId: claims[CLAIM.resourceLink]?.id,
+        checkpoint: claims[CLAIM.custom]?.checkpoint,
+      })
+    }
     if (tool === 'id-assessment') {
       return this.launchAssessment({
         ref,
@@ -404,6 +560,65 @@ export class LtiToolService {
   }
 
   /**
+   * A course checkpoint launch (GitHub issue #90): `ref` is the question bank's slug and the custom `checkpoint`
+   * parameter the placement (what to ask). The delivery for (bank, cohort, resource link) is found or created with
+   * the placement as its config, and the learner is sent to the Simulator's chat page with a checkpoint session.
+   */
+  private async launchCheckpoint(l: {
+    ref: string
+    who: Identity
+    lineitem: string
+    returnUrl: string | undefined
+    brand: ReturnType<typeof sanitizeBrand>
+    contextId: unknown
+    resourceLinkId: unknown
+    checkpoint: unknown
+  }): Promise<{ redirect: string }> {
+    // never trust the claim: the placement is checked strictly before anything is looked up or created
+    const placement: CheckpointPlacement | null = parsePlacement(l.checkpoint)
+    if (!placement || placement.bankSlug !== l.ref) throw new LtiError('Invalid checkpoint')
+    const contextId = typeof l.contextId === 'string' && l.contextId ? l.contextId : null
+    const itemId =
+      typeof l.resourceLinkId === 'string' && l.resourceLinkId ? l.resourceLinkId : null
+    if (!contextId || !itemId) throw new LtiError('A checkpoint is launched from a course item')
+    const cohort = await runAsSystem(() =>
+      this.prisma.cohort.findUnique({ where: { id: contextId }, select: { id: true } })
+    )
+    if (!cohort) throw new LtiError('Cohort not found', 404)
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { slug: placement.bankSlug },
+      select: { id: true, slug: true, datasetId: true, sections: true },
+    })
+    if (!assessment || !assessment.datasetId) throw new LtiError('Question bank not found', 404)
+    // every request must exist, so the Simulator and the LMS agree on what is asked (and the page is never empty)
+    if (unknownRefs(assessment.sections, placement.refs).length > 0)
+      throw new LtiError(UNKNOWN_REFS_MESSAGE, 409)
+    const delivery = await this.findOrCreateDelivery(
+      assessment.id,
+      cohort.id,
+      `lti:${itemId}`,
+      undefined,
+      placement
+    )
+    const iat = Math.floor(this.now() / 1000)
+    const token = signSession({
+      ...l.who,
+      ref: assessment.slug,
+      lineitem: l.lineitem,
+      returnUrl: l.returnUrl,
+      datasets: [],
+      checkpoint: { deliveryId: delivery.id, cohortId: cohort.id, itemId },
+      ...(l.brand ? { brand: l.brand } : {}),
+      jti: newId(),
+      iat,
+      exp: iat + SESSION_TTL_S,
+    })
+    return {
+      redirect: `${idWebUrl()}/lti/checkpoint/${encodeURIComponent(delivery.id)}#session=${token}`,
+    }
+  }
+
+  /**
    * How many attempts the learner has submitted on this item's deliveries: label `base` (attempt 1)
    * or `base#<n>`. The label prefix match is narrowed in code so another item whose id happens to
    * start with `base#` is not counted.
@@ -454,32 +669,43 @@ export class LtiToolService {
     return d
   }
 
+  /** `config`: a checkpoint's placement, stored on a new delivery and kept up to date on a found one. */
   private async findOrCreateDelivery(
     assessmentId: string,
     cohortId: string | null,
     label: string,
-    timeLimitMinutes?: number
+    timeLimitMinutes?: number,
+    config?: CheckpointPlacement
   ): Promise<{ id: string; timeLimitMinutes: number | null }> {
     const find = () =>
       this.prisma.assessmentDelivery.findFirst({
         where: { assessmentId, cohortId, label },
         orderBy: { createdAt: 'asc' },
-        select: { id: true, timeLimitMinutes: true },
+        select: { id: true, timeLimitMinutes: true, ...(config ? { config: true } : {}) },
       })
+    const keep = async (d: { id: string; timeLimitMinutes: number | null; config?: unknown }) => {
+      if (config && !samePlacement(d.config, config))
+        await this.prisma.assessmentDelivery.update({
+          where: { id: d.id },
+          data: { config: config as unknown as object },
+        })
+      return { id: d.id, timeLimitMinutes: d.timeLimitMinutes }
+    }
     const found = await find()
-    if (found) return found
+    if (found) return keep(found)
     const lockKey = `${assessmentId}:${cohortId ?? '-'}:${label}`
     for (let i = 0; i < DELIVERY_LOCK_TRIES; i++) {
       if (await this.store.claim('lti-delivery', lockKey, DELIVERY_LOCK_TTL_S)) {
         try {
           const again = await find()
-          if (again) return again
+          if (again) return keep(again)
           const created = await this.prisma.assessmentDelivery.create({
             data: {
               assessmentId,
               cohortId,
               label,
               ...(timeLimitMinutes === undefined ? {} : { timeLimitMinutes }),
+              ...(config ? { config: config as unknown as object } : {}),
             },
             select: { id: true, timeLimitMinutes: true },
           })
@@ -490,7 +716,7 @@ export class LtiToolService {
       }
       await this.sleep(DELIVERY_LOCK_WAIT_MS)
       const other = await find()
-      if (other) return other
+      if (other) return keep(other)
     }
     throw new LtiError('The assessment is being set up. Please try again.', 503)
   }
@@ -824,7 +1050,46 @@ export class LtiToolService {
     }
   }
 
-  private async postScore(
+  /**
+   * Sends a checkpoint's score to the platform once it is done, and again whenever it changes; never the same score
+   * twice. `current` reads the score from what is recorded (null while not done). One sender per learner and
+   * delivery at a time: a request that finds another sending leaves it to that one, which reads the score again after
+   * each post. Never throws: a failed post is logged and tried again on the next answer.
+   */
+  async syncCheckpointScore(
+    session: LtiSession,
+    current: () => Promise<number | null>
+  ): Promise<void> {
+    const c = session.checkpoint
+    if (!c) return
+    const key = `${c.deliveryId}:${session.sub}`
+    try {
+      for (let round = 0; round < 3; round++) {
+        if (!(await this.store.claim('lti-checkpoint-lock', key, IN_FLIGHT_TTL_S))) return
+        try {
+          for (let i = 0; i < 3; i++) {
+            const score = await current()
+            const last = await this.store.peek<{ score: number }>('lti-checkpoint-score', key)
+            if (score === null || last?.score === score) break
+            await this.postScore(session, score, [])
+            await this.store.put('lti-checkpoint-score', key, { score }, RESULT_TTL_S)
+          }
+        } finally {
+          await this.store.release('lti-checkpoint-lock', key)
+        }
+        // an answer recorded while the lock was held, whose request found it taken, is picked up here
+        const score = await current()
+        const last = await this.store.peek<{ score: number }>('lti-checkpoint-score', key)
+        if (score === null || last?.score === score) return
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Checkpoint score not sent (${c.deliveryId}): ${err instanceof Error ? err.message : err}`
+      )
+    }
+  }
+
+  async postScore(
     claims: Pick<SubmissionClaims, 'sub' | 'lineitem' | 'platformId' | 'platformSub'>,
     score: number,
     dimensions: { dimension: string; score: number }[]
@@ -976,6 +1241,15 @@ function identityOf(platform: ToolPlatform, sub: string): Identity {
     ...(platform.id === BUILT_IN_ID ? {} : { platformId: platform.id }),
     ...(keepsBareSub(platform) ? {} : { platformSub: sub }),
   }
+}
+
+/** Where a framed launch posts once its state came back from platform storage. */
+export const verifiedLaunchUrl = (): string => new URL('launch/verified', launchUrl()).toString()
+
+function sameSecret(a: string, b: string): boolean {
+  const x = Buffer.from(a)
+  const y = Buffer.from(b)
+  return x.length === y.length && timingSafeEqual(x, y)
 }
 
 function sameOrigin(url: string, issuer: string): boolean {

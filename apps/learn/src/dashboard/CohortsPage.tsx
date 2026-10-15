@@ -3,6 +3,7 @@ import type { CohortDetail, CohortListItem, RunnableCourse } from '@id/types'
 import { useState, type FormEvent } from 'react'
 import { useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
+import { AdaptiveChip } from './CoursesPage'
 import { dateOnly } from './format'
 import { canManageWorkspace } from './roleAccess'
 import { errorNotice, useWorkspaceRole } from './shared'
@@ -251,6 +252,7 @@ export function CohortsPage({ workspace }: { workspace: string }) {
                 <CohortStatusChip status={c.status} />
                 <CohortDeliveryChip delivery={c.delivery} />
                 <CohortAttendanceChip delivery={c.delivery} />
+                {c.adaptive && <AdaptiveChip />}
               </div>
             </li>
           ))}

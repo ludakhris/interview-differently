@@ -28,6 +28,7 @@ export const LEARNER_TYPE_LABEL: Record<string, string> = {
   external_link: 'External course',
   tool: 'Connected tool',
   profile: 'Talent profile',
+  spark_lesson: 'Video made for you',
 }
 
 export const TYPE_LABEL: Record<string, string> = {
@@ -39,6 +40,7 @@ export const TYPE_LABEL: Record<string, string> = {
   external_link: 'Link to an external course',
   tool: 'Connected tool',
   profile: 'Talent profile form',
+  spark_lesson: 'Video made per learner (prototype)',
 }
 
 const emptyQuestion = (): KnowledgeCheckQuestion => ({

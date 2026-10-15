@@ -1,7 +1,7 @@
 import { MemoryLtiStore } from '../lti-store'
 import { LtiError } from '../lti-spec'
 import type { LtiSession } from './lti-session'
-import { SqlRunnerBusyError } from '../../sql-runner/sql-runner.service'
+import { SqlRunnerBusyError } from '../../simulator/sql-runner/sql-runner.service'
 import { LtiPlayService } from './lti-play.service'
 
 /**

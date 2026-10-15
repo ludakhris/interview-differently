@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import { Inject, Injectable } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
-import { compareResults } from '../../assessments/grade'
+import { compareResults } from '../../simulator/assessments/grade'
 import {
   SqlRunnerBusyError,
   SqlRunnerService,
   type QueryResult,
-} from '../../sql-runner/sql-runner.service'
+} from '../../simulator/sql-runner/sql-runner.service'
 import {
   fieldsOf,
   firstNodeId,
@@ -17,7 +17,7 @@ import {
   type Run,
   type SimNode,
   type SimScenario,
-} from '../../scoring/sim-scoring'
+} from '../../simulator/scoring/sim-scoring'
 import { LtiError } from '../lti-spec'
 import { LTI_STORE } from '../lti-store'
 import type { LtiStore } from '../lti-store'

@@ -264,7 +264,7 @@ describe('workspace limits', () => {
 
   it('counts the tools on each connection', () => {
     const [c] = defaultConnections()
-    expect(connectionView(c, defaultTools())).toMatchObject({ id: c.id, toolCount: 2 })
+    expect(connectionView(c, defaultTools())).toMatchObject({ id: c.id, toolCount: 3 })
     expect(connectionView(c, [])).toMatchObject({ toolCount: 0 })
   })
 })
@@ -459,7 +459,7 @@ describe('ToolRegistryService', () => {
       setStoredConnections([])
       setStoredTools([])
       await service.onModuleInit()
-      expect(registeredTools().length).toBe(2)
+      expect(registeredTools().length).toBe(3)
       expect(prisma.ltiTool.createMany).not.toHaveBeenCalled()
       expect(prisma.ltiConnection.createMany).not.toHaveBeenCalled()
     })
@@ -473,7 +473,7 @@ describe('ToolRegistryService', () => {
       expect(registeredTools()).toEqual([])
       stored()
       await service.load()
-      expect(registeredTools().length).toBe(2)
+      expect(registeredTools().length).toBe(3)
     })
 
     it('starts with nothing launchable when the tables are empty, until the seed script has run', async () => {
@@ -681,7 +681,7 @@ describe('ToolRegistryService', () => {
 
     it('refuses to remove a connection that tools still use, and removes an unused one', async () => {
       await expect(service.removeConnection(admin, 'u1', 'interview-differently')).rejects.toThrow(
-        /2 tools use this connection/
+        /3 tools use this connection/
       )
       expect(prisma.ltiConnection.delete).not.toHaveBeenCalled()
       setStoredConnections([...defaultConnections(), connection()])

@@ -13,10 +13,11 @@ import {
 import type { Request, Response } from 'express'
 import { LtiError } from '../lti-spec'
 import { returnUrl } from './lti-tool.config'
-import { errorPage } from './lti-tool.html'
+import { errorPage, scriptCsp } from './lti-tool.html'
 import { LtiOnlyGuard, type LtiRequest } from './lti-session.guard'
 import { LtiPlayService } from './lti-play.service'
-import { LtiReturnError, LtiToolService } from './lti-tool.service'
+import { LtiReturnError, LtiToolService, type ScriptPage } from './lti-tool.service'
+import { LtiCheckpointService } from './lti-checkpoint.service'
 
 type Params = Record<string, string | undefined>
 
@@ -27,6 +28,17 @@ const COOKIE_ATTRS = 'HttpOnly; Secure; SameSite=None; Path=/api/lti/tool'
 function strings(input: unknown): Params {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) return {}
   return Object.fromEntries(Object.entries(input).filter(([, v]) => typeof v === 'string'))
+}
+
+/** The origin a browser request came from: its Origin header, else its Referer's origin. */
+function requestOrigin(req: Request): string | undefined {
+  const origin = req.headers.origin
+  if (typeof origin === 'string' && origin !== 'null') return origin
+  try {
+    return req.headers.referer ? new URL(req.headers.referer).origin : undefined
+  } catch {
+    return undefined
+  }
 }
 
 function cookieValue(header: string | undefined, name: string): string | undefined {
@@ -42,7 +54,8 @@ function cookieValue(header: string | undefined, name: string): string | undefin
 export class LtiToolController {
   constructor(
     private readonly tool: LtiToolService,
-    private readonly play: LtiPlayService
+    private readonly play: LtiPlayService,
+    private readonly checkpoint: LtiCheckpointService
   ) {}
 
   @Get('jwks')
@@ -52,12 +65,12 @@ export class LtiToolController {
 
   @Get('login')
   loginGet(@Query() q: unknown, @Req() req: Request, @Res() res: Response) {
-    return this.html(res, () => this.redirect(res, strings(q), req.ip))
+    return this.html(res, () => this.redirect(res, strings(q), req))
   }
 
   @Post('login')
   loginPost(@Body() b: unknown, @Req() req: Request, @Res() res: Response) {
-    return this.html(res, () => this.redirect(res, strings(b), req.ip))
+    return this.html(res, () => this.redirect(res, strings(b), req))
   }
 
   @Post('launch')
@@ -65,6 +78,27 @@ export class LtiToolController {
     return this.html(res, async () => {
       const p = strings(b)
       const page = await this.tool.launch(p.id_token, p.state, cookieValue(cookie, STATE_COOKIE))
+      res.setHeader('Set-Cookie', `${STATE_COOKIE}=; ${COOKIE_ATTRS}; Max-Age=0`)
+      if (typeof page === 'string') this.send(res, 200, page)
+      else if ('page' in page) this.sendScript(res, page.page)
+      else res.redirect(303, page.redirect)
+    })
+  }
+
+  /**
+   * A framed launch whose login state came back from the platform's page (LTI platform storage) instead of the
+   * cookie: posted by the tool's own launch page only.
+   */
+  @Post('launch/verified')
+  launchVerified(@Body() b: unknown, @Req() req: Request, @Res() res: Response) {
+    return this.html(res, async () => {
+      const p = strings(b)
+      const page = await this.tool.launchVerified(
+        p.id_token,
+        p.state,
+        p.lti_storage_value,
+        typeof req.headers.origin === 'string' ? req.headers.origin : undefined
+      )
       res.setHeader('Set-Cookie', `${STATE_COOKIE}=; ${COOKIE_ATTRS}; Max-Age=0`)
       if (typeof page === 'string') this.send(res, 200, page)
       else res.redirect(303, page.redirect)
@@ -83,12 +117,13 @@ export class LtiToolController {
   @Get('session')
   @UseGuards(LtiOnlyGuard)
   session(@Req() req: LtiRequest) {
-    const { brand, ref, deliveryId, review } = req.lti!
+    const { brand, ref, deliveryId, review, checkpoint } = req.lti!
     return {
       brand: brand ?? null,
       ref,
       ...(deliveryId ? { deliveryId } : {}),
       ...(review ? { review: true } : {}),
+      ...(checkpoint ? { checkpoint: { deliveryId: checkpoint.deliveryId } } : {}),
     }
   }
 
@@ -148,6 +183,38 @@ export class LtiToolController {
     return this.asHttp(() => this.play.hint(this.ltiSession(req), p.nodeId))
   }
 
+  // ── A course checkpoint (issue #90): the chat page in apps/web, embedded in the course ──
+
+  @Get('checkpoint')
+  @UseGuards(LtiOnlyGuard)
+  checkpointView(@Req() req: LtiRequest) {
+    return this.asHttp(() => this.checkpoint.view(this.ltiSession(req)))
+  }
+
+  @Post('checkpoint/run')
+  @UseGuards(LtiOnlyGuard)
+  checkpointRun(@Req() req: LtiRequest, @Body() b: unknown) {
+    return this.asHttp(() => this.checkpoint.run(this.ltiSession(req), b))
+  }
+
+  @Post('checkpoint/answer')
+  @UseGuards(LtiOnlyGuard)
+  checkpointAnswer(@Req() req: LtiRequest, @Body() b: unknown) {
+    return this.asHttp(() => this.checkpoint.answer(this.ltiSession(req), b))
+  }
+
+  @Post('checkpoint/help')
+  @UseGuards(LtiOnlyGuard)
+  checkpointHelp(@Req() req: LtiRequest, @Body() b: unknown) {
+    return this.asHttp(() => this.checkpoint.help(this.ltiSession(req), b))
+  }
+
+  @Post('checkpoint/practice')
+  @UseGuards(LtiOnlyGuard)
+  checkpointPractice(@Req() req: LtiRequest) {
+    return this.asHttp(() => this.checkpoint.practice(this.ltiSession(req)))
+  }
+
   private ltiSession(req: LtiRequest) {
     return { ...req.lti!, sub: req.userId! }
   }
@@ -162,11 +229,25 @@ export class LtiToolController {
     }
   }
 
-  /** Binds the login to this browser with a cookie holding the state, then sends it to the platform. */
-  private async redirect(res: Response, p: Params, ip: string | undefined) {
-    const { url, state } = await this.tool.login(p, ip)
+  /**
+   * Binds the login to this browser with a cookie holding the state, then sends it to the platform. A login that
+   * asked for platform storage (a framed launch) gets a page that also keeps the state in the platform's page; the
+   * cookie is still set, in case the browser keeps it.
+   */
+  private async redirect(res: Response, p: Params, req: Request) {
+    const { url, state, page } = await this.tool.login(p, req.ip, requestOrigin(req))
     res.setHeader('Set-Cookie', `${STATE_COOKIE}=${state}; ${COOKIE_ATTRS}; Max-Age=600`)
-    res.redirect(302, url)
+    if (page) this.sendScript(res, page)
+    else res.redirect(302, url)
+  }
+
+  private sendScript(res: Response, page: ScriptPage) {
+    res.status(200).set({
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'Content-Security-Policy': scriptCsp(page.nonce, page.formAction),
+    })
+    res.send(page.html)
   }
 
   private send(res: Response, status: number, html: string) {

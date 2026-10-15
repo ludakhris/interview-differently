@@ -13,6 +13,18 @@ export function StatusChip({ status }: { status: string }) {
   )
 }
 
+/** Adaptive checkpoints (prototype): the course builds each learner's own path from a diagnostic. */
+export function AdaptiveChip() {
+  return (
+    <span
+      className="dash-chip dash-chip-adaptive"
+      title="A diagnostic builds each learner's own path: they skip what they show and get help where they need it"
+    >
+      Adaptive
+    </span>
+  )
+}
+
 /** A provider's courses, with a form to start a new one. */
 export function CoursesPage({ workspace }: { workspace: string }) {
   const { href, current } = useApp()
@@ -141,6 +153,7 @@ export function CoursesPage({ workspace }: { workspace: string }) {
               </dl>
               <div className="dash-course-side">
                 <StatusChip status={c.status} />
+                {c.adaptive && <AdaptiveChip />}
                 <span className="dash-muted">Updated {dateShort(c.updatedAt)}</span>
               </div>
             </li>

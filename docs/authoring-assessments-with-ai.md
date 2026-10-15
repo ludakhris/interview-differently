@@ -2,7 +2,7 @@
 
 Paste this whole file into the model's context, then describe the assessment you want (audience, topics, how many sections, pre/post). The model should return **one markdown file** that imports cleanly under **Admin → Tools ▾ → Assessments → + Import**.
 
-The format is defined in [assessment-format.md](./assessment-format.md); this document is the _how to write good ones_ companion, written for a model. Everything below is verified against the parser (`apps/api/src/assessments/parse-markdown.ts`) and the grader (`apps/api/src/assessments/grade.ts`).
+The format is defined in [assessment-format.md](./assessment-format.md); this document is the _how to write good ones_ companion, written for a model. Everything below is verified against the parser (`apps/api/src/simulator/assessments/parse-markdown.ts`) and the grader (`apps/api/src/simulator/assessments/grade.ts`).
 
 > The finished bank contains answers. **Never commit it** — the repo is public. Keep it in `docs/private/` (gitignored) or outside the repo.
 

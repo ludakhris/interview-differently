@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common'
-import { InterviewEngineModule } from '../../interview-engine/interview-engine.module'
+import { InterviewEngineModule } from '../../simulator/interview-engine/interview-engine.module'
 import { PrismaModule } from '../../prisma/prisma.module'
-import { SqlRunnerModule } from '../../sql-runner/sql-runner.module'
+import { CheckpointsModule } from '../../simulator/checkpoints/checkpoints.module'
+import { SqlRunnerModule } from '../../simulator/sql-runner/sql-runner.module'
 import { LtiStoreModule } from '../lti-store.module'
+import { LtiCheckpointService } from './lti-checkpoint.service'
 import { LtiPlayService } from './lti-play.service'
 import { LtiToolController } from './lti-tool.controller'
 import { LtiToolService } from './lti-tool.service'
@@ -13,8 +15,20 @@ import { ToolRegistrationService } from './registration.service'
 
 /** Interview Differently as an LTI 1.3 tool (#63). */
 @Module({
-  imports: [PrismaModule, LtiStoreModule, InterviewEngineModule, SqlRunnerModule],
+  imports: [
+    PrismaModule,
+    LtiStoreModule,
+    InterviewEngineModule,
+    SqlRunnerModule,
+    CheckpointsModule,
+  ],
   controllers: [LtiToolController, ToolRegistrationController, PlatformsController],
-  providers: [LtiToolService, LtiPlayService, PlatformRegistryService, ToolRegistrationService],
+  providers: [
+    LtiToolService,
+    LtiPlayService,
+    LtiCheckpointService,
+    PlatformRegistryService,
+    ToolRegistrationService,
+  ],
 })
 export class LtiToolModule {}

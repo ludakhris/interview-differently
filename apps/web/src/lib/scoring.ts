@@ -2,7 +2,7 @@
 //
 // The browser still scores a simulation played on the Interview Differently site (the learner's own
 // practice). A launched play (LTI) is scored on the server instead, with the twin of this file,
-// apps/api/src/scoring/sim-scoring.ts. Keep them in sync: scoring.parity.test.ts runs both on the
+// apps/api/src/simulator/scoring/sim-scoring.ts. Keep them in sync: scoring.parity.test.ts runs both on the
 // same plays and fails if they ever differ.
 
 import type {

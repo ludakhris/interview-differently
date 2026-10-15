@@ -115,8 +115,9 @@ function idToken(nonce: string, over: Record<string, unknown> = {}, key = platfo
   )
 }
 
-const submissionOf = (page: string | { redirect: string }) => {
-  if (typeof page !== 'string') throw new Error(`expected the typed page, got ${page.redirect}`)
+const submissionOf = (page: string | { redirect: string } | { page: unknown }) => {
+  if (typeof page !== 'string')
+    throw new Error(`expected the typed page, got ${JSON.stringify(page)}`)
   return /name="submission" value="([^"]+)"/.exec(page)![1]
 }
 

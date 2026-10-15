@@ -99,3 +99,39 @@ export interface AssessmentDeliveryResults {
   sections: { id: string; title: string }[]
   attempts: AssessmentResultAttempt[]
 }
+
+/** One answer or pass in a checkpoint (GitHub issue #90). `itemId` is the LMS item the checkpoint filled. */
+export interface CheckpointEvidence {
+  userId: string
+  itemId: string
+  ref: string
+  correct: boolean
+  passed: boolean
+  at: string
+}
+
+/** One thing a learner saw or did in a checkpoint, in order. */
+export type CheckpointHistoryEntry =
+  | {
+      kind: 'answer'
+      at: string
+      itemId: string
+      ref: string
+      prompt: string
+      from: string | null
+      /** Their SQL; null when they passed. */
+      sql: string | null
+      correct: boolean
+      passed: boolean
+      reason: string | null
+    }
+  | {
+      kind: 'help'
+      at: string
+      itemId: string
+      ref: string
+      helpKind: 'hint' | 'explain' | 'example'
+      text: string
+      exampleSql: string | null
+    }
+  | { kind: 'practice'; at: string; itemId: string; intro: string; tasks: string[] }

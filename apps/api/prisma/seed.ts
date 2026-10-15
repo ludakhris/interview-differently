@@ -4,7 +4,8 @@ import { readFileSync, readdirSync } from 'fs'
 import { join, resolve } from 'path'
 import { createHash } from 'crypto'
 import * as yaml from 'js-yaml'
-import { SqlRunnerService } from '../src/sql-runner/sql-runner.service'
+import { seedSimulations } from './seed-simulations'
+import { SqlRunnerService } from '../src/simulator/sql-runner/sql-runner.service'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Scenario = any
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -213,6 +214,9 @@ async function main() {
   console.log(`\n✅ Done. ${seeded} new scenario(s) seeded.`)
 
   await seedDatasets()
+
+  console.log('🌱 Seeding work simulations...')
+  await seedSimulations(prisma)
 }
 
 /**

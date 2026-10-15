@@ -5,8 +5,17 @@ const NUMERIC_RE = /^-?\d+(\.\d+)?$/
 /**
  * Mono data grid for query results: zebra rows, right-aligned numerics, sticky header.
  * `limit` shows that many rows from the full result; without it, the capped `rows`.
+ * `marks` (one per shown row, from a server check) adds a ✓/✗ column and tints each row right or wrong.
  */
-export function ResultsGrid({ result, limit }: { result: SandboxResult; limit?: number }) {
+export function ResultsGrid({
+  result,
+  limit,
+  marks,
+}: {
+  result: SandboxResult
+  limit?: number
+  marks?: boolean[]
+}) {
   if (result.columns.length === 0) {
     return (
       <p className="px-5 py-6 text-[13px] text-slate-mid font-mono">
@@ -23,6 +32,11 @@ export function ResultsGrid({ result, limit }: { result: SandboxResult; limit?: 
     <table className="min-w-full text-[12px] font-mono border-collapse">
       <thead className="sticky top-0 z-10 bg-surface-alt shadow-[0_1px_0_rgb(var(--ld-edge,255_255_255)/0.08)]">
         <tr>
+          {marks && (
+            <th className="px-2 py-2 w-6">
+              <span className="sr-only">Matches</span>
+            </th>
+          )}
           <th className="px-3 py-2 text-right text-[10px] text-ink/25 font-normal w-10">#</th>
           {result.columns.map((c, i) => (
             <th
@@ -38,7 +52,24 @@ export function ResultsGrid({ result, limit }: { result: SandboxResult; limit?: 
       </thead>
       <tbody>
         {rows.map((row, ri) => (
-          <tr key={ri} className="odd:bg-ink/[0.02] hover:bg-green-light/10">
+          <tr
+            key={ri}
+            className={
+              marks
+                ? marks[ri]
+                  ? 'bg-emerald-400/10'
+                  : 'bg-red-400/[0.06]'
+                : 'odd:bg-ink/[0.02] hover:bg-green-light/10'
+            }
+          >
+            {marks && (
+              <td
+                className={`px-2 py-1.5 text-center font-bold ${marks[ri] ? 'text-emerald-400' : 'text-red-400'}`}
+              >
+                <span aria-hidden="true">{marks[ri] ? '✓' : '✗'}</span>
+                <span className="sr-only">{marks[ri] ? 'right row' : 'wrong row'}</span>
+              </td>
+            )}
             <td className="px-3 py-1.5 text-right text-ink/25">{ri + 1}</td>
             {row.map((v, ci) => (
               <td

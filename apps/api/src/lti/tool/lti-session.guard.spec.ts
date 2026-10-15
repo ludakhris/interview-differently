@@ -361,3 +361,63 @@ describe('AuthenticatedOrLtiGuard with an assessment session', () => {
     )
   })
 })
+
+describe('a checkpoint session (issue #90)', () => {
+  const checkpoint: LtiSession = {
+    ...session,
+    ref: 'bank',
+    checkpoint: { deliveryId: 'd1', cohortId: 'k1', itemId: 'i1' },
+  }
+  const lti = new LtiOnlyGuard()
+
+  it.each([
+    ['GET', '/api/lti/tool/checkpoint'],
+    ['POST', '/api/lti/tool/checkpoint/run'],
+    ['POST', '/api/lti/tool/checkpoint/answer'],
+    ['POST', '/api/lti/tool/checkpoint/help'],
+    ['POST', '/api/lti/tool/checkpoint/practice'],
+    ['GET', '/api/lti/tool/session'],
+  ])('reaches %s %s as the learner', async (method, url) => {
+    const req = reqOf(method, url, {}, ltiHeader(checkpoint))
+    expect(lti.canActivate(ctxOf(req))).toBe(true)
+    expect(req.userId).toBe('u1')
+    expect(req.lti?.checkpoint).toEqual(checkpoint.checkpoint)
+  })
+
+  it.each([
+    ['POST', '/api/me/deliveries/d1/attempts'],
+    ['GET', '/api/me/attempts/a1'],
+    ['POST', '/api/lti/tool/complete'],
+    ['GET', '/api/lti/tool/play'],
+    ['GET', '/api/scenarios/bank'],
+    ['GET', '/api/me/datasets/sql-fundamentals'],
+    ['POST', '/api/lti/tool/checkpoint/other'],
+    ['DELETE', '/api/lti/tool/checkpoint'],
+  ])('never reaches %s %s', async (method, url) => {
+    const req = reqOf(method, url, {}, ltiHeader(checkpoint))
+    expect(() => lti.canActivate(ctxOf(req))).toThrow(ForbiddenException)
+  })
+
+  it('is the only session that reaches the checkpoint routes', () => {
+    const assessment = { ...session, deliveryId: 'd1' }
+    for (const s of [session, assessment])
+      for (const [method, url] of [
+        ['GET', '/api/lti/tool/checkpoint'],
+        ['POST', '/api/lti/tool/checkpoint/answer'],
+      ])
+        expect(() => lti.canActivate(ctxOf(reqOf(method, url, {}, ltiHeader(s))))).toThrow(
+          ForbiddenException
+        )
+  })
+
+  it('refuses a token that is both a checkpoint and an assessment, or a malformed checkpoint', () => {
+    for (const bad of [
+      { ...checkpoint, deliveryId: 'd1' },
+      { ...checkpoint, checkpoint: { deliveryId: 'd1', cohortId: '', itemId: 'i1' } },
+      { ...checkpoint, checkpoint: 'd1' as never },
+    ])
+      expect(() =>
+        lti.canActivate(ctxOf(reqOf('GET', '/api/lti/tool/checkpoint', {}, ltiHeader(bad))))
+      ).toThrow(UnauthorizedException)
+  })
+})

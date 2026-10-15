@@ -8,6 +8,8 @@ import { submitLaunchForm } from './launchForm'
 import { score } from './format'
 import { LEARNER_TYPE_LABEL } from './ItemEditor'
 import { errorNotice } from './shared'
+import { EmbeddedCheckpoint } from './adaptive/EmbeddedCheckpoint'
+import { SparkLessonItem } from './adaptive/SparkLessonItem'
 import { TalentProfileItem } from './talent/TalentProfileItem'
 import { attemptLine, onPageRestore, readyCopy, resultCopy, timeLimitNote } from './toolKinds'
 
@@ -46,8 +48,13 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
   if (itemLoad.loading || !item) return <p className="dash-loading">Loading…</p>
 
   // The next item in the course, named on the button that leads to it.
-  const flat = outline.data?.modules.flatMap((m) => m.items) ?? []
-  const next = flat[flat.findIndex((i) => i.id === item.id) + 1]
+  // Items the learner was let past (adaptive checkpoints) are not next.
+  const flat = (outline.data?.modules.flatMap((m) => m.items) ?? []).filter(
+    (i) => !i.skipped || i.id === item.id
+  )
+  // Content added to the plan is not in the outline: from there, go back to the course.
+  const at = flat.findIndex((i) => i.id === item.id)
+  const next = at >= 0 ? flat[at + 1] : undefined
   const nextLabel = next ? `Next: ${next.title}` : 'Back to course'
   const nextHref = next
     ? href(`/lms/learning/${cohortId}/${next.id}`)
@@ -61,7 +68,7 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
         </a>
       </p>
       <p className="dash-item-type dash-item-kicker">
-        {LEARNER_TYPE_LABEL[item.type] ?? item.type}
+        {item.tool?.embedded ? 'Checkpoint' : (LEARNER_TYPE_LABEL[item.type] ?? item.type)}
         {item.label ? ` · ${item.label}-assessment` : ''}
       </p>
       <h1 className="dash-h2">{item.title}</h1>
@@ -94,11 +101,27 @@ export function LearningItemPage({ cohortId, itemId }: { cohortId: string; itemI
             nextLabel={nextLabel}
           />
         )}
-        {item.type === 'tool' && (
+        {item.type === 'tool' && item.tool?.embedded && (
+          <EmbeddedCheckpoint
+            item={item}
+            onChange={setItem}
+            nextHref={nextHref}
+            nextLabel={nextLabel}
+          />
+        )}
+        {item.type === 'tool' && !item.tool?.embedded && (
           <ToolItem item={item} onChange={setItem} nextHref={nextHref} nextLabel={nextLabel} />
         )}
         {item.type === 'interview' && (
           <Interview item={item} onChange={setItem} nextHref={nextHref} nextLabel={nextLabel} />
+        )}
+        {item.type === 'spark_lesson' && (
+          <SparkLessonItem
+            item={item}
+            onChange={setItem}
+            nextHref={nextHref}
+            nextLabel={nextLabel}
+          />
         )}
         {item.type === 'profile' && (
           <TalentProfileItem
