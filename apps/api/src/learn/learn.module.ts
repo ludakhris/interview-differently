@@ -4,6 +4,8 @@ import { PrismaModule } from '../prisma/prisma.module'
 import { StorageModule } from '../storage/storage.module'
 import { AdminContentController } from './admin-content.controller'
 import { AdminContentService } from './admin-content.service'
+import { AdminStatusController } from './admin-status.controller'
+import { AdminStatusService } from './admin-status.service'
 import { AdminUsersController } from './admin-users.controller'
 import { AdminUsersService } from './admin-users.service'
 import { MembersController } from './members.controller'
@@ -57,6 +59,7 @@ import { AdaptiveService } from './adaptive/adaptive.service'
     PublicCatalogController,
     AdminUsersController,
     AdminContentController,
+    AdminStatusController,
     MembersController,
     AdaptiveLearnerController,
     AdaptiveStaffController,
@@ -73,6 +76,7 @@ import { AdaptiveService } from './adaptive/adaptive.service'
     InterviewScoringService,
     AdminUsersService,
     AdminContentService,
+    AdminStatusService,
     MembersService,
     AdaptiveService,
   ],

@@ -1,5 +1,7 @@
+import { Logger, ServiceUnavailableException } from '@nestjs/common'
 import type { PrismaService } from '../prisma/prisma.service'
 import type { LessonRequest } from '../core/spark-port'
+import { LessonFailureLog } from './lesson-failure-log'
 import { LESSON_PROMPT_VERSION } from './lessons'
 import { verifyPlayerToken, verifyPreviewToken } from './player-token'
 import { addUsage, SparkService } from './spark.service'
@@ -24,6 +26,7 @@ function fakeDb() {
   const lessons: Row[] = []
   const uses: Row[] = []
   const events: Row[] = []
+  const failures: Row[] = []
   const stamp = (data: Record<string, unknown>): Row => ({
     id: `id${++n}`,
     createdAt: new Date(clock++),
@@ -101,6 +104,14 @@ function fakeDb() {
         return { count: gone.length }
       }),
     },
+    serviceFailure: {
+      create: jest.fn(async ({ data }) => {
+        const row = stamp(data)
+        failures.push(row)
+        return row
+      }),
+      deleteMany: jest.fn(async () => ({ count: 0 })),
+    },
     lessonEvent: {
       count: jest.fn(async ({ where }) => events.filter((e) => matches(e, where)).length),
       findMany: jest.fn(async ({ where }) => events.filter((e) => matches(e, where))),
@@ -115,7 +126,7 @@ function fakeDb() {
       }),
     },
   }
-  return { db, lessons, uses, events }
+  return { db, lessons, uses, events, failures }
 }
 
 const scenes = [0, 1, 2].map((i) => ({
@@ -176,10 +187,11 @@ function fakeClaude(replies: string[]) {
 
 function setup(replies: string[] = [storyboard]) {
   const fake = fakeDb()
-  const service = new SparkService(fake.db as unknown as PrismaService)
+  const log = new LessonFailureLog(fake.db as unknown as PrismaService)
+  const service = new SparkService(fake.db as unknown as PrismaService, log)
   const claude = fakeClaude(replies)
   ;(service as unknown as { client: unknown }).client = claude
-  return { ...fake, service, claude }
+  return { ...fake, service, claude, log }
 }
 
 const approvedLesson = (over: Record<string, unknown> = {}) => ({
@@ -319,6 +331,68 @@ describe('makeLesson', () => {
     await expect(service.makeLesson(request())).rejects.toThrow('Could not write that lesson')
     expect(lessons).toHaveLength(0)
     expect(uses).toHaveLength(0)
+  })
+})
+
+describe('recording lessons a learner could not get (System status, GitHub issue #92)', () => {
+  it("records 'no-lesson' when two tries give no usable lesson", async () => {
+    const { service, claude, failures } = setup(['{"title":"x","scenes":[]}'])
+    await expect(service.makeLesson(request())).rejects.toBeInstanceOf(ServiceUnavailableException)
+    expect(claude.messages.create).toHaveBeenCalledTimes(2)
+    expect(failures).toMatchObject([
+      { service: 'lessons', kind: 'no-lesson', reason: 'Could not write that lesson. Try again.' },
+    ])
+  })
+
+  it("records 'not-configured' when the AI service is not configured", async () => {
+    const { service, failures } = setup()
+    ;(service as unknown as { client: unknown }).client = null
+    expect(service.aiConfigured()).toBe(false)
+    await expect(service.makeLesson(request())).rejects.toThrow(
+      'Lessons made for you need the AI service, which is not configured.'
+    )
+    expect(failures).toMatchObject([{ service: 'lessons', kind: 'not-configured' }])
+  })
+
+  it('records nothing when a lesson is written or reused', async () => {
+    const { service, failures } = setup()
+    await service.makeLesson(request())
+    expect(failures).toHaveLength(0)
+  })
+
+  it("never breaks the learner's request: a failed or slow write still gives the learner the same answer", async () => {
+    const { service, db } = setup(['{"title":"x","scenes":[]}'])
+    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined)
+    db.serviceFailure.create.mockRejectedValueOnce(new Error('connection refused'))
+    await expect(service.makeLesson(request())).rejects.toThrow('Could not write that lesson')
+    await new Promise((r) => setImmediate(r))
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('connection refused'))
+    // a write that never finishes does not hold the answer back
+    db.serviceFailure.create.mockImplementationOnce(() => new Promise(() => undefined))
+    await expect(service.makeLesson(request())).rejects.toThrow('Could not write that lesson')
+    error.mockRestore()
+  })
+
+  it('treats a client with no key as not configured', () => {
+    const env = { key: process.env.ANTHROPIC_API_KEY, token: process.env.ANTHROPIC_AUTH_TOKEN }
+    try {
+      const { service } = setup()
+      const reset = () => ((service as unknown as { client: unknown }).client = undefined)
+      delete process.env.ANTHROPIC_API_KEY
+      delete process.env.ANTHROPIC_AUTH_TOKEN
+      reset()
+      expect(service.aiConfigured()).toBe(false)
+      process.env.ANTHROPIC_API_KEY = 'test-key'
+      reset()
+      expect(service.aiConfigured()).toBe(true)
+    } finally {
+      for (const [k, v] of [
+        ['ANTHROPIC_API_KEY', env.key],
+        ['ANTHROPIC_AUTH_TOKEN', env.token],
+      ] as const)
+        if (v === undefined) delete process.env[k]
+        else process.env[k] = v
+    }
   })
 })
 

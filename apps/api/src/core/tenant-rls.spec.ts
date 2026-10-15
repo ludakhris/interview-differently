@@ -187,6 +187,23 @@ suite('row-level security', () => {
     )
   })
 
+  it('lets the API record and read service failures with no context: they hold no learner data (GitHub issue #92)', async () => {
+    await as({}, async () => {
+      await db.query(
+        `INSERT INTO "ServiceFailure" ("id","service","kind","reason") VALUES ('sf-1','grading','busy','Grading is busy. Try again in a moment.'), ('sf-2','lessons','no-lesson','Could not write that lesson. Try again.')`
+      )
+      expect((await db.query(`SELECT 1 FROM "ServiceFailure"`)).rows).toHaveLength(2)
+      expect((await db.query(`DELETE FROM "ServiceFailure"`)).affectedRows).toBe(2)
+      expect(
+        (
+          await attempt(
+            `INSERT INTO "ServiceFailure" ("id","service","kind","reason") VALUES ('sf-3','other','x','x')`
+          )
+        ).error
+      ).toMatch(/ServiceFailure_service_check/)
+    })
+  })
+
   it('keeps staff notes away from a learner even in their own agency', async () => {
     await as({ user: 'learner-A' }, async () =>
       expect((await db.query(`SELECT 1 FROM "ParticipantNote"`)).rows).toHaveLength(0)
@@ -590,5 +607,10 @@ describe('touchesTenantTable', () => {
       touchesTenantTable('Dataset', { where: { slug: 'p' }, orderBy: { createdAt: 'desc' } })
     ).toBe(false)
     expect(touchesTenantTable('Scenario', undefined)).toBe(false)
+    expect(
+      touchesTenantTable('ServiceFailure', {
+        where: { service: 'lessons', at: { gte: new Date() } },
+      })
+    ).toBe(false)
   })
 })

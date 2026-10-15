@@ -6,6 +6,7 @@ import { ActivityPage } from './activity/ActivityPage'
 import { AdminPage, AdminUsersPage } from './AdminPages'
 import { AppProvider, useApp, WorkspacesProvider } from './app-context'
 import { ContentReviewPage } from './ContentReviewPage'
+import { SystemStatusPage } from './SystemStatusPage'
 import { CohortPage } from './CohortPage'
 import { CohortsPage } from './CohortsPage'
 import { CourseEditorPage } from './CourseEditorPage'
@@ -131,6 +132,13 @@ function Routes({ pathname }: { pathname: string }) {
     return (
       <DashboardShell>
         <ContentReviewPage />
+      </DashboardShell>
+    )
+  }
+  if (pathname === '/lms/admin/status' || pathname === '/lms/admin/status/') {
+    return (
+      <DashboardShell>
+        <SystemStatusPage />
       </DashboardShell>
     )
   }

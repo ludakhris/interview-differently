@@ -58,6 +58,15 @@ When the user wants to compare options for how something looks or is laid out (a
 
 `.railway/railway.ts` lists every variable on the Railway services, and CI applies it before deploying the API. **When a change needs a new variable, add it there in the same change** (`preserve()` for a value set by hand, such as a secret, so the file never holds it), for each service that has it. A variable set on Railway but missing from the file reads as a deletion: CI's `railway config apply` refuses it, and the API deploy is skipped while the web deploy goes out. Do not run Railway's CLI against production to check; when that CI step fails, its log names the variables it would delete.
 
+## Status page and monitoring
+
+There are two status pages: the admin System status page (`/lms/admin/status`) and the public Better Stack page (`docs/monitoring.md`). Both show each product's health. Add to it only when a product, or a new kind of learner-facing work whose failure stops learners (such as grading answers or writing lessons), goes live. Not for a new endpoint, API, admin tool or internal helper, unless its failure is fatal to the learner experience.
+
+- One section per product, at most three rows: set up, can run, working for learners. Extend an existing row before adding one.
+- Each row reads failures the product records in `ServiceFailure` (one `service` value per area, added to the table's CHECK in a migration and to `FailureService` in `core/service-failure-log.ts`), or a check that costs no money or AI calls and is cached (at most once every five minutes). Never a timed check that calls the AI.
+- Better Stack: give it a public health URL (`/api/health/<area>/…`, status and time only, 503 when failing) and add it to `ops/monitoring.ts`; CI creates the monitor and its row on the public page.
+- Admin page: by hand, through the product's port in `core/status-port.ts` (bound in the product's module), read in `learn/admin-status.service.ts`, typed in `SystemStatus` (`packages/types/src/learn.ts`, then `npm run sync:types -w @id/api`) and shown on `SystemStatusPage.tsx`.
+
 ## Reviewing larger PRs
 
 For a PR over about 500 changed lines (`git diff --stat origin/main...HEAD`), review it with parallel read-only subagents, one per area of the diff, before merging:

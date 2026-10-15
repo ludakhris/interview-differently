@@ -9,7 +9,7 @@ import { createHash } from 'crypto'
 import { PrismaService } from '../../prisma/prisma.service'
 import { ClerkService } from '../../auth/clerk.service'
 import { sqlDatasetSlugs } from '../../lti/tool/lti-session'
-import { SqlRunnerService, type SchemaTable } from '../sql-runner/sql-runner.service'
+import { HEADROOM_MB, SqlRunnerService, type SchemaTable } from '../sql-runner/sql-runner.service'
 
 export interface DatasetInput {
   slug: string
@@ -83,11 +83,21 @@ export class DatasetsService {
   /** Runs the script and returns the schema — used by the admin "Validate" button. Throws 400 on SQL error. */
   async validate(setupSql: string): Promise<SchemaTable[]> {
     if (!setupSql?.trim()) throw new BadRequestException('setupSql is required')
+    let schema: SchemaTable[]
     try {
-      return await this.runner.introspect(setupSql)
+      schema = await this.runner.introspect(setupSql)
     } catch (err) {
       throw new BadRequestException(`Setup SQL failed: ${(err as Error).message}`)
     }
+    // It must also load in a grading process with room for queries, or every answer graded on it would fail (#92).
+    const fit = await this.runner.measure(setupSql)
+    if (!fit.ok)
+      throw new BadRequestException(`The dataset would not load for grading: ${fit.error}`)
+    if (fit.peakMb !== null && fit.peakMb > fit.limitMb - HEADROOM_MB)
+      throw new BadRequestException(
+        `The dataset is too large to grade on: it needs about ${Math.round(fit.peakMb)} MB, and grading allows ${fit.limitMb - HEADROOM_MB} MB. Make it smaller.`
+      )
+    return schema
   }
 
   async create(input: DatasetInput, institutionId: string | null) {

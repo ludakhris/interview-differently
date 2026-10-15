@@ -43,6 +43,12 @@ export interface PreviewToken {
 /** The value apps/api/.env.example ships with: never a real secret. */
 export const PLACEHOLDER_SECRET = 'replace_with_a_long_random_string'
 
+/** SPARK_SESSION_SECRET when it is set to a real secret, else null. */
+const setSecret = (): string | null => {
+  const set = process.env.SPARK_SESSION_SECRET
+  return set && set !== PLACEHOLDER_SECRET ? set : null
+}
+
 let fallbackSecret: string | undefined
 /**
  * SPARK_SESSION_SECRET. In production a missing (or placeholder) secret means lessons are not set up: signing and
@@ -50,8 +56,8 @@ let fallbackSecret: string | undefined
  * per process stands in, so links stop working on restart.
  */
 export function playerSecret(): string {
-  const set = process.env.SPARK_SESSION_SECRET
-  if (set && set !== PLACEHOLDER_SECRET) return set
+  const set = setSecret()
+  if (set) return set
   if (process.env.NODE_ENV === 'production')
     throw new ServiceUnavailableException('Lessons are not set up on this server')
   if (!fallbackSecret) {
@@ -159,10 +165,30 @@ export const isPreview = (token: SparkLink): token is PreviewToken =>
  * are not set up (as a missing secret does): a 503, never a link to localhost.
  */
 export const sparkWebUrl = (): string => {
-  const set = process.env.SPARK_WEB_URL
+  const set = setWebUrl()
   if (!set && process.env.NODE_ENV === 'production')
     throw new ServiceUnavailableException('Lessons are not set up on this server')
-  return (set || 'http://localhost:5175').replace(/\/+$/, '')
+  return set ?? 'http://localhost:5175'
+}
+
+/** SPARK_WEB_URL without a trailing slash, or null when it is not set (no local fallback). */
+export const setWebUrl = (): string | null => process.env.SPARK_WEB_URL?.replace(/\/+$/, '') || null
+
+/** The address lesson links use, as sparkWebUrl gives it, or null where it would 503 (production without one). */
+export const playerWebUrl = (): string | null =>
+  setWebUrl() ?? (process.env.NODE_ENV === 'production' ? null : 'http://localhost:5175')
+
+/**
+ * What production is missing for lesson links, in plain words, without throwing (for the System status page, GitHub
+ * issue #92): where playerSecret and sparkWebUrl would answer 503. Empty outside production, where both fall back.
+ */
+export function linkSetupProblems(): string[] {
+  if (process.env.NODE_ENV !== 'production') return []
+  const problems: string[] = []
+  if (!setSecret())
+    problems.push('The secret that signs video links (SPARK_SESSION_SECRET) is not set.')
+  if (!setWebUrl()) problems.push('The video player’s web address (SPARK_WEB_URL) is not set.')
+  return problems
 }
 
 /** The player link for a token. The token rides in the fragment, so it is never sent to Spark's web host. */

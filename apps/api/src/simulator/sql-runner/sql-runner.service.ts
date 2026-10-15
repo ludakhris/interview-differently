@@ -1,8 +1,9 @@
 import { fork } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { Injectable, ServiceUnavailableException } from '@nestjs/common'
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import type { PGlite } from '@electric-sql/pglite'
+import { GradingFailureLog } from './grading-failure-log'
 import { buildDb, runOne } from './sql-exec'
 import type { QueryOutcome, QueryResult, SchemaTable } from './sql-exec'
 
@@ -65,9 +66,25 @@ type WorkerMessage =
   | { type: 'done' }
   | { type: 'fatal'; error: string }
 
+/** A dataset must load with at least this much of `maxRssMb` to spare, for the queries run on it (GitHub issue #92). */
+export const HEADROOM_MB = 512
+/** A grading run above this share of `maxRssMb` is logged as a warning, before any run hits the limit. */
+export const WARN_SHARE = 0.8
+
+/** Loading a dataset in a grading process: whether it loaded, and the most memory the process held. */
+export interface DatasetFit {
+  ok: boolean
+  error: string | null
+  /** Peak resident memory in MB; null where it cannot be read (no /proc, as on macOS). */
+  peakMb: number | null
+  limitMb: number
+}
+
 interface Step {
   /** Outcomes for the queries tried, including the one that was stopped (last, with stoppedAt). */
   outcomes: QueryOutcome[]
+  /** The most memory the child held, in MB; absent where it cannot be read. */
+  peakMb?: number
   /** Index, within this step's queries, of the query that was stopped; absent when the batch finished. */
   stoppedAt?: number
   /** The dataset would not load: nothing ran. */
@@ -138,9 +155,13 @@ export class SqlRunnerService {
   spawn: () => ChildLike = forkWorker
   rssMb: (pid: number | undefined) => number | undefined = procRssMb
   now: () => number = () => Date.now()
+  private readonly logger = new Logger(SqlRunnerService.name)
 
   private active = 0
   private waiters: (() => void)[] = []
+
+  /** Learner grading that failed (executeMany only: measure is not a learner's grading) goes to `failures`. */
+  constructor(private readonly failures: GradingFailureLog) {}
 
   async build(setupSql: string): Promise<PGlite> {
     return buildDb(setupSql)
@@ -196,11 +217,48 @@ export class SqlRunnerService {
    * stopped one runs on a fresh instance. Throws SqlRunnerBusyError if no slot frees up in time.
    */
   async executeMany(setupSql: string, queries: string[]): Promise<QueryOutcome[]> {
+    try {
+      const { outcomes } = await this.run(setupSql, queries)
+      const infra = outcomes.find((o) => !o.ok && o.infra)
+      // not awaited: recording never slows or breaks grading
+      if (infra && !infra.ok) void this.failures.record(infra.error, 'infra')
+      return outcomes
+    } catch (err) {
+      if (err instanceof SqlRunnerBusyError) void this.failures.record(err.message, 'busy')
+      throw err
+    }
+  }
+
+  /**
+   * Loads a dataset in a grading process, as grading does, and reports the most memory the process held, so a dataset
+   * (or a PGlite upgrade) that would not leave HEADROOM_MB for queries is caught before learners are graded on it.
+   */
+  async measure(setupSql: string): Promise<DatasetFit> {
+    const { outcomes, peakMb } = await this.run(setupSql, ['SELECT 1'])
+    const [o] = outcomes
+    return {
+      ok: o.ok,
+      error: o.ok ? null : o.error,
+      peakMb: peakMb ?? null,
+      limitMb: this.limits.maxRssMb,
+    }
+  }
+
+  private async run(
+    setupSql: string,
+    queries: string[]
+  ): Promise<{ outcomes: QueryOutcome[]; peakMb?: number }> {
     // the budget includes the wait for a slot, so a caller is never inside this call for longer
     const deadline = this.now() + this.limits.totalMs
     await this.acquire()
     try {
-      return await this.runAll(setupSql, queries, deadline)
+      const done = await this.runAll(setupSql, queries, deadline)
+      const { maxRssMb } = this.limits
+      if (done.peakMb !== undefined && done.peakMb > maxRssMb * WARN_SHARE)
+        this.logger.warn(
+          `Grading used ${Math.round(done.peakMb)} MB of its ${maxRssMb} MB memory limit`
+        )
+      return done
     } finally {
       this.release()
     }
@@ -210,15 +268,17 @@ export class SqlRunnerService {
     setupSql: string,
     queries: string[],
     deadline: number
-  ): Promise<QueryOutcome[]> {
+  ): Promise<{ outcomes: QueryOutcome[]; peakMb?: number }> {
     const out: QueryOutcome[] = queries.map(() => ({
       ok: false,
       error: 'This query was not run because grading ran out of time.',
       infra: true,
     }))
     let from = 0
+    let peakMb: number | undefined
     while (from < queries.length && this.now() < deadline) {
       const step = await this.runChild(setupSql, queries.slice(from), deadline)
+      if (step.peakMb !== undefined) peakMb = Math.max(peakMb ?? 0, step.peakMb)
       step.outcomes.forEach((o, i) => (out[from + i] = o))
       if (step.fatal !== undefined) {
         for (let i = from; i < queries.length; i++) {
@@ -229,7 +289,7 @@ export class SqlRunnerService {
       if (step.stoppedAt === undefined) break
       from += step.stoppedAt + 1
     }
-    return out
+    return { outcomes: out, peakMb }
   }
 
   /** One child process for a batch; it is killed on the first query that must be stopped. */
@@ -249,9 +309,18 @@ export class SqlRunnerService {
 
       // The slot is only given back once the process is really gone, so the number of grading
       // processes (and the memory they hold) never exceeds the limit, even while one is being killed.
+      let peakMb: number | undefined
+      const sample = () => {
+        const rss = this.rssMb(child.pid)
+        if (rss !== undefined) peakMb = Math.max(peakMb ?? 0, rss)
+        return rss
+      }
       const finish = (step: Step) => {
         if (settled) return
         settled = true
+        // one last sample before the process goes, so a run shorter than pollMs still has a peak
+        if (!gone) sample()
+        step.peakMb = peakMb
         clearTimeout(timer)
         clearInterval(watch)
         child.kill('SIGKILL')
@@ -283,7 +352,7 @@ export class SqlRunnerService {
         finish({ outcomes, fatal: 'The practice database took too long to load.' })
       )
       const watch = setInterval(() => {
-        const rss = this.rssMb(child.pid)
+        const rss = sample()
         if (rss !== undefined && rss > limits.maxRssMb)
           stop('Your query used too much memory and was stopped.')
       }, limits.pollMs)

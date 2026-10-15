@@ -41,6 +41,7 @@ import {
   type PlayerToken,
   type SparkLink,
 } from './player-token'
+import { LessonFailureLog } from './lesson-failure-log'
 import { canSpeak, speak } from './voice'
 
 /** Written lessons are reviewed (or at least seen) before they matter; set SPARK_LESSON_MODEL to change it. */
@@ -95,17 +96,27 @@ export class SparkService implements SparkPort {
   private readonly logger = new Logger(SparkService.name)
   private client: Anthropic | null | undefined
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly failures: LessonFailureLog
+  ) {}
 
   private ai(): Anthropic | null {
     if (this.client === undefined) {
       try {
-        this.client = new Anthropic()
+        const client = new Anthropic()
+        // The SDK builds a client with no key, whose every call then fails: that is not configured.
+        this.client = client.apiKey || client.authToken ? client : null
       } catch {
         this.client = null
       }
     }
     return this.client
+  }
+
+  /** Whether lessons can be written: the AI client has a key (for the System status page, GitHub issue #92). */
+  aiConfigured(): boolean {
+    return this.ai() !== null
   }
 
   // ── the port ───────────────────────────────────────────────────────────────
@@ -456,10 +467,12 @@ export class SparkService implements SparkPort {
   /** A new lesson written by Claude and stored in the library, held for review when the request asks. */
   private async write(request: LessonRequest): Promise<Lesson> {
     const client = this.ai()
-    if (!client)
-      throw new ServiceUnavailableException(
-        'Lessons made for you need the AI service, which is not configured.'
-      )
+    if (!client) {
+      const reason = 'Lessons made for you need the AI service, which is not configured.'
+      // not awaited, and it never rejects: recording never slows or breaks the learner's request (GitHub issue #92)
+      void this.failures.record(reason, 'not-configured')
+      throw new ServiceUnavailableException(reason)
+    }
     let lesson: { title: string; scenes: LessonScene[] } | null = null
     let model = LESSON_MODEL
     let usage: LessonUsage = {
@@ -506,7 +519,11 @@ export class SparkService implements SparkPort {
         this.logger.warn(`Lesson generation failed: ${(err as Error).message}`)
       }
     }
-    if (!lesson) throw new ServiceUnavailableException('Could not write that lesson. Try again.')
+    if (!lesson) {
+      const reason = 'Could not write that lesson. Try again.'
+      void this.failures.record(reason, 'no-lesson')
+      throw new ServiceUnavailableException(reason)
+    }
     return this.prisma.lesson.create({
       data: {
         skill: request.skill,

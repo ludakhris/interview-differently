@@ -4,6 +4,7 @@ import { ClerkService } from '../auth/clerk.service'
 import { SIMULATOR_FEED } from '../core/simulator-feed'
 import { PRACTICE_PORT } from '../core/practice-port'
 import { SPARK_PORT } from '../core/spark-port'
+import { SIMULATOR_STATUS_PORT, SPARK_STATUS_PORT } from '../core/status-port'
 import { PrismaService } from '../prisma/prisma.service'
 import { ActivityModule } from './activity/activity.module'
 import { ActivityService } from './activity/activity.service'
@@ -30,8 +31,10 @@ class FakeAuthModule {}
     { provide: SIMULATOR_FEED, useValue: {} },
     { provide: PRACTICE_PORT, useValue: {} },
     { provide: SPARK_PORT, useValue: {} },
+    { provide: SIMULATOR_STATUS_PORT, useValue: {} },
+    { provide: SPARK_STATUS_PORT, useValue: {} },
   ],
-  exports: [SIMULATOR_FEED, PRACTICE_PORT, SPARK_PORT],
+  exports: [SIMULATOR_FEED, PRACTICE_PORT, SPARK_PORT, SIMULATOR_STATUS_PORT, SPARK_STATUS_PORT],
 })
 class FakeFeedModule {}
 

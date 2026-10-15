@@ -512,6 +512,35 @@
 
     <main id="entries">
       <p class="empty-note" id="none" hidden>No updates match. Clear the search or choose All.</p>
+      <!-- ======================= SHIPPED (system status, issue #92) ======================= -->
+
+      <article
+        class="entry"
+        id="system-status"
+        data-status="shipped"
+        data-short="System status for grading and videos"
+        data-summary="Platform admins see at a glance whether grading and Spark's videos are working, and the team is alerted when they are not."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-10-15">Oct 15, 2026</time>
+        </div>
+        <h2>System status: know when grading or videos stop working</h2>
+        <p>
+          A new System status page in the Admin toolbox shows, for each product, whether it is set
+          up, whether it can run, and whether learners hit failures in the last day, hour by hour:
+          grading in the Skill Simulator, and videos in Micro Learning (Spark).
+        </p>
+        <ul>
+          <li>
+            The same checks are watched from outside every five minutes, and the team is emailed
+            when one fails, so a problem is found before learners report it.
+          </li>
+          <li>
+            A practice dataset that would be too large to grade on is refused when it is imported.
+          </li>
+        </ul>
+      </article>
+
       <!-- ======================= SHIPPED (product pages) ======================= -->
 
       <article

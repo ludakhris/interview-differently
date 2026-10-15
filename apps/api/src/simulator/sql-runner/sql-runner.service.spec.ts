@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events'
+import type { GradingFailureLog } from './grading-failure-log'
 import { SqlRunnerBusyError, SqlRunnerService, type ChildLike } from './sql-runner.service'
 import type { QueryOutcome } from './sql-exec'
 
@@ -56,7 +57,8 @@ class FakeChild extends EventEmitter implements ChildLike {
 }
 
 function setup(plans: Step[][], limits: Partial<SqlRunnerService['limits']> = {}) {
-  const svc = new SqlRunnerService()
+  const log = { record: jest.fn(async () => undefined) }
+  const svc = new SqlRunnerService(log as unknown as GradingFailureLog)
   svc.limits = {
     ...svc.limits,
     queryMs: 40,
@@ -72,7 +74,7 @@ function setup(plans: Step[][], limits: Partial<SqlRunnerService['limits']> = {}
     children.push(c)
     return c
   }
-  return { svc, children }
+  return { svc, children, log }
 }
 
 const errorOf = (o: QueryOutcome) => (o.ok ? undefined : o.error)
@@ -139,6 +141,22 @@ describe('SqlRunnerService.executeMany', () => {
     const out = await svc.executeMany('', ['hog'])
     expect(errorOf(out[0])).toBe('Your query used too much memory and was stopped.')
     expect(children[0].killed).toBe(true)
+  })
+
+  it('warns, without stopping anything, when a run passes 80% of the memory limit', async () => {
+    const { svc } = setup([['ready', { outcome: ok(1) }, 'done']], { maxRssMb: 1_000 })
+    svc.rssMb = () => 850
+    const warn = jest.spyOn(svc['logger'], 'warn').mockImplementation(() => undefined)
+    expect(await svc.executeMany('', ['a'])).toEqual([ok(1)])
+    expect(warn).toHaveBeenCalledWith('Grading used 850 MB of its 1000 MB memory limit')
+  })
+
+  it('stays quiet under 80% of the memory limit', async () => {
+    const { svc } = setup([['ready', { outcome: ok(1) }, 'done']], { maxRssMb: 1_000 })
+    svc.rssMb = () => 700
+    const warn = jest.spyOn(svc['logger'], 'warn').mockImplementation(() => undefined)
+    await svc.executeMany('', ['a'])
+    expect(warn).not.toHaveBeenCalled()
   })
 
   it('does not stop a query whose memory is under the limit, or unknown', async () => {
@@ -298,5 +316,63 @@ describe('SqlRunnerService concurrency', () => {
     const { svc } = setup([[{ fatal: 'x' }], slow], { maxChildren: 1, queueMs: 20 })
     await svc.executeMany('', ['a'])
     expect((await svc.executeMany('', ['b']))[0].ok).toBe(true)
+  })
+})
+
+describe('SqlRunnerService.measure', () => {
+  it('loads the dataset in a grading process and reports the most memory it held', async () => {
+    const { svc, children } = setup([['ready', { outcome: ok(1) }, 'done']], { maxRssMb: 2_048 })
+    let n = 0
+    // a sample while it runs, or the one taken as it finishes: the highest wins
+    svc.rssMb = () => (n++ === 0 ? 1_250 : 900)
+    const fit = await svc.measure('create table t(x int);')
+    expect(fit).toEqual({ ok: true, error: null, peakMb: 1_250, limitMb: 2_048 })
+    expect(children[0].job).toEqual({ setupSql: 'create table t(x int);', queries: ['SELECT 1'] })
+  })
+
+  it('says why a dataset would not load, and has no peak where memory cannot be read', async () => {
+    const { svc } = setup([[{ fatal: 'relation "x" does not exist' }]])
+    svc.rssMb = () => undefined
+    expect(await svc.measure('bad')).toMatchObject({
+      ok: false,
+      error: 'relation "x" does not exist',
+      peakMb: null,
+    })
+  })
+})
+
+describe('SqlRunnerService: recording learner grading failures', () => {
+  it("records a learner's grading that would not run, but not a query's own error", async () => {
+    const bad: QueryOutcome = { ok: false, error: 'syntax error' }
+    const { svc, log } = setup(
+      [
+        [{ fatal: 'The practice database could not be loaded.' }],
+        ['ready', { outcome: bad }, 'done'],
+      ],
+      { maxChildren: 1 }
+    )
+    await svc.executeMany('', ['a'])
+    await svc.executeMany('', ['b'])
+    expect(log.record.mock.calls).toEqual([['The practice database could not be loaded.', 'infra']])
+  })
+
+  it('does not record measure (a check, not a learner)', async () => {
+    const { svc, log } = setup([[{ fatal: 'boom' }]])
+    await svc.measure('x')
+    expect(log.record).not.toHaveBeenCalled()
+  })
+
+  it('records a refusal because every grading slot stayed busy', async () => {
+    const { svc, log } = setup([['ready', 'hang']], { maxChildren: 1, queueMs: 20, queryMs: 5_000 })
+    const first = svc.executeMany('', ['slow'])
+    await expect(svc.executeMany('', ['b'])).rejects.toBeInstanceOf(SqlRunnerBusyError)
+    expect(log.record.mock.calls).toEqual([['Grading is busy. Try again in a moment.', 'busy']])
+    await first
+  })
+
+  it('does not wait for the record to be written', async () => {
+    const { svc, log } = setup([[{ fatal: 'boom' }]])
+    log.record.mockImplementation(() => new Promise<undefined>(() => undefined))
+    expect(await svc.executeMany('', ['a'])).toEqual([{ ok: false, error: 'boom', infra: true }])
   })
 })

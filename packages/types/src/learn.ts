@@ -830,6 +830,49 @@ export interface ContentLibrary {
   total: { practice: number; lessons: number }
 }
 
+/**
+ * Failures learners hit through no fault of their own in the last `windowHours` hours (newest 20 listed), and the last
+ * one kept (30 days; null when none).
+ */
+export interface StatusFailures<K extends string> {
+  failures: {
+    windowHours: number
+    count: number
+    /** Failures in each hour of the window, `windowHours` counts, oldest first (the last hour ends now). */
+    perHour: number[]
+    latest: { at: string; reason: string; kind: K }[]
+  }
+  lastFailureAt: string | null
+}
+
+/** Admin toolbox: System status (GitHub issue #92), how each product is doing. */
+export interface SystemStatus {
+  /** Skill Simulator. */
+  simulator: {
+    /** Learner SQL grading. */
+    grading: {
+      /** The grading self-test, reused for five minutes. 'busy': every grading slot was taken, so it could not check. */
+      selfTest: {
+        status: 'ok' | 'failing' | 'busy'
+        reason: string | null
+        /** Memory a grading process held with the practice dataset loaded, in MB; null where it cannot be read. */
+        peakMb: number | null
+        limitMb: number
+        checkedAt: string
+      }
+    } & StatusFailures<'infra' | 'busy'>
+  }
+  /** Micro Learning (Spark): lessons made for a learner, which play like videos in Spark's player. */
+  spark: {
+    /** The server's configuration: the AI service and, in production, the link secret and the player's address. */
+    setup: { status: 'ok' | 'failing'; problems: string[] }
+    /** Whether the player's web address answers, reused for five minutes. 'not-set-up': there is no address. */
+    player: { status: 'ok' | 'failing' | 'not-set-up'; reason: string | null; checkedAt: string }
+    /** Lessons made for a learner that could not be written. */
+    lessons: StatusFailures<'not-configured' | 'no-lesson'>
+  }
+}
+
 export interface AdaptiveBoard {
   cohortId: string
   courseTitle: string

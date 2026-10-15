@@ -38,6 +38,9 @@ product may fork its own copy:
   carries its own free-form skill list (`Course.skills`), and the logic that judges a skill
   (`apps/api/src/learn/skills.ts`) lives in the LMS. The list belongs in shared code; the
   per-course target score stays with the course.
+- **Service health.** The `ServiceFailure` table (each product writes only its own `service` rows, from its own
+  folder, through `core/service-failure-log.ts`) and the status ports in `core/status-port.ts`, which each product
+  implements for the System status page.
 - **Audit, data-access log, notifications, the attention bell, tenant branding, and the shared LTI
   store and signing.** Each side of LTI keeps its own half: the LMS is the platform, the Simulator is
   the tool.
@@ -59,7 +62,9 @@ Talent Match rows, not core rows.
 - **Owns:** courses and pathways, modules and items, cohorts and sessions, enrollment and join
   requests, attendance, gradebook and progress, credentials and badges, outcomes dashboards and
   exports for institutions and funders, learner support items and instructor notes (case
-  management), SCORM playback, the LTI platform side (launching tools into a pathway).
+  management), SCORM playback, the LTI platform side (launching tools into a pathway), the system
+  admin toolbox, including System status, which reads each product's health only through the core
+  status ports.
 - **Writes to the record:** enrollment, progress, completion, credential, attendance.
 - **Reads:** attempt scores and verified skills (from the Simulator), lesson views (Micro Learning),
   placements (Talent Match), to report them.
@@ -228,7 +233,8 @@ apps/
   (later)      opportunity/, talent/ : each its own app when built
 packages/      types (per product), skills (shared vocabulary)
 apps/api/src/
-  core/        auth, prisma, storage, config, shared LTI store, institutions, cohorts, memberships
+  core/        auth, prisma, storage, config, shared LTI store, institutions, cohorts, memberships,
+               status ports, service failure log
   lms/         courses, progress, attendance, outcomes, record, LTI platform
   simulator/   scenarios, scoring, assessments, tools, datasets, sql-runner, checkpoints, LTI tool, ...
   spark/       lessons, narration, lesson events

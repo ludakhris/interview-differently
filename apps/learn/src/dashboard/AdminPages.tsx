@@ -88,6 +88,25 @@ function ContentIcon() {
   )
 }
 
+/** A green heartbeat on a screen: how the system is doing. */
+function StatusIcon() {
+  return (
+    <svg {...ICON} width={40} height={40}>
+      <rect x="4" y="7" width="40" height="28" rx="4" fill="#3b4252" />
+      <path
+        d="M9 22h7l3-7 5 14 4-9 2 2h9"
+        fill="none"
+        stroke="#3ddc97"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M17 41h14m-7-6v6" stroke="#3b4252" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="39" cy="12" r="2" fill="#ffc53d" />
+    </svg>
+  )
+}
+
 /** Friendly avatar colours (background, initials), picked from the user id. */
 const AVATARS = [
   ['#ffe0d6', '#b4380f'],
@@ -202,6 +221,19 @@ export function AdminPage() {
             <span className="dash-tool-name">Content review</span>
             <span className="dash-tool-desc">
               Approve AI-written practice and lessons for reuse with other learners, or reject them.
+            </span>
+            <span className="dash-tool-open">Open tool →</span>
+          </a>
+        </li>
+        <li>
+          <a className="dash-tool" href={href('/lms/admin/status')}>
+            <span className="dash-tool-icon">
+              <StatusIcon />
+            </span>
+            <span className="dash-tool-name">System status</span>
+            <span className="dash-tool-desc">
+              See whether each product is working for learners, grading and videos, and when it last
+              failed.
             </span>
             <span className="dash-tool-open">Open tool →</span>
           </a>

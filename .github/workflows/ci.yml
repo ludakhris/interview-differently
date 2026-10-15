@@ -21,6 +21,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm run test
+      - run: npm run test:scripts
 
   deploy-web:
     name: Deploy Web (Vercel)
@@ -117,3 +118,25 @@ jobs:
         run: railway up --service interview-differently --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  # Applies ops/monitoring.ts to Better Stack (monitors and the status page; docs/monitoring.md). Runs on every push
+  # to main once the API deploy job has passed, so a push that changed only the monitoring list syncs too (that job
+  # passes without uploading when no API file changed). Without the BETTERSTACK_API_TOKEN secret the script prints
+  # that it skipped and exits 0; nothing depends on this job.
+  betterstack:
+    name: Sync Better Stack monitoring (ops/monitoring.ts)
+    needs: [deploy-api]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      # No npm install: the script uses only Node's own modules.
+      - run: npm run betterstack:sync
+        env:
+          BETTERSTACK_API_TOKEN: ${{ secrets.BETTERSTACK_API_TOKEN }}

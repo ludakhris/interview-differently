@@ -1,12 +1,14 @@
 import { ServiceUnavailableException } from '@nestjs/common'
 import {
   isPreview,
+  linkSetupProblems,
   PLACEHOLDER_SECRET,
   PLAYER_TTL_S,
   playerSecret,
   playerUrl,
   PREVIEW_TTL_S,
   signPlayerToken,
+  setWebUrl,
   signPreviewToken,
   verifyPlayerToken,
   verifyPreviewToken,
@@ -158,6 +160,55 @@ describe('player token', () => {
       process.env.SPARK_SESSION_SECRET = PLACEHOLDER_SECRET
       expect(playerSecret()).toBe(first)
       expect(verifyPlayerToken(signPlayerToken(claims))).toMatchObject(claims)
+    })
+  })
+
+  describe('the setup check, which never throws (System status, GitHub issue #92)', () => {
+    const env = {
+      secret: process.env.SPARK_SESSION_SECRET,
+      url: process.env.SPARK_WEB_URL,
+      node: process.env.NODE_ENV,
+    }
+    afterEach(() => {
+      for (const [k, v] of [
+        ['SPARK_SESSION_SECRET', env.secret],
+        ['SPARK_WEB_URL', env.url],
+        ['NODE_ENV', env.node],
+      ] as const)
+        if (v === undefined) delete process.env[k]
+        else process.env[k] = v
+    })
+
+    it('in production, names a missing or placeholder secret and a missing player address', () => {
+      process.env.NODE_ENV = 'production'
+      for (const unset of [undefined, '', PLACEHOLDER_SECRET]) {
+        if (unset === undefined) delete process.env.SPARK_SESSION_SECRET
+        else process.env.SPARK_SESSION_SECRET = unset
+        delete process.env.SPARK_WEB_URL
+        expect(linkSetupProblems()).toEqual([
+          'The secret that signs video links (SPARK_SESSION_SECRET) is not set.',
+          'The video player’s web address (SPARK_WEB_URL) is not set.',
+        ])
+      }
+      process.env.SPARK_SESSION_SECRET = 'configured'
+      process.env.SPARK_WEB_URL = 'https://spark.example.test'
+      expect(linkSetupProblems()).toEqual([])
+    })
+
+    it('outside production, needs neither (both fall back)', () => {
+      process.env.NODE_ENV = 'development'
+      delete process.env.SPARK_SESSION_SECRET
+      delete process.env.SPARK_WEB_URL
+      expect(linkSetupProblems()).toEqual([])
+    })
+
+    it('reads the player address without a trailing slash, and null with no local fallback', () => {
+      process.env.SPARK_WEB_URL = 'https://spark.example.test//'
+      expect(setWebUrl()).toBe('https://spark.example.test')
+      delete process.env.SPARK_WEB_URL
+      expect(setWebUrl()).toBeNull()
+      process.env.SPARK_WEB_URL = ''
+      expect(setWebUrl()).toBeNull()
     })
   })
 })

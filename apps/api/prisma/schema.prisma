@@ -399,6 +399,20 @@ model Dataset {
   @@index([institutionId])
 }
 
+// Failures a learner hit through no fault of their own (GitHub issue #92), one table for every product:
+// service 'grading' (Skill Simulator: kind 'infra' | 'busy') or 'lessons' (Spark: kind 'not-configured' | 'no-lesson').
+// Read by the /health/* checks and the admin System status page; rows older than 30 days are deleted. No learner or
+// agency data, so not a tenant table.
+model ServiceFailure {
+  id      String   @id @default(uuid())
+  at      DateTime @default(now())
+  service String // 'grading' | 'lessons'
+  kind    String
+  reason  String
+
+  @@index([service, at])
+}
+
 // Which datasets a cohort can open in the SQL sandbox. A cohort with at least
 // one dataset has the sandbox tool enabled — there is no separate flag.
 model CohortDataset {
