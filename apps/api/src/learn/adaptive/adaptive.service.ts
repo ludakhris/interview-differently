@@ -436,14 +436,28 @@ export class AdaptiveService {
   }
 
   /**
-   * The AI content made for the cohort's learners, for staff review: Simulator practice and Spark lessons, whatever
-   * their status, so content shown without a person's review (approved, reviewedBy null) can be approved here too.
+   * Whether course staff review this content on the board. With the course's content approval on (approveGenerated):
+   * all of it, so content shown without a person's review (approved, reviewedBy null) can be approved too. With it
+   * off, AI content goes straight to learners and staff are not asked about it (platform admins still approve it for
+   * reuse in Content review); only content still held from when approval was on, which a learner is waiting for, is
+   * theirs to review.
    */
-  private async contentOf(cohortId: string, nameOf: Map<string, string>): Promise<BoardPractice[]> {
-    const [practice, lessons] = await Promise.all([
+  private static forStaff(status: string, approveGenerated: boolean): boolean {
+    return approveGenerated || status === 'pending'
+  }
+
+  /** The AI content made for the cohort's learners that staff review on the board (`forStaff`). */
+  private async contentOf(
+    cohortId: string,
+    nameOf: Map<string, string>,
+    approveGenerated: boolean
+  ): Promise<BoardPractice[]> {
+    const [all, allLessons] = await Promise.all([
       this.practice.practiceInCohort(cohortId),
       this.spark.lessonsInCohort(cohortId),
     ])
+    const practice = all.filter((p) => AdaptiveService.forStaff(p.status, approveGenerated))
+    const lessons = allLessons.filter((l) => AdaptiveService.forStaff(l.status, approveGenerated))
     const who = (used: { userId: string }[]) =>
       used.map((u) => nameOf.get(u.userId) ?? 'A learner').join(', ') || 'A learner'
     return [
@@ -542,7 +556,11 @@ export class AdaptiveService {
         }),
       },
       learners,
-      practice: await this.contentOf(cohortId, nameOf),
+      practice: await this.contentOf(
+        cohortId,
+        nameOf,
+        adaptiveRules(course.adaptive).approveGenerated
+      ),
       jobTitle: course.targetRoles[0] ?? null,
       outline: items
         .filter((i) => !remediationOf(i.config))
@@ -619,16 +637,23 @@ export class AdaptiveService {
   async review(actor: Actor, cohortId: string, contentId: string, approve: unknown) {
     // A send-back changes what learners are given, so it is never read from a missing or mistyped field.
     if (typeof approve !== 'boolean') throw new BadRequestException('approve must be true or false')
-    await this.cohortOf(actor, cohortId, 'cohort.staff')
+    const cohort = await this.cohortOf(actor, cohortId, 'cohort.staff')
     const [practice, lessons] = await Promise.all([
       this.practice.practiceInCohort(cohortId),
       this.spark.lessonsInCohort(cohortId),
     ])
-    if (practice.some((p) => p.id === contentId))
-      return this.practice.review(contentId, approve, actor.userId, cohortId)
-    if (lessons.some((l) => l.id === contentId))
-      return this.spark.reviewLesson(contentId, approve, actor.userId, cohortId)
-    throw new NotFoundException('Content not found')
+    const p = practice.find((x) => x.id === contentId)
+    const found = p ?? lessons.find((x) => x.id === contentId)
+    if (!found) throw new NotFoundException('Content not found')
+    // Only what the board lists (contentOf): with approval off, content already shown to learners is not staff's.
+    const approveGenerated = adaptiveRules(cohort.course.adaptive).approveGenerated
+    if (!AdaptiveService.forStaff(found.status, approveGenerated))
+      throw new ConflictException(
+        'Content approval is off for this course, so AI-written content goes straight to learners. Platform admins approve it for reuse in Content review.'
+      )
+    return p
+      ? this.practice.review(contentId, approve, actor.userId, cohortId)
+      : this.spark.reviewLesson(contentId, approve, actor.userId, cohortId)
   }
 
   /** A link for staff to watch a lesson made for one of this cohort's learners before reviewing it. */

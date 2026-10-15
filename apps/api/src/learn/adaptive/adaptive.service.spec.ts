@@ -165,7 +165,8 @@ describe('AdaptiveService: AI content on the board', () => {
     usedBy: [{ userId: 'u' }],
     ...over,
   })
-  function board() {
+  // `approveGenerated`: the course's "Staff approve AI-written practice and videos before learners see them".
+  function board(approveGenerated = true) {
     const practice = {
       practiceInCohort: jest.fn(async () => [
         view({ id: 'p-shown' }),
@@ -182,7 +183,11 @@ describe('AdaptiveService: AI content on the board', () => {
     const access = { authorize: jest.fn(async () => undefined) }
     const prisma = {
       cohort: {
-        findUnique: jest.fn(async () => ({ id: 'c', course: { id: 'course' }, institution: {} })),
+        findUnique: jest.fn(async () => ({
+          id: 'c',
+          course: { id: 'course', adaptive: { approveGenerated } },
+          institution: {},
+        })),
       },
     }
     const service = new AdaptiveService(
@@ -195,17 +200,20 @@ describe('AdaptiveService: AI content on the board', () => {
     )
     return { service, practice, spark, access }
   }
-
-  it('lists content shown without a person’s review, and pending content, saying whether a person approved it', async () => {
-    const { service } = board()
-    const rows = await (
+  const contentOf = (service: AdaptiveService, approveGenerated: boolean) =>
+    (
       service as unknown as {
         contentOf: (
           c: string,
-          n: Map<string, string>
+          n: Map<string, string>,
+          approveGenerated: boolean
         ) => Promise<{ id: string; status: string; reviewed: boolean }[]>
       }
-    ).contentOf('c', new Map([['u', 'Ana']]))
+    ).contentOf('c', new Map([['u', 'Ana']]), approveGenerated)
+
+  it('lists content shown without a person’s review, and pending content, saying whether a person approved it', async () => {
+    const { service } = board()
+    const rows = await contentOf(service, true)
     expect(rows.map((r) => [r.id, r.status, r.reviewed])).toEqual([
       ['p-shown', 'approved', false],
       ['p-pending', 'pending', false],
@@ -253,5 +261,33 @@ describe('AdaptiveService: AI content on the board', () => {
       'Insufficient role'
     )
     expect(spark.previewLink).not.toHaveBeenCalled()
+  })
+
+  // Approval off: AI content goes straight to learners as the course chose, so the board asks staff to review nothing
+  // of it (platform admins still approve for reuse in Content review). Only content still held from when approval was
+  // on is listed, since a learner waits on it.
+  describe('with content approval off for the course', () => {
+    it('lists nothing shown to learners for review, only content still held from when approval was on', async () => {
+      const { service } = board(false)
+      const rows = await contentOf(service, false)
+      expect(rows.map((r) => [r.id, r.status])).toEqual([['p-pending', 'pending']])
+    })
+
+    it('refuses to approve or send back content already shown to learners, and reviews held content', async () => {
+      const { service, practice, spark } = board(false)
+      const actor = { userId: 'staff-1' } as never
+      for (const [id, approve] of [
+        ['p-shown', true],
+        ['p-shown', false],
+        ['l-shown', true],
+      ] as const)
+        await expect(service.review(actor, 'c', id, approve)).rejects.toThrow(
+          'Content approval is off'
+        )
+      expect(practice.review).not.toHaveBeenCalled()
+      expect(spark.reviewLesson).not.toHaveBeenCalled()
+      await service.review(actor, 'c', 'p-pending', true)
+      expect(practice.review).toHaveBeenCalledWith('p-pending', true, 'staff-1', 'c')
+    })
   })
 })
