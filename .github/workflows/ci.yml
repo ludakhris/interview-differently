@@ -67,6 +67,10 @@ jobs:
     runs-on: ubuntu-latest
     # A normal deploy takes ~2 min; `railway up` has hung for hours before.
     timeout-minutes: 15
+    # actions: read lets the API check find the last main run that passed.
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -77,17 +81,29 @@ jobs:
       # Railway rebuilds the API only when a file in its watch paths changed
       # (.railway/railway.ts: apps/api/** and packages/types/**; keep this list in
       # step with that one). A push that changed one waits for the build (--ci),
-      # so a failed build fails this job; any other push uploads nothing, since
-      # Railway would build nothing and --ci would wait until the timeout. A
-      # re-run, or a push whose previous commit is unknown, uploads without waiting.
-      - name: Did this push change the API?
+      # so a failed build fails this job. The API is compared with the last main
+      # commit whose CI run passed, not only with the previous push: a push whose
+      # deploy failed or was skipped (say, the config step refused) leaves its API
+      # changes undeployed, and the next push, even a config-only one, sends them
+      # (without waiting, as this push changed no watched file). Any other push
+      # uploads nothing, since Railway would build nothing and --ci would wait until
+      # the timeout. A re-run, or a push with no known base, uploads without waiting.
+      - name: Is there an API change to deploy?
         id: api
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          watched='^(apps/api/|packages/types/)'
           before='${{ github.event.before }}'
-          if [ "${{ github.run_attempt }}" != "1" ] || ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+          green=$(gh run list --repo '${{ github.repository }}' --workflow ci.yml --branch main --event push \
+            --status success --limit 1 --json headSha -q '.[0].headSha' || true)
+          known() { [ -n "$1" ] && git cat-file -e "$1^{commit}" 2>/dev/null; }
+          if [ "${{ github.run_attempt }}" != "1" ] || ! known "$before" || ! known "$green"; then
             echo "deploy=detach" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "$before" "${{ github.sha }}" | grep -qE '^(apps/api/|packages/types/)'; then
+          elif git diff --name-only "$before" "${{ github.sha }}" | grep -qE "$watched"; then
             echo "deploy=wait" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$green" "${{ github.sha }}" | grep -qE "$watched"; then
+            echo "deploy=detach" >> "$GITHUB_OUTPUT"
           else
             echo "deploy=skip" >> "$GITHUB_OUTPUT"
           fi
