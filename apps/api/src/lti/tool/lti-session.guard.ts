@@ -23,10 +23,19 @@ export interface LtiRequest {
 type Allow = (session: LtiSession, req: LtiRequest) => boolean
 /**
  * Which sessions a route is for: a scenario session (no `deliveryId`, the default), an assessment
- * session (has `deliveryId`), or both. An assessment session never reaches scenario routes and a
- * scenario session never reaches assessment routes.
+ * session (has `deliveryId`), both of those, a checkpoint session (has `checkpoint`), or a list. An
+ * assessment session never reaches scenario routes and a scenario session never reaches assessment
+ * routes; a checkpoint session reaches only routes that name it.
  */
-type Audience = 'scenario' | 'assessment' | 'both'
+type Kind = 'scenario' | 'assessment' | 'checkpoint'
+type Audience = Kind | 'both' | Kind[]
+const fits = (audience: Audience, mine: Kind): boolean =>
+  audience === 'both'
+    ? mine !== 'checkpoint'
+    : Array.isArray(audience)
+      ? audience.includes(mine)
+      : audience === mine
+const checkpointSession: Allow = (s) => !!s.checkpoint
 const bodyScenario: Allow = (s, req) => req.body?.scenarioId === s.ref
 
 /**
@@ -69,11 +78,29 @@ const ALLOWED: { method: string; path: RegExp; allow?: Allow; audience?: Audienc
   { method: 'PUT', path: /^\/me\/attempts\/[^/]+\/answers$/, audience: 'assessment' },
   { method: 'POST', path: /^\/me\/attempts\/[^/]+\/submit$/, audience: 'assessment' },
   { method: 'GET', path: /^\/me\/attempts\/[^/]+\/result$/, audience: 'assessment' },
-  { method: 'GET', path: /^\/lti\/tool\/session$/, audience: 'both' },
+  {
+    method: 'GET',
+    path: /^\/lti\/tool\/session$/,
+    audience: ['scenario', 'assessment', 'checkpoint'],
+  },
   // a text simulation is played through the server: it grades each answer and decides the score
   { method: 'GET', path: /^\/lti\/tool\/play$/ },
   { method: 'POST', path: /^\/lti\/tool\/play\/(choice|quant|sql|hint)$/ },
   { method: 'POST', path: /^\/lti\/tool\/complete$/, audience: 'both' },
+  // a course checkpoint (issue #90): the chat page. Its delivery, cohort and item come from the session only, and
+  // the service checks the delivery belongs to that cohort.
+  {
+    method: 'GET',
+    path: /^\/lti\/tool\/checkpoint$/,
+    audience: 'checkpoint',
+    allow: checkpointSession,
+  },
+  {
+    method: 'POST',
+    path: /^\/lti\/tool\/checkpoint\/(run|answer|help|practice)$/,
+    audience: 'checkpoint',
+    allow: checkpointSession,
+  },
 ]
 
 const pathOf = (req: LtiRequest): string => {
@@ -128,13 +155,14 @@ function authorizeLti(req: LtiRequest, token: string): true {
     throw err
   }
   const path = pathOf(req)
-  const mine: Audience = session.deliveryId ? 'assessment' : 'scenario'
-  const rule = ALLOWED.find((r) => {
-    const audience = r.audience ?? 'scenario'
-    return (
-      r.method === req.method && r.path.test(path) && (audience === 'both' || audience === mine)
-    )
-  })
+  const mine: Kind = session.checkpoint
+    ? 'checkpoint'
+    : session.deliveryId
+      ? 'assessment'
+      : 'scenario'
+  const rule = ALLOWED.find(
+    (r) => r.method === req.method && r.path.test(path) && fits(r.audience ?? 'scenario', mine)
+  )
   if (!rule || (rule.allow && !rule.allow(session, req))) {
     throw new ForbiddenException('This session cannot be used here')
   }

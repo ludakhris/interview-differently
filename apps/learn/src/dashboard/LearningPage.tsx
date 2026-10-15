@@ -132,7 +132,7 @@ export function LearningPage() {
       ) : (
         <ul className="dash-courselist">
           {data.map((c) => (
-            <li key={c.cohortId} className="dash-card dash-course">
+            <li key={c.cohortId} className="dash-card dash-course dash-mycourse">
               <div className="dash-course-main">
                 <a className="dash-course-title" href={href(`/lms/learning/${c.cohortId}`)}>
                   {c.courseTitle}

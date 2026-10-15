@@ -80,6 +80,10 @@ export const PRODUCTS: Product[] = [
         body: 'Videos that teach one skill, then put it to work.',
       },
       {
+        title: 'Lessons made for your gap',
+        body: 'When a check shows a gap, a short narrated lesson aimed at exactly what you missed.',
+      },
+      {
         title: 'Connected content',
         body: 'We are connecting to the platforms and providers creators already use, so their lessons can sit in the pathway instead of being rebuilt.',
       },

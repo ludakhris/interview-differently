@@ -112,7 +112,7 @@ export class ToolRegistryService implements OnModuleInit {
           toolId: t.toolId,
           connectionId: t.connectionId,
           name: t.name,
-          kind: t.kind === 'assessment' ? 'assessment' : 'interview',
+          kind: t.kind === 'assessment' || t.kind === 'checkpoint' ? t.kind : 'interview',
           retries: t.retries,
           labelable: t.labelable,
           enabled: t.enabled,

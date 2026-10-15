@@ -41,8 +41,8 @@ export function validateToolInput(input: unknown, toolId?: string): ToolRow {
   const id = toolId ?? text(b.toolId, 'Tool id', 40)
   if (!SLUG.test(id))
     return bad('Tool id must be 2-40 lowercase letters, numbers or dashes, starting with one')
-  if (b.kind !== 'interview' && b.kind !== 'assessment')
-    return bad('Kind must be interview or assessment')
+  if (b.kind !== 'interview' && b.kind !== 'assessment' && b.kind !== 'checkpoint')
+    return bad('Kind must be interview, assessment or checkpoint')
   return {
     toolId: id,
     connectionId: text(b.connectionId, 'Connection', 64),

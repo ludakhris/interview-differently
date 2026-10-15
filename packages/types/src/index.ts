@@ -683,7 +683,7 @@ export interface ApiResponse<T> {
 //
 // Cohort-scoped feature flags. An admin enables a tool per cohort; members of
 // that cohort then see it under "Tools" on their dashboard. Mirrored in
-// apps/api/src/tools/tool-keys.ts.
+// apps/api/src/simulator/tools/tool-keys.ts.
 
 export const TOOL_KEYS = ['sql-sandbox', 'assessments'] as const
 
@@ -712,7 +712,7 @@ export const TOOL_META: Record<
 
 // ── Tools: assessments ────────────────────────────────────────────────────────
 //
-// Mirrors apps/api/src/assessments/assessment.types.ts. The student-facing
+// Mirrors apps/api/src/simulator/assessments/assessment.types.ts. The student-facing
 // question shapes omit `answer` / `referenceSql` — the API strips them.
 
 export interface McOption {
@@ -744,6 +744,7 @@ export interface McQuestion extends StudentMcQuestion {
 
 export interface SqlQuestion extends StudentSqlQuestion {
   referenceSql: string
+  from?: string // `> from: Name · Team`: who sends the request in a chat checkpoint (issue #90)
 }
 
 export type AssessmentQuestion = McQuestion | SqlQuestion
@@ -782,3 +783,5 @@ export * from './activity'
 export * from './record'
 export * from './attention'
 export * from './monitor'
+export * from './checkpoint'
+export * from './lesson'

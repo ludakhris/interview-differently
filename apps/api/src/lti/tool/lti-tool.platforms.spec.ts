@@ -142,8 +142,8 @@ const asB = (nonce: string, o: Row = {}) =>
 const asA = (nonce: string, o: Row = {}) =>
   token(nonce, { iss: ENV_ISS, deployment: '1', lineitem: LINEITEM_A, ...o }, keysA)
 
-const sessionOf = (out: string | { redirect: string }): LtiSession => {
-  if (typeof out === 'string') throw new Error('expected a redirect')
+const sessionOf = (out: string | { redirect: string } | { page: unknown }): LtiSession => {
+  if (typeof out === 'string' || !('redirect' in out)) throw new Error('expected a redirect')
   return verifySession(/#session=(.+)$/.exec(out.redirect)![1])
 }
 

@@ -20,6 +20,7 @@
     "remap:user": "ts-node -r tsconfig-paths/register scripts/remap-user-ids.ts",
     "seed:attention-demo": "ts-node -r tsconfig-paths/register scripts/seed-attention-demo.ts",
     "seed:learn-demo": "ts-node -r tsconfig-paths/register scripts/seed-learn-demo.ts",
+    "seed:adaptive-demo": "ts-node -r tsconfig-paths/register scripts/seed-adaptive-demo.ts",
     "mock:lti-tool": "ts-node -r tsconfig-paths/register scripts/mock-lti-tool.ts",
     "seed:lti-tools": "ts-node -r tsconfig-paths/register scripts/seed-lti-tools.ts",
     "set:featured-demos": "ts-node -r tsconfig-paths/register scripts/set-featured-demos.ts",

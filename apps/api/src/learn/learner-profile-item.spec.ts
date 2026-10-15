@@ -15,6 +15,7 @@ const prisma = {
   course: { findUnique: jest.fn() },
   itemProgress: { findMany: jest.fn(), upsert: jest.fn() },
   planItem: { findMany: jest.fn() },
+  planSkip: { findMany: jest.fn() },
   talentProfile: { findUnique: jest.fn() },
 }
 const service = new LearnerService(
@@ -68,6 +69,7 @@ beforeEach(() => {
   prisma.courseModule.findMany.mockResolvedValue(modules(lesson))
   prisma.itemProgress.findMany.mockResolvedValue([])
   prisma.planItem.findMany.mockResolvedValue([])
+  prisma.planSkip.findMany.mockResolvedValue([])
   prisma.talentProfile.findUnique.mockResolvedValue(null)
   prisma.course.findUnique.mockResolvedValue({ readinessThreshold: 70 })
 })
@@ -207,6 +209,7 @@ describe('cards', () => {
     },
     progress,
     plan: [],
+    skips: [],
   })
   it('is unchanged without a profile rule or item', async () => {
     prisma.enrollment.findMany.mockResolvedValue([row({}, [{ itemId: 'l1' }])])

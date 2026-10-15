@@ -1,0 +1,378 @@
+/* Spark's lesson player. Learn Differently's tokens (apps/learn home.css) so it sits calmly in a course page. */
+
+:root {
+  --ink: #0b1f2e;
+  --paper: #f6f7f4;
+  --surface: #ffffff;
+  --surface-alt: #eef2f5;
+  --muted: #4a5d6c; /* 6.6:1 on white */
+  --line: #dfe6ec;
+  --teal: #056a99;
+  --orange: #ff6a1a;
+  --orange-text: #b8480a;
+  --accent: #f0a35b;
+  --stage: #05405c;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  color: var(--ink);
+  font-family: 'Manrope', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+}
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--paper);
+}
+/* In the LMS page's frame the course page is the background. */
+.is-framed body {
+  background: transparent;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+}
+button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+button:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.sp-lesson {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  display: grid;
+  gap: 12px;
+}
+.is-framed .sp-lesson {
+  padding: 0;
+}
+.sp-notice,
+.sp-loading {
+  margin: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--muted);
+}
+.sp-loading {
+  animation: sp-breathe 1.2s ease-in-out infinite;
+}
+.sp-done {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* A reviewer's preview link: said once, above the player. */
+.sp-preview {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ── buttons ───────────────────────────────────────────────────────────────── */
+.sp-btn {
+  padding: 9px 18px;
+  border: 1px solid var(--ink);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sp-btn:hover:not(:disabled) {
+  background: var(--surface-alt);
+}
+.sp-btn-quiet {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--teal);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sp-btn-quiet:hover:not(:disabled) {
+  background: var(--surface-alt);
+}
+
+/* ── the player ────────────────────────────────────────────────────────────── */
+.sp-player {
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.sp-stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  max-height: 70vh;
+  border-radius: 14px;
+  overflow: hidden;
+  background: radial-gradient(120% 120% at 0% 0%, #0b5a82 0%, var(--stage) 55%, #062b3d 100%);
+  color: #fff;
+}
+/* In a frame the viewport is the frame, whose height follows the page: a vh limit would shrink it for good. */
+.is-framed .sp-stage {
+  max-height: none;
+}
+.sp-stage-start {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: center;
+  padding: 24px;
+}
+.sp-stage-start strong {
+  font-size: clamp(20px, 3vw, 30px);
+  font-weight: 800;
+}
+.sp-stage-unblock {
+  background: rgba(6, 43, 61, 0.7);
+}
+.sp-play-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+  font-size: 28px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+@keyframes sp-scene-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.sp-scene {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 18px;
+  padding: 5% 7%;
+  animation: sp-scene-in 0.6s var(--ease) both;
+}
+.sp-scene h2 {
+  margin: 0;
+  font-size: clamp(18px, 2.6vw, 28px);
+  font-weight: 800;
+  text-align: center;
+}
+.sp-v-title {
+  margin: 0;
+  font-size: clamp(14px, 1.8vw, 20px);
+  opacity: 0.85;
+  text-align: center;
+}
+.sp-v-bullets {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: clamp(14px, 1.8vw, 20px);
+}
+.sp-v-bullets li {
+  padding-left: 22px;
+  position: relative;
+  animation: sp-scene-in 0.5s var(--ease) both;
+}
+.sp-v-bullets li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.sp-v-sql,
+.sp-v-compare pre {
+  margin: 0;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  font: clamp(12px, 1.5vw, 17px) / 1.55 var(--mono);
+  white-space: pre-wrap;
+}
+@keyframes sp-mark {
+  from {
+    background: transparent;
+  }
+  to {
+    background: var(--accent);
+  }
+}
+.sp-v-sql mark {
+  color: #062b3d;
+  border-radius: 4px;
+  padding: 0 3px;
+  animation: sp-mark 0.5s 0.9s ease both;
+}
+.sp-v-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  width: 100%;
+}
+.sp-v-compare > div {
+  display: grid;
+  gap: 6px;
+  animation: sp-scene-in 0.5s var(--ease) both;
+}
+.sp-v-compare > div:last-child {
+  animation-delay: 0.9s;
+}
+.sp-v-compare span {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sp-v-compare .is-before pre {
+  box-shadow: inset 4px 0 0 #ff8a65;
+}
+.sp-v-compare .is-after pre {
+  box-shadow: inset 4px 0 0 #6fd39a;
+}
+.sp-v-table {
+  border-collapse: collapse;
+  font-size: clamp(12px, 1.5vw, 17px);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.sp-v-table th,
+.sp-v-table td {
+  padding: 6px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+.sp-v-table tr {
+  animation: sp-scene-in 0.4s var(--ease) both;
+}
+@keyframes sp-pick {
+  to {
+    background: rgba(111, 211, 154, 0.35);
+  }
+}
+.sp-v-table tr.is-picked td {
+  animation: sp-pick 0.5s 1.4s ease both;
+}
+.sp-captions {
+  min-height: 3.2em;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.sp-captions .sp-btn-quiet {
+  color: #fff;
+  text-decoration: underline;
+}
+.sp-captions .sp-btn-quiet:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.sp-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.sp-step {
+  min-width: 40px;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ink);
+}
+.sp-scenebar {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+}
+.sp-scenebar button {
+  flex: 1;
+  height: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--line);
+  transition:
+    background 0.4s,
+    transform 0.2s;
+}
+.sp-scenebar button:hover,
+.sp-scenebar button:focus-visible {
+  transform: scaleY(1.6);
+}
+.sp-scenebar button.is-done {
+  background: var(--teal);
+}
+.sp-scenebar button.is-now {
+  background: var(--accent);
+}
+.sp-scene-count {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+}
+@keyframes sp-breathe {
+  50% {
+    opacity: 0.45;
+  }
+}
+.sp-loading-voice {
+  animation: sp-breathe 1.2s ease-in-out infinite;
+}
+@media (max-width: 640px) {
+  .sp-controls {
+    flex-wrap: wrap;
+  }
+  .sp-scenebar {
+    order: 5;
+    flex-basis: 100%;
+  }
+  .sp-v-compare {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transition: none !important;
+  }
+}

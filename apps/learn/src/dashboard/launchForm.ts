@@ -1,12 +1,12 @@
 /**
- * Posts the launch fields to the tool in this same window; the tool sends the learner back with a
- * return link. Values are set as properties, never as HTML.
+ * Posts the launch fields to the tool: in this same window by default (the tool sends the learner back with a return
+ * link), or in a named frame on this page for an embedded tool. Values are set as properties, never as HTML.
  */
-export function submitLaunchForm(action: string, fields: Record<string, string>) {
+export function submitLaunchForm(action: string, fields: Record<string, string>, target = '_self') {
   const form = document.createElement('form')
   form.method = 'POST'
   form.action = action
-  form.target = '_self'
+  form.target = target
   form.style.display = 'none'
   for (const [name, value] of Object.entries(fields)) {
     const input = document.createElement('input')

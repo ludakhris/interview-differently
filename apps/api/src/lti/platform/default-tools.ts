@@ -26,7 +26,7 @@ export function defaultConnections(): StoredConnection[] {
   ]
 }
 
-/** The two Interview Differently tools a new environment starts with, on the default connection. */
+/** The Interview Differently tools a new environment starts with, on the default connection. */
 export function defaultTools(): StoredTool[] {
   const [c] = defaultConnections()
   const shared = {
@@ -61,6 +61,19 @@ export function defaultTools(): StoredTool[] {
       referenceLabel: 'Assessment slug',
       referenceHelp:
         "The assessment's slug, as set when it was imported in Interview Differently (Admin, Assessments). A wrong slug only shows up when a learner opens it.",
+    },
+    {
+      // A course checkpoint (GitHub issue #90): the learner works it in Interview Differently's chat page, embedded in
+      // the course. The item names the question bank and which of its requests to ask.
+      toolId: 'id-checkpoint',
+      name: 'Interview Differently checkpoint',
+      ...shared,
+      kind: 'checkpoint',
+      retries: true,
+      labelable: false,
+      referenceLabel: 'Question bank slug',
+      referenceHelp:
+        "The question bank's slug, as set when it was imported in Interview Differently (Admin, Assessments). The checkpoint's requests are question numbers in that bank.",
     },
   ]
 }

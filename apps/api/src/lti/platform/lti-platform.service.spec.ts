@@ -1211,3 +1211,122 @@ describe('brand claim', () => {
     expect(await idTokenClaims()).not.toHaveProperty([BRAND_CLAIM])
   })
 })
+
+describe('course checkpoints, embedded in the course page (issue #90)', () => {
+  const checkpointItem = (config: object) => ({
+    id: 'i1',
+    type: 'tool',
+    title: 'First morning',
+    config: { toolId: 'id-checkpoint', ref: 'bank', ...config },
+    module: {
+      courseId: 'c1',
+      course: {
+        skills: [{ id: 'filter', label: 'Select and filter rows', targetPct: 70 }],
+        adaptive: { approveGenerated: true },
+        modules: [
+          {
+            items: [
+              {
+                type: 'tool',
+                config: {
+                  toolId: 'id-checkpoint',
+                  ref: 'bank',
+                  tasks: [
+                    { ref: '1.1', skill: 'filter' },
+                    { ref: '2.1', skill: 'sort' },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  })
+  const claimsOf = async (hint: string) => {
+    const html = await service.authenticate(await authParams({ lti_message_hint: hint }))
+    return verifyJwt(field(html, 'id_token'), {
+      issuer: reg.issuer,
+      audience: tool.clientId,
+      nonce: 'n1',
+      keyFor: async () => service.jwks().keys[0],
+    })
+  }
+
+  it('sends the placement as the custom `checkpoint` parameter', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(
+      checkpointItem({
+        tasks: [
+          { ref: '1.1', skill: 'filter' },
+          { ref: '1.2', skill: 'filter' },
+        ],
+        scenario: 'Your first morning',
+        diagnostic: true,
+      })
+    )
+    const hint = (await service.startLaunch('u1', 'k1', 'i1')).fields.lti_message_hint
+    const custom = (await claimsOf(hint))[CLAIM.custom] as Record<string, unknown>
+    expect(custom.tool).toBe('id-checkpoint')
+    expect(custom.ref).toBe('bank')
+    expect(JSON.parse(custom.checkpoint as string)).toEqual({
+      bankSlug: 'bank',
+      refs: ['1.1', '1.2'],
+      title: 'First morning',
+      scenario: 'Your first morning',
+      diagnostic: true,
+      // a diagnostic stops asking about a skill after a miss
+      groups: [['1.1', '1.2']],
+      practice: null,
+    })
+  })
+
+  it('a practice slot carries the skill label, its evidence refs and the review rule', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(
+      checkpointItem({ generated: { skill: 'filter' } })
+    )
+    const hint = (await service.startLaunch('u1', 'k1', 'i1')).fields.lti_message_hint
+    const custom = (await claimsOf(hint))[CLAIM.custom] as Record<string, unknown>
+    expect(JSON.parse(custom.checkpoint as string)).toMatchObject({
+      refs: [],
+      practice: { skill: 'Select and filter rows', evidenceRefs: ['1.1'], review: true },
+    })
+  })
+
+  it('embed: asks for an iframe, platform storage, and says which origins to trust', async () => {
+    process.env.LTI_ID_WEB_URL = 'http://web.test/'
+    prisma.courseItem.findUnique.mockResolvedValue(
+      checkpointItem({ tasks: [{ ref: '1.1', skill: 'filter' }] })
+    )
+    const out = await service.startLaunch('u1', 'k1', 'i1', undefined, undefined, { embed: true })
+    expect(out.fields.lti_storage_target).toBe('_parent')
+    expect(out.embed).toEqual({
+      storageOrigin: new URL(tool.loginUrl).origin,
+      frameOrigin: 'http://web.test',
+    })
+    const claims = await claimsOf(out.fields.lti_message_hint)
+    // in a frame the tool stays on the page: nothing to return to
+    expect(claims[CLAIM.launchPresentation]).toEqual({ document_target: 'iframe' })
+    delete process.env.LTI_ID_WEB_URL
+  })
+
+  it('without embed, the launch is unchanged: a window, a return URL, no storage', async () => {
+    const out = await service.startLaunch('u1', 'k1', 'i1')
+    expect(out.fields).not.toHaveProperty('lti_storage_target')
+    expect(out).not.toHaveProperty('embed')
+    const claims = await claimsOf(out.fields.lti_message_hint)
+    expect(claims[CLAIM.launchPresentation]).toEqual({
+      document_target: 'window',
+      return_url: 'http://learn.test/lms/learning/k1/i1',
+    })
+  })
+
+  it('refuses a checkpoint item with nothing to ask', async () => {
+    prisma.courseItem.findUnique.mockResolvedValue(checkpointItem({ tasks: [] }))
+    const hint = (await service.startLaunch('u1', 'k1', 'i1')).fields.lti_message_hint
+    await reject(
+      service.authenticate(await authParams({ lti_message_hint: hint })),
+      409,
+      'no requests set up'
+    )
+  })
+})

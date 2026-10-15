@@ -1,9 +1,11 @@
 import { BadRequestException } from '@nestjs/common'
+import type { Prisma, PrismaClient } from '@prisma/client'
 import { randomBytes } from 'node:crypto'
 import { DEFAULT_ATTEMPTS } from './interview-scoring'
 import { ALLOWED_LINK_SITES, parseExternalLink } from './external-link'
 import { isImageKey } from './item-image'
 import { toolAnyById, toolById } from '../lti/platform/lti-platform-config'
+import { CHECKPOINT_TOOL_ID } from './skills'
 import { parseYouTube } from './youtube'
 import type {
   CourseItemType,
@@ -22,7 +24,41 @@ export const ITEM_TYPES: CourseItemType[] = [
   'external_link',
   'tool',
   'profile',
+  'spark_lesson',
 ]
+
+/**
+ * Adaptive checkpoints (GitHub issue #90): a course is adaptive when it has a diagnostic checkpoint, the item that builds
+ * each learner's own path. Inferred from the content, so there is no flag to keep in step.
+ */
+export const ADAPTIVE_COURSE = {
+  modules: {
+    some: {
+      items: {
+        some: {
+          type: 'tool',
+          AND: [
+            { config: { path: ['toolId'], equals: CHECKPOINT_TOOL_ID } },
+            { config: { path: ['diagnostic'], equals: true } },
+          ],
+        },
+      },
+    },
+  },
+} satisfies Prisma.CourseWhereInput
+
+/** Which of these courses are adaptive (ADAPTIVE_COURSE). */
+export async function adaptiveCourseIds(
+  prisma: Pick<PrismaClient, 'course'>,
+  ids: string[]
+): Promise<Set<string>> {
+  if (ids.length === 0) return new Set()
+  const rows = await prisma.course.findMany({
+    where: { id: { in: [...new Set(ids)] }, ...ADAPTIVE_COURSE },
+    select: { id: true },
+  })
+  return new Set(rows.map((r) => r.id))
+}
 
 /** False for a stored item whose type is no longer supported (for example the retired native 'assessment'). */
 export const isSupportedItemType = (type: string): boolean =>
@@ -189,9 +225,17 @@ export function validateItemInput(
   if (remedial && review) return bad('An item is either extra content or a review, not both')
   const mode = remedial ? 'remediationFor' : review ? 'reviewFor' : null
   const skill = remedial || review
-  if (mode && skill && item.type !== 'interview' && item.type !== 'tool') {
+  // A checkpoint (a tool item) can be extra content: its practice slot.
+  const checkpoint = item.type === 'tool' && item.config.toolId === CHECKPOINT_TOOL_ID
+  if (mode && skill && item.type !== 'interview' && (item.type !== 'tool' || checkpoint)) {
     if (!SKILL_ID.test(skill)) return bad('Skill is not valid')
     item.config = { ...item.config, [mode]: skill }
+  }
+  // Adaptive checkpoints: the skill an outline item teaches, so a learner who has shown it can be let past.
+  const teaches = text(config.teaches, 'Skill taught', 60)
+  if (teaches && !mode) {
+    if (!SKILL_ID.test(teaches)) return bad('Skill is not valid')
+    item.config = { ...item.config, teaches }
   }
   return item
 }
@@ -221,6 +265,14 @@ function validateItemByType(
     case 'profile':
       // #69: the talent profile form. Nothing to configure: the learner fills it in on their own page.
       return { type, title, label, config: {} }
+    case 'spark_lesson': {
+      // Adaptive checkpoints (GitHub issue #90): a slot for a short Spark lesson made for a learner's gap in a skill.
+      // `bank` is the question bank whose tables the lesson's examples use.
+      const bank = text(config.bank, 'Question bank', 120, true) as string
+      const skill = isObject(config.generated) ? text(config.generated.skill, 'Skill', 60) : null
+      if (!skill || !SKILL_ID.test(skill)) return bad('Skill is not valid')
+      return { type, title, label, config: { bank, generated: { skill } } }
+    }
     case 'knowledge_check':
       return {
         type,
@@ -352,9 +404,37 @@ function validateItemByType(
           ...rules,
           ...(counts ? { countsAsInterview: true } : {}),
           ...(optional ? { optional: true } : {}),
+          ...(tool.kind === 'checkpoint' ? checkpointFields(config) : {}),
         },
       }
     }
+  }
+}
+
+/**
+ * Adaptive checkpoints (GitHub issue #90): what a checkpoint tool item asks, from its question bank (`ref`): the
+ * questions, each tagged with the course skill it is evidence of, or a slot for practice the Simulator writes per
+ * learner (`generated`). The course owns this placement; the Simulator owns the questions.
+ */
+function checkpointFields(config: Record<string, unknown>): Record<string, unknown> {
+  const generated = isObject(config.generated) ? text(config.generated.skill, 'Skill', 60) : null
+  if (generated && !SKILL_ID.test(generated)) return bad('Skill is not valid')
+  const tasks = Array.isArray(config.tasks) ? config.tasks : []
+  if (!generated && tasks.length === 0) return bad('Add at least one question')
+  if (tasks.length > 20) return bad('A checkpoint has at most 20 questions')
+  const clean = tasks.map((t) => {
+    const ref = isObject(t)
+      ? text(t.ref, 'Question', 20, true)
+      : bad('Each question needs a number and a skill')
+    const skill = isObject(t) ? text(t.skill, 'Skill', 60, true) : null
+    if (!skill || !SKILL_ID.test(skill)) return bad('Skill is not valid')
+    return { ref, skill }
+  })
+  return {
+    tasks: clean,
+    scenario: text(config.scenario, 'Scenario', 2000) ?? null,
+    diagnostic: config.diagnostic === true,
+    ...(generated ? { generated: { skill: generated } } : {}),
   }
 }
 

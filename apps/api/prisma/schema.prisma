@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
   // The owner connection, which Prisma's CLI (migrate, db execute) uses instead of `url`: DATABASE_URL is the API's
   // restricted role, which cannot change the schema. See docs/tenant-isolation.md.
@@ -34,7 +34,7 @@ model SimulationAttempt {
   id         String   @id @default(uuid())
   userId     String
   scenarioId String
-  track      String                          // denormalised for fast per-track stats
+  track      String // denormalised for fast per-track stats
   startedAt  DateTime @default(now())
 
   @@index([userId])
@@ -78,13 +78,13 @@ model DimensionScore {
 }
 
 model ImmersiveSession {
-  id         String               @id @default(uuid())
+  id         String              @id @default(uuid())
   scenarioId String
   userId     String
-  status     String               @default("active") // active | completed | abandoned
-  summary    Json?                // cached ImmersiveSummary once all responses are evaluated
-  createdAt  DateTime             @default(now())
-  updatedAt  DateTime             @updatedAt
+  status     String              @default("active") // active | completed | abandoned
+  summary    Json? // cached ImmersiveSummary once all responses are evaluated
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
   responses  ImmersiveResponse[]
 
   @@index([userId])
@@ -99,7 +99,7 @@ model ImmersiveResponse {
   mediaUrl        String?
   transcript      String?
   durationSeconds Int?
-  aiFeedback      Json?            // cached ImmersiveResponseFeedback
+  aiFeedback      Json? // cached ImmersiveResponseFeedback
   createdAt       DateTime         @default(now())
   session         ImmersiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
@@ -109,7 +109,7 @@ model ImmersiveResponse {
 model ScenarioRequest {
   id               String   @id @default(uuid())
   // Briefing
-  situation        String                            // required
+  situation        String // required
   role             String?
   reportsTo        String?
   timeInRole       String?
@@ -117,18 +117,18 @@ model ScenarioRequest {
   otherPeople      String?
   metricsContext   String?
   timePressure     String?
-  hardestMoment    String                            // required
+  hardestMoment    String // required
   temptingWrong    String?
   greatLooksLike   String?
   // Categorisation
-  track            String?  // operations | business | risk | customer-success | general | custom
+  track            String? // operations | business | risk | customer-success | general | custom
   estimatedMinutes Int?
   // Contact (all optional — anonymous submissions allowed)
   contactName      String?
   contactEmail     String?
   contactPhone     String?
   // Triage
-  status           String   @default("new")          // new | contacted | building | published | declined
+  status           String   @default("new") // new | contacted | building | published | declined
   emailSent        Boolean  @default(false)
   emailError       String?
   notes            String?
@@ -153,64 +153,64 @@ model ScenarioRequest {
 // queries don't have to round-trip to Clerk for every name lookup.
 
 model User {
-  id          String       @id              // Clerk userId — no separate uuid
-  email       String?                       // cached from Clerk; nullable until first sync
+  id               String            @id // Clerk userId — no separate uuid
+  email            String? // cached from Clerk; nullable until first sync
   // Which Clerk instance issued this id: 'interview' (Interview Differently) or
   // 'learn' (LearnDifferently). Someone with both apps has two rows, so email is
   // unique per source rather than globally.
-  source      String       @default("interview")
-  displayName String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  memberships Membership[]
-  enrollments Enrollment[]
-  joinRequests JoinRequest[]
-  participantNotes   ParticipantNote[]
-  supportItems       SupportItem[]
-  talentProfile      TalentProfile?
-  profileShares      ProfileShare[]
-  attendanceMarks    AttendanceMark[]
-  activitySessions   ActivitySession[]
+  source           String            @default("interview")
+  displayName      String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  memberships      Membership[]
+  enrollments      Enrollment[]
+  joinRequests     JoinRequest[]
+  participantNotes ParticipantNote[]
+  supportItems     SupportItem[]
+  talentProfile    TalentProfile?
+  profileShares    ProfileShare[]
+  attendanceMarks  AttendanceMark[]
+  activitySessions ActivitySession[]
 
   @@unique([email, source])
   @@index([email])
 }
 
 model Institution {
-  id          String       @id @default(uuid())
-  name        String
+  id               String            @id @default(uuid())
+  name             String
   // Optional. When set, students whose Clerk email matches this domain
   // (or any subdomain of it) can be auto-suggested into the institution
   // at signup. When null, the only way in is the cohort joinKey or
   // admin-add. Indexed (not unique) — multiple institutions can legitimately
   // share a parent domain (e.g. both "harvard.edu" and "law.harvard.edu"
   // could exist, with longest-match-wins on the suggestion side).
-  emailDomain String?
+  emailDomain      String?
   // LearnDifferently tenancy (#46). An institution is a tenant: it owns the
   // learner data for the cohorts it runs. 'academic' = college or university;
   // 'organization' = nonprofit or other organization that runs cohorts; 'provider' =
   // authors courses and offers them to the others; 'agency' = oversees
   // providers (parentId points at it) and reads outcomes. Free text, not an
   // enum, so new kinds need no migration.
-  kind        String       @default("organization") // 'academic' | 'organization' | 'provider' | 'agency'
-  subdomain   String?      @unique            // {subdomain}.learndifferently.tech
-  brand       Json?                            // { primary, accent, logoUrl, ... }
-  parentId    String?
+  kind             String            @default("organization") // 'academic' | 'organization' | 'provider' | 'agency'
+  subdomain        String?           @unique // {subdomain}.learndifferently.tech
+  brand            Json? // { primary, accent, logoUrl, ... }
+  parentId         String?
   // Demo institutions seeded with full sample data (attendance, talent, activity, notes); shown
   // with a star in the workspace chooser so they stand out among many.
-  featuredDemo Boolean     @default(false)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  parent      Institution?  @relation("InstitutionParent", fields: [parentId], references: [id], onDelete: SetNull)
-  children    Institution[] @relation("InstitutionParent")
-  cohorts     Cohort[]
-  memberships Membership[]
-  roleInvites RoleInvite[]
-  datasets    Dataset[]
-  assessments Assessment[]
-  scenarios   Scenario[]
-  courses     Course[]
-  offers      CourseOffer[]
+  featuredDemo     Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  parent           Institution?      @relation("InstitutionParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children         Institution[]     @relation("InstitutionParent")
+  cohorts          Cohort[]
+  memberships      Membership[]
+  roleInvites      RoleInvite[]
+  datasets         Dataset[]
+  assessments      Assessment[]
+  scenarios        Scenario[]
+  courses          Course[]
+  offers           CourseOffer[]
   // Staff notes, support items and talent profiles belong to (provider, participant).
   participantNotes ParticipantNote[]
   supportItems     SupportItem[]
@@ -221,42 +221,46 @@ model Institution {
 }
 
 model Cohort {
-  id            String       @id @default(uuid())
-  institutionId String
-  name          String
+  id                   String               @id @default(uuid())
+  institutionId        String
+  name                 String
   // Optional — students enter this at signup to auto-join. Globally unique
   // (decided 2026-09-13, closes #16): a key identifies exactly one cohort, so
   // the join flow never has to disambiguate between institutions.
-  joinKey       String?      @unique
+  joinKey              String?              @unique
   // LearnDifferently (#46): a cohort is one course, one roster, one start date
   // and a fixed length. All null for Interview Differently cohorts.
-  courseId      String?
-  startsAt      DateTime?
-  endsAt        DateTime?
+  courseId             String?
+  startsAt             DateTime?
+  endsAt               DateTime?
   // Most learners that may be enrolled (withdrawn ones do not count). Null = no limit.
-  maxLearners   Int?
+  maxLearners          Int?
   // #68: when true, entering the code creates a JoinRequest instead of an enrollment.
-  requiresApproval Boolean   @default(false)
+  requiresApproval     Boolean              @default(false)
   // Who learners should ask (plain text, e.g. 'Dana Reyes, dana@example.org'). Required when requiresApproval.
-  joinContact   String?
+  joinContact          String?
   // How the cohort meets: 'online' (async, activity is logged), 'live' (sessions with attendance) or 'hybrid' (both).
-  delivery      String       @default("online") // 'online' | 'live' | 'hybrid'
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  institution   Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  course        Course?      @relation(fields: [courseId], references: [id], onDelete: SetNull)
-  memberships   Membership[]
-  roleInvites   RoleInvite[]
-  datasets      CohortDataset[]
-  tools         CohortToolConfig[]
-  deliveries    AssessmentDelivery[]
-  enrollments   Enrollment[]
-  joinRequests  JoinRequest[]
-  sessions      CohortSession[]
-  participantNotes ParticipantNote[]
-  supportItems     SupportItem[]
+  delivery             String               @default("online") // 'online' | 'live' | 'hybrid'
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  institution          Institution          @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  course               Course?              @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  memberships          Membership[]
+  roleInvites          RoleInvite[]
+  datasets             CohortDataset[]
+  tools                CohortToolConfig[]
+  deliveries           AssessmentDelivery[]
+  enrollments          Enrollment[]
+  joinRequests         JoinRequest[]
+  sessions             CohortSession[]
+  participantNotes     ParticipantNote[]
+  supportItems         SupportItem[]
+  practiceSetUses      PracticeSetUse[]
+  practiceEvents       PracticeEvent[]
+  lessonUses           LessonUse[]
+  lessonEvents         LessonEvent[]
   // #69: the learner's first course item is their profile; refreshed every N months (null = never stale, 1..60).
-  requiresProfile     Boolean  @default(false)
+  requiresProfile      Boolean              @default(false)
   profileRefreshMonths Int?
 
   // Tenant (GitHub issue #84): the agency this cohort belongs to. A trigger sets it from the institution that
@@ -292,9 +296,9 @@ model JoinRequest {
 
 model Membership {
   id            String      @id @default(uuid())
-  userId        String                          // Clerk userId — FK to User.id
+  userId        String // Clerk userId — FK to User.id
   institutionId String
-  cohortId      String?                          // null = institution member but no cohort yet
+  cohortId      String? // null = institution member but no cohort yet
   createdAt     DateTime    @default(now())
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
@@ -303,9 +307,9 @@ model Membership {
   // Tenant (GitHub issue #84): set by a database trigger, never by application code.
   agencyId String?
   // A staff grant when set (for example 'agency-admin'); a learner's cohort membership has none (GitHub issue #84).
-  role String?
+  role     String?
 
-  @@unique([userId, institutionId, cohortId])  // a user can only be in a given (institution, cohort) once
+  @@unique([userId, institutionId, cohortId]) // a user can only be in a given (institution, cohort) once
   @@index([userId])
   @@index([institutionId])
   @@index([cohortId])
@@ -316,9 +320,9 @@ model Membership {
 // membership with that role the first time they open Learn Differently signed in with that (verified) email.
 model RoleInvite {
   id            String      @id @default(uuid())
-  email         String                          // lower case
+  email         String // lower case
   institutionId String
-  cohortId      String?                          // for an instructor: the cohort they will teach
+  cohortId      String? // for an instructor: the cohort they will teach
   role          String
   invitedById   String?
   createdAt     DateTime    @default(now())
@@ -337,11 +341,11 @@ model ScenarioMediaAsset {
   id           String   @id @default(uuid())
   scenarioId   String
   nodeId       String
-  scriptHash   String   // sha256 of audioScript at render time; mismatch ⇒ stale ⇒ re-render
-  presenterId  String   // D-ID presenter id baked into the clip
-  voiceId      String   // Azure voice id baked into the clip
-  status       String   // queued | rendering | ready | failed
-  mediaUrl     String?  // R2 public URL once status='ready'
+  scriptHash   String // sha256 of audioScript at render time; mismatch ⇒ stale ⇒ re-render
+  presenterId  String // D-ID presenter id baked into the clip
+  voiceId      String // Azure voice id baked into the clip
+  status       String // queued | rendering | ready | failed
+  mediaUrl     String? // R2 public URL once status='ready'
   durationMs   Int?
   errorMessage String?
   createdAt    DateTime @default(now())
@@ -356,11 +360,11 @@ model ScenarioMediaAsset {
 //
 // Tools are cohort-scoped feature flags. A cohort sees a tool only when an
 // admin has explicitly enabled it here — assigning datasets or scheduling an
-// assessment is not enough on its own. Known keys live in src/tools/tool-keys.ts.
+// assessment is not enough on its own. Known keys live in src/simulator/tools/tool-keys.ts.
 
 model CohortToolConfig {
   cohortId  String
-  toolKey   String   // 'sql-sandbox' | 'assessments'
+  toolKey   String // 'sql-sandbox' | 'assessments'
   enabled   Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -417,20 +421,20 @@ model CohortDataset {
 // ids are fixed at start so a refresh doesn't reshuffle the paper.
 
 model Assessment {
-  id             String               @id @default(uuid())
-  slug           String               @unique
-  title          String
-  datasetId      String?                                  // null = no Hands-On SQL questions, so no dataset
-  sourceMarkdown String                                   // last imported markdown, re-import replaces
-  sections       Json                                     // ParsedSection[] — see assessments/parse-markdown.ts
-  defaultDraw    Json?                                    // frontmatter `draw`: total or per-type map (DrawSpec); null = every question
-  expectedMinutes Int?                                   // frontmatter `expected_minutes`: designed duration, not a limit (#39)
-  institutionId  String?                                  // null = platform-wide; see Dataset.institutionId
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  dataset        Dataset?             @relation(fields: [datasetId], references: [id], onDelete: Restrict)
-  institution    Institution?         @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  deliveries     AssessmentDelivery[]
+  id              String               @id @default(uuid())
+  slug            String               @unique
+  title           String
+  datasetId       String? // null = no Hands-On SQL questions, so no dataset
+  sourceMarkdown  String // last imported markdown, re-import replaces
+  sections        Json // ParsedSection[] — see assessments/parse-markdown.ts
+  defaultDraw     Json? // frontmatter `draw`: total or per-type map (DrawSpec); null = every question
+  expectedMinutes Int? // frontmatter `expected_minutes`: designed duration, not a limit (#39)
+  institutionId   String? // null = platform-wide; see Dataset.institutionId
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  dataset         Dataset?             @relation(fields: [datasetId], references: [id], onDelete: Restrict)
+  institution     Institution?         @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  deliveries      AssessmentDelivery[]
 
   @@index([datasetId])
   @@index([institutionId])
@@ -439,17 +443,20 @@ model Assessment {
 model AssessmentDelivery {
   id               String              @id @default(uuid())
   assessmentId     String
-  cohortId         String?                                // null once the cohort is deleted — attempts stay with the student
-  label            String                                 // 'pre' | 'post' | free text
+  cohortId         String? // null once the cohort is deleted — attempts stay with the student
+  label            String // 'pre' | 'post' | free text
   opensAt          DateTime?
   closesAt         DateTime?
   timeLimitMinutes Int?
-  showReview       Boolean?                               // learners see answers + key after submit; null = yes for 'post' labels, no otherwise
-  inviteCode       String?             @unique              // /a/<code> — join the cohort + start; null = no public link
+  showReview       Boolean? // learners see answers + key after submit; null = yes for 'post' labels, no otherwise
+  inviteCode       String?             @unique // /a/<code> — join the cohort + start; null = no public link
+  // A course checkpoint's placement, from its LTI launch: { format: 'chat', refs, scenario?, practice? } (issue #90)
+  config           Json?
   createdAt        DateTime            @default(now())
   assessment       Assessment          @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   cohort           Cohort?             @relation(fields: [cohortId], references: [id], onDelete: SetNull)
   attempts         AssessmentAttempt[]
+  practiceEvents   PracticeEvent[]
 
   @@index([assessmentId])
   @@index([cohortId])
@@ -459,10 +466,10 @@ model AssessmentAttempt {
   id               String             @id @default(uuid())
   deliveryId       String
   userId           String
-  datasetHash      String?                                // Dataset.setupHash at start — grading pins to this script; null = no dataset
-  drawnQuestionIds Json                                   // string[] in paper order
-  answers          Json                                   // Record<questionId, string> — MC letter or SQL text
-  sectionScores    Json?                                  // SectionScore[] once submitted
+  datasetHash      String? // Dataset.setupHash at start — grading pins to this script; null = no dataset
+  drawnQuestionIds Json // string[] in paper order
+  answers          Json // Record<questionId, string> — MC letter or SQL text
+  sectionScores    Json? // SectionScore[] once submitted
   startedAt        DateTime           @default(now())
   submittedAt      DateTime?
   submittedLate    Boolean            @default(false)
@@ -482,33 +489,36 @@ model AssessmentAttempt {
 // and completion all roll up from ItemProgress, so reports have one source.
 
 model Course {
-  id          String         @id @default(uuid())
-  providerId  String
-  slug        String         @unique
-  title       String
-  summary     String?
-  sector      String?
-  credential  String?
-  lengthWeeks Int?
+  id                 String         @id @default(uuid())
+  providerId         String
+  slug               String         @unique
+  title              String
+  summary            String?
+  sector             String?
+  credential         String?
+  lengthWeeks        Int?
   // Best interview score (0-100) at or above which a learner counts as "interview
   // ready" in reports. Set by whoever authors the course.
-  readinessThreshold Int         @default(70)
+  readinessThreshold Int            @default(70)
   // Post-assessment score (0-100) a learner must reach to count as meeting the
   // course target in reports. Set by whoever authors the course.
-  targetScore Int                @default(80)
+  targetScore        Int            @default(80)
   // What a learner will be able to do, and the jobs the course prepares for. Shown in the catalog.
-  outcomes    String[]           @default([])
-  targetRoles String[]           @default([])
+  outcomes           String[]       @default([])
+  targetRoles        String[]       @default([])
   // Skills the course builds, each with the pass mark (0-100) below which a learner is flagged
   // and the author's remediation content is added to their plan: [{ id, label, targetPct }].
-  skills      Json               @default("[]")
-  status      String         @default("published") // 'draft' | 'published'
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  provider    Institution    @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  modules     CourseModule[]
-  offers      CourseOffer[]
-  cohorts     Cohort[]
+  skills             Json           @default("[]")
+  // Adaptive rules (prototype): { testOut?: boolean, approveGenerated?: boolean }. testOut lets a learner past
+  // content for a skill they have shown; approveGenerated holds generated practice for staff review.
+  adaptive           Json           @default("{}")
+  status             String         @default("published") // 'draft' | 'published'
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  provider           Institution    @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  modules            CourseModule[]
+  offers             CourseOffer[]
+  cohorts            Cohort[]
 
   // Tenant (GitHub issue #84): the agency of the provider; a trigger sets it.
   agencyId String?
@@ -536,17 +546,18 @@ model CourseModule {
 // `label` marks assessments as 'pre' or 'post'. `config` holds the type's
 // payload or reference (lesson body, assessment slug, scenario id, SCORM package).
 model CourseItem {
-  id       String         @id @default(uuid())
+  id       String            @id @default(uuid())
   moduleId String
   type     String
   title    String
   position Int
   label    String?
-  config   Json           @default("{}")
-  module   CourseModule   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  config   Json              @default("{}")
+  module   CourseModule      @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   progress ItemProgress[]
   attempts ItemAttempt[]
   plan     PlanItem[]
+  skips    PlanSkip[]
   activity ActivitySession[]
 
   // Tenant (GitHub issue #84): the agency of the provider; a trigger sets it.
@@ -569,17 +580,18 @@ model CourseOffer {
 }
 
 model Enrollment {
-  id          String         @id @default(uuid())
+  id          String            @id @default(uuid())
   cohortId    String
   userId      String
-  status      String         @default("enrolled") // 'enrolled' | 'completed' | 'withdrawn'
-  enrolledAt  DateTime       @default(now())
+  status      String            @default("enrolled") // 'enrolled' | 'completed' | 'withdrawn'
+  enrolledAt  DateTime          @default(now())
   completedAt DateTime?
-  cohort      Cohort         @relation(fields: [cohortId], references: [id], onDelete: Cascade)
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cohort      Cohort            @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   progress    ItemProgress[]
   attempts    ItemAttempt[]
   plan        PlanItem[]
+  skips       PlanSkip[]
   activity    ActivitySession[]
 
   // Tenant (GitHub issue #84): set by a database trigger, never by application code.
@@ -653,6 +665,169 @@ model PlanItem {
   @@index([agencyId])
 }
 
+// Course content a learner was let past because they showed the skill it teaches (the course's
+// adaptive.testOut rule). Not required for completion. Written once; a later gap adds content
+// through PlanItem, it never takes a skip back.
+model PlanSkip {
+  id           String     @id @default(uuid())
+  enrollmentId String
+  itemId       String
+  // { skill, skillLabel, pct, n, sourceItemId }: the evidence that let the learner past it.
+  reason       Json
+  createdAt    DateTime   @default(now())
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  item         CourseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
+  @@unique([enrollmentId, itemId])
+  @@index([itemId])
+  @@index([agencyId])
+}
+
+// ── Adaptive checkpoints: AI content library and learner use (GitHub issue #90) ──
+//
+// Generated content is ours: library rows (PracticeSet, Lesson) have no tie to a learner, course or provider, so
+// they outlive all three, and keep what a content library needs (model, prompt version, source, token counts). A
+// learner's use of a row (PracticeSetUse, LessonUse) and what they did (PracticeEvent, LessonEvent) are tenant rows
+// that point at the cohort and take its agency.
+
+// Simulator: practice written for a gap. Every task's answer key ran on the bank's dataset before the row was
+// written. Reused for another learner only once a person approved it.
+model PracticeSet {
+  id               String           @id @default(uuid())
+  bankSlug         String
+  skill            String // the skill's label, as the course names it
+  intro            String
+  // [{ prompt, referenceSql, ordered }]
+  tasks            Json
+  status           String           @default("pending") // 'pending' | 'approved' | 'rejected'
+  model            String
+  promptVersion    String
+  inputTokens      Int?
+  outputTokens     Int?
+  cacheReadTokens  Int?
+  cacheWriteTokens Int?
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime         @default(now())
+  uses             PracticeSetUse[]
+
+  @@index([bankSlug, skill, status])
+}
+
+model PracticeSetUse {
+  id            String      @id @default(uuid())
+  practiceSetId String
+  cohortId      String
+  userId        String
+  itemId        String // the LMS item (the LTI resource link) it filled
+  createdAt     DateTime    @default(now())
+  // Course staff sent the set back for this cohort: the slot then needs new practice, and the set is not reused here.
+  sentBackAt    DateTime?
+  practiceSet   PracticeSet @relation(fields: [practiceSetId], references: [id], onDelete: Restrict)
+  cohort        Cohort      @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
+  @@index([cohortId, userId, itemId])
+  @@index([practiceSetId])
+  @@index([agencyId])
+}
+
+// Simulator: what a learner did in a checkpoint. kind 'answer' (graded on the server; `passed` when they had not
+// learned it yet) or 'help' (a hint, explanation or example, with its text). Written once, never edited.
+model PracticeEvent {
+  id         String              @id @default(uuid())
+  cohortId   String
+  userId     String
+  itemId     String // the LMS item (the LTI resource link)
+  deliveryId String?
+  kind       String // 'answer' | 'help'
+  ref        String
+  correct    Boolean?
+  passed     Boolean             @default(false)
+  // answer: { sql, reason, error }; help: { kind, text, exampleSql, source }
+  data       Json
+  createdAt  DateTime            @default(now())
+  cohort     Cohort              @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  delivery   AssessmentDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
+  @@index([cohortId, userId, createdAt])
+  @@index([deliveryId])
+  @@index([agencyId])
+}
+
+// Spark: a short lesson for a gap, a storyboard the browser plays as a narrated video. Reused for another learner
+// only once a person approved it.
+model Lesson {
+  id               String      @id @default(uuid())
+  skill            String // the skill's label
+  level            String? // what the learner said about their experience, when it shaped the lesson
+  title            String
+  // [{ heading, narration, visual: { kind, ... } }]
+  scenes           Json
+  status           String      @default("pending") // 'pending' | 'approved' | 'rejected'
+  model            String
+  promptVersion    String
+  inputTokens      Int?
+  outputTokens     Int?
+  cacheReadTokens  Int?
+  cacheWriteTokens Int?
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime    @default(now())
+  uses             LessonUse[]
+
+  @@index([skill, status])
+}
+
+model LessonUse {
+  id         String        @id @default(uuid())
+  lessonId   String
+  cohortId   String
+  userId     String
+  itemId     String // the LMS item it filled
+  createdAt  DateTime      @default(now())
+  // Course staff sent the lesson back for this cohort: the slot then needs a new lesson, and it is not reused here.
+  sentBackAt DateTime?
+  lesson     Lesson        @relation(fields: [lessonId], references: [id], onDelete: Restrict)
+  cohort     Cohort        @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  events     LessonEvent[]
+
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
+  @@index([cohortId, userId, itemId])
+  @@index([lessonId])
+  @@index([agencyId])
+}
+
+// Spark: how a learner watched (start, each scene, replay, finish), kept light. Written once, never edited.
+model LessonEvent {
+  id          String    @id @default(uuid())
+  lessonUseId String
+  cohortId    String
+  userId      String
+  event       String // 'start' | 'scene' | 'replay' | 'finish'
+  data        Json
+  createdAt   DateTime  @default(now())
+  use         LessonUse @relation(fields: [lessonUseId], references: [id], onDelete: Cascade)
+  cohort      Cohort    @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+
+  // Tenant (GitHub issue #84): set by a database trigger, never by application code.
+  agencyId String?
+
+  @@index([lessonUseId, createdAt])
+  @@index([cohortId, userId])
+  @@index([agencyId])
+}
+
 // ── Tools: SQL sandbox query log ────────────────────────────────────────────
 //
 // One row per query a student runs in the browser sandbox (PGlite runs
@@ -663,7 +838,7 @@ model PlanItem {
 model SqlQueryLog {
   id           String   @id @default(uuid())
   userId       String
-  cohortId     String?  // resolved server-side from the user's memberships
+  cohortId     String? // resolved server-side from the user's memberships
   datasetSlug  String
   queryText    String
   ok           Boolean
@@ -715,23 +890,23 @@ model LtiConnection {
 // A connected tool a course item may launch (#63): what it is and who may use it. Where it lives is
 // its connection's.
 model LtiTool {
-  toolId       String        @id
-  connectionId String
-  connection   LtiConnection @relation(fields: [connectionId], references: [id], onDelete: Restrict)
-  name         String
-  kind         String // 'interview' | 'assessment'
-  retries      Boolean
-  labelable    Boolean
-  enabled      Boolean       @default(true)
+  toolId         String        @id
+  connectionId   String
+  connection     LtiConnection @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  name           String
+  kind           String // 'interview' | 'assessment' | 'checkpoint'
+  retries        Boolean
+  labelable      Boolean
+  enabled        Boolean       @default(true)
   // What the course editor calls the item's "Reference" for this tool, and how to find the value
   // (null: a generic label and help text).
   referenceLabel String?
   referenceHelp  String?
   // Institution ids (agencies or providers) that may use the tool; empty means every workspace.
   // A workspace is allowed when it, or the agency it reports to, is listed.
-  workspaceIds String[]      @default([])
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  workspaceIds   String[]      @default([])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   @@index([connectionId])
 }
@@ -759,7 +934,7 @@ model LtiRegistryChange {
 // (issuer, clientId) at login. The one platform in env config is a built-in fallback until it is
 // seeded here.
 model LtiPlatform {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   name         String
   issuer       String
   clientId     String
@@ -767,11 +942,11 @@ model LtiPlatform {
   authUrl      String
   tokenUrl     String
   jwksUrl      String
-  enabled      Boolean  @default(false)
+  enabled      Boolean   @default(false)
   // Null until an admin first switches it on (so "waiting for approval" differs from "switched off").
   approvedAt   DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@unique([issuer, clientId])
 }
@@ -868,24 +1043,24 @@ model SupportItem {
 // The learner's OWN data, one per person (not per provider). The resume is a private upload
 // (PRIVATE_MEDIA_STORAGE); only its key is stored. Who may see it is ProfileShare.
 model TalentProfile {
-  id                   String   @id @default(uuid())
-  userId               String   @unique
+  id                   String             @id @default(uuid())
+  userId               String             @unique
   resumeKey            String?
   resumeName           String?
   resumeSize           Int?
   resumeUploadedAt     DateTime?
   yearsExperience      Int?
-  industries           String[] @default([])
+  industries           String[]           @default([])
   // Annual, whole dollars. Sensitive: staff of a provider the learner shared with only, never in agency rollups or logs.
   previousCompensation Int?
   targetCompensation   Int?
-  targetRoles          String[] @default([])
+  targetRoles          String[]           @default([])
   availableFrom        DateTime?
   // Set when the profile first becomes complete (computed from its fields) and kept.
   completedAt          DateTime?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   educations           ProfileEducation[]
 }
 

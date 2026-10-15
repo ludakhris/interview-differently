@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
-import { MAX_ANSWER_CHARS } from '../../interview-engine/interview-engine'
-import type { ScoredAnswer } from '../../interview-engine/interview-engine'
+import { MAX_ANSWER_CHARS } from '../../simulator/interview-engine/interview-engine'
+import type { ScoredAnswer } from '../../simulator/interview-engine/interview-engine'
 
 /** Escapes a value for use in HTML text or a double-quoted attribute. */
 export const esc = (v: unknown): string =>
@@ -81,4 +81,87 @@ export const registeredPage = (name: string, created: boolean): string =>
       `and is waiting for approval. An administrator of Interview Differently has to approve it ` +
       `before learners can launch from it. You can close this window.</p>` +
       `<script>${CLOSE_SCRIPT}</script>`
+  )
+
+// ── LTI platform storage (1EdTech "LTI Client Side postMessages", issue #90) ──────────────────────
+//
+// A launch in a frame cannot count on the cross-site `lti_state` cookie, so the login state is also kept in the
+// platform's page (the frame's parent): `lti.put_data` before the login goes on, `lti.get_data` when the launch comes
+// back. Messages go only to, and are only accepted from, the platform origin the tool trusts.
+
+/**
+ * CSP for a page whose one inline script carries `nonce`. Its form may post to the tool only; `formAction` adds the
+ * origins a post's redirect may go on to (Chrome checks form-action on those redirects too).
+ */
+export const scriptCsp = (nonce: string, formAction: string[] = []): string =>
+  `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; form-action ${["'self'", ...formAction].join(' ')}`
+
+/** JSON safe inside a <script type="application/json"> block. */
+const scriptJson = (v: unknown): string =>
+  JSON.stringify(v)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
+
+/** How long a page waits for the platform to answer before it gives up. */
+export const STORAGE_WAIT_MS = 3000
+
+// The frame the platform named (`_parent`, or a frame of the parent by name), and a message id.
+const TARGET_JS =
+  `var c=JSON.parse(document.getElementById('lti-storage').textContent);` +
+  `var t=null;try{t=c.target==='_parent'?window.parent:window.parent.frames[c.target]}catch(x){}` +
+  `var id='id-'+Date.now()+'-'+Math.random().toString(36).slice(2);`
+
+/** Puts the login state in platform storage, then goes on to the platform's login (whatever the answer). */
+export const PUT_SCRIPT =
+  `(function(){${TARGET_JS}var left=false;` +
+  `function go(){if(left)return;left=true;window.location.replace(c.next)}` +
+  `window.addEventListener('message',function(e){var d=e.data;` +
+  `if(e.origin!==c.origin||e.source!==t||!d||d.subject!=='lti.put_data.response'||d.message_id!==id)return;go()});` +
+  `setTimeout(go,c.waitMs);` +
+  `try{if(!t||t===window)return go();t.postMessage({subject:'lti.put_data',message_id:id,key:c.key,value:c.value},c.origin)}catch(x){go()}})();`
+
+/** Reads the login state back from platform storage and posts it with the launch, or says it could not. */
+export const GET_SCRIPT =
+  `(function(){${TARGET_JS}var done=false;` +
+  `function fail(){if(done)return;done=true;document.getElementById('wait').hidden=true;document.getElementById('fail').hidden=false}` +
+  `window.addEventListener('message',function(e){var d=e.data;` +
+  `if(done||e.origin!==c.origin||e.source!==t||!d||d.subject!=='lti.get_data.response'||d.message_id!==id)return;` +
+  `if(d.key!==c.key||typeof d.value!=='string'||!d.value)return fail();` +
+  `done=true;var f=document.forms[0];f.elements.lti_storage_value.value=d.value;f.submit()});` +
+  `setTimeout(fail,c.waitMs);` +
+  `try{if(!t||t===window)return fail();t.postMessage({subject:'lti.get_data',message_id:id,key:c.key},c.origin)}catch(x){fail()}})();`
+
+export interface StorageTarget {
+  /** `_parent`, or the name of a frame of the parent. */
+  target: string
+  /** The platform page's origin: the only one messages are sent to and accepted from. */
+  origin: string
+}
+
+export const storagePutPage = (
+  a: StorageTarget & { nonce: string; key: string; value: string; next: string }
+): string =>
+  page(
+    'Opening',
+    `<p>Opening…</p>` +
+      `<script type="application/json" id="lti-storage">${scriptJson({ target: a.target, origin: a.origin, key: a.key, value: a.value, next: a.next, waitMs: STORAGE_WAIT_MS })}</script>` +
+      `<script nonce="${esc(a.nonce)}">${PUT_SCRIPT}</script>`
+  )
+
+export const storageGetPage = (
+  a: StorageTarget & { nonce: string; key: string; action: string; idToken: string; state: string }
+): string =>
+  page(
+    'Opening',
+    `<p id="wait">Opening…</p>` +
+      `<p id="fail" class="err" role="alert" hidden>This launch could not be confirmed in this browser. Reload the course page and open it again.</p>` +
+      `<form method="post" action="${esc(a.action)}">` +
+      `<input type="hidden" name="id_token" value="${esc(a.idToken)}">` +
+      `<input type="hidden" name="state" value="${esc(a.state)}">` +
+      `<input type="hidden" name="lti_storage_value" value=""></form>` +
+      `<script type="application/json" id="lti-storage">${scriptJson({ target: a.target, origin: a.origin, key: a.key, waitMs: STORAGE_WAIT_MS })}</script>` +
+      `<script nonce="${esc(a.nonce)}">${GET_SCRIPT}</script>`
   )

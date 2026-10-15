@@ -5,6 +5,11 @@ import { ClipboardCheck, Database } from 'lucide-react'
 import { Nav } from '@/components/Nav'
 import { Footer } from '@/components/Footer'
 import { TrackIcon } from '@/components/TrackIcon'
+import {
+  WorkSimulationCards,
+  simulationCompetencies,
+  useWorkSimulations,
+} from '@/components/WorkSimulations'
 import { useScenarios } from '@/hooks/useScenarios'
 import { useRole } from '@/hooks/useRole'
 import { useProfile } from '@/hooks/useProfile'
@@ -17,6 +22,9 @@ import { fetchMyTools } from '@/services/toolsService'
 import type { ResultSummary } from '@/services/resultsService'
 import type { Scenario } from '@id/types'
 import { BUSINESS_CASE_SUBCATEGORY_LABELS, TOOL_META, type ToolKey } from '@id/types'
+
+// The track the work simulations (#90) show in.
+const SIMULATIONS_TRACK = 'data-analytics'
 
 // Track order on the dashboard. Tracks not listed here fall to the end alphabetically.
 const TRACK_ORDER: string[] = [
@@ -115,9 +123,19 @@ export function DashboardPage() {
         /* non-critical */
       })
   }, [isSignedIn, getToken])
-  const groupedScenarios = useMemo(() => groupScenarios(scenarios), [scenarios])
+  // Work simulations (#90) are SQL chats, so they sit in the Data Analytics track, even before it has a scenario.
+  const sims = useWorkSimulations(getToken, isSignedIn === true)
+  const groupedScenarios = useMemo(() => {
+    const groups = groupScenarios(scenarios)
+    if (sims.length === 0 || groups.some((g) => g.track === SIMULATIONS_TRACK)) return groups
+    return [...groups, { track: SIMULATIONS_TRACK, scenarios: [] }].sort((a, b) =>
+      compareWithOrder(a.track, b.track, TRACK_ORDER)
+    )
+  }, [scenarios, sims.length])
   const refreshKey = (location.state as { refreshedAt?: number } | null)?.refreshedAt
   const { profile, isLoading: profileLoading } = useProfile(isSignedIn ? userId : null, refreshKey)
+  // Scenario competencies first, then the skills shown in work simulations
+  const competencies = [...(profile?.dimensionAverages ?? []), ...simulationCompetencies(sims)]
   const [immersiveSessions, setImmersiveSessions] = useState<ImmersiveSessionSummary[]>([])
 
   useEffect(() => {
@@ -239,6 +257,9 @@ export function DashboardPage() {
                       </div>
                     )
                   })}
+                  {track === SIMULATIONS_TRACK && (
+                    <WorkSimulationCards sims={sims} getToken={getToken} color={meta.color} />
+                  )}
                 </div>
               </section>
             )
@@ -277,7 +298,7 @@ export function DashboardPage() {
             </div>
           ) : profileLoading ? (
             <p className="text-[13px] text-slate-mid">Loading profile...</p>
-          ) : !profile || profile.dimensionAverages.length === 0 ? (
+          ) : competencies.length === 0 ? (
             <div className="flex items-center gap-3 text-slate-mid">
               <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[16px]">
                 📈
@@ -288,7 +309,7 @@ export function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {profile.dimensionAverages.map((dim) => {
+              {competencies.map((dim) => {
                 const color =
                   dim.averageScore >= 80
                     ? '#2d9e5f'

@@ -6,7 +6,8 @@ import { hiddenIds, ID_PATTERN, visibleIds, type PickWs } from './toolsLogic'
 export interface ToolDraft {
   toolId: string
   name: string
-  kind: 'interview' | 'assessment'
+  /** A checkpoint (GitHub issue #90) is seeded, not made here, but an existing one can be edited. */
+  kind: LearnTool['kind']
   connectionId: string
   retries: boolean
   labelable: boolean
@@ -23,7 +24,7 @@ export interface ToolBody {
   toolId: string
   connectionId: string
   name: string
-  kind: 'interview' | 'assessment'
+  kind: LearnTool['kind']
   retries: boolean
   labelable: boolean
   enabled: boolean

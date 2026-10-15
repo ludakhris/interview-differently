@@ -1,10 +1,10 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { HealthModule } from './health/health.module'
-import { ScenariosModule } from './scenarios/scenarios.module'
+import { ScenariosModule } from './simulator/scenarios/scenarios.module'
 import { PrismaModule } from './prisma/prisma.module'
-import { ResultsModule } from './results/results.module'
+import { ResultsModule } from './simulator/results/results.module'
 import { PlatformConfigModule } from './platform-config/platform-config.module'
-import { ImmersiveSessionsModule } from './immersive-sessions/immersive-sessions.module'
+import { ImmersiveSessionsModule } from './simulator/immersive-sessions/immersive-sessions.module'
 import { DidModule } from './did/did.module'
 import { ScenarioMediaModule } from './scenario-media/scenario-media.module'
 import { ScenarioRequestsModule } from './scenario-requests/scenario-requests.module'
@@ -13,11 +13,13 @@ import { AuthModule } from './auth/auth.module'
 import { InstitutionsModule } from './institutions/institutions.module'
 import { CohortsModule } from './cohorts/cohorts.module'
 import { MeModule } from './me/me.module'
-import { AnalyticsModule } from './analytics/analytics.module'
-import { DatasetsModule } from './datasets/datasets.module'
-import { ToolsModule } from './tools/tools.module'
-import { SimulatorFeedModule } from './simulator-feed/simulator-feed.module'
-import { AssessmentsModule } from './assessments/assessments.module'
+import { AnalyticsModule } from './simulator/analytics/analytics.module'
+import { DatasetsModule } from './simulator/datasets/datasets.module'
+import { ToolsModule } from './simulator/tools/tools.module'
+import { SimulatorFeedModule } from './simulator/simulator-feed/simulator-feed.module'
+import { CheckpointsModule } from './simulator/checkpoints/checkpoints.module'
+import { SparkModule } from './spark/spark.module'
+import { AssessmentsModule } from './simulator/assessments/assessments.module'
 import { UsageModule } from './usage/usage.module'
 import { LearnModule } from './learn/learn.module'
 import { LtiPlatformModule } from './lti/platform/lti-platform.module'
@@ -45,6 +47,8 @@ import { TenantMiddleware } from './core/tenant.middleware'
     ToolsModule,
     AssessmentsModule,
     SimulatorFeedModule,
+    CheckpointsModule,
+    SparkModule,
     UsageModule,
     LearnModule,
     LtiPlatformModule,

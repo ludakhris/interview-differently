@@ -20,7 +20,12 @@ import {
 } from '../lti/platform/lti-platform-config'
 import { toolView } from '../lti/platform/tool-config'
 import { PrismaService } from '../prisma/prisma.service'
-import { slugify, validateCourseFields, validateItemInput } from './course-config'
+import {
+  adaptiveCourseIds,
+  slugify,
+  validateCourseFields,
+  validateItemInput,
+} from './course-config'
 import { imageUrl, isImageKey } from './item-image'
 import { parseSkills } from './skills'
 import { AccessService } from './access/access.service'
@@ -173,6 +178,10 @@ export class CoursesService {
         modules: { select: { _count: { select: { items: true } } } },
       },
     })
+    const adaptive = await adaptiveCourseIds(
+      this.prisma,
+      rows.map((c) => c.id)
+    )
     return rows.map((c) => ({
       ...settings(c),
       id: c.id,
@@ -181,6 +190,7 @@ export class CoursesService {
       items: c.modules.reduce((n, m) => n + m._count.items, 0),
       cohorts: c._count.cohorts,
       updatedAt: c.updatedAt.toISOString(),
+      adaptive: adaptive.has(c.id),
     }))
   }
 
@@ -354,7 +364,9 @@ export class CoursesService {
     const canManage = role === SYSTEM_ADMIN
     return {
       tools: managedTools()
-        .filter((t) => t.enabled && toolAllowedFor(t, scope))
+        // A checkpoint is set up with its questions and skills, which the course editor cannot do yet (GitHub issue
+        // #90), so it is not offered in the picker.
+        .filter((t) => t.enabled && t.kind !== 'checkpoint' && toolAllowedFor(t, scope))
         .map((t) => toolView(t, canManage)),
       // Connection settings are for administrators; an author only picks a tool.
       connections: [],

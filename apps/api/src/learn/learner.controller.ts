@@ -121,7 +121,7 @@ export class LearnerController {
     @Req() req: LearnRequest & { headers: Record<string, string | string[] | undefined> },
     @Param('cohortId') cohortId: string,
     @Param('itemId') itemId: string,
-    @Body() body?: { mode?: unknown }
+    @Body() body?: { mode?: unknown; embed?: unknown }
   ) {
     // The host the learner launched from (a tenant host keeps its skin); the platform validates it.
     const header = (name: string): string | undefined => {
@@ -134,7 +134,9 @@ export class LearnerController {
       cohortId,
       itemId,
       origin,
-      body?.mode === 'review' ? 'review' : undefined
+      body?.mode === 'review' ? 'review' : undefined,
+      // An adaptive checkpoint runs in a frame on the course page (GitHub issue #90).
+      body?.embed === true ? { embed: true } : undefined
     )
   }
 }

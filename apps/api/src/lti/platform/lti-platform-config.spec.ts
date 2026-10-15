@@ -7,12 +7,22 @@ import {
 } from './lti-platform-config'
 
 describe('registered tools', () => {
-  it('registers an interview and an assessment on the same client, URLs and deployment', () => {
-    const [interview, assessment] = [toolById('id-interview')!, toolById('id-assessment')!]
-    expect(registeredTools().map((t) => t.toolId)).toEqual(['id-interview', 'id-assessment'])
+  it('registers an interview, an assessment and a checkpoint on the same client, URLs and deployment', () => {
+    const [interview, assessment, checkpoint] = [
+      toolById('id-interview')!,
+      toolById('id-assessment')!,
+      toolById('id-checkpoint')!,
+    ]
+    expect(registeredTools().map((t) => t.toolId)).toEqual([
+      'id-interview',
+      'id-assessment',
+      'id-checkpoint',
+    ])
     expect(assessment.name).toBe('Interview Differently assessment')
-    for (const k of ['clientId', 'deploymentId', 'loginUrl', 'launchUrl', 'jwksUrl'] as const)
+    for (const k of ['clientId', 'deploymentId', 'loginUrl', 'launchUrl', 'jwksUrl'] as const) {
       expect(assessment[k]).toBe(interview[k])
+      expect(checkpoint[k]).toBe(interview[k])
+    }
   })
 
   it('carries the LearnDifferently-side properties', () => {
@@ -25,6 +35,11 @@ describe('registered tools', () => {
       kind: 'assessment',
       retries: false,
       labelable: true,
+    })
+    expect(toolById('id-checkpoint')).toMatchObject({
+      kind: 'checkpoint',
+      retries: true,
+      labelable: false,
     })
   })
 

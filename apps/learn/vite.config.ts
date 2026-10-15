@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync } from 'node:fs'
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, renameSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -45,8 +45,27 @@ function publishReleaseNotes(): Plugin {
   }
 }
 
+// Spark's lesson player (apps/spark, its own Vite app) has no site of its own: its build is published at /spark/
+// here. @id/spark is a devDependency, so turbo builds it first (`^build`); apps/learn/vercel.json serves its pages.
+function publishSpark(): Plugin {
+  return {
+    name: 'publish-spark',
+    apply: 'build',
+    closeBundle() {
+      const from = resolve(__dirname, '../spark/dist')
+      const page = resolve(from, 'index.html')
+      if (!existsSync(page) || !readFileSync(page, 'utf8').includes('/spark/assets/'))
+        throw new Error(
+          'apps/spark/dist is missing or not built for /spark/. Run `npm run build -w @id/spark` first ' +
+            '(`turbo run build --filter=@id/learn` does it).'
+        )
+      cpSync(from, resolve(__dirname, 'dist/spark'), { recursive: true })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), renameHomeEntry(), publishReleaseNotes()],
+  plugins: [react(), renameHomeEntry(), publishReleaseNotes(), publishSpark()],
   server: {
     port: 5174,
     // SCORM packages load from this origin so they can find the player's API.

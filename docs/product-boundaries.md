@@ -10,13 +10,13 @@ the split before building. This applies to people and to agents.
 
 ## The five pieces, one verb each
 
-| #   | Product                                 | Verb        | The one job                                                                   | Lives today                                       |
-| --- | --------------------------------------- | ----------- | ----------------------------------------------------------------------------- | ------------------------------------------------- |
-| 01  | Learning Management (LMS)               | Structure   | Pathways, cohorts, progress, credentials, institutional reporting             | `apps/learn` (`/lms/*`), `apps/api/src/learn`     |
-| 02  | Micro Learning                          | Spark       | Short lessons that end in an exercise, plus integrations with outside content | not built                                         |
-| 03  | Skill Simulator (Interview Differently) | Practice    | Job simulations and exercises, AI co-work, scoring and coaching               | `apps/web` and the shared API; see section 03     |
-| 04  | Job Board Match                         | Opportunity | Roles from outside boards matched to proven skills; the gap; apply with proof | not built                                         |
-| 05  | Talent Match                            | Placement   | Employers search verified talent, profile sharing, hires                      | partly, inside the LMS (`/lms/talent`, see below) |
+| #   | Product                                 | Verb        | The one job                                                                   | Lives today                                          |
+| --- | --------------------------------------- | ----------- | ----------------------------------------------------------------------------- | ---------------------------------------------------- |
+| 01  | Learning Management (LMS)               | Structure   | Pathways, cohorts, progress, credentials, institutional reporting             | `apps/learn` (`/lms/*`), `apps/api/src/learn`        |
+| 02  | Micro Learning                          | Spark       | Short lessons that end in an exercise, plus integrations with outside content | `apps/spark` (lesson player), `apps/api/src/spark`   |
+| 03  | Skill Simulator (Interview Differently) | Practice    | Job simulations and exercises, AI co-work, scoring and coaching               | `apps/web`, `apps/api/src/simulator`; see section 03 |
+| 04  | Job Board Match                         | Opportunity | Roles from outside boards matched to proven skills; the gap; apply with proof | not built                                            |
+| 05  | Talent Match                            | Placement   | Employers search verified talent, profile sharing, hires                      | partly, inside the LMS (`/lms/talent`, see below)    |
 
 The test for any feature: **which verb does it serve, and who is the user?** A feature serves one verb.
 If it seems to serve two, it is two features, one per product, joined through the learner record.
@@ -42,7 +42,10 @@ product may fork its own copy:
   store and signing.** Each side of LTI keeps its own half: the LMS is the platform, the Simulator is
   the tool.
 
-Rule: a product may read anything in the record. Only the owning product writes its slice.
+Rule: a product may read anything in the record. Only the owning product writes its slice. One exception: in a
+featured demo institution, the demo autoplay on the LMS board makes scripted learners act without a person, through
+the Simulator's and Spark's ports (answers, help, practice, lesson views), and its reset erases what they did
+(`demoForget`). The owning product's code still does the writing; the LMS never touches their tables.
 
 Who writes the shared rows: institutions, cohorts and memberships are edited through the LMS admin
 screens, plus the one automatic membership write described under the Simulator (the system cohort).
@@ -87,6 +90,16 @@ pathway, so creators keep working in the tools they love and we do not duplicate
   nothing back, so an unverifiable lesson counts as **viewed**, never completed, unless the provider
   reports completion or the learner passes the exercise that follows. Name the mechanism (webhook,
   LTI, standard activity statements) before promising a signal.
+- **Lessons written for a gap (adaptive courses):** part of the small native format. Until connectors exist, Spark
+  writes a short narrated lesson aimed at one learner's gap (the owner accepted this as a small step toward a creator
+  tool, issue #90) and plays it in its own player (`apps/spark`), which the LMS embeds in the course with a signed link.
+  The LMS asks for the lesson through `core/spark-port.ts`. Spark's player reports when the lesson was played to the
+  end, so it counts as a provider that reports completion; the LMS completes the item on that. Written lessons are
+  library content kept apart from any learner, course or provider, with their model, prompt version and token counts,
+  and a person-approved lesson is reused before a new one is written. Spark curates the lesson library. Staff approve or send back a lesson from the LMS board: an approval applies to the
+  library, a send-back takes the lesson from that cohort's learners only (it is rejected in the library only when no other
+  cohort uses it). See
+  `docs/adaptive-integration.md`.
 - **If a connector breaks** or a provider removes content, the lesson shows as unavailable and the
   LMS item is not marked complete; Spark owns the notice to staff.
 - **Writes to the record:** lesson views and completion events (including those reported by an
@@ -123,9 +136,19 @@ and tracks it. New work follows the rules below now, even where old code does no
   rollups ("how is this provider doing") are LMS Outcomes. A standalone consumer experience may keep
   its own front door, but the data behind it is still the shared learner record, and cohorts,
   institutions and rosters still come from the LMS.
+- **Checkpoints in a course (adaptive courses):** the Simulator runs the checkpoint in its own page (a chat of requests
+  from colleagues, answered in a SQL editor), launched by LTI into a frame on the LMS course page. Each side keeps its
+  half of the embedded launch: the LMS page holds the tool's login state (LTI platform storage), the Simulator checks
+  it. The Simulator grades, coaches, writes practice for a gap and reports the score by LTI; the LMS reads each answer
+  through the simulator feed to judge skills and change the plan. Generated practice is an exercise, so it stays with
+  the Simulator as library content of its own (curated like Spark's lessons). The LMS reaches the rest (the question
+  bank's prompts for staff screens, practice to review) through `core/practice-port.ts`. The same chat is offered
+  standalone (`/simulations/:id` from the ID dashboard), recorded in the system cohort below. See
+  `docs/adaptive-integration.md`.
 - **Every attempt belongs to a cohort.** A person with no program belongs to the system cohort
-  "Interview Differently Standalone" (under the institution "Interview Differently"), created by the
-  seed in every environment and excluded from institution and funder rollups. Joining that cohort
+  "Interview Differently Standalone" (under the institution "Interview Differently"), created by a
+  migration in every environment (`20261018110000_standalone_cohort`, issue #90). It must be left out of institution
+  and funder rollups; today nothing reports on it, so check that when a rollup starts to. Joining that cohort
   automatically on standalone sign-up or launch is the one membership write the Simulator may make,
   done through the shared membership service, never by editing cohort rows directly. An LTI launch
   must name a real cohort or be rejected.
@@ -191,24 +214,32 @@ required evidence is stricter than a learner's word.
 ## Where code lives (target, not current)
 
 The "Lives today" column above is accurate now. This is the layout the code is moving to, tracked
-in issue #81:
+in issue #81. Parts of it exist already: `apps/spark` (Spark's player; Spark is mostly API for now) and
+`apps/api/src/simulator`, which holds the Simulator folders the boundary test lists (moved in issue #90). The LTI tool
+(`lti/tool`), `scenario-media`, `scenario-requests` and `transcription` are still at the top level.
 
 ```
 apps/
   api/         one shared API
   learn/       Learn Differently: homepage, product pages, the LMS at /lms/*
   simulator/   Skill Simulator, its own domain (renamed from apps/web)
-  (later)      spark/, opportunity/, talent/ : each its own app when built
+  spark/       Micro Learning: the lesson player now (published inside the Learn site at /spark/, not a site of its
+               own), the content library later
+  (later)      opportunity/, talent/ : each its own app when built
 packages/      types (per product), skills (shared vocabulary)
 apps/api/src/
   core/        auth, prisma, storage, config, shared LTI store, institutions, cohorts, memberships
   lms/         courses, progress, attendance, outcomes, record, LTI platform
-  simulator/   scenarios, scoring, assessments, tools, datasets, sql-runner, LTI tool, ...
+  simulator/   scenarios, scoring, assessments, tools, datasets, sql-runner, checkpoints, LTI tool, ...
+  spark/       lessons, narration, lesson events
   talent/      talent profile, search, sharing
 ```
 
-Import rule, enforced by tests: `simulator/` may not import `lms/` or `talent/`, `lms/` may not
-import `simulator/`, `talent/` may not import `lms/`, and all of them may import `core/`. Until the
+Import rule: `simulator/` may not import `lms/` or `talent/`, `lms/` may not import `simulator/` or `spark/`, `spark/`
+may not import `lms/` or `simulator/`, `talent/` may not import `lms/`, and all of them may import `core/`. Today the
+test (`apps/api/src/core/boundary.spec.ts`) enforces only that `learn/` imports neither `spark/` nor the folders
+already under `simulator/`, and the core rules; the rest (including code still at the top level) are followed by
+review. Until the
 folders exist, new backend code is written as if they did: name it for its product and import
 nothing across products.
 

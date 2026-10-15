@@ -5,9 +5,9 @@ import type { AddressInfo } from 'node:net'
 import { AdminGuard } from '../auth/admin.guard'
 import { ClerkService } from '../auth/clerk.service'
 import { LearnGuard } from '../auth/learn.guard'
-import { InterviewEngineService } from '../interview-engine/interview-engine.service'
+import { InterviewEngineService } from '../simulator/interview-engine/interview-engine.service'
 import { PrismaService } from '../prisma/prisma.service'
-import { SqlRunnerService } from '../sql-runner/sql-runner.service'
+import { SqlRunnerService } from '../simulator/sql-runner/sql-runner.service'
 import { LTI_STORE, MemoryLtiStore } from './lti-store'
 import { limitRegistrationBody } from './registration-limit'
 import { RegistrationController } from './platform/registration.controller'
@@ -17,6 +17,9 @@ import { ToolRegistryController } from './platform/tool-registry.controller'
 import { ToolRegistryService } from './platform/tool-registry.service'
 import { resetToDefaults } from './platform/tool-test-helpers'
 import { LtiPlayService } from './tool/lti-play.service'
+import { LtiCheckpointService } from './tool/lti-checkpoint.service'
+import { CheckpointChatService } from '../simulator/checkpoints/checkpoint-chat.service'
+import { CheckpointsService } from '../simulator/checkpoints/checkpoints.service'
 import { LtiToolController } from './tool/lti-tool.controller'
 import { LtiToolService } from './tool/lti-tool.service'
 import { PlatformRegistryService } from './tool/platform-registry.service'
@@ -111,6 +114,9 @@ describe('Interview Differently registers itself with a platform (end to end)', 
         PlatformRegistryService,
         LtiToolService,
         LtiPlayService,
+        LtiCheckpointService,
+        CheckpointChatService,
+        CheckpointsService,
         { provide: SqlRunnerService, useValue: {} },
         LearnGuard,
         AdminGuard,

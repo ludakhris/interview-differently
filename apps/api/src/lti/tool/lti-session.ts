@@ -41,6 +41,12 @@ export interface LtiSession {
    * whose attempt this session may read. `sub` stays the staff member, who owns no attempt.
    */
   reviewUser?: string
+  /**
+   * Set for a course checkpoint launch (GitHub issue #90; `ref` is then the question bank's slug): the delivery the
+   * checkpoint is recorded on, the cohort (the LTI context) and the LMS item (the resource link). A checkpoint session
+   * reaches only the checkpoint routes; it never has `deliveryId`, so it cannot start an assessment attempt.
+   */
+  checkpoint?: { deliveryId: string; cohortId: string; itemId: string }
   jti: string
   /** Issued-at, epoch seconds: a result must be completed after the session began. */
   iat: number
@@ -101,6 +107,20 @@ export function verifySession(
     (typeof claims.reviewUser !== 'string' || !claims.reviewUser || claims.review !== true)
   )
     throw invalid()
+  if (claims.checkpoint !== undefined) {
+    const c = claims.checkpoint as Record<string, unknown> | null
+    const ok = (v: unknown) => typeof v === 'string' && v.length > 0
+    if (
+      !c ||
+      typeof c !== 'object' ||
+      !ok(c.deliveryId) ||
+      !ok(c.cohortId) ||
+      !ok(c.itemId) ||
+      claims.deliveryId !== undefined ||
+      claims.review !== undefined
+    )
+      throw invalid()
+  }
   if (claims.brand !== undefined) {
     // validated again, and the stored form must already be the sanitized form
     const clean = sanitizeBrand(claims.brand)
