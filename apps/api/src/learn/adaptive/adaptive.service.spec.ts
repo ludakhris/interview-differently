@@ -181,9 +181,15 @@ describe('AdaptiveService: AI content on the board', () => {
       lessonsInCohort: jest.fn(async () => [view({ id: 'l-shown' })]),
       reviewLesson: jest.fn(async () => ({})),
       previewLink: jest.fn(async () => 'https://spark.example.test/lesson#token=t'),
+      lessonHistory: jest.fn(async () => [{ lessonId: 'l-given' }]),
     }
     const access = { authorize: jest.fn(async () => undefined) }
     const prisma = {
+      enrollment: {
+        findUnique: jest.fn(async ({ where }: { where: { id: string } }) =>
+          where.id === 'e' ? { id: 'e', cohortId: 'c', userId: 'theo' } : null
+        ),
+      },
       cohort: {
         findUnique: jest.fn(async () => ({
           id: 'c',
@@ -261,6 +267,29 @@ describe('AdaptiveService: AI content on the board', () => {
     access.authorize.mockRejectedValueOnce(new Error('Insufficient role'))
     await expect(service.previewLesson({ userId: 'x' } as never, 'c', 'l-shown')).rejects.toThrow(
       'Insufficient role'
+    )
+    expect(spark.previewLink).not.toHaveBeenCalled()
+  })
+
+  it('links anyone who may see what a learner saw to play a video given to that learner', async () => {
+    const { service, spark, access } = board()
+    const actor = { userId: 'staff-1' } as never
+    await expect(service.watchSeenLesson(actor, 'c', 'e', 'l-given')).resolves.toEqual({
+      url: 'https://spark.example.test/lesson#token=t',
+    })
+    expect(access.authorize).toHaveBeenCalledWith(actor, 'cohort.read', { cohortId: 'c' })
+    expect(spark.lessonHistory).toHaveBeenCalledWith('c', 'theo')
+    expect(spark.previewLink).toHaveBeenCalledWith('l-given', 'staff-1')
+  })
+
+  it('refuses to play a video the learner was not given, or for a learner not in the cohort', async () => {
+    const { service, spark } = board()
+    const actor = { userId: 'staff-1' } as never
+    await expect(service.watchSeenLesson(actor, 'c', 'e', 'l-shown')).rejects.toThrow(
+      'Lesson not found'
+    )
+    await expect(service.watchSeenLesson(actor, 'c', 'other', 'l-given')).rejects.toThrow(
+      'Learner not found'
     )
     expect(spark.previewLink).not.toHaveBeenCalled()
   })

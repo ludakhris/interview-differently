@@ -179,6 +179,7 @@ export class SparkService implements SparkPort {
       return {
         at: u.createdAt.toISOString(),
         itemId: u.itemId,
+        lessonId: u.lessonId,
         title: u.lesson.title,
         scenes,
         watched: watchedSummary(u.events, scenes.length),

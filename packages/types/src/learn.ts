@@ -919,6 +919,8 @@ export type SeenEntry =
       kind: 'video'
       at: string
       item: string
+      /** Plays in Spark's player through the seen view's watch link (it records nothing). */
+      lessonId: string
       title: string
       scenes: { heading: string; narration: string; visual: LessonVisual }[]
       /** How far they watched, for example "all 6 scenes · Mac voice"; null when not opened. */

@@ -89,6 +89,18 @@ export class AdaptiveStaffController {
     return this.adaptive.seen(this.actor(req), id, e)
   }
 
+  /** A link to play, in Spark's player, a lesson the learner was given; it records nothing. */
+  @Access('cohort.read')
+  @Get('learners/:enrollmentId/seen/lessons/:lessonId/watch')
+  watchSeen(
+    @Req() req: LearnRequest,
+    @Param('id') id: string,
+    @Param('enrollmentId') e: string,
+    @Param('lessonId') l: string
+  ) {
+    return this.adaptive.watchSeenLesson(this.actor(req), id, e, l)
+  }
+
   @Access('cohort.staff')
   @Post('content/:contentId/review')
   review(

@@ -1,8 +1,12 @@
 import type { LearnerSeen, SeenEntry } from '@id/types'
-import { Fragment, useEffect, useLayoutEffect, useRef } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLoad } from '../api'
 
 const POLL_MS = 2500
+const MIN_HEIGHT = 420
+const MAX_HEIGHT = 1600
+// Spark's preview links last an hour (PREVIEW_TTL_S in the API); warn a minute early, since the link was signed first.
+export const LINK_EXPIRES_MS = 59 * 60 * 1000
 
 const HELP_NAME = { hint: 'Hint', explain: 'Another explanation', example: 'Worked example' }
 
@@ -28,9 +32,8 @@ export function SeenModal({
   enrollmentId: string
   onClose: () => void
 }) {
-  const { data, error, reload } = useLoad<LearnerSeen>(
-    `/learn/cohorts/${encodeURIComponent(cohortId)}/adaptive/learners/${encodeURIComponent(enrollmentId)}/seen`
-  )
+  const seenPath = `/learn/cohorts/${encodeURIComponent(cohortId)}/adaptive/learners/${encodeURIComponent(enrollmentId)}/seen`
+  const { data, error, reload } = useLoad<LearnerSeen>(seenPath)
   const close = useRef<HTMLButtonElement>(null)
   const card = useRef<HTMLDivElement>(null)
   const reloadRef = useRef(reload)
@@ -98,7 +101,7 @@ export function SeenModal({
                   <li className="ad-seen-item">{e.item}</li>
                 )}
                 <li className={i >= fresh ? 'ad-seen-new' : undefined}>
-                  <Entry entry={e} first={first} />
+                  <Entry entry={e} first={first} seenPath={seenPath} />
                 </li>
               </Fragment>
             ))}
@@ -109,7 +112,15 @@ export function SeenModal({
   )
 }
 
-function Entry({ entry: e, first }: { entry: SeenEntry; first: string }) {
+function Entry({
+  entry: e,
+  first,
+  seenPath,
+}: {
+  entry: SeenEntry
+  first: string
+  seenPath: string
+}) {
   switch (e.kind) {
     case 'request':
       return (
@@ -166,16 +177,81 @@ function Entry({ entry: e, first }: { entry: SeenEntry; first: string }) {
           <span className="ad-chip ad-chip-ai">
             Video made for {first} · {e.watched ? `watched ${e.watched}` : 'not opened yet'}
           </span>
-          {/* The lesson as a storyboard: Spark's player lives in Spark; staff read what was said and shown. */}
           <h4 className="ad-seen-video-title">{e.title}</h4>
-          <ol className="ad-seen-scenes">
-            {e.scenes.map((sc, i) => (
-              <li key={i}>
-                <strong>{sc.heading}</strong> {sc.narration}
-              </li>
-            ))}
-          </ol>
+          <SeenVideo
+            path={`${seenPath}/lessons/${encodeURIComponent(e.lessonId)}/watch`}
+            entry={e}
+          />
         </div>
       )
   }
+}
+
+/**
+ * The video itself, in Spark's player with a link that records nothing (Spark's player lives in Spark, so it is framed
+ * here, not imported). Asked for once per entry, so the live refresh does not restart it. If the link cannot be had,
+ * staff read the storyboard instead.
+ */
+function SeenVideo({
+  path,
+  entry: e,
+}: {
+  path: string
+  entry: Extract<SeenEntry, { kind: 'video' }>
+}) {
+  const { data, error } = useLoad<{ url: string }>(path)
+  const [height, setHeight] = useState(MIN_HEIGHT)
+  const [expired, setExpired] = useState(false)
+  const frame = useRef<HTMLIFrameElement>(null)
+  const url = data?.url
+  useEffect(() => {
+    if (!url) return
+    const t = window.setTimeout(() => setExpired(true), LINK_EXPIRES_MS)
+    return () => window.clearTimeout(t)
+  }, [url])
+  const playerOrigin = data?.url ? new URL(data.url).origin : null
+  useEffect(() => {
+    if (!playerOrigin) return
+    const onMessage = (m: MessageEvent) => {
+      if (m.origin !== playerOrigin || m.source !== frame.current?.contentWindow) return
+      const msg = m.data as { subject?: unknown; height?: unknown } | null
+      if (msg?.subject === 'spark.lesson.resize' && typeof msg.height === 'number')
+        setHeight(Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.ceil(msg.height) + 8)))
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [playerOrigin])
+
+  if (data)
+    return (
+      <>
+        {expired && (
+          <p className="dash-error" role="status">
+            This video’s link has expired after an hour open. Close and reopen this view to play it
+            again.
+          </p>
+        )}
+        <iframe
+          ref={frame}
+          src={data.url}
+          title={e.title}
+          className="ad-embed-frame"
+          style={{ height }}
+          allow="autoplay"
+        />
+      </>
+    )
+  if (!error) return <p className="dash-loading">Loading the video…</p>
+  return (
+    <>
+      <p className="dash-muted">The video could not be loaded here; this is what it says.</p>
+      <ol className="ad-seen-scenes">
+        {e.scenes.map((sc, i) => (
+          <li key={i}>
+            <strong>{sc.heading}</strong> {sc.narration}
+          </li>
+        ))}
+      </ol>
+    </>
+  )
 }

@@ -60,6 +60,7 @@ export interface LessonContentView {
 export interface LessonHistoryEntry {
   at: string
   itemId: string
+  lessonId: string
   title: string
   scenes: LessonScene[]
   /** For example "all 6 scenes · Mac voice"; null when never opened. */
