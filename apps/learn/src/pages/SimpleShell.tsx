@@ -1,8 +1,8 @@
 import { type ReactNode } from 'react'
 import { SiteAccountMenu } from '../components/SiteAccountMenu'
 import { ProductsMenu } from '../components/ProductsMenu'
+import { SiteFooter } from '../components/SiteFooter'
 import { productPagePath } from '../products'
-import { CONTACT_EMAIL } from '../contact'
 import './home.css'
 
 /** Header and footer for the homepage's secondary pages (sign-in, privacy). */
@@ -26,11 +26,7 @@ export function SimpleShell({ children }: { children: ReactNode }) {
         <SiteAccountMenu signedOut={null} />
       </header>
       <main className="ld-wrap ld-simple-main">{children}</main>
-      <footer className="ld-wrap ld-simple-footer">
-        <a href="/">Home</a>
-        <a href="/privacy">Privacy</a>
-        <a href={`mailto:${CONTACT_EMAIL}`}>Contact</a>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

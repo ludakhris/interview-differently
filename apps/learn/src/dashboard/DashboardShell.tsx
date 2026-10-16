@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { AccountMenu, authConfigured, type MenuGroup, type MenuLink } from '../auth'
 import { NavDropdown } from '../components/NavDropdown'
 import { ProductsMenu } from '../components/ProductsMenu'
+import { SiteFooter } from '../components/SiteFooter'
 import { appProductPath } from '../products'
 import { withBrand } from '../brand'
 import '../pages/delaware.css'
@@ -264,6 +265,7 @@ function LearnFrame({ children }: { children: ReactNode }) {
         <HeaderAccount />
       </header>
       <Body wrap="ld-wrap">{children}</Body>
+      <SiteFooter />
     </div>
   )
 }

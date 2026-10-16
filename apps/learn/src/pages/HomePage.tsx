@@ -2,6 +2,7 @@ import type { FormEvent } from 'react'
 import { CONTACT_EMAIL } from '../contact'
 import { SiteAccountMenu } from '../components/SiteAccountMenu'
 import { ProductsMenu } from '../components/ProductsMenu'
+import { SiteFooter } from '../components/SiteFooter'
 import { productPagePath, PRODUCTS } from '../products'
 import { PATHWAYS } from './homeContent'
 import { PaceTracks } from './home/PaceTracks'
@@ -530,19 +531,7 @@ export function HomePage() {
                 <button type="submit">Book a walkthrough</button>
               </form>
             </div>
-            <footer className="ld-footer">
-              <div className="ld-footer-brand">
-                <span className="ld-footer-name">learn/differently</span>
-                <span>Training that adapts. Admin work, automated.</span>
-                <span className="ld-mono">learndifferently.tech</span>
-              </div>
-              <nav aria-label="Footer" className="ld-footer-links">
-                <a href="#team">Products</a>
-                <a href="/release-notes/">Release notes</a>
-                <a href="/privacy">Privacy</a>
-                <a href={`mailto:${CONTACT_EMAIL}`}>Contact</a>
-              </nav>
-            </footer>
+            <SiteFooter bare productsHref="#team" />
           </div>
         </section>
       </main>

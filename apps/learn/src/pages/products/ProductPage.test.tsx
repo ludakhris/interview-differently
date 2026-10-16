@@ -395,6 +395,13 @@ describe('ProductPage', () => {
     }
   })
 
+  it('ends with the site footer and its status badge', () => {
+    render(<ProductPage id="lms" />)
+    const links = within(screen.getByRole('navigation', { name: 'Footer' }))
+    expect(links.getByRole('link', { name: 'Products' }).getAttribute('href')).toBe('/#team')
+    expect(screen.getByTitle('Learn Differently system status')).toBeTruthy()
+  })
+
   it('ships every screenshot it links', () => {
     for (const shot of PRODUCTS.flatMap((p) => p.shots ?? []))
       expect(existsSync(resolve(__dirname, '../../../public', shot.src.slice(1)))).toBe(true)

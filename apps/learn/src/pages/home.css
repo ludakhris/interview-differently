@@ -1470,37 +1470,6 @@
   color: var(--white);
   cursor: pointer;
 }
-.ld-footer {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 12px 40px;
-  padding-top: 24px;
-  border-top: 1.5px solid rgba(255, 255, 255, 0.25);
-  font-size: 14px;
-}
-.ld-footer-brand,
-.ld-footer-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 24px;
-  align-items: center;
-  color: var(--white);
-}
-.ld-footer-name {
-  font-weight: 800;
-  color: var(--white);
-}
-.ld-footer-links a {
-  text-decoration: none;
-  font-weight: 600;
-  color: var(--white);
-}
-.ld .ld-footer-links a:hover {
-  color: var(--white);
-  text-decoration: underline;
-}
-
 /* Tablet */
 @media (max-width: 960px) {
   .ld-hero,
@@ -1685,8 +1654,7 @@
   display: flex;
   flex-direction: column;
 }
-.ld-simple .ld-header,
-.ld-simple-footer {
+.ld-simple .ld-header {
   width: 100%;
 }
 .ld-simple-main {
@@ -1705,20 +1673,6 @@
   display: flex;
   justify-content: center;
 }
-.ld-simple-footer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 24px;
-  padding-top: 24px;
-  padding-bottom: 32px;
-  border-top: 1px solid var(--line);
-  font-size: 14px;
-  font-weight: 600;
-}
-.ld-simple-footer a {
-  text-decoration: none;
-}
-
 /* Account menu (signed in) */
 .ld-account {
   position: relative;
