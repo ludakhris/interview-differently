@@ -23,13 +23,13 @@ export const failuresWord = (x: number) => `${n(x)} ${x === 1 ? 'failure' : 'fai
 const lastHour = (f: Failures) => f.perHour.at(-1) ?? 0
 const fine = (word = 'Working'): RowState => ({ tone: 'ok', word, title: null, detail: null })
 
-/** "Grading can run": the self-test. */
+/** "Simulation scoring": the self-test. */
 export function gradingRunState(t: Grading['selfTest']): RowState {
   if (t.status === 'failing')
     return {
       tone: 'bad',
       word: 'Failing',
-      title: 'Grading is failing',
+      title: 'Simulation scoring is failing',
       detail: t.reason ?? 'Learners’ SQL answers may not be graded.',
     }
   if (t.status === 'busy')
@@ -56,44 +56,44 @@ function learnersState(f: Failures, title: string, what: string): RowState {
   return fine()
 }
 
-/** "Grading for learners". */
+/** "Simulation scoring failures". */
 export const gradingLearnersState = (g: Grading) =>
-  learnersState(g.failures, 'Learners hit grading failures in the last hour', 'Grading')
+  learnersState(g.failures, 'Learners hit simulation scoring failures in the last hour', 'Grading')
 
-/** "Videos are set up". */
+/** "Video lessons". */
 export function videoSetupState(s: Spark['setup']): RowState {
   if (s.status === 'ok') return fine()
   return {
     tone: 'bad',
     word: 'Not set up',
-    title: 'Videos are not set up',
+    title: 'Video lessons are not set up',
     detail: s.problems.join(' ') || 'Lessons made for learners cannot be written or linked.',
   }
 }
 
-/** "Video player". */
+/** "Video lesson player". */
 export function playerState(p: Spark['player']): RowState {
   if (p.status === 'ok') return fine()
   if (p.status === 'not-set-up')
     return {
       tone: 'warn',
       word: 'Not set up',
-      title: 'The video player is not set up',
+      title: 'The video lesson player is not set up',
       detail: 'There is no player address (SPARK_WEB_URL) to check.',
     }
   return {
     tone: 'bad',
     word: 'Failing',
-    title: 'The video player is not answering',
+    title: 'The video lesson player is not answering',
     detail: p.reason ?? 'Learners may not be able to watch their videos.',
   }
 }
 
-/** "Videos for learners". */
+/** "Video lesson failures". */
 export const videoLearnersState = (s: Spark) =>
   learnersState(
     s.lessons.failures,
-    'Learners could not get videos in the last hour',
+    'Learners could not get video lessons in the last hour',
     'Making a video'
   )
 
@@ -123,9 +123,9 @@ export function overall(s: SystemStatus): { tone: Tone; title: string; detail: s
   const hours = g.failures.windowHours
   const earlier = [
     g.failures.count > 0 &&
-      `${n(g.failures.count)} grading ${g.failures.count === 1 ? 'failure' : 'failures'}`,
+      `${n(g.failures.count)} simulation scoring ${g.failures.count === 1 ? 'failure' : 'failures'}`,
     s.spark.lessons.failures.count > 0 &&
-      `${n(s.spark.lessons.failures.count)} video ${s.spark.lessons.failures.count === 1 ? 'failure' : 'failures'}`,
+      `${n(s.spark.lessons.failures.count)} video lesson ${s.spark.lessons.failures.count === 1 ? 'failure' : 'failures'}`,
   ].filter((x): x is string => !!x)
   return {
     tone: 'ok',

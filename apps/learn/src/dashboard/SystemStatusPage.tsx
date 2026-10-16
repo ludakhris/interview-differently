@@ -98,7 +98,7 @@ function SimulatorSection({ grading }: { grading: SystemStatus['simulator']['gra
         Skill Simulator
       </h2>
       <ul className="ss-list" aria-label="Skill Simulator">
-        <Row name="Grading can run" state={run}>
+        <Row name="Simulation scoring" state={run}>
           {selfTest.status === 'failing' && selfTest.reason && (
             <p className="ss-sub ss-reason">{selfTest.reason}</p>
           )}
@@ -107,8 +107,8 @@ function SimulatorSection({ grading }: { grading: SystemStatus['simulator']['gra
           </p>
           {pct !== null && <Meter pct={pct} tone={run.tone} />}
         </Row>
-        <Row name="Grading for learners" state={gradingLearnersState(grading)}>
-          <HourBlocks failures={failures} what="Grading" />
+        <Row name="Simulation scoring failures" state={gradingLearnersState(grading)}>
+          <HourBlocks failures={failures} what="Simulation scoring" />
         </Row>
       </ul>
       <dl className="ss-facts">
@@ -127,7 +127,7 @@ function SimulatorSection({ grading }: { grading: SystemStatus['simulator']['gra
           </dd>
         </div>
       </dl>
-      <RecentFailures history={grading} what="grading" />
+      <RecentFailures history={grading} what="simulation scoring" />
     </section>
   )
 }
@@ -143,7 +143,7 @@ function SparkSection({ spark }: { spark: SystemStatus['spark'] }) {
         Micro Learning (Spark)
       </h2>
       <ul className="ss-list" aria-label="Micro Learning (Spark)">
-        <Row name="Videos are set up" state={videoSetupState(setup)}>
+        <Row name="Video lessons" state={videoSetupState(setup)}>
           {setup.status === 'ok' ? (
             <p className="ss-sub">Videos made for learners can be written and linked.</p>
           ) : (
@@ -154,7 +154,7 @@ function SparkSection({ spark }: { spark: SystemStatus['spark'] }) {
             ))
           )}
         </Row>
-        <Row name="Video player" state={playerState(player)}>
+        <Row name="Video lesson player" state={playerState(player)}>
           {player.status === 'not-set-up' ? (
             <p className="ss-sub">There is no player address (SPARK_WEB_URL) to check.</p>
           ) : (
@@ -167,8 +167,8 @@ function SparkSection({ spark }: { spark: SystemStatus['spark'] }) {
             </>
           )}
         </Row>
-        <Row name="Videos for learners" state={videoLearnersState(spark)}>
-          <HourBlocks failures={lessons.failures} what="Video" />
+        <Row name="Video lesson failures" state={videoLearnersState(spark)}>
+          <HourBlocks failures={lessons.failures} what="Video lesson" />
         </Row>
       </ul>
       <dl className="ss-facts">
@@ -183,7 +183,7 @@ function SparkSection({ spark }: { spark: SystemStatus['spark'] }) {
           </dd>
         </div>
       </dl>
-      <RecentFailures history={lessons} what="video" />
+      <RecentFailures history={lessons} what="video lesson" />
     </section>
   )
 }

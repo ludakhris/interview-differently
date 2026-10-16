@@ -122,32 +122,47 @@ describe('SystemStatusPage', () => {
       within(sim)
         .getAllByRole('heading', { level: 3 })
         .map((h) => h.textContent)
-    ).toEqual(['Grading can run', 'Grading for learners', 'Recent grading failures'])
+    ).toEqual([
+      'Simulation scoring',
+      'Simulation scoring failures',
+      'Recent simulation scoring failures',
+    ])
     const spark = section('Micro Learning (Spark)')
     expect(
       within(spark)
         .getAllByRole('heading', { level: 3 })
         .map((h) => h.textContent)
-    ).toEqual(['Videos are set up', 'Video player', 'Videos for learners', 'Recent video failures'])
+    ).toEqual([
+      'Video lessons',
+      'Video lesson player',
+      'Video lesson failures',
+      'Recent video lesson failures',
+    ])
     for (const name of [
-      'Grading can run',
-      'Grading for learners',
-      'Videos are set up',
-      'Video player',
-      'Videos for learners',
+      'Simulation scoring',
+      'Simulation scoring failures',
+      'Video lessons',
+      'Video lesson player',
+      'Video lesson failures',
     ])
       expect(within(row(name)).getByText('Working')).toBeTruthy()
     // no API row: it could only ever be green
     expect(screen.queryByRole('heading', { name: 'API' })).toBeNull()
-    expect(within(row('Grading can run')).getByText(/1,024 MB of its 2,048 MB limit/)).toBeTruthy()
-    expect(within(row('Grading can run')).getByRole('meter').getAttribute('aria-valuenow')).toBe(
+    expect(
+      within(row('Simulation scoring')).getByText(/1,024 MB of its 2,048 MB limit/)
+    ).toBeTruthy()
+    expect(within(row('Simulation scoring')).getByRole('meter').getAttribute('aria-valuenow')).toBe(
       '50'
     )
     expect(
-      within(sim).getByRole('img', { name: 'Grading failures per hour, last 24 hours: none.' })
+      within(sim).getByRole('img', {
+        name: 'Simulation scoring failures per hour, last 24 hours: none.',
+      })
     ).toBeTruthy()
     expect(
-      within(spark).getByRole('img', { name: 'Video failures per hour, last 24 hours: none.' })
+      within(spark).getByRole('img', {
+        name: 'Video lesson failures per hour, last 24 hours: none.',
+      })
     ).toBeTruthy()
     expect(screen.queryByRole('table')).toBeNull()
     expect(screen.getAllByText('None in 30 days')).toHaveLength(2)
@@ -165,31 +180,37 @@ describe('SystemStatusPage', () => {
           },
         })
       )
-      expect(banner().textContent).toContain('Grading is failing')
-      expect(within(row('Grading can run')).getByText('Failing')).toBeTruthy()
+      expect(banner().textContent).toContain('Simulation scoring is failing')
+      expect(within(row('Simulation scoring')).getByText('Failing')).toBeTruthy()
       expect(screen.getAllByText('Grading memory is low').length).toBe(2)
-      expect(within(row('Grading can run')).getByText(/Not measured on this server/)).toBeTruthy()
-      expect(within(row('Grading can run')).queryByRole('meter')).toBeNull()
+      expect(
+        within(row('Simulation scoring')).getByText(/Not measured on this server/)
+      ).toBeTruthy()
+      expect(within(row('Simulation scoring')).queryByRole('meter')).toBeNull()
     })
 
     it('says grading is busy when the self-test could not run', () => {
       show(status({ selfTest: { ...selfTest, status: 'busy' } }))
       expect(banner().textContent).toContain('Grading is busy')
-      expect(within(row('Grading can run')).getByText('Busy, not checked')).toBeTruthy()
+      expect(within(row('Simulation scoring')).getByText('Busy, not checked')).toBeTruthy()
     })
 
     it('lists earlier failures and blocks out the hours, while the banner stays green', () => {
       show(status(gradingFailures(0)))
       expect(banner().textContent).toContain('All systems working')
       expect(banner().textContent).toContain(
-        '3 grading failures in the last 24 hours, none in the last hour.'
+        '3 simulation scoring failures in the last 24 hours, none in the last hour.'
       )
-      expect(within(row('Grading for learners')).getByText('Failed earlier today')).toBeTruthy()
-      const blocks = within(row('Grading for learners')).getByRole('img', { name: /3 in all/ })
+      expect(
+        within(row('Simulation scoring failures')).getByText('Failed earlier today')
+      ).toBeTruthy()
+      const blocks = within(row('Simulation scoring failures')).getByRole('img', {
+        name: /3 in all/,
+      })
       expect(blocks.children).toHaveLength(24)
       expect(blocks.querySelectorAll('.ss-seg-bad')).toHaveLength(1)
       const rows = within(
-        screen.getByRole('table', { name: 'Latest grading failures' })
+        screen.getByRole('table', { name: 'Latest simulation scoring failures' })
       ).getAllByRole('row')
       expect(rows).toHaveLength(3)
       expect(rows[1].textContent).toContain('Grading would not run')
@@ -198,8 +219,12 @@ describe('SystemStatusPage', () => {
 
     it('flags failures in the last hour even while the self-test works', () => {
       show(status(gradingFailures(2)))
-      expect(banner().textContent).toContain('Learners hit grading failures in the last hour')
-      expect(within(row('Grading for learners')).getByText('Failed in the last hour')).toBeTruthy()
+      expect(banner().textContent).toContain(
+        'Learners hit simulation scoring failures in the last hour'
+      )
+      expect(
+        within(row('Simulation scoring failures')).getByText('Failed in the last hour')
+      ).toBeTruthy()
     })
 
     it('says when the list is cut', () => {
@@ -222,10 +247,10 @@ describe('SystemStatusPage', () => {
           }
         )
       )
-      expect(banner().textContent).toContain('Videos are not set up')
-      expect(within(row('Videos are set up')).getByText('Not set up')).toBeTruthy()
+      expect(banner().textContent).toContain('Video lessons are not set up')
+      expect(within(row('Video lessons')).getByText('Not set up')).toBeTruthy()
       expect(
-        within(row('Videos are set up')).getByText(
+        within(row('Video lessons')).getByText(
           'The video player’s web address (SPARK_WEB_URL) is not set.'
         )
       ).toBeTruthy()
@@ -238,30 +263,34 @@ describe('SystemStatusPage', () => {
           {
             player: {
               status: 'failing',
-              reason: 'The video player answered 502.',
+              reason: 'The video lesson player answered 502.',
               checkedAt: iso(60_000),
             },
           }
         )
       )
-      expect(banner().textContent).toContain('The video player is not answering')
-      expect(within(row('Video player')).getByText('Failing')).toBeTruthy()
-      expect(within(row('Video player')).getByText('The video player answered 502.')).toBeTruthy()
+      expect(banner().textContent).toContain('The video lesson player is not answering')
+      expect(within(row('Video lesson player')).getByText('Failing')).toBeTruthy()
+      expect(
+        within(row('Video lesson player')).getByText('The video lesson player answered 502.')
+      ).toBeTruthy()
     })
 
     it('warns when there is no player address to check', () => {
       show(status({}, { player: { status: 'not-set-up', reason: null, checkedAt: iso(0) } }))
-      expect(banner().textContent).toContain('The video player is not set up')
+      expect(banner().textContent).toContain('The video lesson player is not set up')
       expect(banner().textContent).toContain('There is no player address (SPARK_WEB_URL) to check.')
-      expect(within(row('Video player')).getByText('Not set up')).toBeTruthy()
+      expect(within(row('Video lesson player')).getByText('Not set up')).toBeTruthy()
     })
 
     it('lists lessons learners could not get, and flags the last hour', () => {
       show(status({}, videoFailures(1)))
-      expect(banner().textContent).toContain('Learners could not get videos in the last hour')
-      expect(within(row('Videos for learners')).getByText('Failed in the last hour')).toBeTruthy()
+      expect(banner().textContent).toContain(
+        'Learners could not get video lessons in the last hour'
+      )
+      expect(within(row('Video lesson failures')).getByText('Failed in the last hour')).toBeTruthy()
       const rows = within(
-        screen.getByRole('table', { name: 'Latest video failures' })
+        screen.getByRole('table', { name: 'Latest video lesson failures' })
       ).getAllByRole('row')
       expect(rows[1].textContent).toContain('No usable video was written')
       expect(rows[1].textContent).toContain('Could not write that lesson. Try again.')
@@ -276,7 +305,7 @@ describe('SystemStatusPage', () => {
       )
     )
     // the player failing is worse than grading being busy, though grading comes first on the page
-    expect(banner().textContent).toContain('The video player is not answering')
+    expect(banner().textContent).toContain('The video lesson player is not answering')
     expect(screen.getByText('boom 1 more problem below.')).toBeTruthy()
     expect(section('Skill Simulator')).toBeTruthy()
   })
