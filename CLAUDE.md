@@ -54,6 +54,8 @@ When the user wants to compare options for how something looks or is laid out (a
 
 `api-dev` runs beside the dev database with dev keys only; deploy a branch with `apps/api/scripts/deploy-dev.sh`. Preview deployments on Vercel point at it. Setup, the scripts and the safety rules are in `docs/dev-api.md`. Never put production secrets (live Clerk keys, the real R2 buckets) on it. **To test a Learn Differently LTI launch from a Learn preview, run the Interview Differently web app locally against it: `VITE_API_URL=<dev API address, without /api> npm run dev -w @id/web`** (details in `docs/dev-api.md`).
 
+**Production runs the seed on every start.** The API's start command is `prisma migrate deploy && npm run db:seed && node dist/main.js`, so a seed or migration that fails takes the whole API down, not just the data. When a change touches anything `prisma/seed.ts` or a migration uses (a constructor, a service, a model), run `npm run typecheck` (it covers `src`, `prisma` and `scripts`) and `npm run db:seed` against dev before pushing.
+
 ## Railway variables
 
 `.railway/railway.ts` lists every variable on the Railway services, and CI applies it before deploying the API. **When a change needs a new variable, add it there in the same change** (`preserve()` for a value set by hand, such as a secret, so the file never holds it), for each service that has it. A variable set on Railway but missing from the file reads as a deletion: CI's `railway config apply` refuses it, and the API deploy is skipped while the web deploy goes out. Do not run Railway's CLI against production to check; when that CI step fails, its log names the variables it would delete.

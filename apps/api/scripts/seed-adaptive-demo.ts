@@ -13,7 +13,6 @@
  */
 
 import './lib/owner-env'
-import { join } from 'node:path'
 import { PrismaClient } from '@prisma/client'
 import {
   DEMO_BANK,

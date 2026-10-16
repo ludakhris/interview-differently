@@ -9,7 +9,7 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main",
-    "lint": "eslint src",
+    "lint": "eslint src prisma scripts",
     "typecheck": "tsc --noEmit",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests",
     "db:migrate": "prisma migrate dev",

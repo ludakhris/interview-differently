@@ -157,6 +157,7 @@ async function main(): Promise<void> {
         } catch {
           return null
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- walks whatever JSON each endpoint returns
       })() as any,
     }
   }
