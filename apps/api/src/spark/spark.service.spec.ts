@@ -741,7 +741,11 @@ describe('staff views and the demo', () => {
       { userId: 'learner-1', itemId: 'item-1', at: expect.any(String) },
     ])
     const [entry] = await service.lessonHistory('c1', 'learner-1')
-    expect(entry).toMatchObject({ itemId: 'item-1', watched: 'all 3 scenes · browser voice' })
+    expect(entry).toMatchObject({
+      itemId: 'item-1',
+      lessonId: content.id,
+      watched: 'all 3 scenes · browser voice',
+    })
     expect((await service.lessonSlot(slot)).finished).toBe(true)
   })
 

@@ -647,6 +647,7 @@ export class AdaptiveService {
         kind: 'video',
         at: l.at,
         item: title(l.itemId),
+        lessonId: l.lessonId,
         title: l.title,
         scenes: l.scenes,
         watched: l.watched,
@@ -655,6 +656,25 @@ export class AdaptiveService {
       name: e.user.displayName ?? e.user.email ?? 'A learner',
       entries: entries.sort((a, b) => a.at.localeCompare(b.at)),
     }
+  }
+
+  /**
+   * A link to play a lesson the learner was given, from the seen view, in Spark's player. Anyone who may see what they
+   * saw may watch it, sent back or not; it records nothing.
+   */
+  async watchSeenLesson(
+    actor: Actor,
+    cohortId: string,
+    enrollmentId: string,
+    lessonId: string
+  ): Promise<{ url: string }> {
+    const cohort = await this.cohortOf(actor, cohortId, 'cohort.read')
+    const e = await this.prisma.enrollment.findUnique({ where: { id: enrollmentId } })
+    if (!e || e.cohortId !== cohort.id) throw new NotFoundException('Learner not found')
+    const lessons = await this.spark.lessonHistory(cohortId, e.userId)
+    if (!lessons.some((l) => l.lessonId === lessonId))
+      throw new NotFoundException('Lesson not found')
+    return { url: await this.spark.previewLink(lessonId, actor.userId) }
   }
 
   /** Approves or sends back AI content made for one of this cohort's learners. */
