@@ -106,8 +106,9 @@ export const monitoring: Monitoring = {
           path: '/api/health/videos/recent-failures',
           explanation:
             'Down if making a video lesson failed for any learner in the last 15 minutes.',
-          // a failure count: finer bars show when in the day failures happened
-          widget: 'intraday_response_times',
+          // a failure count: finer bars show when in the day failures happened (a chart would only show the
+          // check's response time, not the count)
+          widget: 'intraday_history',
         },
       ],
     },
@@ -126,7 +127,7 @@ export const monitoring: Monitoring = {
           name: 'Simulation scoring failures (last 15 min)',
           path: '/api/health/grading/recent-failures',
           explanation: 'Down if scoring a learner’s answer failed in the last 15 minutes.',
-          widget: 'intraday_response_times',
+          widget: 'intraday_history',
         },
       ],
     },
