@@ -4,9 +4,10 @@
  *
  *   npm run build -w @id/learn && npm run a11y:scan
  *
- * It serves apps/learn/dist the way vercel.json does (every page is home.html) and opens each public page in
- * Chromium. Signed-in screens need a sign-in, so they are checked statically instead, by eslint-plugin-jsx-a11y in
- * each app's lint.
+ * It serves apps/learn/dist the way vercel.json does (every page is home.html) and opens each page learners and staff
+ * use without signing in. The marketing homepage and product pages are left out (owner's decision, 2026-10-19).
+ * Signed-in screens need a sign-in, so they are checked statically instead, by eslint-plugin-jsx-a11y in each app's
+ * lint. Animations are turned off (reduced motion), so text is checked in its settled state.
  */
 import { createServer, type Server } from 'node:http'
 import { readFile } from 'node:fs/promises'
@@ -18,15 +19,10 @@ import { AxeBuilder } from '@axe-core/playwright'
 const DIST = resolve(import.meta.dirname, '../apps/learn/dist')
 
 export const PAGES = [
-  '/',
   '/?site=delaware',
   '/privacy',
+  '/accessibility',
   '/sign-in',
-  '/products/lms',
-  '/products/micro-learning',
-  '/products/skill-simulator',
-  '/products/job-board-match',
-  '/products/talent-match',
   '/lms/dashboard',
   '/release-notes/',
   '/no-such-page',
@@ -50,7 +46,7 @@ export function fileFor(pathname: string): string {
   if (pathname === '/') return '/home.html'
   if (pathname.endsWith('/')) pathname += 'index.html'
   if (extname(pathname)) return pathname
-  if (/^\/(privacy|sign-in|products|lms)(\/|$)/.test(pathname)) return '/home.html'
+  if (/^\/(privacy|accessibility|sign-in|products|lms)(\/|$)/.test(pathname)) return '/home.html'
   return '/404.html'
 }
 
@@ -78,7 +74,7 @@ async function main() {
   let failures = 0
   try {
     for (const path of PAGES) {
-      const context = await browser.newContext()
+      const context = await browser.newContext({ reducedMotion: 'reduce' })
       const page = await context.newPage()
       await page.goto(base + path, { waitUntil: 'networkidle' })
       const { violations } = await new AxeBuilder({ page })

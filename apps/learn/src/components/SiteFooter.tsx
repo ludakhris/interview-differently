@@ -27,6 +27,7 @@ export function SiteFooter({
           <a href={productsHref}>Products</a>
           <a href="/release-notes/">Release notes</a>
           <a href="/privacy">Privacy</a>
+          <a href="/accessibility">Accessibility</a>
           <a href={`mailto:${CONTACT_EMAIL}`}>Contact</a>
         </nav>
         {/* Fixed size, so the line lays out the same if the badge is blocked or slow. */}

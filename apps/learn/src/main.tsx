@@ -9,6 +9,7 @@ import { EnvironmentBanner } from './EnvironmentBanner'
 import { HomePage } from './pages/HomePage'
 import { DelawarePage } from './pages/DelawarePage'
 import { PrivacyPage } from './pages/PrivacyPage'
+import { AccessibilityPage } from './pages/AccessibilityPage'
 import { SignInPage } from './pages/SignInPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ProductPage } from './pages/products/ProductPage'
@@ -21,6 +22,7 @@ const site = resolveSite(hostname, search)
 // Keep in sync with the rewrites in vercel.json; any other path is served 404.html.
 function page(): ReactNode {
   if (pathname === '/privacy') return <PrivacyPage />
+  if (pathname === '/accessibility') return <AccessibilityPage />
   if (pathname === '/sign-in' || pathname.startsWith('/sign-in/')) return <SignInPage />
   if (
     pathname === '/lms/dashboard' ||

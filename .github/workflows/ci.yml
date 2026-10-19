@@ -25,6 +25,9 @@ jobs:
       - run: npm run build
       - run: npm run test
       - run: npm run test:scripts
+      # Accessibility scan of the built Learn Differently pages learners use (scripts/a11y-scan.ts).
+      - run: npx playwright install --with-deps chromium
+      - run: npm run a11y:scan
 
   deploy-web:
     name: Deploy Web (Vercel)

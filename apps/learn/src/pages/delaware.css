@@ -278,7 +278,8 @@
   text-align: right;
 }
 .de-record-rows .de-ready {
-  color: var(--orange-text);
+  /* Darker than --orange-text: this sits on the light blue row (5.4:1). */
+  color: #9a4a06;
 }
 .de-note {
   font-size: 13px;

@@ -386,6 +386,7 @@ export function DelawarePage() {
             <a href="#catalog">Eligible Training Provider List</a>
             <a href="#practice">2026 High Demand Occupation List</a>
             <a href="#progress">Delaware JobLink</a>
+            <a href="/accessibility">Accessibility</a>
           </div>
           <div>
             <p className="de-footer-head">About this demo</p>
