@@ -14,11 +14,12 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          # Jest loads NestJS 12 (ESM only) on Node 24.9 or later. The API itself still runs on Node 22 on Railway.
+          node-version: '24'
       - run: npm ci
-      # Known vulnerabilities in what ships (dev tools left out). Fails on critical only for now: a high one in multer
-      # needs the NestJS 10 to 12 upgrade first. Dependabot (.github/dependabot.yml) opens the update PRs.
-      - run: npm audit --omit=dev --audit-level=critical
+      # Known vulnerabilities in what ships (dev tools left out). Fails on high or critical. Dependabot
+      # (.github/dependabot.yml) opens the update PRs.
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
