@@ -70,8 +70,9 @@ export class ScenarioMediaController {
    * R2 hosts the MP4s directly and this route is unused.
    * Wildcard splat: /files/scenarios/abc/node1-abcdef.mp4 → key = "scenarios/abc/node1-abcdef.mp4".
    */
-  @Get('files/*')
-  async serveFile(@Param('0') key: string, @Res() res: Response) {
+  @Get('files/*key')
+  async serveFile(@Param('key') segments: string[], @Res() res: Response) {
+    const key = segments.join('/')
     const buf = await this.localStorage.read(key)
     if (!buf) throw new NotFoundException(`Media not found: ${key}`)
     res.set('Content-Type', 'video/mp4')

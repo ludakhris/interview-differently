@@ -67,13 +67,13 @@ export class ScormController {
 export class ScormFilesController {
   constructor(private readonly scorm: ScormService) {}
 
-  @Get(':packageId/*')
+  @Get(':packageId/*path')
   async file(
     @Param('packageId') packageId: string,
-    @Param('0') path: string,
+    @Param('path') path: string[],
     @Res() res: Response
   ) {
-    const found = await this.scorm.read(packageId, path)
+    const found = await this.scorm.read(packageId, path.join('/'))
     if (!found) throw new NotFoundException('Not found')
     res.set('Content-Type', found.type)
     res.set('Cache-Control', 'public, max-age=300')
