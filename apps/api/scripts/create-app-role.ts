@@ -22,7 +22,7 @@ const ROLE = process.env.APP_ROLE_NAME ?? 'ld_app'
 async function main(): Promise<void> {
   requireHostConfirmation()
   const password = process.env.APP_ROLE_PASSWORD
-  if (!password || password.length < 24) throw new Error('Set APP_ROLE_PASSWORD (24+ characters)')
+  if (!password || password.length < 32) throw new Error('Set APP_ROLE_PASSWORD (32+ characters)')
   if (!/^[a-z_][a-z0-9_]*$/.test(ROLE)) throw new Error('APP_ROLE_NAME must be a plain identifier')
   const prisma = new PrismaClient()
   try {
