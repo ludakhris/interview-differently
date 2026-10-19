@@ -1,4 +1,4 @@
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useRole } from '@/hooks/useRole'
 

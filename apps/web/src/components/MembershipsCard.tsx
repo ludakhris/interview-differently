@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import { useConfirm, useNotify } from '@/components/ConfirmDialog'
 import {
   fetchInstitutionSuggestion,

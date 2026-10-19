@@ -1,4 +1,4 @@
-import { ClerkProvider, useClerk, useUser } from '@clerk/clerk-react'
+import { ClerkProvider, useClerk, useUser } from '@clerk/react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -17,7 +17,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       appearance={{
         variables: {
           colorPrimary: '#0b1f2e',
-          colorText: '#0b1f2e',
+          colorForeground: '#0b1f2e',
           fontFamily: "'Manrope', system-ui, sans-serif",
           borderRadius: '12px',
         },

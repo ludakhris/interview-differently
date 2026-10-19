@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth, useUser } from '@clerk/clerk-react'
+import { useAuth, useUser } from '@clerk/react'
 import { Nav } from '@/components/Nav'
 import { MembershipsCard } from '@/components/MembershipsCard'
 import { fetchMyMemberships } from '@/services/meService'

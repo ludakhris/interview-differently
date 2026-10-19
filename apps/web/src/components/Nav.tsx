@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth, UserButton } from '@clerk/clerk-react'
+import { useAuth, UserButton } from '@clerk/react'
 import { ChevronDown } from 'lucide-react'
 import { TOOL_META, type ToolKey } from '@id/types'
 import { useMyTools } from '@/hooks/useMyTools'
@@ -68,7 +68,7 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
         )}
         {isLoaded &&
           (isSignedIn ? (
-            <UserButton afterSignOutUrl="/dashboard" />
+            <UserButton />
           ) : (
             <button
               onClick={() => navigate('/sign-in')}

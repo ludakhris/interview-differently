@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useParams, useSearchParams } from 'react-router-dom'
-import { SignIn, SignUp } from '@clerk/clerk-react'
+import { SignIn, SignUp } from '@clerk/react'
 import { LandingPage } from '@/pages/LandingPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { BriefingPage } from '@/pages/BriefingPage'

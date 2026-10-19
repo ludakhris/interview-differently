@@ -1,4 +1,4 @@
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import type { ReactNode } from 'react'
 import { AccountMenu, authConfigured } from '../auth'
 import { resolveContext } from '../brand'

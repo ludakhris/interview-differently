@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 
 const auth = { isLoaded: true, isSignedIn: false }
-vi.mock('@clerk/clerk-react', () => ({ useAuth: () => auth }))
+vi.mock('@clerk/react', () => ({ useAuth: () => auth }))
 vi.mock('../auth', () => ({
   authConfigured: true,
   AccountMenu: ({ signedOut }: { signedOut: React.ReactNode }) => (

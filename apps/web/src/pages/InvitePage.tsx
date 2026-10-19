@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import { ClipboardCheck } from 'lucide-react'
 import { Nav } from '@/components/Nav'
 import { acceptInvite, fetchInviteInfo, type InviteInfo } from '@/services/assessmentsService'

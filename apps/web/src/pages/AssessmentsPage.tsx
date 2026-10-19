@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import { ClipboardCheck } from 'lucide-react'
 import { Nav } from '@/components/Nav'
 import { fetchMyAssessments, startAttempt, type MyDelivery } from '@/services/assessmentsService'

@@ -5,7 +5,7 @@ import { act } from 'react'
 
 let signedIn = true
 const getToken = vi.fn(async () => 'tok')
-vi.mock('@clerk/clerk-react', () => ({ useAuth: () => ({ isSignedIn: signedIn, getToken }) }))
+vi.mock('@clerk/react', () => ({ useAuth: () => ({ isSignedIn: signedIn, getToken }) }))
 vi.mock('../api', () => ({ API_URL: 'http://api.test' }))
 
 import { ActivityHeartbeat } from './ActivityHeartbeat'

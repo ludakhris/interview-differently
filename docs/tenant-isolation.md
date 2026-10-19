@@ -105,7 +105,7 @@ in the same command, never rely on a local `.env`. Never run `scripts/tenant-e2e
    the column and refuses to run as a role the policies bind. It must end with every row having an agency. The last
    migration (`require_agency`) makes the agency required and refuses to run on a database that has not been backfilled,
    saying which script to run, so on an environment with older data run steps 3 and 5 before deploying it.
-6. **Restricted role:** `scripts/create-app-role.ts` with `APP_ROLE_PASSWORD` (24 or more characters). It prints the
+6. **Restricted role:** `scripts/create-app-role.ts` with `APP_ROLE_PASSWORD` (32 or more characters). It prints the
    connection string; on the API service set `DATABASE_URL` to it using the database's private host, and set
    `REQUIRE_TENANT_RLS=on`. `SCHEMA_DATABASE_URL` stays the owner, so the start command does not change. Redeploy: the
    log must say row-level security is on.
