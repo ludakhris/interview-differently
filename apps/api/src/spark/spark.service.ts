@@ -488,6 +488,7 @@ export class SparkService implements SparkPort {
         const res = await client.messages.create(
           {
             model: LESSON_MODEL,
+            inference_geo: 'us',
             max_tokens: 8000,
             system: LESSON_SYSTEM,
             output_config: {
