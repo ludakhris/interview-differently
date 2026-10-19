@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import type { ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { AlertTriangle, PanelLeftClose, PanelLeftOpen, Play, RotateCcw } from 'lucide-react'
 import { Nav } from '@/components/Nav'

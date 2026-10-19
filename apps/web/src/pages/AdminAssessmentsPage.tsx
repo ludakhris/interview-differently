@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import { Nav } from '@/components/Nav'
 import { useRole } from '@/hooks/useRole'
 import { useConfirm } from '@/components/ConfirmDialog'

@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { useAuth, useUser } from '@clerk/clerk-react'
+import { useAuth, useUser } from '@clerk/react'
 import { useEffect, useMemo, useState } from 'react'
 import { ClipboardCheck, Database } from 'lucide-react'
 import { Nav } from '@/components/Nav'

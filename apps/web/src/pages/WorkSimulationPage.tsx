@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import type { CheckpointView } from '@id/types'
 import { Nav } from '@/components/Nav'
 import { CheckpointScreen } from '@/components/checkpoint/CheckpointScreen'

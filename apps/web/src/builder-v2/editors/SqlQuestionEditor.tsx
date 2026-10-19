@@ -3,7 +3,7 @@
 // flags, optional hint, rubric dimension.
 
 import { useEffect, useRef, useState } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import type { ScenarioNode, SqlSpec } from '@id/types'
 import { EditShell, Field, TextInput, Textarea, SelectInput, SectionLabel } from './shared'
 import { SqlEditor } from '@/components/sql/SqlEditor'

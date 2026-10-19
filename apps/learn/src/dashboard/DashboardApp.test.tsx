@@ -13,7 +13,7 @@ const ws = () => ({
   role,
 })
 vi.mock('../auth', () => ({ authConfigured: true }))
-vi.mock('@clerk/clerk-react', () => ({ useAuth: () => ({ isLoaded: true, isSignedIn: true }) }))
+vi.mock('@clerk/react', () => ({ useAuth: () => ({ isLoaded: true, isSignedIn: true }) }))
 vi.mock('./app-context', () => ({
   AppProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   WorkspacesProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,

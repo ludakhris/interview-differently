@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import { useConfirm } from '@/components/ConfirmDialog'
 import type { ScenarioNode, SqlSpec } from '@id/types'
 import { SqlWorkbench } from './SqlWorkbench'

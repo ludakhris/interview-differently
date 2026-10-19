@@ -1,4 +1,4 @@
-import { SignIn } from '@clerk/clerk-react'
+import { SignIn } from '@clerk/react'
 import { authConfigured } from '../auth'
 import { resolveContext, withContext } from '../brand'
 import { AppProvider } from '../dashboard/app-context'
