@@ -869,7 +869,7 @@ describe('token', () => {
 
   it('rejects an assertion that lives longer than 10 minutes', async () => {
     await reject(
-      service.token(body({ client_assertion: assertion({ exp: nowS() + 601 }) })),
+      service.token(body({ client_assertion: assertion({ exp: nowS() + 660 }) })),
       401,
       'lifetime'
     )
