@@ -936,3 +936,37 @@ export interface LearnerSeen {
   name: string
   entries: SeenEntry[]
 }
+
+/** Admin -> Compliance: where we stand on one requirement a governing agency places on vendors. */
+export type ComplianceStatus = 'satisfied' | 'partial' | 'not_satisfied' | 'not_applicable'
+
+export interface ComplianceRequirement {
+  /** The agency's own id, e.g. IAM-12. */
+  code: string
+  area: string
+  requirement: string
+  strength: 'MUST' | 'SHOULD'
+  source: string
+  status: ComplianceStatus
+  /** Where we stand today; for a requirement that does not apply, why not. */
+  standing: string
+  /** How we get there; partly and not satisfied requirements only. */
+  plan: string | null
+  /** The GitHub issue (in this repo) that tracks the work; partly and not satisfied requirements only. */
+  issue: number | null
+}
+
+/** One governing agency's requirements, e.g. Delaware DTI. */
+export interface ComplianceFramework {
+  key: string
+  name: string
+  importedAt: string
+  requirements: ComplianceRequirement[]
+}
+
+/** The file an admin imports: one framework, replacing what was there. */
+export interface ComplianceImport {
+  key: string
+  name: string
+  requirements: ComplianceRequirement[]
+}

@@ -89,6 +89,23 @@ function ContentIcon() {
 }
 
 /** A green heartbeat on a screen: how the system is doing. */
+/** A shield with a check, for Compliance. */
+function ComplianceIcon() {
+  return (
+    <svg {...ICON} width={40} height={40}>
+      <path d="M24 4 40 10v12c0 10-7 18-16 22C15 40 8 32 8 22V10z" fill="#0d5f8a" />
+      <path
+        d="m16 24 6 6 11-12"
+        fill="none"
+        stroke="#3ddc97"
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 function StatusIcon() {
   return (
     <svg {...ICON} width={40} height={40}>
@@ -234,6 +251,19 @@ export function AdminPage() {
             <span className="dash-tool-desc">
               See whether each product is working for learners, grading and videos, and when it last
               failed.
+            </span>
+            <span className="dash-tool-open">Open tool →</span>
+          </a>
+        </li>
+        <li>
+          <a className="dash-tool" href={href('/lms/admin/compliance')}>
+            <span className="dash-tool-icon">
+              <ComplianceIcon />
+            </span>
+            <span className="dash-tool-name">Compliance</span>
+            <span className="dash-tool-desc">
+              See each governing agency’s requirements for vendors, where we stand on each one, and
+              how we close the rest.
             </span>
             <span className="dash-tool-open">Open tool →</span>
           </a>

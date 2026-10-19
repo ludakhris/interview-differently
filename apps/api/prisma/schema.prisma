@@ -413,6 +413,29 @@ model ServiceFailure {
   @@index([service, at])
 }
 
+// One requirement a governing agency (for example Delaware DTI) places on vendors, and where we stand on it.
+// Platform-admin data only, imported as a whole per framework from Admin -> Compliance; never seeded from the repo,
+// which is public. Holds no learner or agency data, so it is not a tenant table.
+model ComplianceRequirement {
+  id            String   @id @default(uuid())
+  framework     String // short key, e.g. 'delaware-dti'
+  frameworkName String // e.g. 'State of Delaware, Department of Technology and Information'
+  code          String // the agency's own id, e.g. 'IAM-12'
+  area          String
+  requirement   String
+  strength      String // 'MUST' | 'SHOULD'
+  source        String
+  status        String // 'satisfied' | 'partial' | 'not_satisfied' | 'not_applicable'
+  standing      String // where we stand today
+  plan          String? // how we get there (partial and not satisfied only)
+  issue         Int? // the GitHub issue that tracks the work (partial and not satisfied only)
+  position      Int // order within the framework, as imported
+  importedAt    DateTime @default(now())
+
+  @@unique([framework, code])
+  @@index([framework, position])
+}
+
 // Which datasets a cohort can open in the SQL sandbox. A cohort with at least
 // one dataset has the sandbox tool enabled — there is no separate flag.
 model CohortDataset {

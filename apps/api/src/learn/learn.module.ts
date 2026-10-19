@@ -2,6 +2,8 @@ import { Module, forwardRef } from '@nestjs/common'
 import { LtiPlatformModule } from '../lti/platform/lti-platform.module'
 import { PrismaModule } from '../prisma/prisma.module'
 import { StorageModule } from '../storage/storage.module'
+import { AdminComplianceController } from './admin-compliance.controller'
+import { AdminComplianceService } from './admin-compliance.service'
 import { AdminContentController } from './admin-content.controller'
 import { AdminContentService } from './admin-content.service'
 import { AdminStatusController } from './admin-status.controller'
@@ -58,6 +60,7 @@ import { AdaptiveService } from './adaptive/adaptive.service'
     ItemImageController,
     PublicCatalogController,
     AdminUsersController,
+    AdminComplianceController,
     AdminContentController,
     AdminStatusController,
     MembersController,
@@ -75,6 +78,7 @@ import { AdaptiveService } from './adaptive/adaptive.service'
     PublicCatalogService,
     InterviewScoringService,
     AdminUsersService,
+    AdminComplianceService,
     AdminContentService,
     AdminStatusService,
     MembersService,

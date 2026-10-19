@@ -6,6 +6,7 @@ import { ActivityPage } from './activity/ActivityPage'
 import { AdminPage, AdminUsersPage } from './AdminPages'
 import { AppProvider, useApp, WorkspacesProvider } from './app-context'
 import { ContentReviewPage } from './ContentReviewPage'
+import { CompliancePage } from './CompliancePage'
 import { SystemStatusPage } from './SystemStatusPage'
 import { CohortPage } from './CohortPage'
 import { CohortsPage } from './CohortsPage'
@@ -139,6 +140,13 @@ function Routes({ pathname }: { pathname: string }) {
     return (
       <DashboardShell>
         <SystemStatusPage />
+      </DashboardShell>
+    )
+  }
+  if (pathname === '/lms/admin/compliance' || pathname === '/lms/admin/compliance/') {
+    return (
+      <DashboardShell>
+        <CompliancePage />
       </DashboardShell>
     )
   }
