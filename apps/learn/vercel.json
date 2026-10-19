@@ -46,6 +46,16 @@
       "destination": "/delaware.html"
     },
     {
+      "source": "/accessibility",
+      "has": [
+        {
+          "type": "host",
+          "value": "delaware.learndifferently.tech"
+        }
+      ],
+      "destination": "/delaware.html"
+    },
+    {
       "source": "/sign-in/:path*",
       "has": [
         {
@@ -65,6 +75,10 @@
     },
     {
       "source": "/privacy",
+      "destination": "/home.html"
+    },
+    {
+      "source": "/accessibility",
       "destination": "/home.html"
     },
     {

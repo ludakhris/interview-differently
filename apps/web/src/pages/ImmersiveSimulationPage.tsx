@@ -438,6 +438,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
               currentMediaUrl ? (
                 <PrerenderedAvatarPlayer
                   mediaUrl={currentMediaUrl}
+                  script={currentNode.audioScript?.trim() || currentNode.narrative}
                   isPlaying={pageState === 'narrating'}
                   onDone={handleAvatarDone}
                   className="w-full aspect-video"

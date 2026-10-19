@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { captionsVtt } from '@/lib/captions'
 
 interface PrerenderedAvatarPlayerProps {
   /** Public URL of the MP4 to play for the current node. */
@@ -7,6 +8,8 @@ interface PrerenderedAvatarPlayerProps {
   isPlaying: boolean
   /** Called when the clip finishes (used to advance the simulation state). */
   onDone?: () => void
+  /** The words the clip speaks, shown as captions timed across the clip. */
+  script?: string
   className?: string
 }
 
@@ -14,9 +17,12 @@ export function PrerenderedAvatarPlayer({
   mediaUrl,
   isPlaying,
   onDone,
+  script,
   className,
 }: PrerenderedAvatarPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const [duration, setDuration] = useState(0)
+  const [captionsUrl, setCaptionsUrl] = useState<string | null>(null)
   const [isPaused, setIsPaused] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const onDoneRef = useRef(onDone)
@@ -31,6 +37,20 @@ export function PrerenderedAvatarPlayer({
     video.currentTime = 0
     video.play().catch((err) => setError(err instanceof Error ? err.message : 'Playback blocked'))
   }, [mediaUrl])
+
+  // Captions as a WebVTT file once the clip's length is known; shown by default.
+  useEffect(() => {
+    const vtt = script ? captionsVtt(script, duration) : null
+    if (!vtt) return setCaptionsUrl(null)
+    const url = URL.createObjectURL(new Blob([vtt], { type: 'text/vtt' }))
+    setCaptionsUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [script, duration])
+
+  useEffect(() => {
+    const track = videoRef.current?.textTracks[0]
+    if (track) track.mode = 'showing'
+  }, [captionsUrl])
 
   // External pause control (e.g. parent transitions away from "narrating").
   useEffect(() => {
@@ -53,17 +73,24 @@ export function PrerenderedAvatarPlayer({
 
   return (
     <div className={`relative rounded-2xl overflow-hidden bg-surface-deep ${className ?? ''}`}>
-      {/* No caption track yet: captions for avatar clips are tracked in GitHub issue #99 (ACC-03). */}
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <video
         ref={videoRef}
         src={mediaUrl}
         autoPlay
         playsInline
+        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
         onEnded={() => onDoneRef.current?.()}
         onError={() => setError('Failed to load avatar clip')}
         className="w-full h-full object-contain"
-      />
+      >
+        <track
+          kind="captions"
+          srcLang="en"
+          label="English"
+          src={captionsUrl ?? undefined}
+          default
+        />
+      </video>
 
       {error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-deep p-4">
