@@ -32,16 +32,16 @@
     "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.86.1",
-    "@aws-sdk/client-s3": "^3.1041.0",
-    "@aws-sdk/s3-request-presigner": "^3.1041.0",
-    "@clerk/backend": "^3.4.4",
-    "@electric-sql/pglite": "^0.5.8",
+    "@anthropic-ai/sdk": "^0.135.0",
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/s3-request-presigner": "^3.1152.0",
+    "@clerk/backend": "^3.25.0",
+    "@electric-sql/pglite": "^0.5.10",
     "@nestjs/common": "^12.2.0",
     "@nestjs/core": "^12.2.0",
     "@nestjs/platform-express": "^12.2.0",
     "@prisma/client": "^5.22.0",
-    "@types/multer": "^2.1.0",
+    "@types/multer": "^2.3.0",
     "dotenv": "^17.4.1",
     "fflate": "^0.8.3",
     "js-yaml": "^4.1.1",
@@ -66,6 +66,6 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "~6.0.2",
-    "typescript-eslint": "^8.0.0"
+    "typescript-eslint": "^8.71.2"
   }
 }
