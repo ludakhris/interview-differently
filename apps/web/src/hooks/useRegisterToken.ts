@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import { registerTokenGetter } from '@/services/authToken'
 
 /** Hands Clerk's getToken to the builder/media services (see services/authToken.ts). */

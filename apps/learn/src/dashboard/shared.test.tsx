@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 let metadata: Record<string, unknown> = {}
 let workspaces: Array<{ subdomain: string; role: string }> | null = null
-vi.mock('@clerk/clerk-react', () => ({ useUser: () => ({ user: { publicMetadata: metadata } }) }))
+vi.mock('@clerk/react', () => ({ useUser: () => ({ user: { publicMetadata: metadata } }) }))
 vi.mock('./app-context', () => ({ useApp: () => ({ workspaces }) }))
 
 import { useRole, useWorkspaceRole } from './shared'

@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import { getScenario, updateScenario, publishScenario } from '@/services/builderService'
 import { listScenarioMedia } from '@/services/scenarioMediaService'
 import { useBuilderDoc } from '@/hooks/useBuilderDoc'

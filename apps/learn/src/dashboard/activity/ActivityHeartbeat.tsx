@@ -1,4 +1,4 @@
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import { useEffect, useRef } from 'react'
 import { API_URL } from '../api'
 import { parseLearningPath, type LearningTarget } from './activityLogic'

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import { Nav } from '@/components/Nav'
 import { downloadCsv } from '@/lib/csv'
 import {

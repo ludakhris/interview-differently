@@ -1,4 +1,4 @@
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import { authConfigured } from '../auth'
 import type { AppContext } from '../brand'
 import { ActivityHeartbeat } from './activity/ActivityHeartbeat'

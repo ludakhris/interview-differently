@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import { Nav } from '@/components/Nav'
 import { LtiNav } from '@/components/LtiNav'
 import { useLtiBrand } from '@/components/LtiBrandProvider'

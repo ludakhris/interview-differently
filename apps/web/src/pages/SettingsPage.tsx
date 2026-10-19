@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useAuth, useUser } from '@clerk/clerk-react'
+import { useAuth, useUser } from '@clerk/react'
 import { Nav } from '@/components/Nav'
 import { MembershipsCard } from '@/components/MembershipsCard'
 import { fetchConfig, patchAdminConfig } from '@/services/configService'

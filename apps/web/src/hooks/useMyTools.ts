@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import type { ToolKey } from '@id/types'
 import { fetchMyTools } from '@/services/toolsService'
 

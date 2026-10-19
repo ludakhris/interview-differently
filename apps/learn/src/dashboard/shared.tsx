@@ -1,4 +1,4 @@
-import { useUser } from '@clerk/clerk-react'
+import { useUser } from '@clerk/react'
 import { ApiError } from './api'
 import { useApp } from './app-context'
 import { Notice } from './DashboardShell'

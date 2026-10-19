@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/react'
 import { useConfirm } from '@/components/ConfirmDialog'
 import { Clock } from 'lucide-react'
 import type { StudentQuestion } from '@id/types'
