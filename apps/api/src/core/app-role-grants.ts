@@ -18,12 +18,19 @@ export const APP_ROLE_FUNCTIONS: readonly string[] = [
   'all_agency_ids()',
 ]
 
+/**
+ * Audit tables the API may add to and read but never change or delete: a trail its own users could edit is no trail.
+ * Only the database owner may remove rows (a retention job, an agency's data at exit).
+ */
+export const APPEND_ONLY_TABLES: readonly string[] = ['DataAccessLog']
+
 /** SQL that gives `role` its table access and exactly the functions above, and nothing else. `role` is a plain identifier. */
 export function appRoleGrantsSql(role: string): string[] {
   return [
     `GRANT USAGE ON SCHEMA public TO ${role}`,
     `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${role}`,
     `GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${role}`,
+    ...APPEND_ONLY_TABLES.map((t) => `REVOKE UPDATE, DELETE, TRUNCATE ON "${t}" FROM ${role}`),
     `REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM ${role}`,
     ...APP_ROLE_FUNCTIONS.map((f) => `GRANT EXECUTE ON FUNCTION ${f} TO ${role}`),
   ]

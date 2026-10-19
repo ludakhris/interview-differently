@@ -42,7 +42,7 @@ The first system admin must be set by hand in the **LearnDifferently** Clerk das
 
 Every demo row has an id starting with `demo-`, so loading and removing touch nothing else. Ask the owner before running either command against production.
 
-Run both from `apps/api`, with the Railway CLI linked to this project. The script refuses any host other than localhost unless `--allow-host` names it; take the host from the Postgres service's public URL in Railway (`<db-host>` below). Do not use `npm run db:migrate` against production; migrations apply on every API deploy (`prisma migrate deploy`).
+Run both from `apps/api`, with the Railway CLI linked to this project. The script refuses any host other than localhost unless `--allow-host` names it; take the host from the Postgres service's public URL in Railway (`<db-host>` below). Production's database has no public address by default (`.railway/railway.ts`): add a TCP proxy on the Postgres service in the Railway dashboard (Settings, Networking) for the job, and remove it when you are done. While the proxy exists, CI's `railway config apply` refuses to run (the file would delete it), so the API deploy is skipped until it is removed. Do not use `npm run db:migrate` against production; migrations apply on every API deploy (`prisma migrate deploy`).
 
 ### Load or reload
 

@@ -15,7 +15,7 @@
 import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
 import { assertBypassesRls, requireHostConfirmation } from './lib/db-guard'
-import { APP_ROLE_FUNCTIONS } from '../src/core/app-role-grants'
+import { APPEND_ONLY_TABLES, APP_ROLE_FUNCTIONS } from '../src/core/app-role-grants'
 
 const ROLE = process.env.APP_ROLE_NAME ?? 'ld_app'
 
@@ -51,6 +51,10 @@ async function main(): Promise<void> {
     await prisma.$executeRawUnsafe(
       `GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${ROLE}`
     )
+    // Audit tables: add and read only (src/core/app-role-grants.ts).
+    for (const table of APPEND_ONLY_TABLES) {
+      await prisma.$executeRawUnsafe(`REVOKE UPDATE, DELETE, TRUNCATE ON "${table}" FROM ${ROLE}`)
+    }
     // Functions: only the ones in src/core/app-role-grants.ts. Nothing is granted by default, so a function added
     // later is not callable by the API until it is listed there and this script is run again.
     await prisma.$executeRawUnsafe(`REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM ${ROLE}`)

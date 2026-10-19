@@ -16,6 +16,9 @@ jobs:
         with:
           node-version: '22'
       - run: npm install
+      # Known vulnerabilities in what ships (dev tools left out). Fails on critical only for now: a high one in multer
+      # needs the NestJS 11 to 12 upgrade first. Dependabot (.github/dependabot.yml) opens the update PRs.
+      - run: npm audit --omit=dev --audit-level=critical
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck

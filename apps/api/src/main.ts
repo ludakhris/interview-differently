@@ -18,6 +18,16 @@ async function bootstrap() {
     const hops = Number(process.env.TRUST_PROXY)
     app.set('trust proxy', Number.isInteger(hops) ? hops : true)
   }
+  // Security headers on every response. No frame options: LTI launch pages are posted into course platforms' frames.
+  app.disable('x-powered-by')
+  app.use(
+    (_req: unknown, res: { setHeader(name: string, value: string): void }, next: () => void) => {
+      res.setHeader('Strict-Transport-Security', 'max-age=63072000')
+      res.setHeader('X-Content-Type-Options', 'nosniff')
+      res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+      next()
+    }
+  )
   app.setGlobalPrefix('api')
   const port = process.env.PORT ?? 3000
   await app.listen(port)

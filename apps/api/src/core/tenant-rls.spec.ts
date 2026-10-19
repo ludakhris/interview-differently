@@ -367,6 +367,22 @@ suite('row-level security', () => {
     }
   })
 
+  it('lets the API add to and read the data access log, but never change or delete it', async () => {
+    await as({}, async () => {
+      await db.query(
+        `INSERT INTO "DataAccessLog" ("id","actorId","actorName","providerId","resource","action") VALUES ('dal-1','staff-A','Staff A','prov-A','note','read')`
+      )
+      expect((await db.query(`SELECT 1 FROM "DataAccessLog"`)).rows).toHaveLength(1)
+      for (const sql of [
+        `UPDATE "DataAccessLog" SET "action" = 'list'`,
+        `DELETE FROM "DataAccessLog"`,
+        `TRUNCATE "DataAccessLog"`,
+      ]) {
+        expect((await attempt(sql)).error).toMatch(/permission denied/)
+      }
+    })
+  })
+
   it('does not apply to the database owner (migrations, seeds)', async () => {
     // Every database also holds the system cohort the migrations create (standalone Interview Differently).
     expect(await ids('Cohort')).toEqual(['coh-A', 'coh-B', 'interview-differently-standalone'])

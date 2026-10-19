@@ -1,0 +1,5 @@
+Contact: mailto:security@learndifferently.tech
+Contact: https://github.com/ludakhris/interview-differently/security/advisories/new
+Expires: 2027-10-19T00:00:00.000Z
+Preferred-Languages: en
+Policy: https://github.com/ludakhris/interview-differently/security/policy

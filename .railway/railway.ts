@@ -12,7 +12,13 @@ import {
 
 export default defineRailway((ctx) => {
   const Postgres = postgres('Postgres', { region: 'us-east4-eqdc4a' })
-  Postgres.networking = { privateNetworkEndpoint: 'postgres', tcpProxies: { '5432': {} } }
+  // Production's database and cache are reachable only on Railway's private network: no public TCP proxy. The dev
+  // database keeps one, since apps/api/.env and the hand-run scripts connect to it from outside Railway. To run a
+  // script against production, add a TCP proxy in the Railway dashboard for that job and remove it afterwards
+  // (docs/admin-setup.md).
+  Postgres.networking = ctx.isEnvironment('dev')
+    ? { privateNetworkEndpoint: 'postgres', tcpProxies: { '5432': {} } }
+    : { privateNetworkEndpoint: 'postgres' }
 
   // `dev`: the shared development environment. Its database is what apps/api/.env points at (its
   // DATABASE_PUBLIC_URL), and `api-dev` is an API that runs beside it, deployed by hand from any branch:
@@ -78,7 +84,7 @@ export default defineRailway((ctx) => {
     startCommand:
       '/bin/sh -c "rm -rf $RAILWAY_VOLUME_MOUNT_PATH/lost+found/ && exec docker-entrypoint.sh redis-server --requirepass $REDIS_PASSWORD --save 60 1 --dir $RAILWAY_VOLUME_MOUNT_PATH"',
   }
-  Redis.networking = { privateNetworkEndpoint: 'redis', tcpProxies: { '6379': {} } }
+  Redis.networking = { privateNetworkEndpoint: 'redis' }
   const redisVolume = volume('redis-volume', {
     alerts: { usage: { '100': {}, '80': {}, '95': {} } },
     allowOnlineResize: true,
