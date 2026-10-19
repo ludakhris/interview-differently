@@ -120,6 +120,9 @@ export class MeService {
    * joinKey is globally unique (#16), so a key resolves to exactly one cohort.
    */
   async join(userId: string, input: { joinKey?: string; institutionId?: string }) {
+    for (const v of [input?.joinKey, input?.institutionId])
+      if (v != null && (typeof v !== 'string' || v.length > 200))
+        throw new BadRequestException('joinKey and institutionId must be short text')
     await this.sync(userId)
 
     let institutionId: string

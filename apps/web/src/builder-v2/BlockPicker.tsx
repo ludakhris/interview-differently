@@ -150,11 +150,16 @@ export function BlockPicker({ onPick, onClose }: Props) {
   const selected = REGISTRY.find((d) => d.kind === selectedKind) ?? groupKinds[0]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        role="presentation"
+        onClick={onClose}
+      />
       <div
         className="relative z-10 w-[820px] max-h-[88vh] bg-[#111] border border-white/10 rounded-2xl overflow-hidden flex flex-col shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label="Insert a block"
       >
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-6 pt-5 pb-0 flex-none">

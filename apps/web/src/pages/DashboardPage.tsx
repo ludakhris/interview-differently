@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth, useUser } from '@clerk/clerk-react'
 import { useEffect, useMemo, useState } from 'react'
 import { ClipboardCheck, Database } from 'lucide-react'
@@ -214,10 +214,10 @@ export function DashboardPage() {
                   {trackScenarios.map((scenario) => {
                     const iconName = scenario.icon ?? meta.icon
                     return (
-                      <div
+                      <Link
                         key={scenario.scenarioId}
-                        className="bg-[#111111] rounded-2xl border border-white/10 hover:border-white/20 transition-all hover:-translate-y-0.5 overflow-hidden cursor-pointer group"
-                        onClick={() => navigate(`/scenario/${scenario.scenarioId}/briefing`)}
+                        to={`/scenario/${scenario.scenarioId}/briefing`}
+                        className="block bg-[#111111] rounded-2xl border border-white/10 hover:border-white/20 transition-all hover:-translate-y-0.5 overflow-hidden cursor-pointer group"
                       >
                         <div className="h-1.5 w-full" style={{ backgroundColor: meta.color }} />
                         <div className="p-5">
@@ -254,7 +254,7 @@ export function DashboardPage() {
                             </span>
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     )
                   })}
                   {track === SIMULATIONS_TRACK && (
@@ -483,16 +483,13 @@ export function DashboardPage() {
                     : key === 'sql-sandbox'
                       ? 'No datasets assigned to your cohorts yet.'
                       : meta.description
-                return (
-                  <div
-                    key={key}
-                    onClick={() => available && navigate(meta.path)}
-                    className={`bg-[#111111] rounded-2xl border border-white/10 overflow-hidden transition-all group ${
-                      available
-                        ? 'hover:border-white/20 hover:-translate-y-0.5 cursor-pointer'
-                        : 'opacity-60'
-                    }`}
-                  >
+                const cls = `bg-[#111111] rounded-2xl border border-white/10 overflow-hidden transition-all group ${
+                  available
+                    ? 'hover:border-white/20 hover:-translate-y-0.5 cursor-pointer'
+                    : 'opacity-60'
+                }`
+                const body = (
+                  <>
                     <div className="h-1.5 w-full" style={{ backgroundColor: TOOL_COLOR }} />
                     <div className="p-5">
                       <div className="flex items-start gap-3 mb-3">
@@ -526,6 +523,15 @@ export function DashboardPage() {
                         </p>
                       )}
                     </div>
+                  </>
+                )
+                return available ? (
+                  <Link key={key} to={meta.path} className={`block ${cls}`}>
+                    {body}
+                  </Link>
+                ) : (
+                  <div key={key} className={cls}>
+                    {body}
                   </div>
                 )
               })}

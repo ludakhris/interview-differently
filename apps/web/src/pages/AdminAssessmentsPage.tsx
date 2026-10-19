@@ -1105,14 +1105,16 @@ function AttemptAnswers({
   return (
     <div
       className="fixed inset-0 z-50 bg-black/70 flex items-start justify-center p-4 sm:p-8 overflow-y-auto"
-      onClick={onClose}
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={`Answers: ${who}`}
         className="w-full max-w-3xl bg-surface rounded-2xl border border-edge/10 p-5"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-display font-bold text-[16px] text-fg">Answers · {who}</h3>

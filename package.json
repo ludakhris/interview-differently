@@ -14,10 +14,13 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\"",
     "test:scripts": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --test scripts/*.test.ts",
+    "a11y:scan": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning scripts/a11y-scan.ts",
     "betterstack:sync": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning scripts/betterstack-sync.ts"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@types/js-yaml": "^4.0.9",
+    "playwright": "1.63.0",
     "prettier": "^3.2.0",
     "railway": "^3.12.0",
     "turbo": "^2.0.0"

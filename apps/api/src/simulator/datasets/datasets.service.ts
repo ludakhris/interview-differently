@@ -26,6 +26,9 @@ export type ContentWhere =
   | undefined
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const SLUG_MAX = 200
+const NAME_MAX = 500
+const DESCRIPTION_MAX = 20_000
 
 /**
  * Datasets for the SQL sandbox (#25).
@@ -82,7 +85,8 @@ export class DatasetsService {
 
   /** Runs the script and returns the schema — used by the admin "Validate" button. Throws 400 on SQL error. */
   async validate(setupSql: string): Promise<SchemaTable[]> {
-    if (!setupSql?.trim()) throw new BadRequestException('setupSql is required')
+    if (typeof setupSql !== 'string' || !setupSql.trim())
+      throw new BadRequestException('setupSql is required')
     let schema: SchemaTable[]
     try {
       schema = await this.runner.introspect(setupSql)
@@ -145,6 +149,8 @@ export class DatasetsService {
     cohortIds: string[],
     withinInstitutions: string[] | null
   ): Promise<void> {
+    if (!Array.isArray(cohortIds) || !cohortIds.every((c) => typeof c === 'string'))
+      throw new BadRequestException('cohortIds must be a list of cohort ids')
     await this.get(id)
     if (withinInstitutions) {
       const allowed = await this.prisma.cohort.count({
@@ -183,11 +189,18 @@ export class DatasetsService {
   }
 
   private async prepare(input: DatasetInput) {
-    const slug = input.slug?.trim()
-    const name = input.name?.trim()
-    if (!slug || !SLUG_RE.test(slug))
+    const slug = typeof input.slug === 'string' ? input.slug.trim() : ''
+    const name = typeof input.name === 'string' ? input.name.trim() : ''
+    if (!slug || slug.length > SLUG_MAX || !SLUG_RE.test(slug))
       throw new BadRequestException('slug must be lowercase letters, digits and hyphens')
     if (!name) throw new BadRequestException('name is required')
+    if (name.length > NAME_MAX)
+      throw new BadRequestException(`name can be at most ${NAME_MAX} characters`)
+    if (
+      input.description != null &&
+      (typeof input.description !== 'string' || input.description.length > DESCRIPTION_MAX)
+    )
+      throw new BadRequestException(`description can be at most ${DESCRIPTION_MAX} characters`)
     const schemaSummary = await this.validate(input.setupSql)
     return {
       slug,

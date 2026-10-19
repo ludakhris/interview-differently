@@ -707,14 +707,20 @@ function DemoIntro({ onStart, onClose }: { onStart: () => void; onClose: () => v
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
   return (
+    // A click on the backdrop closes it; Escape closes it from the keyboard.
     <div
       className="ad-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="h-demo-intro"
-      onClick={onClose}
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
     >
-      <div className="ad ad-overlay-card ad-intro" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="ad ad-overlay-card ad-intro"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="h-demo-intro"
+      >
         <span className="ad-chip ad-chip-ai">Before we start</span>
         <h2 id="h-demo-intro">Two simulated learners. Everything else is real.</h2>
         <p>

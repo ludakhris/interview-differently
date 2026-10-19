@@ -43,3 +43,32 @@ describe('DatasetsService.validate', () => {
     expect(await svc.validate('x')).toHaveLength(1)
   })
 })
+
+describe('DatasetsService request bodies', () => {
+  const fit = { ok: true, error: null, peakMb: 1, limitMb: 2_048 }
+
+  it('refuses setupSql, slug, name or description of the wrong type with a 400', async () => {
+    const { svc, runner } = setup(fit)
+    await expect(svc.validate({ sql: 'x' } as never)).rejects.toThrow(BadRequestException)
+    const base = { slug: 'ds', name: 'DS', setupSql: 'create table t(x int);' }
+    for (const over of [
+      { slug: 5 },
+      { name: ['DS'] },
+      { name: 'x'.repeat(501) },
+      { description: { a: 1 } },
+      { setupSql: 7 },
+    ])
+      await expect(svc.create({ ...base, ...over } as never, null)).rejects.toThrow(
+        BadRequestException
+      )
+    expect(runner.introspect).not.toHaveBeenCalled()
+  })
+
+  it('refuses cohortIds that are not a list of ids with a 400', async () => {
+    const prisma = { dataset: { findUnique: jest.fn() }, $transaction: jest.fn() }
+    const svc = new DatasetsService(prisma as never, {} as never, {} as never)
+    await expect(svc.setCohorts('d1', 'c1' as never, null)).rejects.toThrow(BadRequestException)
+    await expect(svc.setCohorts('d1', [1] as never, null)).rejects.toThrow(BadRequestException)
+    expect(prisma.$transaction).not.toHaveBeenCalled()
+  })
+})

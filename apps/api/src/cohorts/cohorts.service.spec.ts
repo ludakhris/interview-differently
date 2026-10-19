@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common'
+import { BadRequestException, NotFoundException } from '@nestjs/common'
 import { CohortsService } from './cohorts.service'
 import type { PrismaService } from '../prisma/prisma.service'
 import type { ClerkService } from '../auth/clerk.service'
@@ -67,5 +67,21 @@ describe('CohortsService.addMember user source', () => {
     expect(prisma.user.create).toHaveBeenCalledWith({
       data: { id: 'user_ld1', source: 'learn', email: 'ann@example.com', displayName: 'Ann' },
     })
+  })
+})
+
+describe('CohortsService input checks', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('refuses a malformed body with a 400 before touching data', async () => {
+    const bad = (p: Promise<unknown>) => expect(p).rejects.toBeInstanceOf(BadRequestException)
+    await bad(service.create('i1', { name: 42 } as never))
+    await bad(service.create('i1', { name: 'Fall', joinKey: ['k'] } as never))
+    await bad(service.update('c1', { name: null } as never))
+    await bad(service.update('c1', { joinKey: 'k'.repeat(255) }))
+    await bad(service.addMember('c1', { email: { equals: 'a@b.co' } } as never))
+    await bad(service.addMember('c1', { userId: 7 } as never))
+    expect(prisma.cohort.findUnique).not.toHaveBeenCalled()
+    expect(prisma.membership.create).not.toHaveBeenCalled()
   })
 })

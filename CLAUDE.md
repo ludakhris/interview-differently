@@ -74,8 +74,33 @@ There are two status pages: the admin System status page (`/lms/admin/status`) a
 For a PR over about 500 changed lines (`git diff --stat origin/main...HEAD`), review it with parallel read-only subagents, one per area of the diff, before merging:
 
 1. Split the diff by area (for example protocol and server side, rules and data model, other API and config, web apps). Each reviewer reads every hunk in its area and reports at most 8 ranked findings, each with a concrete failure scenario. Tell each what earlier reviews already fixed.
-2. Verify the top claims against the code, then report at most 15 findings, one line each (`file:line — summary`).
+2. Verify the top claims against the code, then report at most 15 findings to the owner. Each finding gives the
+   place (`file:line`), then **a scenario in plain words**: who does what, on which screen, and what goes wrong for
+   them (for example "An instructor marks attendance for a cohort; Save fails halfway; three learners stay marked
+   absent with no note and the summary counts them"). Then the fix, also in plain words. No internal names or
+   shorthand the owner would have to ask about: say what it is on the screen or in the database the first time
+   ("the attendance draft kept in the browser until Save"). Say how many findings there were in all, and list the
+   ones left out with one line each on why.
 3. Fix in parallel by area with disjoint file lists, then run the CI gates locally (`npm run lint`, `npm run format:check`, `npm run typecheck`, `npm run build`, tests) before pushing. After a clean build confirm `apps/api/dist/main.js` exists.
+
+## Reviewing a feature with the owner
+
+Before a feature is committed, the owner sees it working, screen by screen (owner's decision, 2026-10-19):
+
+1. **Deploy it to dev.** Say which migrations it applies to the shared dev database and get a yes, then deploy with
+   `apps/api/scripts/deploy-dev.sh` and point the local web apps at it (`VITE_API_URL=<dev API address>`, see
+   `docs/dev-api.md`).
+2. **Give a guided tour.** Drive the browser pane yourself, one screen at a time, on the fictional seed. For each
+   screen, narrate in plain words: where we are, what each part does, what is new, and anything that looks wrong.
+   Stop at the end of each section and wait for "next", so the owner can take notes. Move slowly. Do the real
+   actions (save, change, release), cancel anything that should not stick, and put the demo data back as it was
+   afterwards.
+3. **Keep one numbered list of findings** as you go: everything the owner calls out and everything you notice
+   (layout, wording, a broken rule). Repeat the list at the end of each section, one line per item, and strike what
+   the owner rules out. Don't fix mid-tour unless asked.
+4. **Fix the list, then tour the fixes** the same way, only over what changed.
+5. **A design change goes back into the issue.** If the tour shows the design is wrong, rewrite the issue in plain
+   words with the owner's decisions, and park the built code on a local branch (not on main) instead of shipping it.
 
 ## Posting screenshots to GitHub issues / PRs
 

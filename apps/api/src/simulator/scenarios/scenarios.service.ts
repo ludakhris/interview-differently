@@ -1,9 +1,37 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common'
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { withholdAnswerKey } from './answer-key'
 import { TRACK_META } from './track-meta'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Scenario = any
+
+const SCENARIO_ID_MAX = 200
+const STATUSES = ['draft', 'published']
+
+/** Checks the parts of a scenario body the API reads itself; the rest is the builder's JSON. */
+function checkScenario(scenario: unknown, requireId: boolean): void {
+  if (typeof scenario !== 'object' || scenario === null || Array.isArray(scenario))
+    throw new BadRequestException('A scenario must be an object')
+  const { scenarioId, builderMeta } = scenario as { scenarioId?: unknown; builderMeta?: unknown }
+  if (
+    requireId &&
+    (typeof scenarioId !== 'string' || !scenarioId || scenarioId.length > SCENARIO_ID_MAX)
+  )
+    throw new BadRequestException(
+      `scenarioId must be text of at most ${SCENARIO_ID_MAX} characters`
+    )
+  if (builderMeta == null) return
+  if (typeof builderMeta !== 'object' || Array.isArray(builderMeta))
+    throw new BadRequestException('builderMeta must be an object')
+  const status = (builderMeta as { status?: unknown }).status
+  if (status !== undefined && !STATUSES.includes(status as string))
+    throw new BadRequestException(`builderMeta.status must be one of: ${STATUSES.join(', ')}`)
+}
 
 /**
  * Who is asking. `null` = anonymous. Institution-private scenarios (#15)
@@ -101,6 +129,7 @@ export class ScenariosService {
   }
 
   async create(scenario: Scenario, institutionId: string | null): Promise<Scenario> {
+    checkScenario(scenario, true)
     const row = await this.prisma.scenario.create({
       data: {
         scenarioId: scenario.scenarioId,
@@ -114,6 +143,7 @@ export class ScenariosService {
   }
 
   async update(id: string, scenario: Scenario): Promise<Scenario> {
+    checkScenario(scenario, false)
     const updated = {
       ...stripOwner(scenario),
       builderMeta: {

@@ -168,9 +168,12 @@ export function AttendanceSheet({
           {rows.map((r, i) => {
             const d = drafts[r.userId]
             return (
+              // Each row is a keyboard stop: arrow keys move between learners, letters set the status.
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
               <li
                 key={r.userId}
                 className="at-row"
+                // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
                 tabIndex={0}
                 ref={(el) => {
                   rowRefs.current[i] = el

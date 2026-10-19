@@ -106,6 +106,8 @@ export class InstitutionScope {
    * it — auto-picked when they belong to exactly one institution.
    */
   ownerFor(req: AdminRequest, requested: string | null | undefined): string | null {
+    if (requested != null && typeof requested !== 'string')
+      throw new BadRequestException('institutionId is not valid')
     if (this.isFullAdmin(req)) return requested ?? null
     const ids = req.institutionIds ?? []
     if (requested) {

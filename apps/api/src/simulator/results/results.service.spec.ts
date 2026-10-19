@@ -114,3 +114,20 @@ describe('ResultsService.create for an existing id', () => {
     await expect(h.svc.create(dto())).rejects.toBeInstanceOf(ForbiddenException)
   })
 })
+
+describe('ResultsService.createAttempt', () => {
+  it('refuses a missing or non-text scenarioId or track with a 400', async () => {
+    const prisma = { simulationAttempt: { create: jest.fn() } }
+    const svc = new ResultsService(prisma as never, {} as never)
+    for (const body of [
+      { scenarioId: 5, track: 'ops' },
+      { scenarioId: 'S1' },
+      { scenarioId: '', track: 'ops' },
+      { scenarioId: 'S1', track: { a: 1 } },
+    ])
+      await expect(svc.createAttempt({ userId: 'u1', ...body } as never)).rejects.toThrow(
+        BadRequestException
+      )
+    expect(prisma.simulationAttempt.create).not.toHaveBeenCalled()
+  })
+})

@@ -1,5 +1,7 @@
+import { BadRequestException } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import { AssessmentsService } from './assessments.service'
+import { AssessmentsAdminController, AssessmentsMeController } from './assessments.controller'
 import { parseAssessmentMarkdown, AssessmentParseError } from './parse-markdown'
 import { compareResults } from './grade'
 import { drawCount, drawSection, formatDrawSpec, parseDrawSpec } from './draw'
@@ -458,6 +460,18 @@ describe('createDelivery institution guard', () => {
       make(null).service.createDelivery('a1', { cohortId: 'other', label: 'pre' })
     ).resolves.toEqual({ id: 'd1' })
   })
+
+  it('refuses a malformed delivery with a 400 before touching data', async () => {
+    const { service, created } = make(null)
+    const bad = (input: object) =>
+      expect(service.createDelivery('a1', input as never)).rejects.toThrow(BadRequestException)
+    await bad({ cohortId: 5, label: 'pre' })
+    await bad({ cohortId: 'own', label: 7 })
+    await bad({ cohortId: 'own', label: 'x'.repeat(101) })
+    await bad({ cohortId: 'own', label: 'pre', opensAt: 'not a date' })
+    await bad({ cohortId: 'own', label: 'pre', closesAt: 1700000000 })
+    expect(created).toHaveLength(0)
+  })
 })
 
 describe('completion times (#39)', () => {
@@ -721,5 +735,34 @@ describe('LTI attempts (#63)', () => {
       const { update } = await run(31)
       expect(update.mock.calls[0]).toMatchObject([{ data: { submittedLate: false } }])
     })
+  })
+})
+
+describe('assessment request bodies', () => {
+  it('refuses malformed answers from a standalone learner as from an LTI session', async () => {
+    const service = { saveAnswers: jest.fn(), submit: jest.fn() }
+    const c = new AssessmentsMeController(service as never)
+    const req = { userId: 'u1' } as never
+    expect(() => c.save(req, 'a1', { answers: ['x'] } as never)).toThrow(BadRequestException)
+    expect(() => c.save(req, 'a1', { answers: { q1: 5 } } as never)).toThrow(BadRequestException)
+    expect(() => c.submit(req, 'a1', { answers: { q1: 'x'.repeat(20_001) } })).toThrow(
+      BadRequestException
+    )
+    expect(service.saveAnswers).not.toHaveBeenCalled()
+    expect(service.submit).not.toHaveBeenCalled()
+    c.save(req, 'a1', { answers: { q1: 'B' } })
+    expect(service.saveAnswers).toHaveBeenCalledWith('u1', 'a1', { q1: 'B' }, undefined)
+  })
+
+  it('refuses markdown that is not text, and a delivery without a cohort id', async () => {
+    const svc = new AssessmentsService({} as never, {} as never, {} as never)
+    await expect(svc.preview(42 as never, undefined)).rejects.toThrow(BadRequestException)
+    const scope = { assertReadable: jest.fn(), assertCohort: jest.fn() }
+    const service = { get: jest.fn(), createDelivery: jest.fn() }
+    const c = new AssessmentsAdminController(service as never, scope as never)
+    await expect(
+      c.createDelivery({ userId: 'u1' } as never, 'a1', { cohortId: { id: 'x' } } as never)
+    ).rejects.toThrow(BadRequestException)
+    expect(scope.assertCohort).not.toHaveBeenCalled()
   })
 })

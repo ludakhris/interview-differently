@@ -77,7 +77,9 @@ export function NodeRenderStatus({
         </button>
       </div>
 
+      {/* An author's preview of the clip rendered from the script they wrote just above it. */}
       {asset?.mediaUrl && status === 'ready' && (
+        // eslint-disable-next-line jsx-a11y/media-has-caption
         <video
           key={asset.mediaUrl}
           src={asset.mediaUrl}

@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common'
+import { BadRequestException, NotFoundException } from '@nestjs/common'
 import { ScenariosService } from './scenarios.service'
 
 const svc = (row: unknown) =>
@@ -17,5 +17,20 @@ describe('ScenariosService.findForLti', () => {
 
   it('404s an unknown scenario', async () => {
     await expect(svc(null).findForLti('S1')).rejects.toBeInstanceOf(NotFoundException)
+  })
+})
+
+describe('ScenariosService request bodies', () => {
+  it('refuses a scenario body the API cannot read with a 400', async () => {
+    const prisma = { scenario: { create: jest.fn(), update: jest.fn() } }
+    const s = new ScenariosService(prisma as never)
+    const bad = (p: Promise<unknown>) => expect(p).rejects.toBeInstanceOf(BadRequestException)
+    await bad(s.create([] as never, null))
+    await bad(s.create({ scenarioId: 5 }, null))
+    await bad(s.create({ scenarioId: 'x'.repeat(201) }, null))
+    await bad(s.create({ scenarioId: 'S1', builderMeta: 'draft' }, null))
+    await bad(s.update('S1', { builderMeta: { status: 'live' } }))
+    expect(prisma.scenario.create).not.toHaveBeenCalled()
+    expect(prisma.scenario.update).not.toHaveBeenCalled()
   })
 })

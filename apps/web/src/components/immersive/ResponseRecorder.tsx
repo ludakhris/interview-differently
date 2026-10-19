@@ -180,9 +180,12 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
         {/* Playback preview */}
         {state === 'preview' && previewUrl && (
           <div className="rounded-lg overflow-hidden bg-surface-alt border border-edge/10">
+            {/* The learner's own answer, played back to them; there is no caption track to give it. */}
             {mode === 'video' ? (
+              // eslint-disable-next-line jsx-a11y/media-has-caption
               <video src={previewUrl} controls className="w-full aspect-video" />
             ) : (
+              // eslint-disable-next-line jsx-a11y/media-has-caption
               <audio src={previewUrl} controls className="w-full" />
             )}
           </div>

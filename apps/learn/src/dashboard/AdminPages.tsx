@@ -385,11 +385,16 @@ function RoleMenu({
   onChange: (role: string) => void
 }) {
   const button = useRef<HTMLButtonElement>(null)
+  const menu = useRef<HTMLUListElement>(null)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
 
   useEffect(() => {
     if (!pos) return
     const close = () => setPos(null)
+    // A click inside the menu (its heading or padding) keeps it open.
+    const onClick = (e: MouseEvent) => {
+      if (!menu.current?.contains(e.target as Node)) close()
+    }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         close()
@@ -397,12 +402,12 @@ function RoleMenu({
       }
     }
     // Fixed position: the grid scrolls sideways, which would clip an absolute menu.
-    document.addEventListener('click', close)
+    document.addEventListener('click', onClick)
     document.addEventListener('keydown', onKey)
     window.addEventListener('scroll', close, true)
     window.addEventListener('resize', close)
     return () => {
-      document.removeEventListener('click', close)
+      document.removeEventListener('click', onClick)
       document.removeEventListener('keydown', onKey)
       window.removeEventListener('scroll', close, true)
       window.removeEventListener('resize', close)
@@ -439,12 +444,7 @@ function RoleMenu({
         <span aria-hidden="true">▾</span>
       </button>
       {pos && (
-        <ul
-          className="dash-rolemenu"
-          role="listbox"
-          style={pos}
-          onClick={(e) => e.stopPropagation()}
-        >
+        <ul ref={menu} className="dash-rolemenu" role="listbox" style={pos}>
           <li className="dash-rolemenu-head" role="presentation">
             Change role
           </li>

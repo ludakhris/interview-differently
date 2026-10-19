@@ -19,6 +19,16 @@ export interface AddMemberInput {
   email?: string
 }
 
+const TEXT_MAX = 254
+
+/** Optional text from a request body (null/undefined allowed), at most TEXT_MAX characters, or a 400. */
+function optionalText(v: unknown, field: string): string | null | undefined {
+  if (v == null) return v as null | undefined
+  if (typeof v !== 'string' || v.length > TEXT_MAX)
+    throw new BadRequestException(`${field} must be text of at most ${TEXT_MAX} characters`)
+  return v
+}
+
 @Injectable()
 export class CohortsService {
   constructor(
@@ -43,12 +53,13 @@ export class CohortsService {
   }
 
   async create(institutionId: string, input: CohortInput) {
-    if (!input.name?.trim()) throw new BadRequestException('name is required')
+    const name = optionalText(input.name, 'name')?.trim()
+    if (!name) throw new BadRequestException('name is required')
+    const joinKey = optionalText(input.joinKey, 'joinKey')?.trim() || null
     await this.assertInstitutionExists(institutionId)
-    const joinKey = input.joinKey?.trim() || null
     try {
       return await this.prisma.cohort.create({
-        data: { institutionId, name: input.name.trim(), joinKey },
+        data: { institutionId, name, joinKey },
       })
     } catch (err) {
       if ((err as { code?: string }).code === 'P2002') {
@@ -61,11 +72,12 @@ export class CohortsService {
   async update(cohortId: string, input: Partial<CohortInput>) {
     const data: { name?: string; joinKey?: string | null } = {}
     if (input.name !== undefined) {
-      if (!input.name.trim()) throw new BadRequestException('name cannot be empty')
-      data.name = input.name.trim()
+      const name = optionalText(input.name, 'name')?.trim()
+      if (!name) throw new BadRequestException('name cannot be empty')
+      data.name = name
     }
     if (input.joinKey !== undefined) {
-      data.joinKey = input.joinKey?.trim() || null
+      data.joinKey = optionalText(input.joinKey, 'joinKey')?.trim() || null
     }
     try {
       return await this.prisma.cohort.update({ where: { id: cohortId }, data })
@@ -136,6 +148,8 @@ export class CohortsService {
    * to sign in first" is clearer than silently failing later.
    */
   async addMember(cohortId: string, input: AddMemberInput) {
+    optionalText(input.userId, 'userId')
+    optionalText(input.email, 'email')
     const cohort = await this.prisma.cohort.findUnique({ where: { id: cohortId } })
     if (!cohort) throw new NotFoundException(`Cohort ${cohortId} not found`)
 

@@ -2,7 +2,7 @@
 // Drag-to-reorder wired via HTML5 DnD (no dep needed).
 // Click to scroll the corresponding phase heading into view.
 
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import type { ScenarioPhase } from '@id/types'
 
 interface Props {
@@ -21,6 +21,18 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
   const [editValue, setEditValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const itemsRef = useRef<(HTMLDivElement | null)[]>([])
+  // Set by Add phase: the next phase list ends with the new phase, which opens for naming.
+  const justAdded = useRef(false)
+
+  useEffect(() => {
+    if (!justAdded.current) return
+    justAdded.current = false
+    const added = phases[phases.length - 1]
+    if (!added) return
+    setEditingId(added.id)
+    setEditValue(added.label)
+    setTimeout(() => inputRef.current?.select(), 0)
+  }, [phases])
 
   function startEdit(phase: ScenarioPhase, e: React.MouseEvent) {
     e.stopPropagation()
@@ -66,6 +78,8 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
           const isDragOver = dragOver === idx && dragging !== idx
 
           return (
+            // The whole row selects on click; keyboard users select with the phase name button inside it.
+            // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
             <div
               key={phase.id}
               ref={(el) => {
@@ -110,14 +124,16 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
                   autoFocus
                 />
               ) : (
-                <span
+                <button
+                  type="button"
+                  aria-current={isActive ? 'step' : undefined}
                   className={[
-                    'flex-1 text-[13px] font-semibold truncate',
+                    'flex-1 text-left text-[13px] font-semibold truncate',
                     isActive ? 'text-white' : 'text-white/65',
                   ].join(' ')}
                 >
                   {phase.label}
-                </span>
+                </button>
               )}
               {/* pencil — visible on hover when not editing */}
               {editingId !== phase.id && (
@@ -139,7 +155,10 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
 
         {/* Add phase */}
         <button
-          onClick={onAdd}
+          onClick={() => {
+            justAdded.current = true
+            onAdd()
+          }}
           className="flex items-center gap-2 px-2.5 py-2 mt-1 rounded-lg border border-dashed border-white/10 text-[12px] font-semibold text-white/30 hover:text-white/55 hover:border-white/20 transition-all"
         >
           <span>＋</span>

@@ -84,6 +84,8 @@ export class AssessmentsAdminController {
     @Param('id') id: string,
     @Body() body: DeliveryInput
   ) {
+    if (typeof body?.cohortId !== 'string' || !body.cohortId)
+      throw new BadRequestException('cohortId is required')
     this.scope.assertReadable(req, (await this.service.get(id)).institutionId)
     await this.scope.assertCohort(req, body.cohortId)
     return this.service.createDelivery(id, body)
@@ -182,8 +184,8 @@ const MAX_ANSWER_KEYS = 200
 const MAX_ANSWER_KEY_CHARS = 64
 const MAX_ANSWER_CHARS = 20_000
 
-/** Answers from an LTI session: a plain object of short ids to strings of bounded size. */
-function ltiAnswers(input: unknown): Record<string, string> {
+/** Answers from a learner (LTI or standalone): a plain object of short ids to strings of bounded size. */
+function checkAnswers(input: unknown): Record<string, string> {
   if (typeof input !== 'object' || input === null || Array.isArray(input))
     throw new BadRequestException('answers must be an object')
   const entries = Object.entries(input)
@@ -230,7 +232,7 @@ export class AssessmentsMeController {
     @Param('id') id: string,
     @Body() body: { answers: Record<string, string> }
   ) {
-    const answers = req.lti ? ltiAnswers(body?.answers ?? {}) : (body.answers ?? {})
+    const answers = checkAnswers(body?.answers ?? {})
     return this.service.saveAnswers(req.userId, id, answers, this.pinned(req))
   }
 
@@ -240,8 +242,7 @@ export class AssessmentsMeController {
     @Param('id') id: string,
     @Body() body: { answers?: Record<string, string> }
   ) {
-    const answers =
-      req.lti && body?.answers !== undefined ? ltiAnswers(body.answers) : body?.answers
+    const answers = body?.answers != null ? checkAnswers(body.answers) : undefined
     return this.service.submit(req.userId, id, answers, this.pinned(req))
   }
 

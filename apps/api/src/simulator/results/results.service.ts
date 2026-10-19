@@ -68,6 +68,8 @@ export class ResultsService {
    * in SimulationPage); the table itself is intentionally append-only.
    */
   async createAttempt(input: { userId: string; scenarioId: string; track: string }) {
+    if (!isString(input.scenarioId, MAX_SHORT, 1) || !isString(input.track, MAX_SHORT))
+      throw new BadRequestException('Invalid attempt: scenarioId and track are required')
     return this.prisma.simulationAttempt.create({
       data: {
         userId: input.userId,

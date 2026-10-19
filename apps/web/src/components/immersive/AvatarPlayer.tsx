@@ -130,7 +130,8 @@ export function AvatarPlayer({ onReady, onDone, onError, className }: AvatarPlay
 
   return (
     <div className={`relative rounded-2xl overflow-hidden bg-[#0d0d0d] ${className ?? ''}`}>
-      {/* Video stream */}
+      {/* Video stream (live; no caption track) */}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <video ref={videoRef} autoPlay playsInline className="w-full h-full object-contain" />
 
       {/* Status overlays */}

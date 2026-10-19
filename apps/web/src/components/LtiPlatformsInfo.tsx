@@ -139,14 +139,16 @@ export function LtiPlatformsInfoDialog({
   return (
     <div
       className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-3 sm:p-6"
-      onClick={onClose}
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
     >
       <div
         ref={box}
         role="dialog"
         aria-modal="true"
         aria-labelledby="lti-info-title"
-        onClick={(e) => e.stopPropagation()}
         className="flex flex-col w-full max-w-2xl max-h-full rounded-2xl border border-edge/10 bg-surface-alt shadow-2xl"
       >
         <header className="flex items-start gap-3 px-5 sm:px-6 py-4 border-b border-edge/10">

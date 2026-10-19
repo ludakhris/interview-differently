@@ -25,6 +25,7 @@ export function TourVideo() {
         width="1280"
         height="860"
         playsInline
+        muted
         preload="metadata"
         aria-label="A forty-second tour of the real product: a state's view across providers, one provider's cohorts, one cohort's gradebook, attendance, and the export"
       />

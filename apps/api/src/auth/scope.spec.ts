@@ -73,3 +73,12 @@ describe('InstitutionScope', () => {
     })
   })
 })
+
+describe('InstitutionScope.ownerFor', () => {
+  it('refuses an institutionId that is not text with a 400', () => {
+    expect(() => scope.ownerFor(full, 5 as never)).toThrow(BadRequestException)
+    expect(() => scope.ownerFor(inst, { in: ['i1'] } as never)).toThrow(BadRequestException)
+    expect(scope.ownerFor(full, null)).toBeNull()
+    expect(scope.ownerFor(inst, 'i1')).toBe('i1')
+  })
+})

@@ -354,16 +354,19 @@ function PhaseSection({
               }}
               className="mt-1 w-full bg-[#0a0a0a] border border-white/12 rounded-md px-2 py-1 text-[13px] text-white/75 outline-none focus:border-emerald-400/50"
             />
-          ) : (
-            <p
-              className="text-[13px] text-white/45 mt-0.5 cursor-text hover:text-white/70 transition-colors"
+          ) : onPhaseUpdate ? (
+            <button
+              type="button"
+              className="block w-full text-left text-[13px] text-white/45 mt-0.5 cursor-text hover:text-white/70 transition-colors"
               title="Click to edit the phase description"
-              onClick={() => onPhaseUpdate && setEditingDescription(true)}
+              onClick={() => setEditingDescription(true)}
             >
               {phase.description || (
                 <span className="italic text-white/25">Add a phase description…</span>
               )}
-            </p>
+            </button>
+          ) : (
+            <p className="text-[13px] text-white/45 mt-0.5">{phase.description}</p>
           )}
           {/* Rubric dimension chips — clickable toggles */}
           {allDimensions.length > 0 && (

@@ -98,12 +98,16 @@ export function Modal({
       />
     )
   return createPortal(
+    // The backdrop is presentational: a click on it closes the dialog, and keys pressed
+    // inside the dialog bubble up to it (Escape closes, Tab stays inside).
     <div
       className="dash-backdrop"
       data-testid="dash-backdrop"
+      role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) requestClose()
       }}
+      onKeyDown={onKeyDown}
     >
       <div
         className={`dash-modal${wide ? ' dash-modal-wide' : ''} ${className}`.trim()}
@@ -112,7 +116,6 @@ export function Modal({
         aria-labelledby={titleId}
         tabIndex={-1}
         ref={dialog}
-        onKeyDown={onKeyDown}
       >
         <header className="dash-modal-head">
           <h2 className="dash-modal-title" id={titleId}>

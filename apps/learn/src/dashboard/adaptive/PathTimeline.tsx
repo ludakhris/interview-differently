@@ -159,6 +159,8 @@ function Fold({
   }
   const fresh = skipped.some((p) => animOf(anim, p.itemId))
   return (
+    // Focusable so keyboard users can open the tooltip that lists what was skipped.
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
     <span className={`pt-fold${fresh ? ' is-entering' : ''}`} tabIndex={0}>
       ⤳ {skipped.length} skipped · {hm(saved)} saved
       <span className="pt-pop" role="tooltip">

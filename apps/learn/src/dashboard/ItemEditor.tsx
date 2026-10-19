@@ -280,7 +280,7 @@ export function ItemEditor(props: {
               <img
                 className="dash-extcard-image"
                 src={item.config.imageUrl}
-                alt="Preview of the card image"
+                alt="Card preview"
                 width={320}
                 height={180}
               />

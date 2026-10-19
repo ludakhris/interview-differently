@@ -53,6 +53,8 @@ export function PrerenderedAvatarPlayer({
 
   return (
     <div className={`relative rounded-2xl overflow-hidden bg-surface-deep ${className ?? ''}`}>
+      {/* No caption track yet: captions for avatar clips are tracked in GitHub issue #99 (ACC-03). */}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <video
         ref={videoRef}
         src={mediaUrl}

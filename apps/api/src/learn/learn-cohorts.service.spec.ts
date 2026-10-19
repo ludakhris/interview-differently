@@ -737,6 +737,13 @@ describe('reviewTarget', () => {
       BadRequestException
     )
   })
+
+  it('refuses an itemId that is not text with a 400', async () => {
+    await expect(service.reviewTarget('u', 'agency-admin', 'e1', 5 as never)).rejects.toThrow(
+      BadRequestException
+    )
+    expect(prisma.courseItem.findUnique).not.toHaveBeenCalled()
+  })
 })
 
 describe('unoffer', () => {

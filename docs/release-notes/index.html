@@ -512,6 +512,34 @@
 
     <main id="entries">
       <p class="empty-note" id="none" hidden>No updates match. Clear the search or choose All.</p>
+      <!-- ======================= REVIEW (keyboard access and input checks) ======================= -->
+
+      <article
+        class="entry"
+        id="keyboard-and-input-checks"
+        data-status="review"
+        data-short="Keyboard access and input checks"
+        data-summary="Scenario and tool cards open from the keyboard, dialogs close cleanly, and the server turns away malformed requests."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-10-19">Oct 19, 2026</time>
+        </div>
+        <h2>Keyboard access and stricter input checks</h2>
+        <p>
+          On the Interview Differently dashboard, scenario and tool cards are now real links, so
+          they open with the keyboard and in a new tab. Dialogs close with Escape or a click
+          outside, and screen readers announce them as dialogs. Every app is now checked for
+          common accessibility mistakes each time the code changes.
+        </p>
+        <ul>
+          <li>Form fields in the scenario builder are labelled for screen readers.</li>
+          <li>
+            The server now answers a malformed request with a clear error instead of failing, on
+            every form that sends data.
+          </li>
+        </ul>
+      </article>
+
       <!-- ======================= SHIPPED (compliance admin tool) ======================= -->
 
       <article

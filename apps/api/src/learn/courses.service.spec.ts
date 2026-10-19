@@ -255,6 +255,20 @@ describe('CoursesService reorder', () => {
     ).rejects.toThrow(BadRequestException)
     expect(prisma.$transaction).not.toHaveBeenCalled()
   })
+
+  it('refuses a malformed outline with a 400', async () => {
+    const bad = (outline: unknown) =>
+      expect(service.reorder('u', 'agency-admin', 'c1', outline as never)).rejects.toThrow(
+        BadRequestException
+      )
+    await bad({ moduleIds: 'm1,m2', itemIds: {} })
+    await bad({ moduleIds: ['m1', 'm2'], itemIds: [['i1']] })
+    await bad({ moduleIds: ['m1', 'm2'], itemIds: { m1: 'i1', m2: ['i3'] } })
+    await bad({ moduleIds: [1, 2], itemIds: {} })
+    // a duplicated item in place of a missing one
+    await bad({ moduleIds: ['m1', 'm2'], itemIds: { m1: ['i1', 'i1'], m2: ['i3'] } })
+    expect(prisma.$transaction).not.toHaveBeenCalled()
+  })
 })
 
 describe('CoursesService tool access', () => {

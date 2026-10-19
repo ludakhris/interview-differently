@@ -18,12 +18,14 @@ export function resolveOwner(owners: OwnerOption[], choice: OwnerChoice): OwnerC
 
 /** Owner picker with no preselection — sharing content is a deliberate choice. Renders nothing when there's no choice. */
 export function OwnerSelect({
+  id,
   owners,
   value,
   onChange,
   className,
   optionLabel = (o) => o.label,
 }: {
+  id?: string
   owners: OwnerOption[]
   value: OwnerChoice
   onChange: (v: OwnerChoice) => void
@@ -33,6 +35,7 @@ export function OwnerSelect({
   if (owners.length <= 1) return null
   return (
     <select
+      id={id}
       value={value === undefined ? '' : (value ?? PLATFORM)}
       onChange={(e) => onChange(e.target.value === PLATFORM ? null : e.target.value)}
       className={className}

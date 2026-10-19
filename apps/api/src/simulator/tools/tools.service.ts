@@ -81,9 +81,10 @@ export class ToolsService {
         datasetSlug: input.datasetSlug.slice(0, 200),
         queryText: input.queryText.slice(0, MAX_QUERY_CHARS),
         ok: input.ok,
-        errorMessage: input.errorMessage?.slice(0, 1000) ?? null,
-        rowCount: Number.isInteger(input.rowCount) ? input.rowCount! : null,
-        durationMs: Number.isInteger(input.durationMs) ? input.durationMs! : null,
+        errorMessage:
+          typeof input.errorMessage === 'string' ? input.errorMessage.slice(0, 1000) : null,
+        rowCount: isInt4(input.rowCount) ? input.rowCount : null,
+        durationMs: isInt4(input.durationMs) ? input.durationMs : null,
       },
     })
     // Retention: opportunistic purge so no cron is needed.
@@ -178,6 +179,10 @@ const dedupeUsers = (users: UserRow[]): UserRow[] => [
 const RETENTION_DAYS = 90
 const MAX_QUERY_CHARS = 5000
 const retentionCutoff = () => new Date(Date.now() - RETENTION_DAYS * 86_400_000)
+
+/** A whole number that fits the Int column; anything else is stored as unknown (null). */
+const isInt4 = (v: unknown): v is number =>
+  Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 2_147_483_647
 
 export interface SandboxQueryInput {
   datasetSlug: string

@@ -25,6 +25,8 @@ import {
  */
 
 const AUTOSAVE_MS = 1500
+/** Matches MAX_ANSWER_CHARS in the API (assessments.controller.ts). */
+const MAX_ANSWER_CHARS = 20_000
 const NAV_HEIGHT = 57
 
 /**
@@ -103,7 +105,9 @@ export function AssessmentAttemptPage({
   }, [getToken, attemptId])
 
   const setAnswer = useCallback(
-    (qid: string, value: string) => {
+    (qid: string, input: string) => {
+      // The API refuses an answer longer than this, which would block saving and submitting.
+      const value = input.slice(0, MAX_ANSWER_CHARS)
       setAnswers((a) => ({ ...a, [qid]: value }))
       dirtyRef.current[qid] = value
       setSaveState('dirty')

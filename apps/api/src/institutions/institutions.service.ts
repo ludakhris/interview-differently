@@ -23,14 +23,25 @@ export interface InstitutionSummary {
 }
 
 const DOMAIN_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i
+const NAME_MAX = 500
+
+/** A required institution name from a request body: trimmed text, at most NAME_MAX characters. */
+function checkName(raw: unknown, message: string): string {
+  if (typeof raw !== 'string' || !raw.trim()) throw new BadRequestException(message)
+  if (raw.trim().length > NAME_MAX)
+    throw new BadRequestException(`name can be at most ${NAME_MAX} characters`)
+  return raw.trim()
+}
 
 /**
  * Normalises an optional email domain. Returns null when the caller passed
  * nothing (or empty/whitespace) — that's a valid state for institutions whose
  * students don't share a domain. Validates format only when a value is given.
  */
-function normaliseDomain(raw: string | null | undefined): string | null {
+function normaliseDomain(raw: unknown): string | null {
   if (raw == null) return null
+  if (typeof raw !== 'string' || raw.length > 253)
+    throw new BadRequestException('emailDomain must be a domain like "example.edu"')
   const trimmed = raw.trim().toLowerCase().replace(/^@/, '')
   if (trimmed === '') return null
   if (!DOMAIN_RE.test(trimmed)) {
@@ -95,12 +106,12 @@ export class InstitutionsService {
   }
 
   async create(input: InstitutionInput) {
-    if (!input.name?.trim()) throw new BadRequestException('name is required')
+    const name = checkName(input.name, 'name is required')
     const emailDomain = normaliseDomain(input.emailDomain)
     try {
       return await this.prisma.institution.create({
         data: {
-          name: input.name.trim(),
+          name,
           emailDomain,
           parentId: await ensureStandaloneAgency(this.prisma),
         },
@@ -121,8 +132,7 @@ export class InstitutionsService {
   async update(id: string, input: Partial<InstitutionInput>) {
     const data: { name?: string; emailDomain?: string | null } = {}
     if (input.name !== undefined) {
-      if (!input.name.trim()) throw new BadRequestException('name cannot be empty')
-      data.name = input.name.trim()
+      data.name = checkName(input.name, 'name cannot be empty')
     }
     if (input.emailDomain !== undefined) {
       data.emailDomain = normaliseDomain(input.emailDomain)

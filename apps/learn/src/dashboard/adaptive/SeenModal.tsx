@@ -63,17 +63,20 @@ export function SeenModal({
   const first = data?.name.split(' ')[0] ?? 'The learner'
 
   return (
+    // A click on the backdrop closes it; Escape closes it from the keyboard.
     <div
       className="ad-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="h-seen"
-      onClick={onClose}
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
     >
       <div
         ref={card}
         className="ad ad-overlay-card ad-seen"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="h-seen"
         onScroll={(e) => {
           const el = e.currentTarget
           following.current = el.scrollHeight - el.scrollTop - el.clientHeight < 160

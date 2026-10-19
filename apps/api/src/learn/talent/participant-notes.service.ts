@@ -222,7 +222,8 @@ export class ParticipantNotesService {
       .sort((a, b) => a.name.localeCompare(b.name))
   }
 
-  private async assertAssignable(providerId: string, assigneeId: string): Promise<string> {
+  private async assertAssignable(providerId: string, assigneeId: unknown): Promise<string> {
+    if (typeof assigneeId !== 'string') throw new BadRequestException('assigneeId is not valid')
     const m = await this.prisma.membership.findFirst({
       where: { userId: assigneeId, institutionId: providerId, cohortId: null },
       select: { id: true },

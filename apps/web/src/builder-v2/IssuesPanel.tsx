@@ -1,6 +1,7 @@
 // IssuesPanel — what stands between the author and Publish (#24 Phase F).
 // Errors block publishing; warnings don't. Each row jumps to its block.
 
+import { useEffect } from 'react'
 import type { ValidationIssue } from './validate'
 
 interface Props {
@@ -17,21 +18,31 @@ export function IssuesPanel({ issues, status, publishing, onJump, onPublish, onC
   const warnings = issues.filter((i) => i.level === 'warning')
   const canPublish = errors.length === 0
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-      onClick={onClose}
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
     >
       <div
         className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#111] shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-labelledby="issues-title"
       >
         <div className="px-6 py-5 border-b border-white/10">
           <div className="flex items-center gap-3">
             <span className={`text-[20px] ${canPublish ? 'text-emerald-400' : 'text-amber-400'}`}>
               {canPublish ? '✓' : '⚠'}
             </span>
-            <h2 className="font-display font-bold text-[16px] text-[#f5f3ee]">
+            <h2 id="issues-title" className="font-display font-bold text-[16px] text-[#f5f3ee]">
               {canPublish
                 ? status === 'published'
                   ? 'Ready to re-publish'

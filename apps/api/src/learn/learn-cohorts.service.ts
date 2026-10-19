@@ -940,7 +940,7 @@ export class LearnCohortsService {
     const e = await this.prisma.enrollment.findUnique({ where: { id: enrollmentId } })
     if (!e) throw new NotFoundException('Enrollment not found')
     const cohort = await this.cohortFor(userId, role, e.cohortId, 'cohort.staff')
-    if (!itemId) throw new BadRequestException('itemId is required')
+    if (typeof itemId !== 'string' || !itemId) throw new BadRequestException('itemId is required')
     const item = await this.prisma.courseItem.findUnique({
       where: { id: itemId },
       include: { module: { select: { courseId: true } } },

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Post,
   Get,
@@ -50,6 +51,26 @@ export function transcriptOrNoSpeech(heard: string): string {
     : NO_SPEECH_TRANSCRIPT
 }
 
+const MAX_ID = 200
+const MAX_QUESTION = 20_000
+const MAX_DURATION_SECONDS = 24 * 60 * 60
+
+/** A text field of a request body, `min` to `max` characters, or a 400. */
+function text(v: unknown, field: string, max: number, min = 1): string {
+  if (typeof v !== 'string' || v.length < min || v.length > max)
+    throw new BadRequestException(`${field} must be text of at most ${max} characters`)
+  return v
+}
+
+/** The recorded answer's length: a form field (text) or JSON number of whole seconds, or null. */
+function durationOf(v: unknown): number | null {
+  if (v === undefined || v === null || v === '') return null
+  const n = typeof v === 'string' ? Number(v) : v
+  if (typeof n !== 'number' || !Number.isInteger(n) || n < 0 || n > MAX_DURATION_SECONDS)
+    throw new BadRequestException('durationSeconds must be a whole number of seconds')
+  return n
+}
+
 interface CreateSessionDto {
   scenarioId: string
 }
@@ -81,8 +102,9 @@ export class ImmersiveSessionsController {
   @Post()
   @HttpCode(201)
   async createSession(@Req() req: Req, @Body() dto: CreateSessionDto) {
+    const scenarioId = text(dto?.scenarioId, 'scenarioId', MAX_ID)
     await this.limit(req, 'immersive-create')
-    return this.service.createSession(dto.scenarioId, req.userId, !!req.lti)
+    return this.service.createSession(scenarioId, req.userId, !!req.lti)
   }
 
   @Get('user/:userId')
@@ -112,16 +134,19 @@ export class ImmersiveSessionsController {
     @UploadedFile() file?: Express.Multer.File
   ) {
     await this.assertSession(req, sessionId)
+    const nodeId = text(body?.nodeId, 'nodeId', MAX_ID)
+    const questionText = text(body?.questionText, 'questionText', MAX_QUESTION, 0)
+    const durationSeconds = durationOf(body?.durationSeconds)
     await this.limit(req, 'immersive-response')
     try {
       // Save immediately so the frontend can navigate without waiting for Whisper
       const response = await this.service.createResponse(
         sessionId,
-        body.nodeId,
-        body.questionText,
+        nodeId,
+        questionText,
         null,
         null,
-        body.durationSeconds != null ? Number(body.durationSeconds) : null
+        durationSeconds
       )
 
       // Transcribe AND upload to private storage in parallel — both are

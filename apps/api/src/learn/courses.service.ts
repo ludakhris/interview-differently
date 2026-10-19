@@ -412,6 +412,16 @@ export class CoursesService {
     courseId: string,
     outline: CourseOutline
   ) {
+    const ids = (v: unknown) => Array.isArray(v) && v.every((x) => typeof x === 'string')
+    const items: unknown = outline?.itemIds ?? {}
+    if (
+      !ids(outline?.moduleIds ?? []) ||
+      typeof items !== 'object' ||
+      items === null ||
+      Array.isArray(items) ||
+      !Object.values(items).every(ids)
+    )
+      throw new BadRequestException('The new order must list module and item ids.')
     await this.courseFor(userId, role, courseId)
     const modules = await this.prisma.courseModule.findMany({
       where: { courseId },
@@ -421,7 +431,8 @@ export class CoursesService {
     const itemIds = new Set(modules.flatMap((m) => m.items.map((i) => i.id)))
     const sent = outline.moduleIds ?? []
     const sentItems = Object.values(outline.itemIds ?? {}).flat()
-    const same = (a: string[], b: Set<string>) => a.length === b.size && a.every((x) => b.has(x))
+    const same = (a: string[], b: Set<string>) =>
+      a.length === b.size && new Set(a).size === a.length && a.every((x) => b.has(x))
     if (!same(sent, moduleIds) || !same(sentItems, itemIds)) {
       throw new BadRequestException(
         'The new order does not match this course. Reload and try again.'
@@ -432,7 +443,7 @@ export class CoursesService {
         this.prisma.courseModule.update({ where: { id }, data: { position: i + 1 } })
       ),
       ...sent.flatMap((moduleId) =>
-        (outline.itemIds[moduleId] ?? []).map((id, i) =>
+        (outline.itemIds?.[moduleId] ?? []).map((id, i) =>
           this.prisma.courseItem.update({ where: { id }, data: { moduleId, position: i + 1 } })
         )
       ),

@@ -44,9 +44,11 @@ export class ScormController {
     @UploadedFile() file: { buffer: Buffer } | undefined
   ) {
     if (!file?.buffer?.length) throw new BadRequestException('Choose a .zip file to upload')
+    const raw: unknown = req.body?.title ?? ''
+    if (typeof raw !== 'string') throw new BadRequestException('title must be text')
     await this.courses.assertModuleAccess(req.userId, req.userRole, moduleId)
     const pkg = await this.scorm.store(file.buffer)
-    const title = (req.body?.title ?? '').trim() || pkg.title || 'SCORM package'
+    const title = raw.trim() || pkg.title || 'SCORM package'
     return this.courses.addScormItem(req.userId, req.userRole, moduleId, title, {
       packageId: pkg.packageId,
       entry: pkg.entry,

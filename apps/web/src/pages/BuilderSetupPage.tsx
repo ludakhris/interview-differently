@@ -212,10 +212,13 @@ export function BuilderSetupPage() {
 
         {/* Start from */}
         <div className="mb-8">
-          <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+          <p
+            id="setup-start-from"
+            className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3"
+          >
             Start from
-          </label>
-          <div className="grid grid-cols-3 gap-2">
+          </p>
+          <div className="grid grid-cols-3 gap-2" role="group" aria-labelledby="setup-start-from">
             {(
               [
                 { value: 'blank', label: 'Blank', hint: 'Pick a track, start writing' },
@@ -244,10 +247,14 @@ export function BuilderSetupPage() {
 
         {startFrom === 'clone' && (
           <div className="mb-8">
-            <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+            <label
+              htmlFor="setup-clone"
+              className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3"
+            >
               Scenario to clone
             </label>
             <select
+              id="setup-clone"
               value={cloneId}
               onChange={(e) => {
                 setCloneId(e.target.value)
@@ -271,9 +278,9 @@ export function BuilderSetupPage() {
 
         {startFrom === 'import' && (
           <div className="mb-8">
-            <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+            <p className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
               File
-            </label>
+            </p>
             <input
               ref={fileRef}
               type="file"
@@ -299,7 +306,10 @@ export function BuilderSetupPage() {
 
         {/* Title input */}
         <div className="mb-8">
-          <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+          <label
+            htmlFor="setup-title"
+            className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3"
+          >
             Scenario Title
             {startFrom !== 'blank' && (
               <span className="normal-case tracking-normal font-normal text-white/25">
@@ -309,6 +319,7 @@ export function BuilderSetupPage() {
             )}
           </label>
           <input
+            id="setup-title"
             type="text"
             value={title}
             onChange={(e) => {
@@ -323,10 +334,14 @@ export function BuilderSetupPage() {
         {/* Owner — only when there's a choice (#15) */}
         {owners.length > 1 && (
           <div className="mb-8">
-            <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+            <label
+              htmlFor="setup-owner"
+              className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3"
+            >
               Visible to
             </label>
             <OwnerSelect
+              id="setup-owner"
               owners={owners}
               value={ownerId}
               onChange={setOwnerId}
@@ -340,10 +355,13 @@ export function BuilderSetupPage() {
           <>
             {/* Track selector */}
             <div className="mb-8">
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+              <p
+                id="setup-track"
+                className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3"
+              >
                 Track
-              </label>
-              <div className="grid grid-cols-2 gap-3">
+              </p>
+              <div className="grid grid-cols-2 gap-3" role="group" aria-labelledby="setup-track">
                 {TRACK_OPTIONS.map((option) => {
                   const isSelected = track === option.value
                   return (
@@ -378,10 +396,17 @@ export function BuilderSetupPage() {
             {/* Sub-track (business cases only today) */}
             {showSubcategory && (
               <div className="mb-8">
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+                <p
+                  id="setup-subtrack"
+                  className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3"
+                >
                   Sub-track
-                </label>
-                <div className="grid grid-cols-2 gap-2">
+                </p>
+                <div
+                  className="grid grid-cols-2 gap-2"
+                  role="group"
+                  aria-labelledby="setup-subtrack"
+                >
                   {BUSINESS_CASE_SUBCATEGORIES.map((slug) => {
                     const isSelected = subcategory === slug
                     return (

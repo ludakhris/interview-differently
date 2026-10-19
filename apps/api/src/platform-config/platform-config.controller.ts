@@ -15,7 +15,7 @@ export class PlatformConfigController {
   @Patch('admin/config')
   @HttpCode(204)
   @UseGuards(AdminGuard)
-  async set(@Body() body: { key: string; value: string }) {
-    await this.svc.set(body.key, body.value)
+  async set(@Body() body: { key?: unknown; value?: unknown }) {
+    await this.svc.set(body?.key, body?.value)
   }
 }

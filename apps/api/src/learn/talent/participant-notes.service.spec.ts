@@ -434,6 +434,7 @@ describe('support items', () => {
     await bad({ dueDate: '10/20/2026' })
     await bad({ dueDate: '2026-02-31' })
     await bad({ details: 'x'.repeat(2001) })
+    await bad({ assigneeId: { not: 'x' } })
   })
 
   it('sets resolvedAt on resolve, clears it on reopen, never for cancelled', async () => {

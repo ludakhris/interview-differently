@@ -68,14 +68,16 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       {pending && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
-          onClick={() => close(false)}
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) close(false)
+          }}
         >
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="confirm-title"
             className="w-full max-w-sm rounded-2xl border border-edge/10 bg-surface-alt shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
           >
             <div className="px-6 pt-5 pb-4">
               <h2 id="confirm-title" className="font-display font-bold text-[16px] text-fg">

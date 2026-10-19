@@ -15,9 +15,9 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-      - run: npm install
+      - run: npm ci
       # Known vulnerabilities in what ships (dev tools left out). Fails on critical only for now: a high one in multer
-      # needs the NestJS 11 to 12 upgrade first. Dependabot (.github/dependabot.yml) opens the update PRs.
+      # needs the NestJS 10 to 12 upgrade first. Dependabot (.github/dependabot.yml) opens the update PRs.
       - run: npm audit --omit=dev --audit-level=critical
       - run: npm run lint
       - run: npm run format:check
@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-      - run: npm install
+      - run: npm ci
       - run: npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -54,7 +54,8 @@ jobs:
         with:
           node-version: '22'
       # The railway SDK (root devDependency) evaluates .railway/railway.ts.
-      - run: npm install
+      - run: npm ci
+      # Same pinned version as the deploy-api job; bump both together.
       - run: npm install -g @railway/cli@5.63.1
       - run: railway config plan --verbose
         env:
@@ -112,7 +113,7 @@ jobs:
             echo "deploy=skip" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.api.outputs.deploy != 'skip'
-        run: npm install -g @railway/cli
+        run: npm install -g @railway/cli@5.63.1
       - if: steps.api.outputs.deploy == 'wait'
         run: railway up --service interview-differently --ci
         env:

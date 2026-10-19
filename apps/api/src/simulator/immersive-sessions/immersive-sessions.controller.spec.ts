@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common'
 import { MemoryLtiStore } from '../../lti/lti-store'
 import {
   ImmersiveSessionsController,
@@ -169,5 +169,29 @@ describe('ImmersiveSessionsController transcripts', () => {
     await c.createResponse(req, 's1', { nodeId: 'n1', questionText: 'q' }, file as never)
     await new Promise((r) => setImmediate(r))
     expect(service.updateTranscript).toHaveBeenCalledWith('r1', TRANSCRIPTION_FAILED)
+  })
+})
+
+describe('ImmersiveSessionsController request bodies', () => {
+  const req = { userId: 'u1' } as never
+
+  it('refuses a session without a text scenarioId with a 400', async () => {
+    const { c, service } = setup(null)
+    await expect(c.createSession(req, { scenarioId: 5 } as never)).rejects.toBeInstanceOf(
+      BadRequestException
+    )
+    expect(service.createSession).not.toHaveBeenCalled()
+  })
+
+  it('refuses a response with a missing node, or a duration that is not whole seconds', async () => {
+    const { c, service } = setup({ userId: 'u1', scenarioId: 'S1' })
+    const bad = (body: object) =>
+      expect(c.createResponse(req, 's1', body as never)).rejects.toBeInstanceOf(BadRequestException)
+    await bad({ questionText: 'q' })
+    await bad({ nodeId: 'n', questionText: 'q', durationSeconds: 'abc' })
+    await bad({ nodeId: 'n', questionText: 'q', durationSeconds: '1.5' })
+    expect(service.createResponse).not.toHaveBeenCalled()
+    await c.createResponse(req, 's1', { nodeId: 'n', questionText: '', durationSeconds: '12' })
+    expect(service.createResponse).toHaveBeenCalledWith('s1', 'n', '', null, null, 12)
   })
 })

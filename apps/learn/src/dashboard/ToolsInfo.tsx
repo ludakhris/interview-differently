@@ -91,6 +91,8 @@ export function ToolsInfoDialog({
   }, [open])
   const c = infoSections(registrationUrls(registration, API_URL))
   return (
+    // A native modal dialog: Escape closes it from the keyboard, so the backdrop click is a mouse extra.
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
     <dialog
       ref={dialog}
       className="dash-tl-info"

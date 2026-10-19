@@ -36,6 +36,16 @@ export function reviewEnabled(d: { label: string; showReview: boolean | null }):
   return d.showReview ?? d.label.trim().toLowerCase().startsWith('post')
 }
 
+const LABEL_MAX = 100
+
+/** An optional delivery date from a request body: empty means none, anything else must parse. */
+function deliveryDate(v: unknown, field: string): Date | null {
+  if (v === undefined || v === null || v === '') return null
+  const d = typeof v === 'string' ? new Date(v) : null
+  if (!d || Number.isNaN(d.getTime())) throw new BadRequestException(`${field} is not a valid date`)
+  return d
+}
+
 // Students get this long past the deadline before a submit is marked late —
 // covers a client-side timer firing a few seconds after the server clock.
 const LATE_GRACE_MS = 2 * 60 * 1000
@@ -113,7 +123,8 @@ export class AssessmentsService {
   }
 
   private parse(markdown: string): ParsedAssessment {
-    if (!markdown?.trim()) throw new BadRequestException('markdown is required')
+    if (typeof markdown !== 'string' || !markdown.trim())
+      throw new BadRequestException('markdown is required')
     try {
       return parseAssessmentMarkdown(markdown)
     } catch (err) {
@@ -220,11 +231,14 @@ export class AssessmentsService {
   // ── Admin: deliveries ────────────────────────────────────────────────────
 
   async createDelivery(assessmentId: string, input: DeliveryInput) {
-    if (!input.cohortId) throw new BadRequestException('cohortId is required')
-    const label = input.label?.trim()
+    if (typeof input.cohortId !== 'string' || !input.cohortId)
+      throw new BadRequestException('cohortId is required')
+    const label = typeof input.label === 'string' ? input.label.trim() : ''
     if (!label) throw new BadRequestException('label is required (e.g. "pre" or "post")')
-    const opensAt = input.opensAt ? new Date(input.opensAt) : null
-    const closesAt = input.closesAt ? new Date(input.closesAt) : null
+    if (label.length > LABEL_MAX)
+      throw new BadRequestException(`label can be at most ${LABEL_MAX} characters`)
+    const opensAt = deliveryDate(input.opensAt, 'opensAt')
+    const closesAt = deliveryDate(input.closesAt, 'closesAt')
     if (opensAt && closesAt && closesAt <= opensAt)
       throw new BadRequestException('closesAt must be after opensAt')
     const timeLimitMinutes = input.timeLimitMinutes ?? null

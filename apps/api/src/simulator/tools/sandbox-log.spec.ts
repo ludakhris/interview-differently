@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common'
 import { ToolsService } from './tools.service'
 
 const NOW = Date.now()
@@ -120,5 +121,38 @@ describe('sandboxActivity', () => {
     const r = await svc.sandboxActivity('c1')
     expect(r.unassigned.map((s) => s.userId)).toEqual(['x'])
     expect(r.students.map((s) => s.userId).sort()).toEqual(['a', 'b'])
+  })
+})
+
+describe('logSandboxQuery', () => {
+  const setup = () => {
+    const prisma = {
+      membership: { findMany: jest.fn(async () => []) },
+      sqlQueryLog: { create: jest.fn(async () => ({})), deleteMany: jest.fn() },
+    }
+    return { prisma, svc: new ToolsService(prisma as never, {} as never) }
+  }
+
+  it('refuses a body without text slug and query with a 400', async () => {
+    const { svc, prisma } = setup()
+    await expect(
+      svc.logSandboxQuery('u1', { datasetSlug: 1, queryText: 'select 1', ok: true } as never)
+    ).rejects.toThrow(BadRequestException)
+    expect(prisma.sqlQueryLog.create).not.toHaveBeenCalled()
+  })
+
+  it('stores malformed optional fields as unknown instead of failing', async () => {
+    const { svc, prisma } = setup()
+    await svc.logSandboxQuery('u1', {
+      datasetSlug: 'ds',
+      queryText: 'select 1',
+      ok: false,
+      errorMessage: 42,
+      rowCount: 1e12,
+      durationMs: -5,
+    } as never)
+    expect(prisma.sqlQueryLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ errorMessage: null, rowCount: null, durationMs: null }),
+    })
   })
 })

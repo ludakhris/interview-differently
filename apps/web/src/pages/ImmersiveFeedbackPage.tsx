@@ -248,6 +248,8 @@ export function ImmersiveFeedbackPage() {
                               <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
                                 Your Recording
                               </p>
+                              {/* The learner's own recorded answer; its transcript shows with the feedback. */}
+                              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                               <video
                                 src={m.url}
                                 controls

@@ -423,7 +423,8 @@ export function SqlSandboxPage() {
               />
             </div>
 
-            {/* Splitter */}
+            {/* Splitter: a mouse-only resize; both panes stay usable at their default sizes */}
+            {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
             <div
               onMouseDown={onSplitterDown}
               className="h-[5px] flex-shrink-0 cursor-row-resize bg-white/5 hover:bg-[#2d9e5f]/60 transition-colors"

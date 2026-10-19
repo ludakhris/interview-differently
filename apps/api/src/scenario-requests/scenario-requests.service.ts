@@ -5,6 +5,8 @@ import { PrismaService } from '../prisma/prisma.service'
 const SITUATION_MIN_LEN = 30
 const HARDEST_MIN_LEN = 20
 const FIELD_MAX_LEN = 4000
+const EMAIL_MAX_LEN = 254
+const MAX_MINUTES = 600
 
 export interface ScenarioRequestInput {
   // Required
@@ -30,6 +32,24 @@ export interface ScenarioRequestInput {
   // Anti-spam — bots fill it; humans don't see it.
   honeypot?: string
 }
+
+const TEXT_FIELDS = [
+  'situation',
+  'hardestMoment',
+  'role',
+  'reportsTo',
+  'timeInRole',
+  'otherPeople',
+  'metricsContext',
+  'timePressure',
+  'temptingWrong',
+  'greatLooksLike',
+  'track',
+  'contactName',
+  'contactEmail',
+  'contactPhone',
+  'honeypot',
+] as const
 
 const VALID_TRACKS = new Set([
   'operations',
@@ -63,7 +83,7 @@ export class ScenarioRequestsService {
   async submit(input: ScenarioRequestInput, ipAddress?: string, userAgent?: string) {
     // Honeypot — silently accept-and-discard. Returning success without
     // persisting denies bots both feedback and a real DB row.
-    if (input.honeypot && input.honeypot.trim().length > 0) {
+    if (typeof input?.honeypot === 'string' && input.honeypot.trim().length > 0) {
       this.logger.debug(`Honeypot tripped from ${ipAddress ?? 'unknown'}`)
       return { id: 'discarded' }
     }
@@ -92,6 +112,27 @@ export class ScenarioRequestsService {
   }
 
   private validateAndClean(input: ScenarioRequestInput): ScenarioRequestInput {
+    // Every text field is optional text (or null); anything else is a 400, not a crash further down.
+    for (const field of TEXT_FIELDS) {
+      const v = input[field]
+      if (v != null && typeof v !== 'string')
+        throw new BadRequestException(`"${field}" must be text`)
+    }
+    if (
+      input.estimatedMinutes != null &&
+      !(
+        Number.isInteger(input.estimatedMinutes) &&
+        input.estimatedMinutes > 0 &&
+        input.estimatedMinutes <= MAX_MINUTES
+      )
+    ) {
+      throw new BadRequestException(
+        `"estimatedMinutes" must be a whole number up to ${MAX_MINUTES}`
+      )
+    }
+    if (input.contactEmail && input.contactEmail.length > EMAIL_MAX_LEN) {
+      throw new BadRequestException('"contactEmail" is not a valid email address')
+    }
     const situation = (input.situation ?? '').trim()
     const hardestMoment = (input.hardestMoment ?? '').trim()
     if (situation.length < SITUATION_MIN_LEN) {
