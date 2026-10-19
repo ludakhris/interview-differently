@@ -146,7 +146,7 @@ export class ScenarioRequestsService {
     if (input.track && !VALID_TRACKS.has(input.track)) {
       throw new BadRequestException(`"track" must be one of ${[...VALID_TRACKS].join(', ')}`)
     }
-    if (input.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.contactEmail)) {
+    if (input.contactEmail && !/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(input.contactEmail)) {
       throw new BadRequestException('"contactEmail" is not a valid email address')
     }
 

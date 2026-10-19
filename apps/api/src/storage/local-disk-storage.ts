@@ -25,15 +25,23 @@ abstract class LocalDiskStorageBase {
     this.publicBase = (process.env.API_PUBLIC_URL ?? `http://localhost:${port}`).replace(/\/$/, '')
   }
 
+  /** The file for a key, or null when the key would leave the storage folder. */
+  protected fileFor(key: string): string | null {
+    const target = path.resolve(this.root, key)
+    return target.startsWith(this.root + path.sep) ? target : null
+  }
+
   protected async writeFile(key: string, buffer: Buffer): Promise<void> {
-    const target = path.join(this.root, key)
+    const target = this.fileFor(key)
+    if (!target) throw new Error(`Invalid storage key: ${key}`)
     await fs.mkdir(path.dirname(target), { recursive: true })
     await fs.writeFile(target, buffer)
     this.logger.log(`Wrote ${buffer.length} bytes to ${target}`)
   }
 
   async delete(key: string): Promise<void> {
-    const target = path.join(this.root, key)
+    const target = this.fileFor(key)
+    if (!target) return
     await fs.unlink(target).catch(() => {
       /* ignore */
     })
@@ -41,8 +49,8 @@ abstract class LocalDiskStorageBase {
 
   /** Read a file from disk — used by the scenario-media controller's static handler. */
   async read(key: string): Promise<Buffer | null> {
-    const target = path.join(this.root, key)
-    if (!target.startsWith(this.root)) return null // path traversal guard
+    const target = this.fileFor(key)
+    if (!target) return null
     return fs.readFile(target).catch(() => null)
   }
 

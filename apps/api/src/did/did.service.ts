@@ -124,7 +124,7 @@ export class DidService {
     duration?: number
     error?: { description?: string } | string
   }> {
-    return this.request(`/talks/${talkId}`)
+    return this.request(`/talks/${encodeURIComponent(talkId)}`)
   }
 
   /** Create a new WebRTC streaming session using D-ID's lively (v4) animation driver. */
@@ -149,7 +149,7 @@ export class DidService {
     answer: RTCSessionDescriptionInit,
     sessionId: string
   ): Promise<unknown> {
-    return this.request(`/talks/streams/${streamId}/sdp`, {
+    return this.request(`/talks/streams/${encodeURIComponent(streamId)}/sdp`, {
       method: 'POST',
       body: JSON.stringify({ answer, session_id: sessionId }),
     })
@@ -163,7 +163,7 @@ export class DidService {
     sdpMLineIndex: number,
     sessionId: string
   ): Promise<unknown> {
-    return this.request(`/talks/streams/${streamId}/ice`, {
+    return this.request(`/talks/streams/${encodeURIComponent(streamId)}/ice`, {
       method: 'POST',
       body: JSON.stringify({ candidate, sdpMid, sdpMLineIndex, session_id: sessionId }),
     })
@@ -176,7 +176,7 @@ export class DidService {
     voiceId: string,
     sessionId: string
   ): Promise<unknown> {
-    return this.request(`/talks/streams/${streamId}`, {
+    return this.request(`/talks/streams/${encodeURIComponent(streamId)}`, {
       method: 'POST',
       body: JSON.stringify({
         script: {
@@ -192,7 +192,7 @@ export class DidService {
 
   /** Close and clean up the streaming session. */
   async closeStream(streamId: string, sessionId: string): Promise<unknown> {
-    return this.request(`/talks/streams/${streamId}`, {
+    return this.request(`/talks/streams/${encodeURIComponent(streamId)}`, {
       method: 'DELETE',
       body: JSON.stringify({ session_id: sessionId }),
     })

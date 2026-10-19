@@ -60,12 +60,13 @@ function attr(tag: string, name: string): string | null {
 }
 
 function decodeXml(s: string): string {
+  // &amp; last, so "&amp;lt;" decodes to "&lt;" and not to "<".
   return s
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
 }
 
 export interface Manifest {

@@ -15,7 +15,7 @@ import type { AssessmentQuestion, AssessmentSection, DrawSpec } from './assessme
 export function parseDrawSpec(text: string): DrawSpec | null {
   const t = text.trim()
   if (/^\d+$/.test(t)) return Number(t)
-  const spec: Record<string, number> = {}
+  const spec: Record<string, number> = Object.create(null)
   for (const part of t.split(',')) {
     const m = /^([a-z][\w-]*)\s*:?\s*(\d+)$/i.exec(part.trim())
     if (!m) return null
@@ -29,7 +29,7 @@ export function drawSpecFromYaml(value: unknown): DrawSpec | null {
   if (typeof value === 'number') return Number.isInteger(value) && value > 0 ? value : null
   if (typeof value === 'string') return parseDrawSpec(value)
   if (value && typeof value === 'object') {
-    const spec: Record<string, number> = {}
+    const spec: Record<string, number> = Object.create(null)
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
       if (!(typeof v === 'number' && Number.isInteger(v) && v >= 0)) return null
       spec[k.toLowerCase()] = v

@@ -161,7 +161,7 @@ export function validateCohortFields(input: unknown, partial: boolean): CohortFi
 
 export function validateEmail(input: unknown): string {
   const email = typeof input === 'string' ? input.trim().toLowerCase() : ''
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+  if (email.length > 254 || !/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email)) {
     throw new BadRequestException('Enter a valid email address')
   }
   return email

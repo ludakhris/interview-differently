@@ -4,7 +4,7 @@ import { AssessmentsService } from './assessments.service'
 import { AssessmentsAdminController, AssessmentsMeController } from './assessments.controller'
 import { parseAssessmentMarkdown, AssessmentParseError } from './parse-markdown'
 import { compareResults } from './grade'
-import { drawCount, drawSection, formatDrawSpec, parseDrawSpec } from './draw'
+import { drawCount, drawSection, drawSpecFromYaml, formatDrawSpec, parseDrawSpec } from './draw'
 import type { QueryResult } from '../sql-runner/sql-runner.service'
 
 const BANK = `---
@@ -764,5 +764,13 @@ describe('assessment request bodies', () => {
       c.createDelivery({ userId: 'u1' } as never, 'a1', { cohortId: { id: 'x' } } as never)
     ).rejects.toThrow(BadRequestException)
     expect(scope.assertCohort).not.toHaveBeenCalled()
+  })
+})
+
+describe('drawSpecFromYaml with a reserved key', () => {
+  it('stores "__proto__" as an ordinary question type', () => {
+    const spec = drawSpecFromYaml(JSON.parse('{"__proto__": 2}')) as Record<string, number>
+    expect(Object.keys(spec)).toEqual(['__proto__'])
+    expect(spec['__proto__']).toBe(2)
   })
 })

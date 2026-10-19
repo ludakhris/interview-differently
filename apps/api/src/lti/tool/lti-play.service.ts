@@ -387,11 +387,13 @@ export class LtiPlayService {
       if (!isRecord(raw.variables)) throw bad()
       const entries = Object.entries(raw.variables)
       if (entries.length > MAX_VARIABLES) throw bad()
-      clean.variables = {}
+      // No prototype, so a key such as "__proto__" is stored as an ordinary name.
+      const variables: Record<string, number> = Object.create(null)
       for (const [k, v] of entries) {
         if (!finite(v) || k.length > MAX_NAME_CHARS) throw bad()
-        clean.variables[k] = v
+        variables[k] = v
       }
+      clean.variables = variables
     }
     return { clean, values }
   }
