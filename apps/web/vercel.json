@@ -20,8 +20,8 @@
           "value": "strict-origin-when-cross-origin"
         },
         {
-          "key": "Content-Security-Policy-Report-Only",
-          "value": "default-src 'self'; script-src 'self' https://*.clerk.accounts.dev https://*.learndifferently.tech https://*.interviewdifferently.com https://challenges.cloudflare.com https://vercel.live; connect-src 'self' https://*.interviewdifferently.com https://*.learndifferently.tech https://*.clerk.accounts.dev https://clerk-telemetry.com wss://*.clerk.accounts.dev https://*.d-id.com wss://*.d-id.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; frame-src 'self' https://*.interviewdifferently.com https://*.learndifferently.tech https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com https://vercel.live https://*.d-id.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'"
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' https://*.clerk.accounts.dev https://*.learndifferently.tech https://*.interviewdifferently.com https://challenges.cloudflare.com https://*.protect.clerk.com https://vercel.live; connect-src 'self' https://*.interviewdifferently.com https://api-dev-dev-871e.up.railway.app https://*.learndifferently.tech https://*.clerk.accounts.dev https://clerk-telemetry.com https://*.protect.clerk.com:* wss://*.clerk.accounts.dev https://*.d-id.com wss://*.d-id.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; frame-src 'self' https://*.interviewdifferently.com https://api-dev-dev-871e.up.railway.app https://*.learndifferently.tech https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com https://vercel.live https://*.d-id.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'"
         }
       ]
     }
