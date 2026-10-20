@@ -33,6 +33,10 @@ function publishReleaseNotes(): Plugin {
         resolve(docs, 'release-notes/index.html'),
         resolve(out, 'release-notes/index.html')
       )
+      copyFileSync(
+        resolve(docs, 'release-notes/release-notes.js'),
+        resolve(out, 'release-notes/release-notes.js')
+      )
       for (const [, rel] of page.matchAll(
         /\.\.\/(screenshots\/[^"'\s)]+\.(?:png|jpe?g|webp|gif))/g
       )) {
