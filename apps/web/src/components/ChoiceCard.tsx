@@ -22,7 +22,7 @@ export function ChoiceCard({ id, text, selected, onSelect }: Props) {
     >
       <span
         className={`
-          flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center
+          shrink-0 w-8 h-8 rounded-lg flex items-center justify-center
           font-display font-bold text-[13px] transition-colors
           ${selected ? 'bg-green text-on-primary' : 'bg-ink/10 text-slate-light'}
         `}

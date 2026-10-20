@@ -21,7 +21,7 @@ export function AttemptReview({ review }: { review: ReviewSection[] }) {
               <li key={q.id} className="border-t border-edge/10 pt-4 first:border-t-0 first:pt-0">
                 <div className="flex items-start gap-3">
                   <span
-                    className={`mt-0.5 text-[11px] font-bold uppercase tracking-widest flex-shrink-0 ${q.correct ? 'text-[#1f8a4c]' : 'text-[#c93636]'}`}
+                    className={`mt-0.5 text-[11px] font-bold uppercase tracking-widest shrink-0 ${q.correct ? 'text-[#1f8a4c]' : 'text-[#c93636]'}`}
                   >
                     {q.correct ? 'Correct' : 'Wrong'}
                   </span>

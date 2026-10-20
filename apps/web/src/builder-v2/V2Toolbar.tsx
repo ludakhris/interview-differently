@@ -60,7 +60,7 @@ export function V2Toolbar({
             if (e.key === 'Enter') commitTitle()
             if (e.key === 'Escape') setEditing(false)
           }}
-          className="text-[14px] font-semibold bg-transparent border-b border-emerald-400/60 outline-none text-white min-w-[200px] max-w-[360px] pb-px"
+          className="text-[14px] font-semibold bg-transparent border-b border-emerald-400/60 outline-hidden text-white min-w-[200px] max-w-[360px] pb-px"
         />
       ) : (
         <button

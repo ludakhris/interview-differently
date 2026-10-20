@@ -42,7 +42,7 @@ export function IssuesPanel({ issues, status, publishing, onJump, onPublish, onC
             <span className={`text-[20px] ${canPublish ? 'text-emerald-400' : 'text-amber-400'}`}>
               {canPublish ? '✓' : '⚠'}
             </span>
-            <h2 id="issues-title" className="font-display font-bold text-[16px] text-[#f5f3ee]">
+            <h2 id="issues-title" className="font-display font-bold text-[16px] text-cream-light">
               {canPublish
                 ? status === 'published'
                   ? 'Ready to re-publish'
@@ -67,14 +67,14 @@ export function IssuesPanel({ issues, status, publishing, onJump, onPublish, onC
         </div>
 
         {issues.length > 0 && (
-          <ul className="max-h-[50vh] overflow-auto px-3 py-2 divide-y divide-white/[0.05]">
+          <ul className="max-h-[50vh] overflow-auto px-3 py-2 divide-y divide-white/5">
             {[...errors, ...warnings].map((issue, i) => (
               <li key={i}>
                 <button
                   type="button"
                   disabled={!issue.where}
                   onClick={() => issue.where && onJump(issue.where)}
-                  className="w-full text-left flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.04] disabled:cursor-default transition-colors"
+                  className="w-full text-left flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-white/4 disabled:cursor-default transition-colors"
                 >
                   <span
                     className={`mt-1 w-1.5 h-1.5 rounded-full flex-none ${issue.level === 'error' ? 'bg-amber-400' : 'bg-white/30'}`}

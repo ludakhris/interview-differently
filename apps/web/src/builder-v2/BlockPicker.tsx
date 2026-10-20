@@ -46,9 +46,9 @@ function DecisionPreview() {
           ].map((o) => (
             <div
               key={o.id}
-              className="flex items-start gap-3 px-3 py-2.5 border border-white/[0.06] rounded-lg bg-white/[0.02]"
+              className="flex items-start gap-3 px-3 py-2.5 border border-white/6 rounded-lg bg-white/2"
             >
-              <span className="w-[22px] h-[22px] rounded-[6px] bg-white/[0.06] border border-white/10 text-[11px] font-bold flex items-center justify-center flex-none mt-px">
+              <span className="w-[22px] h-[22px] rounded-[6px] bg-white/6 border border-white/10 text-[11px] font-bold flex items-center justify-center flex-none mt-px">
                 {o.id}
               </span>
               <span className="flex-1 text-[13px] text-white/80 leading-snug">{o.text}</span>
@@ -92,7 +92,7 @@ function EndingPreview() {
   return (
     <div className="w-full h-full flex items-center justify-center p-10 bg-[#0d0d0d]">
       <div className="w-full max-w-lg flex flex-col gap-3">
-        <div className="border border-emerald-400/20 rounded-[14px] bg-emerald-400/[0.04] p-5">
+        <div className="border border-emerald-400/20 rounded-[14px] bg-emerald-400/4 p-5">
           <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-400/60 mb-2">
             🏁 Strong ending
           </div>
@@ -101,7 +101,7 @@ function EndingPreview() {
             the core driver and sized the opportunity correctly.
           </p>
         </div>
-        <div className="border border-amber-400/15 rounded-[14px] bg-amber-400/[0.03] p-4">
+        <div className="border border-amber-400/15 rounded-[14px] bg-amber-400/3 p-4">
           <div className="text-[10px] font-bold uppercase tracking-widest text-amber-400/50 mb-2">
             🏁 Developing ending
           </div>
@@ -152,7 +152,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/70 backdrop-blur-xs"
         role="presentation"
         onClick={onClose}
       />
@@ -166,7 +166,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
           <h2 className="text-[15px] font-bold text-white tracking-tight">Insert a block</h2>
           <button
             onClick={onClose}
-            className="text-white/35 hover:text-white/70 text-[20px] leading-none w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/[0.06] transition-colors"
+            className="text-white/35 hover:text-white/70 text-[20px] leading-none w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/6 transition-colors"
           >
             ×
           </button>
@@ -191,7 +191,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
         </div>
 
         {/* ── Kind selector pills ────────────────────────────────────────────── */}
-        <div className="flex gap-2 px-6 py-3 overflow-x-auto flex-none border-b border-white/[0.06]">
+        <div className="flex gap-2 px-6 py-3 overflow-x-auto flex-none border-b border-white/6">
           {groupKinds.map((desc) => (
             <button
               key={desc.kind}
@@ -200,7 +200,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold whitespace-nowrap transition-all flex-none',
                 selectedKind === desc.kind
                   ? 'bg-emerald-400/15 border border-emerald-400/50 text-emerald-300'
-                  : 'bg-white/[0.04] border border-white/[0.08] text-white/50 hover:text-white/75 hover:border-white/20',
+                  : 'bg-white/4 border border-white/8 text-white/50 hover:text-white/75 hover:border-white/20',
               ].join(' ')}
             >
               <span className="text-[13px]">{desc.emoji}</span>

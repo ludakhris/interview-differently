@@ -38,20 +38,20 @@ export function WelcomePage() {
 
   if (!isLoaded || checking) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <p className="text-slate-mid text-[14px]">Loading…</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Nav />
       <div className="max-w-xl mx-auto px-6 py-12 animate-fade-in">
         <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-2">
           Welcome
         </p>
-        <h1 className="font-display font-extrabold text-[28px] text-[#f5f3ee] tracking-tight mb-3">
+        <h1 className="font-display font-extrabold text-[28px] text-cream-light tracking-tight mb-3">
           {user?.firstName ? `Hi ${user.firstName} —` : "Glad you're here —"} let's get you set up
         </h1>
         <p className="text-[14px] text-slate-light leading-relaxed mb-8">

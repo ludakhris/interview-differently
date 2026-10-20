@@ -5,7 +5,7 @@ export function LandingPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+    <div className="min-h-screen bg-black flex flex-col">
       <Nav />
 
       <main className="flex-1 flex flex-col items-center justify-center px-6 text-center relative overflow-hidden">
@@ -22,7 +22,7 @@ export function LandingPage() {
             AI Powered Interview Simulations
           </span>
 
-          <h1 className="font-display font-extrabold text-[clamp(44px,7vw,84px)] text-[#f5f3ee] leading-[1.0] tracking-[-2px] mb-7">
+          <h1 className="font-display font-extrabold text-[clamp(44px,7vw,84px)] text-cream-light leading-none tracking-[-2px] mb-7">
             Get interview ready.
             <br />
             <em className="not-italic text-green-light">For real this time.</em>
@@ -53,7 +53,7 @@ export function LandingPage() {
 
           <p className="text-[15px] text-slate-light font-light max-w-[420px] mx-auto mb-12 leading-relaxed">
             The job market has never been harder to break into.{' '}
-            <span className="text-[#f5f3ee] font-medium">
+            <span className="text-cream-light font-medium">
               Interview<span className="text-green-light">Differently</span>
             </span>{' '}
             gives you the reps — run a simulation and find out where you really stand.

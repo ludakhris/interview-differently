@@ -34,12 +34,12 @@ export function AdminStudentDetailPage() {
   }, [institutionId, userId, getToken])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Nav />
       <div className="max-w-4xl mx-auto px-6 py-12">
         <button
           onClick={() => navigate(`/admin/institutions/${institutionId}/analytics`)}
-          className="text-[12px] text-slate-mid hover:text-[#f5f3ee] transition-colors mb-3"
+          className="text-[12px] text-slate-mid hover:text-cream-light transition-colors mb-3"
         >
           ← Back to analytics
         </button>
@@ -83,7 +83,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
         <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
           {data.institution.name}
         </p>
-        <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight mb-2">
+        <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight mb-2">
           {displayName}
         </h1>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-slate-mid">
@@ -91,7 +91,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
           {cohortNames.length > 0 && (
             <span>
               Cohort{cohortNames.length > 1 ? 's' : ''}:{' '}
-              <span className="text-[#f5f3ee]">{cohortNames.join(', ')}</span>
+              <span className="text-cream-light">{cohortNames.join(', ')}</span>
             </span>
           )}
           {data.user.createdAt && (
@@ -134,7 +134,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
                 <li key={c.id} className="py-3 flex items-center justify-between">
                   <div className="min-w-0">
                     <p
-                      className="text-[13px] font-semibold text-[#f5f3ee] truncate"
+                      className="text-[13px] font-semibold text-cream-light truncate"
                       title={c.scenarioTitle}
                     >
                       {c.scenarioTitle}
@@ -143,7 +143,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
                       {c.track} · {new Date(c.completedAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-3 shrink-0">
                     <span
                       className="text-[14px] font-bold"
                       style={{ color: scoreColor(c.overallScore) }}
@@ -154,7 +154,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
                       href={`/scenario/${c.scenarioId}/feedback/${c.id}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                      className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
                     >
                       View feedback ↗
                     </a>
@@ -177,7 +177,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
               .map((s) => (
                 <li key={s.id} className="py-3 flex items-center justify-between">
                   <div className="min-w-0">
-                    <p className="text-[13px] text-[#f5f3ee] truncate" title={s.scenarioId}>
+                    <p className="text-[13px] text-cream-light truncate" title={s.scenarioId}>
                       {s.scenarioId}
                     </p>
                     <p className="text-[11px] text-slate-mid">
@@ -210,7 +210,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
                 <li key={a.attemptId} className="py-3">
                   <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0">
-                      <p className="text-[13px] text-[#f5f3ee] truncate">
+                      <p className="text-[13px] text-cream-light truncate">
                         <span className="uppercase tracking-widest text-[10px] text-[#2d9e5f] mr-2">
                           {a.label}
                         </span>

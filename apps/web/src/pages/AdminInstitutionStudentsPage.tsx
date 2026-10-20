@@ -125,7 +125,7 @@ export function AdminInstitutionStudentsPage() {
     >
       <button
         onClick={() => clickSort(k)}
-        className={`hover:text-[#f5f3ee] transition-colors ${sort === k ? 'text-[#f5f3ee]' : ''}`}
+        className={`hover:text-cream-light transition-colors ${sort === k ? 'text-cream-light' : ''}`}
       >
         {children}
         {sort === k && <span className="ml-1 text-[9px]">{dir === 'asc' ? '▲' : '▼'}</span>}
@@ -134,12 +134,12 @@ export function AdminInstitutionStudentsPage() {
   )
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Nav />
-      <div className="max-w-screen-2xl mx-auto px-6 py-12">
+      <div className="max-w-(--breakpoint-2xl) mx-auto px-6 py-12">
         <button
           onClick={() => navigate('/admin/institutions')}
-          className="text-[12px] text-slate-mid hover:text-[#f5f3ee] transition-colors mb-3"
+          className="text-[12px] text-slate-mid hover:text-cream-light transition-colors mb-3"
         >
           ← Back to institutions
         </button>
@@ -149,12 +149,12 @@ export function AdminInstitutionStudentsPage() {
             <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
               Analytics
             </p>
-            <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
+            <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
               {detail?.name ?? 'Institution analytics'}
             </h1>
             {data?.cohort && (
               <p className="text-[12px] text-slate-mid mt-1">
-                Cohort: <span className="text-[#f5f3ee]">{data.cohort.name}</span>
+                Cohort: <span className="text-cream-light">{data.cohort.name}</span>
               </p>
             )}
           </div>
@@ -167,7 +167,7 @@ export function AdminInstitutionStudentsPage() {
                 id="cohort-filter"
                 value={cohortId}
                 onChange={(e) => patchParams({ cohortId: e.target.value || null })}
-                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
+                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
               >
                 <option value="">All cohorts</option>
                 {detail.cohorts.map((c) => (
@@ -254,7 +254,7 @@ export function AdminInstitutionStudentsPage() {
                     ]),
                   })
                 }
-                className="text-[11px] font-semibold text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                className="text-[11px] font-semibold text-slate-mid hover:text-cream-light transition-colors"
               >
                 ↓ CSV
               </button>
@@ -298,10 +298,10 @@ export function AdminInstitutionStudentsPage() {
                           `/admin/institutions/${institutionId}/students/${encodeURIComponent(s.userId)}`
                         )
                       }
-                      className="border-b border-white/5 last:border-0 hover:bg-white/[0.03] cursor-pointer"
+                      className="border-b border-white/5 last:border-0 hover:bg-white/3 cursor-pointer"
                     >
                       <td className="py-3 pl-5 pr-4">
-                        <p className="text-[#f5f3ee]">{label(s)}</p>
+                        <p className="text-cream-light">{label(s)}</p>
                         {showNames && s.displayName && s.email && (
                           <p className="text-[11px] text-white/40">{s.email}</p>
                         )}
@@ -322,7 +322,7 @@ export function AdminInstitutionStudentsPage() {
                         {s.avgScore ?? '—'}
                       </td>
                       <td
-                        className={`py-3 px-2 text-right font-mono ${s.prePercent == null ? 'text-white/25' : 'text-[#d4830a]'}`}
+                        className={`py-3 px-2 text-right font-mono ${s.prePercent == null ? 'text-white/25' : 'text-amber'}`}
                       >
                         {s.prePercent == null ? '—' : `${s.prePercent}%`}
                       </td>

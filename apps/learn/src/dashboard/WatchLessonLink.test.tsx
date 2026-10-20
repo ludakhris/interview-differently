@@ -6,7 +6,7 @@ import type { AdaptiveBoard, BoardPractice, ContentLibrary, LibraryContent } fro
 // "Watch the lesson" (GitHub issue #90): on both review screens, for lessons only, opening Spark's player in a new tab.
 
 let loaded: unknown = null
-const apiFetch = vi.fn<[string], Promise<Response>>(
+const apiFetch = vi.fn<(url: string) => Promise<Response>>(
   async () =>
     ({ json: async () => ({ url: 'https://spark.example.test/lesson#token=t' }) }) as Response
 )

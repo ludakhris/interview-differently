@@ -102,7 +102,7 @@ export function PersonaPicker({ value, onChange }: PersonaPickerProps) {
                 />
               </div>
               <p
-                className={`text-[10px] font-semibold truncate ${selected ? 'text-[#2d9e5f]' : 'text-[#f5f3ee]'}`}
+                className={`text-[10px] font-semibold truncate ${selected ? 'text-[#2d9e5f]' : 'text-cream-light'}`}
               >
                 {p.name}
               </p>
@@ -123,7 +123,7 @@ export function PersonaPicker({ value, onChange }: PersonaPickerProps) {
             id={voiceSelectId}
             value={value?.voiceId ?? voiceOptions[0]?.id}
             onChange={(e) => pickVoice(e.target.value)}
-            className="w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[12px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
+            className="w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[12px] text-cream-light focus:outline-hidden focus:border-white/30"
           >
             {voiceOptions.map((v) => (
               <option key={v.id} value={v.id}>

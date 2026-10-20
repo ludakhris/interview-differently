@@ -34,11 +34,11 @@ export function SqlResultPanel({ result }: Props) {
             </span>
           </div>
         </div>
-        <p className="mt-0.5 text-[13px] font-medium text-[#f5f3ee] leading-snug">
+        <p className="mt-0.5 text-[13px] font-medium text-cream-light leading-snug">
           {result.prompt}
         </p>
       </div>
-      <pre className="px-4 py-3 font-mono text-[12px] text-[#f5f3ee]/85 whitespace-pre-wrap">
+      <pre className="px-4 py-3 font-mono text-[12px] text-cream-light/85 whitespace-pre-wrap">
         {result.sql}
       </pre>
       {!result.correct && result.reason && (

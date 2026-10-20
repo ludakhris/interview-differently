@@ -10,7 +10,7 @@ import type {
 // ── Base input styles ─────────────────────────────────────────────────────────
 
 export const inputCls =
-  'w-full bg-[#0a0a0a] border border-white/12 rounded-lg px-3 py-2 text-[13px] text-white/85 outline-none focus:border-emerald-400/50 transition-colors placeholder:text-white/20'
+  'w-full bg-black border border-white/12 rounded-lg px-3 py-2 text-[13px] text-white/85 outline-hidden focus:border-emerald-400/50 transition-colors placeholder:text-white/20'
 
 // ── Primitives ────────────────────────────────────────────────────────────────
 
@@ -64,7 +64,7 @@ export function SectionLabel({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">{label}</span>
-      <div className="flex-1 h-px bg-white/[0.06]" />
+      <div className="flex-1 h-px bg-white/6" />
     </div>
   )
 }
@@ -114,9 +114,9 @@ export function EditShell({
   children: ReactNode
 }) {
   return (
-    <div className="border border-emerald-400/40 rounded-[14px] bg-[#0d1a12] ring-1 ring-emerald-400/[0.08]">
+    <div className="border border-emerald-400/40 rounded-[14px] bg-[#0d1a12] ring-1 ring-emerald-400/8">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-400/[0.12]">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-400/12">
         <span className="text-[14px]">{emoji}</span>
         <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-300/60">
           Editing {kindLabel}

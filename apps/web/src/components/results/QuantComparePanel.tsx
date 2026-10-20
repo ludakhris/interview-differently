@@ -32,7 +32,7 @@ export function QuantComparePanel({ result }: Props) {
             </span>
           )}
         </div>
-        <p className="mt-0.5 text-[13px] font-medium text-[#f5f3ee] leading-snug">
+        <p className="mt-0.5 text-[13px] font-medium text-cream-light leading-snug">
           {result.prompt}
         </p>
       </div>
@@ -53,13 +53,13 @@ export function QuantComparePanel({ result }: Props) {
                     <p className="text-[10px] uppercase tracking-widest text-white/35">
                       Your answer
                     </p>
-                    <p className="text-[14px] font-display font-bold text-[#f5f3ee]">
+                    <p className="text-[14px] font-display font-bold text-cream-light">
                       {format(field.userAnswer)}
                     </p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-widest text-white/35">Model</p>
-                    <p className="text-[14px] font-display font-bold text-[#f5f3ee]">
+                    <p className="text-[14px] font-display font-bold text-cream-light">
                       {format(field.modelAnswer)}
                     </p>
                   </div>

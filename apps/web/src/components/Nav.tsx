@@ -18,10 +18,10 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
   const tools = useMyTools()
 
   return (
-    <nav className="flex items-center justify-between px-8 py-4 bg-[#0a0a0a] sticky top-0 z-50">
+    <nav className="flex items-center justify-between px-8 py-4 bg-black sticky top-0 z-50">
       <button
         onClick={() => navigate('/')}
-        className="font-display font-extrabold text-[17px] text-[#f5f3ee] tracking-tight hover:opacity-80 transition-opacity"
+        className="font-display font-extrabold text-[17px] text-cream-light tracking-tight hover:opacity-80 transition-opacity"
       >
         Interview<span className="text-green-light">Differently</span>
       </button>
@@ -35,14 +35,14 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
         )}
         <button
           onClick={() => navigate('/request-scenario')}
-          className="text-[12px] font-medium text-slate-mid hover:text-[#f5f3ee] transition-colors"
+          className="text-[12px] font-medium text-slate-mid hover:text-cream-light transition-colors"
         >
           Request a scenario
         </button>
         {isLoaded && isSignedIn && (
           <button
             onClick={() => navigate('/dashboard')}
-            className="text-[12px] font-medium text-slate-mid hover:text-[#f5f3ee] transition-colors"
+            className="text-[12px] font-medium text-slate-mid hover:text-cream-light transition-colors"
           >
             Dashboard
           </button>
@@ -53,7 +53,7 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
         {isLoaded && isSignedIn && isAnyAdmin && (
           <button
             onClick={() => navigate('/builder')}
-            className="text-[12px] font-medium text-slate-mid hover:text-[#f5f3ee] transition-colors"
+            className="text-[12px] font-medium text-slate-mid hover:text-cream-light transition-colors"
           >
             Builder
           </button>
@@ -61,7 +61,7 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
         {isLoaded && isSignedIn && (
           <button
             onClick={() => navigate('/settings')}
-            className="text-[12px] font-medium text-slate-mid hover:text-[#f5f3ee] transition-colors"
+            className="text-[12px] font-medium text-slate-mid hover:text-cream-light transition-colors"
           >
             Settings
           </button>
@@ -72,7 +72,7 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
           ) : (
             <button
               onClick={() => navigate('/sign-in')}
-              className="text-[13px] font-semibold text-[#f5f3ee] hover:text-white/70 transition-colors"
+              className="text-[13px] font-semibold text-cream-light hover:text-white/70 transition-colors"
             >
               Sign in
             </button>
@@ -101,7 +101,7 @@ function ToolsMenu({ tools, isAnyAdmin }: { tools: ToolKey[]; isAnyAdmin: boolea
     <div ref={ref} className="relative flex items-center">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 text-[12px] font-medium text-slate-mid hover:text-[#f5f3ee] transition-colors"
+        className="inline-flex items-center gap-1 text-[12px] font-medium text-slate-mid hover:text-cream-light transition-colors"
       >
         Tools
         <ChevronDown
@@ -124,7 +124,7 @@ function ToolsMenu({ tools, isAnyAdmin }: { tools: ToolKey[]; isAnyAdmin: boolea
                 }}
                 className="w-full text-left px-3 py-2 hover:bg-white/5 disabled:hover:bg-transparent disabled:opacity-50 transition-colors"
               >
-                <p className="text-[13px] font-semibold text-[#f5f3ee]">
+                <p className="text-[13px] font-semibold text-cream-light">
                   {meta.label}
                   {!live && (
                     <span className="ml-2 text-[9px] uppercase tracking-widest text-white/40">
@@ -160,7 +160,7 @@ function ToolsMenu({ tools, isAnyAdmin }: { tools: ToolKey[]; isAnyAdmin: boolea
                     setOpen(false)
                     navigate(item.path)
                   }}
-                  className="w-full text-left px-3 py-1.5 text-[12px] text-slate-mid hover:text-[#f5f3ee] hover:bg-white/5 transition-colors"
+                  className="w-full text-left px-3 py-1.5 text-[12px] text-slate-mid hover:text-cream-light hover:bg-white/5 transition-colors"
                 >
                   {item.label}
                 </button>

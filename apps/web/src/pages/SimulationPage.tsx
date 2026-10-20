@@ -524,7 +524,7 @@ function SimulationContent({
                 {/* Alert banner (ops P1 alert, shown on first step) */}
                 {display?.alertBanner && stepNumber === 1 && (
                   <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 mb-5">
-                    <span className="text-amber-400 text-[18px] flex-shrink-0 mt-0.5">
+                    <span className="text-amber-400 text-[18px] shrink-0 mt-0.5">
                       {display.alertBanner.icon}
                     </span>
                     <div>

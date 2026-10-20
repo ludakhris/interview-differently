@@ -55,7 +55,7 @@ export function InvitePage() {
   const returnTo = encodeURIComponent(`/a/${code}`)
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+    <div className="min-h-screen bg-black flex flex-col">
       <Nav />
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md bg-[#111111] rounded-2xl border border-white/10 overflow-hidden">
@@ -66,7 +66,7 @@ export function InvitePage() {
                 <p className="text-[12px] font-bold uppercase tracking-widest text-red-400 mb-1">
                   Invite
                 </p>
-                <p className="text-[14px] text-[#f5f3ee]">{error}</p>
+                <p className="text-[14px] text-cream-light">{error}</p>
               </>
             ) : !info ? (
               <p className="text-[13px] text-slate-mid">Loading…</p>
@@ -74,7 +74,7 @@ export function InvitePage() {
               <>
                 <div className="flex items-start gap-3 mb-5">
                   <div
-                    className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
+                    className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
                     style={{ backgroundColor: `${ACCENT}22`, color: ACCENT }}
                   >
                     <ClipboardCheck size={20} />
@@ -86,7 +86,7 @@ export function InvitePage() {
                     >
                       {info.label} · {info.institutionName}
                     </p>
-                    <h1 className="mt-0.5 font-display font-bold text-[18px] text-[#f5f3ee] leading-snug">
+                    <h1 className="mt-0.5 font-display font-bold text-[18px] text-cream-light leading-snug">
                       {info.title}
                     </h1>
                   </div>
@@ -124,7 +124,7 @@ export function InvitePage() {
                     </button>
                     <button
                       onClick={() => navigate(`/sign-up?redirect_url=${returnTo}`)}
-                      className="w-full mt-2 px-4 py-2.5 rounded-md border border-white/15 hover:border-white/30 text-[13px] font-semibold text-[#f5f3ee] transition-colors"
+                      className="w-full mt-2 px-4 py-2.5 rounded-md border border-white/15 hover:border-white/30 text-[13px] font-semibold text-cream-light transition-colors"
                     >
                       Create an account
                     </button>
@@ -148,7 +148,7 @@ function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between gap-4">
       <dt className="text-white/40">{k}</dt>
-      <dd className="text-[#f5f3ee]/85 text-right">{v}</dd>
+      <dd className="text-cream-light/85 text-right">{v}</dd>
     </div>
   )
 }

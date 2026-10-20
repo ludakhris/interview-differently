@@ -30,7 +30,7 @@ function TextSection({ items }: { items: SidebarItem[] }) {
       {items.map((item, i) => (
         <div key={i} className="flex justify-between gap-3">
           {item.label && (
-            <span className="text-[12px] text-ink/40 flex-shrink-0 pt-0.5">{item.label}</span>
+            <span className="text-[12px] text-ink/40 shrink-0 pt-0.5">{item.label}</span>
           )}
           <span
             className={`text-[13px] leading-snug ${
@@ -109,11 +109,11 @@ function SidebarSectionBlock({ section }: { section: SidebarSection }) {
 export function ScenarioSidebar({ sections, contextStyle, accentColor }: Props) {
   return (
     <aside
-      className="hidden lg:flex flex-col w-[260px] flex-shrink-0 bg-surface-deep border-r border-edge/8"
+      className="hidden lg:flex flex-col w-[260px] shrink-0 bg-surface-deep border-r border-edge/8"
       style={{ minHeight: 'calc(100vh - 57px)' }}
     >
       {/* Accent bar */}
-      <div className={`h-[3px] w-full flex-shrink-0 ${accentLine[contextStyle]}`} />
+      <div className={`h-[3px] w-full shrink-0 ${accentLine[contextStyle]}`} />
 
       <div className="px-5 py-5 space-y-5 overflow-y-auto flex-1">
         <p

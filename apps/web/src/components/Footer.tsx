@@ -11,14 +11,14 @@ export function Footer() {
           © {year} Interview Differently ·{' '}
           <a
             href="https://learndifferently.tech/accessibility"
-            className="text-slate-light hover:text-[#f5f3ee] transition-colors"
+            className="text-slate-light hover:text-cream-light transition-colors"
           >
             Accessibility
           </a>
         </p>
         <button
           onClick={() => navigate('/request-scenario')}
-          className="text-[12px] font-medium text-slate-mid hover:text-[#f5f3ee] transition-colors"
+          className="text-[12px] font-medium text-slate-mid hover:text-cream-light transition-colors"
         >
           Request a custom scenario →
         </button>

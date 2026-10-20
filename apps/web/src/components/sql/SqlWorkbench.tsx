@@ -114,7 +114,7 @@ export function SqlWorkbench({
       <div className="flex min-w-0">
         {showSchema && (
           <aside
-            className="w-[220px] flex-shrink-0 border-r border-edge/8 bg-surface px-3 py-3 overflow-y-auto"
+            className="w-[220px] shrink-0 border-r border-edge/8 bg-surface px-3 py-3 overflow-y-auto"
             style={{ maxHeight: editorHeight + resultsHeight + 1 }}
           >
             <p className="text-[10px] uppercase tracking-widest text-ink/30 mb-2">
@@ -139,7 +139,7 @@ export function SqlWorkbench({
           >
             {error && (
               <div className="m-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 flex gap-2">
-                <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+                <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
                 <p className="text-[12px] text-fg/85 font-mono whitespace-pre-wrap">{error}</p>
               </div>
             )}

@@ -64,7 +64,7 @@ function FieldEditor({
   }
 
   return (
-    <div className="flex flex-col gap-3 p-3 border border-white/[0.06] rounded-xl bg-white/[0.01]">
+    <div className="flex flex-col gap-3 p-3 border border-white/6 rounded-xl bg-white/1">
       <div className="flex items-center gap-2">
         <Field label="Field label">
           <TextInput

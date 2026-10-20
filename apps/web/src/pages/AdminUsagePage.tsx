@@ -62,7 +62,7 @@ export function AdminUsagePage() {
   }, [refresh])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Nav />
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
@@ -70,7 +70,7 @@ export function AdminUsagePage() {
             <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
               Platform
             </p>
-            <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
+            <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
               Usage
             </h1>
           </div>
@@ -80,7 +80,7 @@ export function AdminUsagePage() {
               <select
                 value={range}
                 onChange={(e) => setRange(e.target.value as UsageRange)}
-                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
+                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
               >
                 {RANGES.map((r) => (
                   <option key={r.value} value={r.value}>
@@ -101,7 +101,7 @@ export function AdminUsagePage() {
             <button
               onClick={() => void refresh()}
               disabled={loading}
-              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-[#f5f3ee] disabled:opacity-40 transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-cream-light disabled:opacity-40 transition-colors"
             >
               {loading ? 'Refreshing…' : 'Refresh'}
             </button>
@@ -117,8 +117,8 @@ export function AdminUsagePage() {
                 aria-current={tab === t.key ? 'page' : undefined}
                 className={`px-4 py-2.5 text-[13px] font-semibold transition-colors border-b-2 -mb-px ${
                   tab === t.key
-                    ? 'text-[#f5f3ee] border-green'
-                    : 'text-slate-mid hover:text-[#f5f3ee] border-transparent'
+                    ? 'text-cream-light border-green'
+                    : 'text-slate-mid hover:text-cream-light border-transparent'
                 }`}
               >
                 {t.label}
@@ -168,13 +168,13 @@ export function AdminUsagePage() {
 
 const card = 'bg-[#111111] rounded-xl border border-white/10'
 const th = 'text-left text-[11px] font-bold uppercase tracking-widest text-slate-mid px-4 py-2.5'
-const td = 'px-4 py-2.5 text-[13px] text-[#f5f3ee] align-top'
+const td = 'px-4 py-2.5 text-[13px] text-cream-light align-top'
 
 function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
   return (
     <div className={`${card} px-5 py-4`}>
       <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">{label}</p>
-      <p className="font-display font-extrabold text-[28px] text-[#f5f3ee] leading-tight mt-1">
+      <p className="font-display font-extrabold text-[28px] text-cream-light leading-tight mt-1">
         {value}
       </p>
       {sub && <p className="text-[12px] text-slate-mid mt-0.5">{sub}</p>}
@@ -206,7 +206,7 @@ function CsvButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="text-[12px] font-semibold text-slate-mid hover:text-[#f5f3ee] transition-colors"
+      className="text-[12px] font-semibold text-slate-mid hover:text-cream-light transition-colors"
     >
       Export CSV
     </button>
@@ -342,7 +342,7 @@ function Overview({ data }: { data: UsageReport }) {
                   : []),
               ] as [string, number][]
             ).map(([label, n]) => (
-              <li key={label} className="flex justify-between text-[#f5f3ee]">
+              <li key={label} className="flex justify-between text-cream-light">
                 <span className="text-slate-mid">{label}</span>
                 <span className="font-semibold">{n.toLocaleString()}</span>
               </li>
@@ -382,8 +382,8 @@ function Scenarios({
                 onClick={() => setFilter(f)}
                 className={`px-2.5 py-1 rounded-lg text-[12px] font-semibold transition-colors ${
                   filter === f
-                    ? 'bg-white/15 text-[#f5f3ee]'
-                    : 'text-slate-mid hover:text-[#f5f3ee]'
+                    ? 'bg-white/15 text-cream-light'
+                    : 'text-slate-mid hover:text-cream-light'
                 }`}
               >
                 {f === 'all' ? 'All' : 'Not used'}
@@ -572,7 +572,7 @@ function ToolCard({ tool, tracking }: { tool: UsageTool; tracking: boolean }) {
           </p>
           <ul className="text-[13px] space-y-1">
             {tool.datasets.map((d) => (
-              <li key={d.slug} className="flex justify-between text-[#f5f3ee]">
+              <li key={d.slug} className="flex justify-between text-cream-light">
                 <span>{d.slug}</span>
                 <span className="text-slate-mid">
                   {d.events.toLocaleString()} queries · {d.users} {d.users === 1 ? 'user' : 'users'}
@@ -771,7 +771,7 @@ function UserRow({
 }) {
   return (
     <>
-      <tr onClick={onToggle} className="cursor-pointer hover:bg-white/[0.03]">
+      <tr onClick={onToggle} className="cursor-pointer hover:bg-white/3">
         <td className={td}>
           <p className="font-semibold">
             <span className="text-slate-mid mr-1.5">{open ? '▾' : '▸'}</span>
@@ -791,7 +791,7 @@ function UserRow({
         <td className={td}>{when(u.lastActiveAt)}</td>
       </tr>
       {open && (
-        <tr className="bg-white/[0.02]">
+        <tr className="bg-white/2">
           <td colSpan={9} className="px-4 pb-4 pt-1">
             <p className="text-[12px] text-slate-mid mb-2 ml-4">First seen {when(u.firstSeenAt)}</p>
             <div className="grid md:grid-cols-3 gap-4 ml-4">
@@ -813,7 +813,7 @@ function TopList({ title, items }: { title: string; items: { label: string; coun
       {items.length === 0 ? (
         <p className="text-[12px] text-slate-mid">—</p>
       ) : (
-        <ul className="text-[12px] text-[#f5f3ee] space-y-0.5">
+        <ul className="text-[12px] text-cream-light space-y-0.5">
           {items.map((i) => (
             <li key={i.label} className="flex justify-between gap-3">
               <span className="truncate">{i.label}</span>

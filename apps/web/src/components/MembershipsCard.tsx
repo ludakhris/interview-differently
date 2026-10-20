@@ -78,10 +78,10 @@ export function MembershipsCard({ variant = 'settings', onJoined, onSkip }: Memb
           {memberships.map((m) => (
             <li
               key={m.membershipId}
-              className="flex items-center justify-between bg-[#0a0a0a] border border-white/10 rounded-lg px-4 py-3"
+              className="flex items-center justify-between bg-black border border-white/10 rounded-lg px-4 py-3"
             >
               <div>
-                <p className="text-[13px] font-semibold text-[#f5f3ee]">{m.institution.name}</p>
+                <p className="text-[13px] font-semibold text-cream-light">{m.institution.name}</p>
                 <p className="text-[11px] text-slate-mid">
                   {m.cohort ? (
                     <>Cohort: {m.cohort.name}</>
@@ -130,7 +130,7 @@ export function MembershipsCard({ variant = 'settings', onJoined, onSkip }: Memb
         <div className="mt-6 text-center">
           <button
             onClick={onSkip}
-            className="text-[12px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+            className="text-[12px] text-slate-mid hover:text-cream-light transition-colors"
           >
             Skip for now →
           </button>
@@ -164,11 +164,11 @@ function JoinForm({
   return (
     <div className="space-y-4">
       {suggestedInstitution && !alreadyInSuggested && (
-        <div className="bg-[#0a0a0a] border border-green/30 rounded-lg p-4">
+        <div className="bg-black border border-green/30 rounded-lg p-4">
           <p className="text-[11px] font-bold uppercase tracking-widest text-green-light mb-1">
             Suggested for you
           </p>
-          <p className="text-[14px] text-[#f5f3ee] mb-3">
+          <p className="text-[14px] text-cream-light mb-3">
             We noticed your email is at{' '}
             <span className="font-mono text-slate-light">@{suggestedInstitution.emailDomain}</span>{' '}
             — looks like you're with <strong>{suggestedInstitution.name}</strong>.
@@ -225,7 +225,7 @@ function JoinForm({
             value={joinKey}
             onChange={(e) => setJoinKey(e.target.value)}
             placeholder="e.g. fall2026-mba"
-            className="flex-1 bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-[#f5f3ee] placeholder:text-white/25 focus:outline-none focus:border-white/30 font-mono"
+            className="flex-1 bg-black border border-white/10 rounded-lg px-3 py-2 text-[13px] text-cream-light placeholder:text-white/25 focus:outline-hidden focus:border-white/30 font-mono"
           />
           <button
             type="submit"

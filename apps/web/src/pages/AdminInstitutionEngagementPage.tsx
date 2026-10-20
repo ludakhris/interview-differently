@@ -61,12 +61,12 @@ export function AdminInstitutionEngagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Nav />
-      <div className="max-w-screen-2xl mx-auto px-6 py-12">
+      <div className="max-w-(--breakpoint-2xl) mx-auto px-6 py-12">
         <button
           onClick={() => navigate('/admin/institutions')}
-          className="text-[12px] text-slate-mid hover:text-[#f5f3ee] transition-colors mb-3"
+          className="text-[12px] text-slate-mid hover:text-cream-light transition-colors mb-3"
         >
           ← Back to institutions
         </button>
@@ -76,7 +76,7 @@ export function AdminInstitutionEngagementPage() {
             <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
               Analytics
             </p>
-            <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
+            <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
               {detail?.name ?? 'Institution analytics'}
             </h1>
           </div>
@@ -90,7 +90,7 @@ export function AdminInstitutionEngagementPage() {
                 id="cohort-filter"
                 value={cohortId}
                 onChange={(e) => setCohort(e.target.value)}
-                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
+                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
               >
                 <option value="">All cohorts</option>
                 {detail.cohorts.map((c) => (
@@ -147,7 +147,7 @@ function EngagementTable({ data }: { data: ScenarioEngagementResponse }) {
           </h2>
           {data.cohort && (
             <p className="text-[12px] text-slate-mid mt-1">
-              Cohort: <span className="text-[#f5f3ee]">{data.cohort.name}</span>
+              Cohort: <span className="text-cream-light">{data.cohort.name}</span>
             </p>
           )}
         </div>
@@ -180,7 +180,7 @@ function EngagementTable({ data }: { data: ScenarioEngagementResponse }) {
                 ]),
               })
             }
-            className="text-[11px] font-semibold text-slate-mid hover:text-[#f5f3ee] transition-colors"
+            className="text-[11px] font-semibold text-slate-mid hover:text-cream-light transition-colors"
             title="Download as CSV"
           >
             ↓ CSV
@@ -222,7 +222,7 @@ function ScenarioRow({ row }: { row: ScenarioEngagementRow }) {
   return (
     <tr className="border-b border-white/5 last:border-0 align-top">
       <td className="py-2 pr-3 max-w-[260px]">
-        <p className="text-[#f5f3ee] truncate" title={row.scenarioTitle}>
+        <p className="text-cream-light truncate" title={row.scenarioTitle}>
           {row.scenarioTitle}
         </p>
         <p className="text-[10px] text-slate-mid font-mono truncate" title={row.scenarioId}>

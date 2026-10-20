@@ -24,10 +24,10 @@ export function PhaseStepper({ phases, accentColor = '#0f5b89' }: PhaseStepperPr
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3">
         <ol className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
           {phases.map((p, i) => (
-            <li key={p.phase.id} className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <li key={p.phase.id} className="flex items-center gap-1 sm:gap-2 shrink-0">
               <PhaseChip view={p} accentColor={accentColor} />
               {i < phases.length - 1 && (
-                <span className="h-px w-4 sm:w-8 bg-ink/15 flex-shrink-0" aria-hidden />
+                <span className="h-px w-4 sm:w-8 bg-ink/15 shrink-0" aria-hidden />
               )}
             </li>
           ))}

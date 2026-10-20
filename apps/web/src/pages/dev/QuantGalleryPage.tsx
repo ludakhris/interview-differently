@@ -172,7 +172,7 @@ function Section({ id, kind, blurb, children }: SectionProps) {
 
 export function QuantGalleryPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#f5f3ee]">
+    <div className="min-h-screen bg-black text-cream-light">
       <div className="max-w-3xl mx-auto px-6 py-12 space-y-12">
         <header>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">

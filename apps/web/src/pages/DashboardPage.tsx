@@ -149,7 +149,7 @@ export function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <p className="text-slate-mid text-[14px]">Loading simulations...</p>
       </div>
     )
@@ -157,14 +157,14 @@ export function DashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <p className="text-red-400 text-[14px]">Failed to load simulations. Please try again.</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+    <div className="min-h-screen bg-black flex flex-col">
       <Nav />
 
       <div className="max-w-5xl mx-auto px-6 py-12">
@@ -173,7 +173,7 @@ export function DashboardPage() {
             <p className="text-[12px] font-medium tracking-widest uppercase text-slate-mid mb-1">
               {isSignedIn ? 'Welcome back' : 'Explore simulations'}
             </p>
-            <h2 className="font-display font-extrabold text-[32px] text-[#f5f3ee] tracking-tight">
+            <h2 className="font-display font-extrabold text-[32px] text-cream-light tracking-tight">
               {isSignedIn ? (user?.fullName ?? user?.firstName ?? 'Welcome') : 'Choose a scenario'}
             </h2>
           </div>
@@ -196,7 +196,7 @@ export function DashboardPage() {
                   </div>
                   <div className="flex-1">
                     <h4
-                      className="font-display font-extrabold text-[20px] text-[#f5f3ee] leading-tight"
+                      className="font-display font-extrabold text-[20px] text-cream-light leading-tight"
                       style={{ color: meta.color }}
                     >
                       {meta.label}
@@ -223,7 +223,7 @@ export function DashboardPage() {
                         <div className="p-5">
                           <div className="flex items-start gap-3 mb-2">
                             <div
-                              className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
+                              className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
                               style={{ backgroundColor: `${meta.color}22`, color: meta.color }}
                             >
                               <TrackIcon name={iconName} size={20} />
@@ -237,7 +237,7 @@ export function DashboardPage() {
                                   {subcategoryLabel(scenario.subcategory)}
                                 </p>
                               )}
-                              <h4 className="mt-0.5 font-display font-bold text-[15px] text-[#f5f3ee] leading-snug">
+                              <h4 className="mt-0.5 font-display font-bold text-[15px] text-cream-light leading-snug">
                                 {scenario.title}
                               </h4>
                             </div>
@@ -272,7 +272,7 @@ export function DashboardPage() {
           className="w-full mb-10 rounded-2xl border border-dashed border-white/15 hover:border-green/40 bg-[#0d0d0d] hover:bg-[#101510] transition-all px-6 py-5 text-left flex items-center justify-between gap-4 group"
         >
           <div>
-            <p className="font-display font-bold text-[15px] text-[#f5f3ee] mb-1">
+            <p className="font-display font-bold text-[15px] text-cream-light mb-1">
               Don't see what you need?
             </p>
             <p className="text-[13px] text-slate-mid leading-relaxed">
@@ -319,7 +319,7 @@ export function DashboardPage() {
                 return (
                   <div key={dim.dimension}>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[13px] font-semibold text-[#f5f3ee]">
+                      <span className="text-[13px] font-semibold text-cream-light">
                         {dim.dimension}
                       </span>
                       <span className="text-[13px] font-bold" style={{ color }}>
@@ -366,11 +366,11 @@ export function DashboardPage() {
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className="h-2 w-2 rounded-full flex-shrink-0"
+                        className="h-2 w-2 rounded-full shrink-0"
                         style={{ backgroundColor: meta?.color ?? '#888' }}
                       />
                       <div>
-                        <p className="text-[13px] font-semibold text-[#f5f3ee]">
+                        <p className="text-[13px] font-semibold text-cream-light">
                           {item.scenarioTitle}
                         </p>
                         <p className="text-[11px] text-slate-mid">{date}</p>
@@ -382,13 +382,13 @@ export function DashboardPage() {
                       </span>
                       <button
                         onClick={() => navigate(`/scenario/${item.scenarioId}/feedback/${item.id}`)}
-                        className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                        className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
                       >
                         View →
                       </button>
                       <button
                         onClick={() => navigate(`/scenario/${item.scenarioId}/briefing`)}
-                        className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                        className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
                       >
                         Retry →
                       </button>
@@ -422,7 +422,7 @@ export function DashboardPage() {
                     <div className="flex items-center gap-3">
                       <span className="text-[14px]">🎙</span>
                       <div>
-                        <p className="text-[13px] font-semibold text-[#f5f3ee]">
+                        <p className="text-[13px] font-semibold text-cream-light">
                           {session.scenarioId}
                         </p>
                         <p className="text-[11px] text-slate-mid">
@@ -445,14 +445,14 @@ export function DashboardPage() {
                               `/scenario/${session.scenarioId}/immersive/${session.id}/feedback`
                             )
                           }
-                          className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                          className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
                         >
                           View →
                         </button>
                       )}
                       <button
                         onClick={() => navigate(`/scenario/${session.scenarioId}/immersive`)}
-                        className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                        className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
                       >
                         Retry →
                       </button>
@@ -494,7 +494,7 @@ export function DashboardPage() {
                     <div className="p-5">
                       <div className="flex items-start gap-3 mb-3">
                         <div
-                          className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
+                          className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
                           style={{ backgroundColor: `${TOOL_COLOR}22`, color: TOOL_COLOR }}
                         >
                           <Icon size={20} />
@@ -506,7 +506,7 @@ export function DashboardPage() {
                           >
                             {available ? 'Tool' : 'Coming soon'}
                           </p>
-                          <h4 className="mt-0.5 font-display font-bold text-[15px] text-[#f5f3ee] leading-snug">
+                          <h4 className="mt-0.5 font-display font-bold text-[15px] text-cream-light leading-snug">
                             {meta.label}
                           </h4>
                         </div>

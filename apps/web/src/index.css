@@ -1,6 +1,85 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme inline {
+  --color-black: #0a0a0a;
+  --color-cream: #f0ede6;
+  --color-cream-light: #f5f3ee;
+
+  --color-surface: rgb(var(--ld-surface, 10 10 10));
+  --color-surface-alt: rgb(var(--ld-surface-alt, 17 17 17));
+  --color-surface-deep: rgb(var(--ld-surface-deep, 13 13 13));
+  --color-surface-bar: rgb(var(--ld-surface-bar, 15 15 15));
+
+  --color-fg: rgb(var(--ld-text, 245 243 238));
+  --color-ink: rgb(var(--ld-ink, 255 255 255));
+  --color-edge: rgb(var(--ld-edge, 255 255 255) / calc(1 * var(--ld-edge-k, 1)));
+  --color-on-primary: rgb(var(--ld-on-primary, 255 255 255));
+  --color-on-accent: rgb(var(--ld-on-accent, 255 255 255));
+  --color-mint: rgb(var(--ld-mint, 127 200 178));
+  --color-jade: rgb(var(--ld-jade, 78 165 138));
+  --color-azure: rgb(var(--ld-azure, 15 91 137));
+
+  --color-green: rgb(var(--ld-primary, 26 107 60));
+  --color-green-light: rgb(var(--ld-accent, 45 158 95));
+  --color-green-pale: #e8f5ee;
+
+  --color-amber-200: rgb(var(--ld-amber-200, 253 230 138));
+  --color-amber-300: rgb(var(--ld-amber-300, 252 211 77));
+  --color-amber-400: rgb(var(--ld-amber-400, 251 191 36));
+  --color-amber: #d4830a;
+  --color-amber-pale: #fef3e0;
+
+  --color-red-300: rgb(var(--ld-red-300, 252 165 165));
+  --color-red-400: rgb(var(--ld-red-400, 248 113 113));
+
+  --color-emerald-300: rgb(var(--ld-emerald-300, 110 231 183));
+  --color-emerald-400: rgb(var(--ld-emerald-400, 52 211 153));
+
+  --color-violet-400: rgb(var(--ld-violet-400, 167 139 250));
+
+  --color-sky-400: rgb(var(--ld-sky-400, 56 189 248));
+
+  --color-slate: #2c3e50;
+  --color-slate-mid: rgb(var(--ld-soft, 84 110 122));
+  --color-slate-light: rgb(var(--ld-soft-light, 176 190 197));
+
+  --color-border: #e0dbd2;
+
+  --font-body: Inter, sans-serif;
+
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --shadow-card-lg: 0 12px 48px rgba(0, 0, 0, 0.14);
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility font-display {
+  font-family: 'Syne', sans-serif;
+}
+
+@utility animate-fade-in {
+  animation: fadeIn 0.35s ease forwards;
+}
+
+@utility animate-slide-up {
+  animation: slideUp 0.4s ease forwards;
+}
 
 @layer base {
   * {
@@ -24,20 +103,6 @@
   h5,
   h6 {
     font-family: 'Syne', sans-serif;
-  }
-}
-
-@layer utilities {
-  .font-display {
-    font-family: 'Syne', sans-serif;
-  }
-
-  .animate-fade-in {
-    animation: fadeIn 0.35s ease forwards;
-  }
-
-  .animate-slide-up {
-    animation: slideUp 0.4s ease forwards;
   }
 }
 

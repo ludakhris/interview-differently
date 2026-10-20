@@ -11,7 +11,7 @@ export function PreviewGate({ scenarioId }: PreviewGateProps) {
   return (
     <div className="absolute inset-0 flex items-center justify-center z-10">
       {/* Fade — starts transparent, darkens only near the card */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent from-40% via-[#0a0a0a]/40 via-60% to-[#0a0a0a]/80" />
+      <div className="absolute inset-0 bg-linear-to-b from-transparent from-40% via-black/40 via-60% to-black/80" />
 
       {/* Sign-up card */}
       <div className="relative z-10 bg-[#111111] border border-white/10 rounded-2xl p-8 max-w-sm w-full mx-6 text-center shadow-2xl">
@@ -19,7 +19,7 @@ export function PreviewGate({ scenarioId }: PreviewGateProps) {
           <span className="text-green text-[18px]">◈</span>
         </div>
 
-        <h2 className="font-display font-bold text-[20px] text-[#f5f3ee] mb-2">
+        <h2 className="font-display font-bold text-[20px] text-cream-light mb-2">
           Ready to continue?
         </h2>
         <p className="text-[14px] text-slate-mid leading-relaxed mb-6">
@@ -34,7 +34,7 @@ export function PreviewGate({ scenarioId }: PreviewGateProps) {
         </button>
         <button
           onClick={() => navigate(`/sign-in?redirect_url=${redirectUrl}`)}
-          className="w-full text-[13px] text-slate-mid hover:text-[#f5f3ee] transition-colors py-1"
+          className="w-full text-[13px] text-slate-mid hover:text-cream-light transition-colors py-1"
         >
           Already have an account? Sign in
         </button>
