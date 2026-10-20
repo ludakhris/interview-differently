@@ -8,10 +8,6 @@
       "destination": "/spark/index.html"
     },
     {
-      "source": "/scorm/:path*",
-      "destination": "https://media.interviewdifferently.com/learn-scorm/:path*"
-    },
-    {
       "source": "/lms/:path*",
       "has": [
         {

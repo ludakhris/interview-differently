@@ -43,6 +43,8 @@ export default defineRailway((ctx) => {
       env: {
         NODE_ENV: 'development',
         TRUST_PROXY: '1',
+        // This API's own address: outside production it serves stored SCORM packages and their player page itself.
+        API_PUBLIC_URL: 'https://${{RAILWAY_PUBLIC_DOMAIN}}',
         // Browser origins of Vercel preview deployments of the two front ends (never set in production); built from
         // your own Vercel team by scripts/railway-dev-vars.sh, so no team name is written here.
         PREVIEW_ORIGIN_PATTERN: preserve(),
