@@ -19,6 +19,7 @@
 
 import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 import {
   interviewQuestions,
   lessonBody,
@@ -1147,7 +1148,7 @@ async function main() {
   console.log(`Database host: ${host}`)
   // Check the environment before removing anything, so a bad setting never leaves the database empty.
   if (!argv.includes('--remove')) resolveLearnOrigin(process.env.LTI_LEARN_URL, dbHost())
-  const prisma = new PrismaClient()
+  const prisma = new PrismaClient({ adapter: prismaAdapter() })
   try {
     await removeDemo(prisma)
     if (!argv.includes('--remove')) await load(prisma)

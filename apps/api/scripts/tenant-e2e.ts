@@ -17,6 +17,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { NestFactory } from '@nestjs/core'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 import { requireHostConfirmation } from './lib/db-guard'
 import { STANDALONE_AGENCY_ID } from '../src/core/standalone-agency'
 
@@ -94,7 +95,7 @@ async function main(): Promise<void> {
   }
   if (mode === 'plain') process.env.DATABASE_URL = ownerUrl
   const owner = new PrismaClient({
-    datasourceUrl: process.env.SCHEMA_DATABASE_URL ?? process.env.DATABASE_URL,
+    adapter: prismaAdapter(process.env.SCHEMA_DATABASE_URL ?? process.env.DATABASE_URL),
   })
   const { learnerId, chCohorts } = await setup(owner)
   await owner.institution.deleteMany({

@@ -26,10 +26,8 @@
     "set:featured-demos": "ts-node -r tsconfig-paths/register scripts/set-featured-demos.ts",
     "seed:lti-platforms": "ts-node -r tsconfig-paths/register scripts/seed-lti-platforms.ts",
     "sync:types": "node scripts/sync-learn-types.mjs",
-    "railway:lti-vars": "node scripts/railway-lti-vars.mjs"
-  },
-  "prisma": {
-    "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts"
+    "railway:lti-vars": "node scripts/railway-lti-vars.mjs",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.86.1",
@@ -40,7 +38,8 @@
     "@nestjs/common": "^12.2.0",
     "@nestjs/core": "^12.2.0",
     "@nestjs/platform-express": "^12.2.0",
-    "@prisma/client": "^5.22.0",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
     "@types/multer": "^2.1.0",
     "dotenv": "^17.4.1",
     "fflate": "^0.8.3",
@@ -62,11 +61,22 @@
     "@types/node": "^20.0.0",
     "eslint": "^9.0.0",
     "jest": "^30.5.2",
-    "prisma": "^5.22.0",
+    "prisma": "^7.10.1",
     "ts-jest": "^29.4.15",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.0.0"
+  },
+  "overrides": {
+    "@visx/curve": "4.0.0",
+    "@visx/event": "4.0.0",
+    "@visx/grid": "4.0.0",
+    "@visx/group": "4.0.0",
+    "@visx/point": "4.0.0",
+    "@visx/responsive": "4.0.0",
+    "@visx/scale": "4.0.0",
+    "@visx/shape": "4.0.0",
+    "@visx/vendor": "4.0.0"
   }
 }

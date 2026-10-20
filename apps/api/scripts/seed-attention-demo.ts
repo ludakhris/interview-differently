@@ -15,6 +15,7 @@
 
 import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 
 const DEV_HOSTS = ['localhost', '127.0.0.1']
 const COHORT = 'demo-cohort-cedar-mill-c'
@@ -40,7 +41,7 @@ async function main() {
   const email = arg('--email')
   if (!email) throw new Error('Pass --email <the address you sign in with>')
   const remove = process.argv.includes('--remove')
-  const prisma = new PrismaClient()
+  const prisma = new PrismaClient({ adapter: prismaAdapter() })
   try {
     console.log(`Database: ${host}`)
     const me = await prisma.user.findFirst({ where: { email, source: 'learn' } })

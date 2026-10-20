@@ -1,5 +1,6 @@
 import '../scripts/lib/owner-env'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 import { readFileSync, readdirSync } from 'fs'
 import { join, resolve } from 'path'
 import { createHash } from 'crypto'
@@ -15,7 +16,7 @@ type ScenarioNode = any
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Choice = any
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient({ adapter: prismaAdapter() })
 
 type ScoreQuality = 'strong' | 'proficient' | 'developing'
 

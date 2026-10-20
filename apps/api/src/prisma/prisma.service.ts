@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common'
 import { Prisma, PrismaClient } from '@prisma/client'
+import { prismaAdapter } from './client'
 import { tenantContext, type TenantContext } from '../core/tenant-context'
 import { TENANT_TABLES, touchesTenantTable } from '../core/tenant-tables'
 
@@ -24,7 +25,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   private readonly logger = new Logger(PrismaService.name)
 
   constructor() {
-    super()
+    super({ adapter: prismaAdapter() })
     // Every `this.prisma.*` call goes through the proxy; until startup finds the connection is the restricted
     // role it behaves exactly like the plain client.
     return tenantProxy(this) as PrismaService

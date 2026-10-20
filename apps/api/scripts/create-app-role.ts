@@ -14,6 +14,7 @@
  */
 import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 import { assertBypassesRls, requireHostConfirmation } from './lib/db-guard'
 import { APPEND_ONLY_TABLES, APP_ROLE_FUNCTIONS } from '../src/core/app-role-grants'
 
@@ -24,7 +25,7 @@ async function main(): Promise<void> {
   const password = process.env.APP_ROLE_PASSWORD
   if (!password || password.length < 32) throw new Error('Set APP_ROLE_PASSWORD (32+ characters)')
   if (!/^[a-z_][a-z0-9_]*$/.test(ROLE)) throw new Error('APP_ROLE_NAME must be a plain identifier')
-  const prisma = new PrismaClient()
+  const prisma = new PrismaClient({ adapter: prismaAdapter() })
   try {
     await assertBypassesRls(prisma)
     const [me] = await prisma.$queryRawUnsafe<{ current_user: string; db: string }[]>(

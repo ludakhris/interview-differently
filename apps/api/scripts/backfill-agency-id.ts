@@ -13,6 +13,7 @@
  */
 import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 import { assertBypassesRls, dbHost, requireHostConfirmation } from './lib/db-guard'
 
 // Parents first: children copy their parent's agency.
@@ -36,7 +37,7 @@ const TABLES = [
   'RoleInvite',
 ]
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient({ adapter: prismaAdapter() })
 
 async function empty(table: string): Promise<number> {
   const rows = await prisma.$queryRawUnsafe<{ n: number }[]>(
