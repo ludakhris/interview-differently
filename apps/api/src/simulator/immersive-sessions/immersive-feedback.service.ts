@@ -50,7 +50,10 @@ export class ImmersiveFeedbackService {
     try {
       const message = await this.client.messages.create(
         {
-          model: 'claude-haiku-4-5-20251001',
+          model: 'claude-haiku-5-5',
+          // No thinking, as before: the reply is read as one text block, within a small token limit.
+          thinking: { type: 'disabled' },
+          inference_geo: 'us',
           max_tokens: maxTokens,
           messages: [{ role: 'user', content: prompt }],
         },

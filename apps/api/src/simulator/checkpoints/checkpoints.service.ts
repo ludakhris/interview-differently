@@ -337,6 +337,7 @@ export class CheckpointsService {
         const res = await client.messages.create(
           {
             model: HELP_MODEL,
+            inference_geo: 'us',
             max_tokens: 4000,
             system: COACH_SYSTEM,
             output_config: {
@@ -463,6 +464,7 @@ export class CheckpointsService {
         const res = await client.messages.create(
           {
             model: CONTENT_MODEL,
+            inference_geo: 'us',
             max_tokens: 8000,
             system: GENERATE_SYSTEM,
             output_config: {
