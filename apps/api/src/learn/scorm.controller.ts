@@ -59,9 +59,9 @@ export class ScormController {
 }
 
 /**
- * Dev only: serves stored package files. In production /scorm/* is rewritten to
- * the R2 bucket, so this finds nothing there. Public like the bucket is: the
- * package id is an unguessable uuid.
+ * Outside production: serves stored package files and the player page (see scorm-player.ts). In production they are
+ * served from the public media host and this finds nothing. Public like the bucket is: the package id is an
+ * unguessable uuid.
  */
 @Controller('scorm-files')
 export class ScormFilesController {

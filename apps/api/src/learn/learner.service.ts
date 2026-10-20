@@ -71,6 +71,7 @@ import {
   type ProfileFacts,
 } from './talent/profile-requirement'
 import { randomUUID } from 'node:crypto'
+import { scormSrc } from './scorm-player'
 
 /** A tool's score is still accepted this long after the cohort ends (a timed assessment begun just before). */
 export const TOOL_SCORE_GRACE_MS = 24 * 60 * 60 * 1000
@@ -1611,11 +1612,6 @@ export function buildRecord(
 }
 
 /** The URL a package loads from: same origin as the player, so the SCORM API can be found. */
-export function scormSrc(packageId: string, entry: string): string {
-  const [path, query] = entry.split('?')
-  const encoded = path.split('/').map(encodeURIComponent).join('/')
-  return `/scorm/${packageId}/${encoded}${query ? `?${query}` : ''}`
-}
 
 /** Done and score (0-100) from what a SCORM package reported on commit. */
 export function scormResult(body: unknown): { done: boolean; score: number | null } {

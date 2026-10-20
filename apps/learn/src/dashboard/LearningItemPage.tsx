@@ -1,6 +1,7 @@
 import type { LearnerItem, LearnerOutline, PlanAddition, QuizResult } from '@id/types'
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Scorm12API, Scorm2004API } from 'scorm-again'
+import CrossFrameLMS from 'scorm-again/cross-frame-lms'
 import { useApiSend, useLoad } from './api'
 import { useApp } from './app-context'
 import { YourAttempts } from './AttemptsList'
@@ -989,9 +990,10 @@ function VideoPlayer(props: {
 }
 
 /**
- * Plays a SCORM package. The package runs in an iframe on this same origin and
- * finds the player through window.API (SCORM 1.2) or window.API_1484_11 (2004),
- * which scorm-again provides. What the package reports is saved to our API.
+ * Plays a SCORM package. The package runs on the public media host, never this origin, inside a small player page
+ * there that gives it window.API / window.API_1484_11 (scorm-again's CrossFrameAPI). Every call reaches the real
+ * SCORM API here by postMessage (CrossFrameLMS), accepted only from the media origin. What the package reports is
+ * saved to our API.
  */
 function ScormPlayer(props: {
   item: LearnerItem
@@ -1007,7 +1009,8 @@ function ScormPlayer(props: {
   const [saved, setSaved] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [ready, setReady] = useState(false)
   const version = scorm.version
-  const globalName = version === '2004' ? 'API_1484_11' : 'API'
+  const mediaOrigin = new URL(scorm.src).origin
+  const src = `${scorm.src}&o=${encodeURIComponent(window.location.origin)}`
 
   useEffect(() => {
     if (item.locked) return
@@ -1022,7 +1025,7 @@ function ScormPlayer(props: {
         /* a snapshot from an older package version: start fresh */
       }
     }
-    ;(window as unknown as Record<string, unknown>)[globalName] = api
+    const bridge = new CrossFrameLMS(api, mediaOrigin)
     setReady(true)
 
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -1070,7 +1073,7 @@ function ScormPlayer(props: {
     return () => {
       clearTimeout(timer)
       void push()
-      delete (window as unknown as Record<string, unknown>)[globalName]
+      bridge.destroy()
     }
     // The package runs for the life of this page; re-creating the API would reset it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1083,7 +1086,7 @@ function ScormPlayer(props: {
         <iframe
           className="dash-scorm-frame"
           title={item.title}
-          src={scorm.src}
+          src={src}
           sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
         />
       )}

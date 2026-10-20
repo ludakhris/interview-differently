@@ -9,7 +9,6 @@ import {
   buildRecord,
   LearnerService,
   scormResult,
-  scormSrc,
   videoEvidence,
 } from './learner.service'
 
@@ -780,12 +779,6 @@ describe('buildRecord', () => {
 })
 
 describe('scorm', () => {
-  it('builds a same-origin, encoded launch URL', () => {
-    expect(scormSrc('abc', 'story/my page.html?mode=1')).toBe(
-      '/scorm/abc/story/my%20page.html?mode=1'
-    )
-  })
-
   it('reads done and a 0-100 score from what the package reported', () => {
     expect(scormResult({ completionStatus: 'completed', score: { raw: 8, max: 10 } })).toEqual({
       done: true,
