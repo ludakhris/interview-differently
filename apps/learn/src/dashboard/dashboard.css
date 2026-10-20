@@ -3350,6 +3350,11 @@ a.dash-tool:focus-visible {
   padding: 0.4rem 0;
   border-bottom: 1px solid var(--border);
 }
+/* #124: the learner's catalog intake answers, one line each under the name. */
+.dash-pending-intake {
+  display: block;
+  font-size: 0.85rem;
+}
 
 /* Cohort page: title, chips beside it, and a line between sections (not around the join code card). */
 .co-head {

@@ -922,6 +922,7 @@ describe('join requests (#68)', () => {
         name: 'Ann',
         email: 'a@b.co',
         requestedAt: '2026-10-07T12:00:00.000Z',
+        intake: null,
       },
     ])
   })

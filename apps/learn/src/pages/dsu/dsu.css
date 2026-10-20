@@ -1,0 +1,447 @@
+/* DSU Adult & Continuing Education demonstration site (#124), styled after desu.edu:
+   red logo block, dark teal bar, blue Oswald headings, Arial body. */
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&display=swap');
+
+.dsu {
+  --dsu-red: #ed1c24;
+  --dsu-navy: #002a3a;
+  --dsu-blue: #00549a;
+  --dsu-sky: #c7eafb;
+  --dsu-line: #e5e5e5;
+  --dsu-soft: #f5f7f8;
+  --dsu-text: #1a1a1a;
+  --dsu-muted: #4a4a4a;
+  min-height: 100vh;
+  background: #fff;
+  color: var(--dsu-text);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+}
+.dsu a {
+  color: var(--dsu-blue);
+}
+.dsu-wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+.dsu-skip {
+  position: absolute;
+  left: -9999px;
+}
+.dsu-skip:focus {
+  left: 16px;
+  top: 8px;
+  z-index: 10;
+  background: #fff;
+  padding: 8px 12px;
+}
+
+/* Always visible: this is not DSU's own site. */
+.dsu-demo {
+  background: #fff4c2;
+  border-bottom: 1px solid #e0c96b;
+  color: #3d3200;
+  font-size: 14px;
+  padding: 8px 16px;
+  text-align: center;
+}
+.dsu-demo a {
+  color: #3d3200;
+  font-weight: 700;
+}
+
+.dsu-header {
+  background: var(--dsu-navy);
+}
+.dsu-header-row {
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.dsu-logo {
+  display: flex;
+  align-items: center;
+  background: var(--dsu-red);
+  /* Readable alt text if the logo image does not load. */
+  color: #fff;
+  padding: 12px 18px;
+}
+.dsu .dsu-logo {
+  color: #fff;
+}
+.dsu-logo img {
+  display: block;
+  color: #fff;
+  font-weight: 700;
+  height: 48px;
+  width: auto;
+}
+.dsu-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 22px;
+  padding: 10px 0;
+}
+.dsu .dsu-nav a {
+  color: #fff;
+  font-family: Oswald, 'Arial Black', sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+}
+.dsu .dsu-nav a:hover,
+.dsu .dsu-nav a:focus-visible {
+  text-decoration: underline;
+}
+
+.dsu-crumbs {
+  font-size: 13px;
+  padding: 16px 0 8px;
+  color: var(--dsu-muted);
+}
+
+.dsu-cols {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 32px;
+  padding-bottom: 48px;
+}
+.dsu-cols-right {
+  grid-template-columns: 1fr 300px;
+}
+/* The catalog's side menu comes after the cards in the page, but sits on the left on wide screens. */
+.dsu-cols-cat > .dsu-body {
+  grid-column: 2;
+  grid-row: 1;
+}
+.dsu-cols-cat > .dsu-cat-side {
+  grid-column: 1;
+  grid-row: 1;
+}
+@media (max-width: 760px) {
+  .dsu-cols,
+  .dsu-cols-right {
+    grid-template-columns: 1fr;
+  }
+  /* Phones: reading order (cards, then the funding note); the area menu becomes .dsu-chips. */
+  .dsu-cols-cat > .dsu-body,
+  .dsu-cols-cat > .dsu-cat-side {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .dsu-cat-side .dsu-side-head,
+  .dsu-cat-side .dsu-side-menu {
+    display: none;
+  }
+}
+.dsu-chips {
+  display: none;
+}
+@media (max-width: 760px) {
+  .dsu-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 4px 0 8px;
+  }
+  .dsu-chips button {
+    background: #fff;
+    border: 1px solid var(--dsu-navy);
+    color: var(--dsu-navy);
+    padding: 6px 10px;
+    font: inherit;
+    font-size: 14px;
+  }
+  .dsu-chips button[aria-pressed='true'] {
+    background: var(--dsu-navy);
+    color: #fff;
+  }
+}
+.dsu-body {
+  min-width: 0;
+}
+.dsu-narrow {
+  max-width: 640px;
+  padding-bottom: 48px;
+}
+
+.dsu-h1,
+.dsu-h2,
+.dsu-h3,
+.dsu-side-head,
+.dsu-box-head {
+  font-family: Oswald, 'Arial Black', sans-serif;
+  color: var(--dsu-blue);
+  font-weight: 500;
+  line-height: 1.2;
+}
+.dsu-h1 {
+  font-size: 34px;
+  margin: 8px 0 12px;
+}
+.dsu-h2 {
+  font-size: 22px;
+  margin: 28px 0 8px;
+}
+.dsu-h3 {
+  font-size: 18px;
+  margin: 18px 0 6px;
+}
+.dsu-lead {
+  font-size: 17px;
+  margin: 0 0 18px;
+}
+.dsu-muted {
+  color: var(--dsu-muted);
+  font-size: 14px;
+}
+.dsu-error {
+  color: #a30d12;
+  font-weight: 700;
+}
+
+/* Left menu, like desu.edu's section menu. */
+.dsu-side-head {
+  font-size: 20px;
+  text-transform: uppercase;
+  margin: 8px 0 8px;
+}
+.dsu-side-menu {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  border-top: 1px solid var(--dsu-line);
+}
+.dsu-side-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--dsu-line);
+  padding: 9px 8px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--dsu-text);
+  cursor: pointer;
+}
+.dsu-side-menu button[aria-pressed='true'] {
+  background: var(--dsu-sky);
+  font-weight: 700;
+}
+.dsu-side-menu button:hover {
+  background: var(--dsu-soft);
+}
+
+.dsu-box {
+  background: var(--dsu-soft);
+  border-top: 4px solid var(--dsu-navy);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  font-size: 15px;
+}
+.dsu-box-head {
+  font-size: 19px;
+  margin: 0 0 8px;
+}
+.dsu-cta {
+  border-top-color: var(--dsu-red);
+}
+.dsu-done {
+  border-top-color: #1b7a3a;
+}
+
+.dsu-button,
+.dsu a.dsu-button {
+  display: inline-block;
+  background: var(--dsu-navy);
+  color: #fff;
+  border: 0;
+  padding: 12px 20px;
+  font-family: Oswald, 'Arial Black', sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+.dsu-button:hover,
+.dsu a.dsu-button:hover {
+  background: #0d4258;
+}
+.dsu-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.dsu-search {
+  display: block;
+  margin-bottom: 8px;
+}
+.dsu-search span {
+  display: block;
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+.dsu-search input,
+.dsu-form input:not([type='radio']),
+.dsu-form select,
+.dsu-form textarea {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  padding: 10px 12px;
+  border: 1px solid #8a8a8a;
+  font: inherit;
+}
+
+.dsu-cards {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.dsu-card {
+  border: 1px solid var(--dsu-line);
+  border-top: 4px solid var(--dsu-blue);
+  padding: 14px 16px;
+}
+.dsu-card-area {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dsu-muted);
+  margin: 0;
+}
+.dsu-card-title {
+  font-family: Oswald, 'Arial Black', sans-serif;
+  font-weight: 500;
+  font-size: 20px;
+  line-height: 1.25;
+  margin: 4px 0 6px;
+}
+.dsu-card-title a {
+  text-decoration: none;
+}
+.dsu-card-title a:hover {
+  text-decoration: underline;
+}
+.dsu-card-summary {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.dsu-card-facts {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.dsu-card-cred {
+  margin: 0;
+  font-size: 13px;
+  color: var(--dsu-muted);
+}
+.dsu-card-cred span {
+  font-weight: 700;
+}
+
+.dsu-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 0 0 8px;
+  border: 1px solid var(--dsu-line);
+}
+.dsu-facts div {
+  flex: 1 1 120px;
+  padding: 10px 14px;
+  border-right: 1px solid var(--dsu-line);
+}
+.dsu-facts dt {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dsu-muted);
+}
+.dsu-facts dd {
+  margin: 2px 0 0;
+  font-weight: 700;
+  font-size: 18px;
+}
+.dsu-list {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.dsu-form {
+  display: grid;
+  gap: 16px;
+}
+.dsu-form label > span,
+.dsu-form legend {
+  display: block;
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+.dsu-form fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.dsu-form .dsu-choice {
+  display: block;
+  font-size: 15px;
+  padding: 3px 0;
+}
+
+.dsu-footer {
+  background: var(--dsu-navy);
+  color: #fff;
+  font-size: 14px;
+  padding: 24px 0;
+}
+.dsu-footer a {
+  color: #fff;
+}
+.dsu-footer-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr;
+  gap: 24px;
+}
+@media (max-width: 760px) {
+  .dsu-footer-row {
+    grid-template-columns: 1fr;
+  }
+}
+.dsu-footer-head {
+  font-family: Oswald, 'Arial Black', sans-serif;
+  font-size: 17px;
+}
+.dsu-footer-note {
+  color: #d6e2e6;
+}
+
+.dsu-form-note {
+  background: #fff4c2;
+  border: 1px solid #e0c96b;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+.dsu-form [aria-invalid='true'] {
+  border-color: #a30d12;
+  outline: 2px solid #a30d12;
+}
+.dsu-field-error {
+  display: block;
+  color: #a30d12;
+  font-weight: 700;
+  font-size: 14px;
+  margin-top: 4px;
+}

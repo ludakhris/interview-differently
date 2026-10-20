@@ -78,6 +78,7 @@ export default defineConfig({
       input: {
         home: resolve(__dirname, 'index.html'),
         delaware: resolve(__dirname, 'delaware.html'),
+        dsu: resolve(__dirname, 'dsu.html'),
         notFound: resolve(__dirname, '404.html'),
       },
     },

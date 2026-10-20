@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { resetToDefaults, withFirstTool } from '../lti/platform/tool-test-helpers'
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common'
 import type { ClerkService } from '../auth/clerk.service'
@@ -14,16 +15,23 @@ import {
 
 const prisma = {
   user: { findUnique: jest.fn(), create: jest.fn() },
-  cohort: { findFirst: jest.fn() },
+  institution: { findFirst: jest.fn() },
+  cohort: { findFirst: jest.fn(), findMany: jest.fn() },
   enrollment: {
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     findMany: jest.fn(),
     count: jest.fn(),
   },
   membership: { upsert: jest.fn() },
-  joinRequest: { findUnique: jest.fn(), upsert: jest.fn(), findMany: jest.fn() },
+  joinRequest: {
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    upsert: jest.fn(),
+    findMany: jest.fn(),
+  },
   course: { findUnique: jest.fn() },
   courseItem: { findUnique: jest.fn() },
   courseModule: { findMany: jest.fn() },
@@ -239,6 +247,7 @@ describe('join with approval (#68)', () => {
     const update = prisma.joinRequest.upsert.mock.calls[0][0].update
     expect(update).toMatchObject({ status: 'pending', decidedAt: null, decidedBy: null })
     expect(update.createdAt).toBeInstanceOf(Date)
+    expect(update.intake).toBe(Prisma.DbNull)
   })
 
   it('does not block a request when the cohort is full', async () => {
@@ -2105,5 +2114,126 @@ describe('a lesson slot’s title', () => {
       .mockImplementation(() => undefined)
     expect(await titleOf(svc, lessonItem)).toBeNull()
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('db down'))
+  })
+})
+
+describe('request from the public catalog (#124)', () => {
+  const intake = {
+    phone: '302-555-0142',
+    education: 'High School/GED',
+    employment: 'not-employed',
+    funding: 'wioa',
+  }
+  const cohort = {
+    id: 'k1',
+    name: 'Open enrollment',
+    joinContact: 'ACE office',
+    institution: { id: 'p1', name: 'Fictional Provider' },
+    course: { id: 'c1', title: 'Medical Billing' },
+    maxLearners: null,
+    _count: { enrollments: 0 },
+  }
+  beforeEach(() => {
+    prisma.institution.findFirst.mockResolvedValue({ id: 'a1' })
+    prisma.cohort.findMany.mockResolvedValue([cohort])
+    prisma.user.findUnique.mockResolvedValue({ id: 'u1' })
+    prisma.enrollment.findFirst.mockResolvedValue(null)
+    prisma.joinRequest.findFirst.mockResolvedValue(null)
+    prisma.joinRequest.findUnique.mockResolvedValue(null)
+    prisma.joinRequest.upsert.mockResolvedValue({
+      id: 'r1',
+      status: 'pending',
+      createdAt: new Date('2026-10-20T12:00:00Z'),
+    })
+  })
+
+  it("looks only in the agency's own cohorts that take catalog requests", async () => {
+    await service.requestFromCatalog('u1', 'dsu', 'c1', intake)
+    expect(prisma.institution.findFirst.mock.calls[0][0].where).toEqual({
+      subdomain: 'dsu',
+      kind: 'agency',
+    })
+    expect(prisma.cohort.findMany.mock.calls[0][0].where).toMatchObject({
+      courseId: 'c1',
+      agencyId: 'a1',
+      acceptsRequests: true,
+      requiresApproval: true,
+      course: { status: 'published', provider: { parentId: 'a1' } },
+    })
+  })
+
+  it('stores the intake on a pending request and enrolls no one', async () => {
+    const out = await service.requestFromCatalog('u1', 'dsu', 'c1', intake)
+    expect(out).toMatchObject({
+      pending: true,
+      request: { id: 'r1', courseTitle: 'Medical Billing' },
+    })
+    const call = prisma.joinRequest.upsert.mock.calls[0][0]
+    expect(call.create).toMatchObject({ cohortId: 'k1', userId: 'u1', intake: { funding: 'wioa' } })
+    expect(prisma.enrollment.create).not.toHaveBeenCalled()
+    expect(prisma.membership.upsert).not.toHaveBeenCalled()
+  })
+
+  it('updates the answers on a request that is already pending, keeping its place', async () => {
+    prisma.joinRequest.findFirst.mockResolvedValue({ id: 'r1', cohortId: 'k1', status: 'pending' })
+    prisma.joinRequest.findUnique.mockResolvedValue({ id: 'r1', status: 'pending' })
+    await service.requestFromCatalog('u1', 'dsu', 'c1', intake)
+    const update = prisma.joinRequest.upsert.mock.calls[0][0].update
+    expect(update.intake).toMatchObject({ phone: '302-555-0142' })
+    expect(update.createdAt).toBeUndefined()
+  })
+
+  it('refuses an incomplete intake before looking anything up', async () => {
+    await expect(
+      service.requestFromCatalog('u1', 'dsu', 'c1', { ...intake, phone: '' })
+    ).rejects.toThrow(BadRequestException)
+    expect(prisma.cohort.findMany).not.toHaveBeenCalled()
+  })
+
+  it('says so when the program takes no requests or the agency is unknown', async () => {
+    prisma.cohort.findMany.mockResolvedValue([])
+    await expect(service.requestFromCatalog('u1', 'dsu', 'c1', intake)).rejects.toThrow(
+      NotFoundException
+    )
+    prisma.institution.findFirst.mockResolvedValue(null)
+    await expect(service.requestFromCatalog('u1', 'nope', 'c1', intake)).rejects.toThrow(
+      NotFoundException
+    )
+  })
+
+  it('refuses someone already enrolled in any cohort of the program', async () => {
+    prisma.enrollment.findFirst.mockResolvedValue({ id: 'e1', status: 'enrolled' })
+    await expect(service.requestFromCatalog('u1', 'dsu', 'c1', intake)).rejects.toThrow(
+      ConflictException
+    )
+    expect(prisma.joinRequest.upsert).not.toHaveBeenCalled()
+  })
+
+  it('skips a full cohort for the next one with a seat', async () => {
+    prisma.cohort.findMany.mockResolvedValue([
+      { ...cohort, id: 'full', maxLearners: 2, _count: { enrollments: 2 } },
+      { ...cohort, id: 'k2' },
+    ])
+    await service.requestFromCatalog('u1', 'dsu', 'c1', intake)
+    expect(prisma.joinRequest.upsert.mock.calls[0][0].create.cohortId).toBe('k2')
+  })
+
+  it('does not let a declined learner reopen the request from the catalog', async () => {
+    prisma.joinRequest.findFirst.mockResolvedValue({ id: 'r1', cohortId: 'k1', status: 'declined' })
+    await expect(service.requestFromCatalog('u1', 'dsu', 'c1', intake)).rejects.toThrow(
+      /not approved\. Contact ACE office/
+    )
+    expect(prisma.joinRequest.upsert).not.toHaveBeenCalled()
+  })
+
+  it('refuses a second request in another cohort of the same program', async () => {
+    prisma.joinRequest.findFirst.mockResolvedValue({
+      id: 'r9',
+      cohortId: 'other',
+      status: 'pending',
+    })
+    await expect(service.requestFromCatalog('u1', 'dsu', 'c1', intake)).rejects.toThrow(
+      ConflictException
+    )
   })
 })

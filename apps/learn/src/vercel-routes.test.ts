@@ -18,6 +18,14 @@ describe('LMS routes live under /lms', () => {
     expect(lms.find((r) => !r.has)?.destination).toBe('/home.html')
   })
 
+  it('serves the DSU demonstration site from its own page on its host (#124)', () => {
+    const dsu = config.rewrites.filter((r) => r.has?.[0]?.value === 'dsu.learndifferently.tech')
+    expect(dsu.map((r) => r.source).sort()).toEqual(
+      ['/', '/accessibility', '/lms/:path*', '/privacy', '/sign-in/:path*'].sort()
+    )
+    expect(dsu.every((r) => r.destination === '/dsu.html')).toBe(true)
+  })
+
   it('has no rewrites or redirects for the old top-level paths', () => {
     for (const p of LEGACY) {
       expect(config.rewrites.some((r) => r.source === `/${p}/:path*`)).toBe(false)

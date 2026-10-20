@@ -8,6 +8,7 @@ import { AuthProvider } from './auth'
 import { EnvironmentBanner } from './EnvironmentBanner'
 import { HomePage } from './pages/HomePage'
 import { DelawarePage } from './pages/DelawarePage'
+import { DsuSite } from './pages/dsu/DsuSite'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { AccessibilityPage } from './pages/AccessibilityPage'
 import { SignInPage } from './pages/SignInPage'
@@ -50,6 +51,13 @@ function page(): ReactNode {
         search={search}
       />
     )
+  }
+  if (
+    site === 'dsu' &&
+    (pathname === '/' || pathname === '/lms/catalog' || pathname.startsWith('/lms/catalog/'))
+  ) {
+    // DSU Adult & Continuing Education demonstration site (#124): its own look over the public catalog.
+    return <DsuSite pathname={pathname} />
   }
   if (pathname === '/lms/catalog' || pathname.startsWith('/lms/catalog/')) {
     const context = resolveContext(hostname, search)

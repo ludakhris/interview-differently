@@ -11,7 +11,7 @@ import { CohortConfigModal } from './CohortConfigModal'
 import { CohortAttendanceChip, CohortDeliveryChip, CohortStatusChip } from './CohortsPage'
 import { AdaptiveChip } from './CoursesPage'
 import { dateOnly, dateShort } from './format'
-import type { PendingJoinRequest } from './joinRequests'
+import { intakeLines, type PendingJoinRequest } from './joinRequests'
 import { canManageMembers, canManageWorkspace } from './roleAccess'
 import { errorNotice, useWorkspaceRole } from './shared'
 import { NoteIndicators } from './talent/NoteIndicators'
@@ -62,6 +62,11 @@ export function PendingRequests({
                 <span>
                   {r.name} <span className="dash-muted">{r.email ?? ''}</span>{' '}
                   <span className="dash-muted">requested {dateShort(r.requestedAt)}</span>
+                  {intakeLines(r.intake).map((line) => (
+                    <span key={line} className="dash-muted dash-pending-intake">
+                      {line}
+                    </span>
+                  ))}
                 </span>
                 <span className="dash-pending-actions">
                   <button

@@ -27,8 +27,17 @@ export class PublicCatalogService {
     lengthWeeks: number | null
     outcomes: string[]
     targetRoles: string[]
+    tuitionDollars: number | null
+    contactHours: number | null
+    format: string | null
+    prerequisite: string | null
     provider: { name: string }
-    cohorts: { startsAt: Date | null; endsAt: Date | null }[]
+    cohorts: {
+      startsAt: Date | null
+      endsAt: Date | null
+      requiresApproval: boolean
+      acceptsRequests: boolean
+    }[]
   }): CatalogCourse {
     const open = c.cohorts.filter((k) => cohortStatus(k.startsAt, k.endsAt) !== 'completed')
     const upcoming = c.cohorts
@@ -47,6 +56,11 @@ export class PublicCatalogService {
       targetRoles: c.targetRoles,
       nextStart: upcoming ? new Date(upcoming).toISOString() : null,
       openCohorts: open.length,
+      tuitionDollars: c.tuitionDollars,
+      contactHours: c.contactHours,
+      format: c.format,
+      prerequisite: c.prerequisite,
+      acceptsRequests: open.some((k) => k.acceptsRequests && k.requiresApproval),
     }
   }
 
@@ -72,7 +86,10 @@ export class PublicCatalogService {
         },
         include: {
           provider: { select: { name: true } },
-          cohorts: { where: { agencyId }, select: { startsAt: true, endsAt: true } },
+          cohorts: {
+            where: { agencyId },
+            select: { startsAt: true, endsAt: true, requiresApproval: true, acceptsRequests: true },
+          },
         },
         orderBy: [{ sector: 'asc' }, { title: 'asc' }],
       })
@@ -94,6 +111,8 @@ export class PublicCatalogService {
               name: true,
               startsAt: true,
               endsAt: true,
+              requiresApproval: true,
+              acceptsRequests: true,
               maxLearners: true,
               _count: { select: { enrollments: { where: { status: { not: 'withdrawn' } } } } },
             },

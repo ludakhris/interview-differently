@@ -283,6 +283,8 @@ export interface CohortJoinRequestRow {
   name: string
   email: string | null
   requestedAt: string
+  /** Answers given when the request came from the public catalog (#124); null for a join code. */
+  intake: CatalogIntake | null
 }
 
 export interface CohortRosterRow {
@@ -643,6 +645,28 @@ export interface CatalogCourse {
   /** Start date of the next cohort that has not begun, if any. */
   nextStart: string | null
   openCohorts: number
+  /** #124: shown so a prospective learner can compare programs. Null when the course does not say. */
+  tuitionDollars: number | null
+  contactHours: number | null
+  format: string | null
+  prerequisite: string | null
+  /** True when a signed-in learner can request a seat here without a join code. */
+  acceptsRequests: boolean
+}
+
+/** How a learner plans to pay, asked when requesting from the catalog. */
+export type CatalogFunding = 'wioa' | 'dvr' | 'employer' | 'self' | 'unsure'
+
+/** The short intake a learner fills in when requesting a program from the catalog (#124). */
+export interface CatalogIntake {
+  phone: string
+  education: string
+  employment: 'employed' | 'not-employed'
+  /** Employer and job title, when employed. */
+  employer: string | null
+  funding: CatalogFunding
+  language: string | null
+  reason: string | null
 }
 
 export interface CatalogOffering extends CatalogCourse {

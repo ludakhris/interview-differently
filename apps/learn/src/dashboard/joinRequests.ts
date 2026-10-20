@@ -1,4 +1,10 @@
-import type { CohortJoinRequestRow, LearnerJoinPending, LearnerJoinRequest } from '@id/types'
+import type {
+  CatalogFunding,
+  CatalogIntake,
+  CohortJoinRequestRow,
+  LearnerJoinPending,
+  LearnerJoinRequest,
+} from '@id/types'
 
 // Join-approval wording. The shapes are shared with the API (@id/types).
 
@@ -28,4 +34,31 @@ export function requestState(r: LearnerJoinRequest): string {
 export function requestContact(r: LearnerJoinRequest): string | null {
   const c = clean(r.contact)
   return c ? `Contact: ${c}` : null
+}
+
+const FUNDING: Record<CatalogFunding, string> = {
+  wioa: 'WIOA',
+  dvr: 'DVR',
+  employer: 'Employer pays',
+  self: 'Self-pay',
+  unsure: 'Funding not sure yet',
+}
+
+/** What a learner answered when requesting from the public catalog (#124), as short lines for staff. */
+export function intakeLines(intake: CatalogIntake | null): string[] {
+  if (!intake) return []
+  return [
+    [
+      intake.phone,
+      FUNDING[intake.funding],
+      intake.education,
+      intake.employment === 'employed'
+        ? `Working${intake.employer ? `: ${intake.employer}` : ''}`
+        : 'Not working now',
+      intake.language,
+    ]
+      .filter(Boolean)
+      .join(' · '),
+    ...(intake.reason ? [`“${intake.reason}”`] : []),
+  ]
 }

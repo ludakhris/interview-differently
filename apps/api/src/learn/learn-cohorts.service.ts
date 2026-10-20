@@ -43,6 +43,7 @@ import { LearnerService } from './learner.service'
 import { AccessService } from './access/access.service'
 import type { Action } from './access/permissions'
 import { ParticipantNotesService } from './talent/participant-notes.service'
+import { readCatalogIntake } from './catalog-request'
 
 /** Cohorts of courses: created in the workspace that runs them (a provider, or an organization offered the course). */
 @Injectable()
@@ -422,6 +423,7 @@ export class LearnCohortsService {
       name: r.user.displayName ?? r.user.email ?? r.userId,
       email: r.user.email,
       requestedAt: r.createdAt.toISOString(),
+      intake: readCatalogIntake(r.intake),
     }))
   }
 

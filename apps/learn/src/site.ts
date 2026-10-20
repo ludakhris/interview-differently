@@ -5,10 +5,14 @@
  *
  * Tenants are hard-coded until branding moves to the database (#46).
  * Local dev: delaware.localhost:5174, or ?site=delaware on any host.
+ * dsu is the Delaware State University Adult & Continuing Education demonstration site (#124).
  */
-export type Site = 'home' | 'delaware'
+export type Site = 'home' | 'delaware' | 'dsu'
 
-const TENANTS = new Map<string, Site>([['delaware', 'delaware']])
+const TENANTS = new Map<string, Site>([
+  ['delaware', 'delaware'],
+  ['dsu', 'dsu'],
+])
 
 export function resolveSite(hostname: string, search: string): Site {
   const override = new URLSearchParams(search).get('site')

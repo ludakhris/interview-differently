@@ -12,6 +12,16 @@
       "has": [
         {
           "type": "host",
+          "value": "dsu.learndifferently.tech"
+        }
+      ],
+      "destination": "/dsu.html"
+    },
+    {
+      "source": "/lms/:path*",
+      "has": [
+        {
+          "type": "host",
           "value": "delaware.learndifferently.tech"
         }
       ],
@@ -20,6 +30,16 @@
     {
       "source": "/lms/:path*",
       "destination": "/home.html"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "dsu.learndifferently.tech"
+        }
+      ],
+      "destination": "/dsu.html"
     },
     {
       "source": "/",
@@ -36,6 +56,16 @@
       "has": [
         {
           "type": "host",
+          "value": "dsu.learndifferently.tech"
+        }
+      ],
+      "destination": "/dsu.html"
+    },
+    {
+      "source": "/privacy",
+      "has": [
+        {
+          "type": "host",
           "value": "delaware.learndifferently.tech"
         }
       ],
@@ -46,10 +76,30 @@
       "has": [
         {
           "type": "host",
+          "value": "dsu.learndifferently.tech"
+        }
+      ],
+      "destination": "/dsu.html"
+    },
+    {
+      "source": "/accessibility",
+      "has": [
+        {
+          "type": "host",
           "value": "delaware.learndifferently.tech"
         }
       ],
       "destination": "/delaware.html"
+    },
+    {
+      "source": "/sign-in/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "dsu.learndifferently.tech"
+        }
+      ],
+      "destination": "/dsu.html"
     },
     {
       "source": "/sign-in/:path*",

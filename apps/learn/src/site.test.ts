@@ -11,6 +11,7 @@ describe('resolveSite', () => {
     expect(resolveSite('delaware.learndifferently.tech', '')).toBe('delaware')
     expect(resolveSite('Delaware.learndifferently.tech', '')).toBe('delaware')
     expect(resolveSite('delaware.localhost', '')).toBe('delaware')
+    expect(resolveSite('dsu.learndifferently.tech', '')).toBe('dsu')
   })
 
   it('falls back to the homepage for unknown subdomains and plain localhost', () => {
@@ -20,6 +21,7 @@ describe('resolveSite', () => {
 
   it('honours a ?site= override for known sites only', () => {
     expect(resolveSite('localhost', '?site=delaware')).toBe('delaware')
+    expect(resolveSite('localhost', '?site=dsu')).toBe('dsu')
     expect(resolveSite('delaware.localhost', '?site=home')).toBe('home')
     expect(resolveSite('localhost', '?site=nowhere')).toBe('home')
     expect(resolveSite('localhost', '?site=toString')).toBe('home')

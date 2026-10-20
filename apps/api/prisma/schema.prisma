@@ -238,6 +238,9 @@ model Cohort {
   requiresApproval     Boolean              @default(false)
   // Who learners should ask (plain text, e.g. 'Dana Reyes, dana@example.org'). Required when requiresApproval.
   joinContact          String?
+  // #124: a signed-in learner may request a seat from the agency's public catalog, without the join code.
+  // Only meaningful with requiresApproval: staff still approve every request.
+  acceptsRequests      Boolean              @default(false)
   // How the cohort meets: 'online' (async, activity is logged), 'live' (sessions with attendance) or 'hybrid' (both).
   delivery             String               @default("online") // 'online' | 'live' | 'hybrid'
   createdAt            DateTime             @default(now())
@@ -282,6 +285,8 @@ model JoinRequest {
   updatedAt DateTime  @updatedAt
   decidedAt DateTime?
   decidedBy String? // user id of the staff member
+  // #124: answers given when requesting from the public catalog (see catalog-request.ts). Null for a join code.
+  intake    Json?
   cohort    Cohort    @relation(fields: [cohortId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -542,6 +547,11 @@ model Course {
   // What a learner will be able to do, and the jobs the course prepares for. Shown in the catalog.
   outcomes           String[]       @default([])
   targetRoles        String[]       @default([])
+  // #124: what a prospective learner compares in the public catalog. Null = not shown.
+  tuitionDollars     Int?
+  contactHours       Int?
+  format             String? // plain words, e.g. 'Online, self-paced'
+  prerequisite       String?
   // Skills the course builds, each with the pass mark (0-100) below which a learner is flagged
   // and the author's remediation content is added to their plan: [{ id, label, targetPct }].
   skills             Json           @default("[]")

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  intakeLines,
   isPendingJoin,
   requestContact,
   requestSentLine,
@@ -39,5 +40,28 @@ describe('join request wording', () => {
   it('tells a pending reply from a joined card', () => {
     expect(isPendingJoin({ pending: true, request: req })).toBe(true)
     expect(isPendingJoin({ cohortId: 'c1' })).toBe(false)
+  })
+})
+
+describe('intakeLines (#124)', () => {
+  it('is empty for a request made with a join code', () => {
+    expect(intakeLines(null)).toEqual([])
+  })
+
+  it('puts the answers on one line and the reason on its own', () => {
+    expect(
+      intakeLines({
+        phone: '302-555-0118',
+        education: 'High School/GED',
+        employment: 'employed',
+        employer: 'Front desk, a dental office',
+        funding: 'wioa',
+        language: 'English',
+        reason: 'I want to move into billing.',
+      })
+    ).toEqual([
+      '302-555-0118 · WIOA · High School/GED · Working: Front desk, a dental office · English',
+      '“I want to move into billing.”',
+    ])
   })
 })

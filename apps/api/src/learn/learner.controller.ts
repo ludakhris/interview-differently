@@ -35,6 +35,18 @@ export class LearnerController {
     return this.learner.join(req.userId, body?.code)
   }
 
+  /** #124: request a seat in a program from an agency's public catalog (no join code; staff approve). */
+  @Post('catalog/:tenant/courses/:courseId/request')
+  @SelfOnly()
+  requestFromCatalog(
+    @Req() req: LearnRequest,
+    @Param('tenant') tenant: string,
+    @Param('courseId') courseId: string,
+    @Body() body: unknown
+  ) {
+    return this.learner.requestFromCatalog(req.userId, tenant, courseId, body)
+  }
+
   @Get('cohorts/:cohortId')
   @SelfOnly()
   outline(@Req() req: LearnRequest, @Param('cohortId') cohortId: string) {

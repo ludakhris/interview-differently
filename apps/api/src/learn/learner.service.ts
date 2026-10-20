@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { runAsSystem } from '../core/tenant-context'
 import {
   BadRequestException,
@@ -13,6 +14,7 @@ import type {
   KnowledgeCheckQuestion,
   LearnerAddedItem,
   LearnerCohortCard,
+  CatalogIntake,
   LearnerJoinPending,
   LearnerJoinRequest,
   LearnerItem,
@@ -35,6 +37,7 @@ import { gradeQuiz, publicQuestions } from './grade-quiz'
 import { averageScore, DEFAULT_ATTEMPTS, MAX_ANSWER_CHARS } from './interview-scoring'
 import { InterviewScoringService } from './interview-scoring.service'
 import { parseExternalLink } from './external-link'
+import { parseCatalogIntake } from './catalog-request'
 import {
   assessmentLimits,
   isInterviewLike,
@@ -255,30 +258,7 @@ export class LearnerService {
       where: { cohortId_userId: { cohortId: cohort.id, userId } },
     })
     if (cohort.requiresApproval && (!existing || existing.status === 'withdrawn')) {
-      // A request holds no seat and no access; staff approve it (see LearnCohortsService.approveRequest).
-      let request = await this.prisma.joinRequest.findUnique({
-        where: { cohortId_userId: { cohortId: cohort.id, userId } },
-      })
-      if (!request || request.status !== 'pending') {
-        request = await this.prisma.joinRequest.upsert({
-          where: { cohortId_userId: { cohortId: cohort.id, userId } },
-          create: { cohortId: cohort.id, userId },
-          update: { status: 'pending', createdAt: new Date(), decidedAt: null, decidedBy: null },
-        })
-      }
-      return {
-        pending: true,
-        request: {
-          id: request.id,
-          cohortId: cohort.id,
-          cohortName: cohort.name,
-          courseTitle: cohort.course?.title as string,
-          institutionName: cohort.institution.name,
-          status: 'pending',
-          requestedAt: request.createdAt.toISOString(),
-          contact: cohort.joinContact,
-        },
-      }
+      return this.pendingRequest(userId, cohort, null)
     }
     // A seat is needed unless this person already holds one.
     if (typeof cohort.maxLearners === 'number' && (!existing || existing.status === 'withdrawn')) {
@@ -307,6 +287,126 @@ export class LearnerService {
       update: {},
     })
     return (await this.cards(userId)).find((c) => c.cohortId === cohort.id) as LearnerCohortCard
+  }
+
+  /**
+   * A request holds no seat and no access; staff approve it (see LearnCohortsService.approveRequest).
+   * `intake` is set when the request comes from the public catalog (#124); a join code leaves it as it is.
+   */
+  private async pendingRequest(
+    userId: string,
+    cohort: {
+      id: string
+      name: string
+      joinContact: string | null
+      institution: { name: string }
+      course: { title: string } | null
+    },
+    intake: CatalogIntake | null
+  ): Promise<LearnerJoinPending> {
+    const where = { cohortId_userId: { cohortId: cohort.id, userId } }
+    let request = await this.prisma.joinRequest.findUnique({ where })
+    if (!request || request.status !== 'pending' || intake) {
+      const answers = intake ? { intake: intake as unknown as object } : {}
+      request = await this.prisma.joinRequest.upsert({
+        where,
+        create: { cohortId: cohort.id, userId, ...answers },
+        update:
+          request?.status === 'pending'
+            ? answers
+            : {
+                status: 'pending',
+                createdAt: new Date(),
+                decidedAt: null,
+                decidedBy: null,
+                // A reopened request starts fresh: old catalog answers are not carried onto it.
+                intake: Prisma.DbNull,
+                ...answers,
+              },
+      })
+    }
+    return {
+      pending: true,
+      request: {
+        id: request.id,
+        cohortId: cohort.id,
+        cohortName: cohort.name,
+        courseTitle: cohort.course?.title as string,
+        institutionName: cohort.institution.name,
+        status: 'pending',
+        requestedAt: request.createdAt.toISOString(),
+        contact: cohort.joinContact,
+      },
+    }
+  }
+
+  /**
+   * #124: request a seat in a program from an agency's public catalog, without a join code. Goes to the
+   * soonest open cohort of the course that accepts catalog requests; staff still approve every request.
+   */
+  async requestFromCatalog(
+    userId: string,
+    tenant: string,
+    courseId: string,
+    body: unknown
+  ): Promise<LearnerJoinPending> {
+    const parsed = parseCatalogIntake(body)
+    if (!parsed.ok) throw new BadRequestException(parsed.reason)
+    const now = new Date()
+    // Made before the learner is in the cohort's agency, like the join-code lookup.
+    const cohorts = await runAsSystem(async () => {
+      const agency = await this.prisma.institution.findFirst({
+        where: { subdomain: tenant, kind: 'agency' },
+        select: { id: true },
+      })
+      if (!agency) return []
+      // The same courses the agency's public catalog lists, and only this agency's own cohorts of them.
+      return this.prisma.cohort.findMany({
+        where: {
+          courseId,
+          agencyId: agency.id,
+          acceptsRequests: true,
+          requiresApproval: true,
+          course: { status: 'published', provider: { parentId: agency.id } },
+          OR: [{ endsAt: null }, { endsAt: { gt: now } }],
+        },
+        include: {
+          institution: { select: { id: true, name: true } },
+          course: { select: { id: true, title: true } },
+          _count: { select: { enrollments: { where: { status: { not: 'withdrawn' } } } } },
+        },
+        orderBy: [{ startsAt: 'asc' }, { createdAt: 'asc' }],
+      })
+    })
+    if (cohorts.length === 0) {
+      throw new NotFoundException('This program is not taking requests right now.')
+    }
+    // The soonest cohort with a seat, so staff are not asked to approve into a full one.
+    const cohort = cohorts.find(
+      (k) => k.maxLearners === null || k._count.enrollments < k.maxLearners
+    )
+    if (!cohort) throw new ConflictException('This program is full right now.')
+    await this.ensureUser(userId)
+    // One request or seat per program, whichever of its cohorts it is in.
+    const enrolled = await this.prisma.enrollment.findFirst({
+      where: { userId, status: { not: 'withdrawn' }, cohort: { courseId } },
+    })
+    if (enrolled) throw new ConflictException('You are already enrolled in this program.')
+    const earlier = await this.prisma.joinRequest.findFirst({
+      where: { userId, status: { in: ['pending', 'declined'] }, cohort: { courseId } },
+      orderBy: { createdAt: 'desc' },
+    })
+    if (earlier?.status === 'declined') {
+      // Staff decided; a public page must not quietly reopen it. The learner talks to the office instead.
+      const contact = cohort.joinContact?.trim()
+      throw new ConflictException(
+        `Your earlier request for this program was not approved.${contact ? ` Contact ${contact}.` : ''}`
+      )
+    }
+    if (earlier && earlier.cohortId !== cohort.id) {
+      throw new ConflictException('You already have a request waiting for this program.')
+    }
+    return this.pendingRequest(userId, cohort, parsed.intake)
   }
 
   /** Requests still waiting or declined, newest first; approved ones are enrollments now. */
