@@ -81,7 +81,7 @@ export function QuantNumberInput({
             ${inputSize}
             font-display font-semibold text-fg
             placeholder:text-ink/25 placeholder:font-normal
-            focus:outline-none focus:border-jade focus:ring-1 focus:ring-jade/40
+            focus:outline-hidden focus:border-jade focus:ring-1 focus:ring-jade/40
             disabled:opacity-60 disabled:cursor-not-allowed
             tabular-nums
           `}

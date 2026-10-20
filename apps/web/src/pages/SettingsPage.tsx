@@ -25,13 +25,13 @@ function ToggleRow({ label, description, checked, saving, onChange }: ToggleRowP
   return (
     <div className="flex items-center justify-between py-5 border-b border-white/10 last:border-0">
       <div>
-        <p className="text-[14px] font-semibold text-[#f5f3ee]">{label}</p>
+        <p className="text-[14px] font-semibold text-cream-light">{label}</p>
         <p className="text-[12px] text-slate-mid mt-0.5">{description}</p>
       </div>
       <button
         onClick={() => onChange(!checked)}
         disabled={saving}
-        className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+        className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-hidden ${
           checked ? 'bg-green' : 'bg-white/15'
         } ${saving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         aria-pressed={checked}
@@ -80,14 +80,14 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Nav />
       <div className="max-w-2xl mx-auto px-6 py-12 animate-fade-in">
         <div className="mb-8">
           <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
             Settings
           </p>
-          <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
+          <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
             Your account
           </h1>
         </div>

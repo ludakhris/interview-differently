@@ -140,10 +140,10 @@ export function DimensionTrendChart({ series, height = 220 }: DimensionTrendChar
             onMouseLeave={() => setFocused(null)}
             onFocus={() => setFocused(dim)}
             onBlur={() => setFocused(null)}
-            className="flex items-center gap-1.5 text-[11px] text-slate-light hover:text-[#f5f3ee] transition-colors"
+            className="flex items-center gap-1.5 text-[11px] text-slate-light hover:text-cream-light transition-colors"
           >
             <span
-              className="inline-block w-3 h-3 rounded-sm"
+              className="inline-block w-3 h-3 rounded-xs"
               style={{ backgroundColor: colorByDim.get(dim) }}
             />
             {dim}

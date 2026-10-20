@@ -225,7 +225,7 @@ export function CheckpointWorkbench({
             {Array.from({ length: Math.min(want.rowCount, SHOWN_ROWS) }).map((_, i) => (
               <span
                 key={i}
-                className={`w-6 h-2.5 rounded-sm transition-colors duration-500 ${i < right ? 'bg-emerald-400' : 'bg-ink/10'}`}
+                className={`w-6 h-2.5 rounded-xs transition-colors duration-500 ${i < right ? 'bg-emerald-400' : 'bg-ink/10'}`}
               />
             ))}
             {want.rowCount > SHOWN_ROWS && (
@@ -308,7 +308,7 @@ export function CheckpointWorkbench({
           className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 flex flex-wrap items-center gap-2"
           role="alert"
         >
-          <AlertTriangle size={14} className="text-red-400 flex-shrink-0" aria-hidden="true" />
+          <AlertTriangle size={14} className="text-red-400 shrink-0" aria-hidden="true" />
           <p className="text-[13px] text-fg/85 flex-1">{error.text}</p>
           <button type="button" className={BTN_SECONDARY} onClick={() => void act(error.retry)}>
             Retry

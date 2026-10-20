@@ -30,7 +30,7 @@ const components: Components = {
   ),
   thead: ({ children }) => <thead className="bg-[#1a6b3c]/25">{children}</thead>,
   tr: ({ children }) => (
-    <tr className="border-b border-white/[0.07] last:border-0 even:bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
+    <tr className="border-b border-white/[0.07] last:border-0 even:bg-white/3 hover:bg-white/5 transition-colors">
       {children}
     </tr>
   ),
@@ -45,13 +45,13 @@ const components: Components = {
   td: ({ children, style }) => (
     <td
       style={style}
-      className={`px-4 py-1.5 whitespace-nowrap first:font-medium first:text-[#f5f3ee] text-white/80 ${style?.textAlign === 'right' ? 'font-mono text-[13px] text-[#f5f3ee]' : ''}`}
+      className={`px-4 py-1.5 whitespace-nowrap first:font-medium first:text-cream-light text-white/80 ${style?.textAlign === 'right' ? 'font-mono text-[13px] text-cream-light' : ''}`}
     >
       {children}
     </td>
   ),
   pre: ({ children }) => (
-    <pre className="font-mono text-[13px] text-[#f5f3ee] bg-[#0d0d0d] border border-white/10 rounded-lg px-4 py-3 overflow-x-auto [scrollbar-color:rgb(255_255_255/0.15)_transparent]">
+    <pre className="font-mono text-[13px] text-cream-light bg-[#0d0d0d] border border-white/10 rounded-lg px-4 py-3 overflow-x-auto [scrollbar-color:rgb(255_255_255/0.15)_transparent]">
       {children}
     </pre>
   ),
@@ -60,7 +60,7 @@ const components: Components = {
     const text = String(children ?? '')
     if (!className && !text.includes('\n')) {
       return (
-        <code className="font-mono text-[13px] bg-ink/8 px-1.5 py-0.5 rounded text-fg">
+        <code className="font-mono text-[13px] bg-ink/8 px-1.5 py-0.5 rounded-sm text-fg">
           {children}
         </code>
       )

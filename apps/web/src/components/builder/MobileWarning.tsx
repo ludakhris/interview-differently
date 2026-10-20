@@ -25,7 +25,7 @@ export function MobileWarning() {
         <div className="flex items-start gap-4">
           <span className="text-[26px] leading-none mt-0.5">🖥️</span>
           <div className="flex-1 min-w-0">
-            <p className="text-[14px] font-semibold text-[#f5f3ee] mb-1">Best on desktop</p>
+            <p className="text-[14px] font-semibold text-cream-light mb-1">Best on desktop</p>
             <p className="text-[12px] text-white/40 leading-relaxed">
               The scenario builder is designed for larger screens. For the full experience, open it
               on your laptop or desktop.
@@ -33,7 +33,7 @@ export function MobileWarning() {
           </div>
           <button
             onClick={() => setVisible(false)}
-            className="text-white/30 hover:text-white/60 text-[18px] leading-none flex-shrink-0 transition-colors"
+            className="text-white/30 hover:text-white/60 text-[18px] leading-none shrink-0 transition-colors"
             aria-label="Dismiss"
           >
             ×
@@ -46,7 +46,7 @@ export function MobileWarning() {
               style={{ width: `${(timeLeft / 10) * 100}%` }}
             />
           </div>
-          <span className="text-[11px] text-white/25 flex-shrink-0">Closes in {timeLeft}s</span>
+          <span className="text-[11px] text-white/25 shrink-0">Closes in {timeLeft}s</span>
         </div>
       </div>
     </div>

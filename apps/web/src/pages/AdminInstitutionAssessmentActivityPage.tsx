@@ -87,12 +87,12 @@ export function AdminInstitutionAssessmentActivityPage() {
   }, [auto, autoSec, refresh])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Nav />
-      <div className="max-w-screen-2xl mx-auto px-6 py-12">
+      <div className="max-w-(--breakpoint-2xl) mx-auto px-6 py-12">
         <button
           onClick={() => navigate('/admin/institutions')}
-          className="text-[12px] text-slate-mid hover:text-[#f5f3ee] transition-colors mb-3"
+          className="text-[12px] text-slate-mid hover:text-cream-light transition-colors mb-3"
         >
           ← Back to institutions
         </button>
@@ -102,7 +102,7 @@ export function AdminInstitutionAssessmentActivityPage() {
             <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
               Analytics
             </p>
-            <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
+            <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
               {detail?.name ?? 'Assessment activity'}
             </h1>
           </div>
@@ -116,7 +116,7 @@ export function AdminInstitutionAssessmentActivityPage() {
                 id="cohort-filter"
                 value={cohortId}
                 onChange={(e) => setSearchParams({ cohortId: e.target.value }, { replace: true })}
-                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
+                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
               >
                 {detail.cohorts.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -146,7 +146,7 @@ export function AdminInstitutionAssessmentActivityPage() {
           <button
             onClick={() => void refresh()}
             disabled={loading || !cohortId}
-            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-[#f5f3ee] disabled:opacity-40 transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-cream-light disabled:opacity-40 transition-colors"
           >
             {loading ? 'Refreshing…' : 'Refresh'}
           </button>
@@ -163,7 +163,7 @@ export function AdminInstitutionAssessmentActivityPage() {
             aria-label="Auto-refresh interval"
             value={autoSec}
             onChange={(e) => setAutoSec(Number(e.target.value))}
-            className="bg-[#111111] border border-white/10 rounded-lg px-2 py-1 text-[12px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
+            className="bg-[#111111] border border-white/10 rounded-lg px-2 py-1 text-[12px] text-cream-light focus:outline-hidden focus:border-white/30"
           >
             {AUTO_REFRESH_OPTIONS.map((sec) => (
               <option key={sec} value={sec}>
@@ -212,7 +212,7 @@ function DeliveryPanel({ delivery: d }: { delivery: AssessmentActivity['deliveri
     <section className="bg-[#111111] rounded-xl border border-white/10">
       <header className="px-5 py-4 flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-[15px] font-semibold text-[#f5f3ee]">
+          <h2 className="text-[15px] font-semibold text-cream-light">
             {d.assessmentTitle} <span className="font-normal text-slate-mid">· {d.label}</span>
           </h2>
           {(d.opensAt || d.closesAt || d.timeLimitMinutes) && (
@@ -252,7 +252,7 @@ function StudentRow({ s }: { s: AssessmentActivityStudent }) {
   const color = s.status === 'submitted' ? 'bg-green' : 'bg-amber-400'
   return (
     <li className="px-5 py-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)] items-center gap-4">
-      <span className="text-[13px] text-[#f5f3ee] truncate">
+      <span className="text-[13px] text-cream-light truncate">
         {s.name}
         {s.email && s.email !== s.name && (
           <span className="ml-2 text-[12px] text-slate-mid">{s.email}</span>

@@ -405,7 +405,7 @@ export function BuilderListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <MobileWarning />
       <Nav />
       <div className="max-w-5xl mx-auto px-6 py-12">
@@ -415,7 +415,7 @@ export function BuilderListPage() {
             <p className="text-[12px] font-medium tracking-widest uppercase text-white/30 mb-1">
               Scenario Builder
             </p>
-            <h2 className="font-display font-extrabold text-[32px] text-[#f5f3ee] tracking-tight">
+            <h2 className="font-display font-extrabold text-[32px] text-cream-light tracking-tight">
               Your Scenarios
             </h2>
           </div>
@@ -457,7 +457,7 @@ export function BuilderListPage() {
             <div className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 mt-2">
               {renderProgress && (
                 <div>
-                  <p className="text-[12px] font-semibold text-[#f5f3ee]">
+                  <p className="text-[12px] font-semibold text-cream-light">
                     Rendering {renderProgress.index + 1} of {renderProgress.total} —{' '}
                     <span className="text-slate-mid">{renderProgress.scenarioTitle}</span>{' '}
                     <span className="text-white/30 font-mono">/{renderProgress.nodeId}</span>
@@ -472,7 +472,7 @@ export function BuilderListPage() {
               )}
               {renderSummary && !renderProgress && (
                 <div>
-                  <p className="text-[12px] text-[#f5f3ee]">
+                  <p className="text-[12px] text-cream-light">
                     <span className="font-semibold text-green-light">✓ Done.</span> Rendered{' '}
                     <strong>{renderSummary.rendered}</strong>, already current{' '}
                     <strong>{renderSummary.alreadyCurrent}</strong>
@@ -492,7 +492,7 @@ export function BuilderListPage() {
                     .{' '}
                     <button
                       onClick={() => setRenderSummary(null)}
-                      className="ml-2 text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                      className="ml-2 text-slate-mid hover:text-cream-light transition-colors"
                     >
                       Dismiss
                     </button>
@@ -519,14 +519,14 @@ export function BuilderListPage() {
         </div>
 
         {/* Search + filters */}
-        <div className="sticky top-0 z-10 py-3 bg-[#0a0a0a] mb-3 flex items-center gap-2 flex-wrap">
+        <div className="sticky top-0 z-10 py-3 bg-black mb-3 flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[220px]">
             <input
               ref={searchRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search scenarios…  ( / )"
-              className="w-full bg-[#111111] border border-white/10 rounded-lg pl-3 pr-8 py-2 text-[13px] text-[#f5f3ee] placeholder:text-white/25 focus:outline-none focus:border-white/30 transition-colors"
+              className="w-full bg-[#111111] border border-white/10 rounded-lg pl-3 pr-8 py-2 text-[13px] text-cream-light placeholder:text-white/25 focus:outline-hidden focus:border-white/30 transition-colors"
             />
             {query && (
               <button
@@ -543,7 +543,7 @@ export function BuilderListPage() {
               <button
                 key={v}
                 onClick={() => setStatusFilter(v)}
-                className={`px-3 py-2 transition-colors ${statusFilter === v ? 'bg-white/10 text-[#f5f3ee]' : 'text-white/40 hover:text-white/70'}`}
+                className={`px-3 py-2 transition-colors ${statusFilter === v ? 'bg-white/10 text-cream-light' : 'text-white/40 hover:text-white/70'}`}
               >
                 {v === 'all' ? 'All' : v === 'draft' ? 'Drafts' : 'Published'}
               </button>
@@ -553,7 +553,7 @@ export function BuilderListPage() {
             <select
               value={ownerFilter}
               onChange={(e) => setOwnerFilter(e.target.value)}
-              className="bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[12px] text-white/70 focus:outline-none focus:border-white/30"
+              className="bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[12px] text-white/70 focus:outline-hidden focus:border-white/30"
             >
               <option value="">All owners</option>
               {ownerOptions.map((o) => (
@@ -588,7 +588,7 @@ export function BuilderListPage() {
           </div>
         ) : scenarios.length === 0 ? (
           <div className="bg-[#111111] border border-white/10 rounded-2xl p-16 text-center">
-            <p className="text-[16px] font-semibold text-[#f5f3ee] mb-2">No scenarios yet.</p>
+            <p className="text-[16px] font-semibold text-cream-light mb-2">No scenarios yet.</p>
             <p className="text-[14px] text-white/30 mb-8">
               Create your first scenario to get started.
             </p>
@@ -620,7 +620,7 @@ export function BuilderListPage() {
           <div className="bg-[#111111] border border-white/10 rounded-2xl overflow-x-auto">
             <table className="w-full border-collapse table-fixed min-w-[560px]">
               <thead>
-                <tr className="border-b border-white/10 bg-white/[0.02]">
+                <tr className="border-b border-white/10 bg-white/2">
                   {(
                     [
                       ['title', 'Title', 'text-left pl-5'],
@@ -639,7 +639,9 @@ export function BuilderListPage() {
                       <button
                         onClick={() => setSortKey(key)}
                         className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                          sort.key === key ? 'text-[#f5f3ee]' : 'text-white/35 hover:text-white/70'
+                          sort.key === key
+                            ? 'text-cream-light'
+                            : 'text-white/35 hover:text-white/70'
                         }`}
                       >
                         {label}
@@ -670,7 +672,7 @@ export function BuilderListPage() {
                           <td colSpan={7} className="p-0">
                             <button
                               onClick={() => toggleTrack(scenario.track)}
-                              className="w-full flex items-center gap-3 pl-4 pr-4 py-2.5 text-left border-y border-white/[0.06] hover:brightness-125 transition"
+                              className="w-full flex items-center gap-3 pl-4 pr-4 py-2.5 text-left border-y border-white/6 hover:brightness-125 transition"
                               style={{
                                 background: `${color}14`,
                                 boxShadow: `inset 3px 0 0 ${color}`,
@@ -702,7 +704,7 @@ export function BuilderListPage() {
                       )}
                       {!collapsed && (
                         <tr
-                          className={`group/row border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.04] transition-colors ${i % 2 ? 'bg-white/[0.015]' : ''}`}
+                          className={`group/row border-b border-white/4 last:border-b-0 hover:bg-white/4 transition-colors ${i % 2 ? 'bg-white/1.5' : ''}`}
                         >
                           <td className="pl-5 pr-3 py-2.5">
                             <button
@@ -710,7 +712,7 @@ export function BuilderListPage() {
                               className="flex items-baseline gap-2 text-left w-full min-w-0"
                             >
                               <span
-                                className="text-[13px] font-semibold text-[#f5f3ee] group-hover/row:text-white truncate min-w-0"
+                                className="text-[13px] font-semibold text-cream-light group-hover/row:text-white truncate min-w-0"
                                 title={scenario.title}
                               >
                                 {scenario.title || 'Untitled Scenario'}

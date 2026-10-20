@@ -197,7 +197,7 @@ export function SetupEditor({ scenario, onDone }: Props) {
                 className={`p-3 rounded-lg border text-left transition-all ${
                   mode === opt.value
                     ? 'border-emerald-400/50 bg-emerald-400/10'
-                    : 'border-white/10 bg-[#0a0a0a] hover:border-white/20'
+                    : 'border-white/10 bg-black hover:border-white/20'
                 }`}
               >
                 <p className="text-[13px] font-semibold text-white/85">{opt.label}</p>
@@ -294,7 +294,7 @@ export function SetupEditor({ scenario, onDone }: Props) {
         {sidebar.map((section, si) => (
           <div
             key={si}
-            className="border border-white/10 rounded-lg p-3 bg-[#0a0a0a]/60 flex flex-col gap-2"
+            className="border border-white/10 rounded-lg p-3 bg-black/60 flex flex-col gap-2"
           >
             <div className="grid grid-cols-[1fr_130px_auto] gap-2 items-center">
               <TextInput

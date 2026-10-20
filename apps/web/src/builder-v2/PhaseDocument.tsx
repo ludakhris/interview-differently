@@ -352,7 +352,7 @@ function PhaseSection({
                 if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                 if (e.key === 'Escape') setEditingDescription(false)
               }}
-              className="mt-1 w-full bg-[#0a0a0a] border border-white/12 rounded-md px-2 py-1 text-[13px] text-white/75 outline-none focus:border-emerald-400/50"
+              className="mt-1 w-full bg-black border border-white/12 rounded-md px-2 py-1 text-[13px] text-white/75 outline-hidden focus:border-emerald-400/50"
             />
           ) : onPhaseUpdate ? (
             <button
@@ -383,7 +383,7 @@ function PhaseSection({
                       'text-[11px] font-semibold px-2.5 py-0.5 rounded-full border transition-all',
                       active
                         ? 'bg-emerald-400/10 border-emerald-400/30 text-emerald-300 hover:bg-emerald-400/5'
-                        : 'bg-transparent border-white/[0.08] text-white/25 hover:border-white/20 hover:text-white/40',
+                        : 'bg-transparent border-white/8 text-white/25 hover:border-white/20 hover:text-white/40',
                     ].join(' ')}
                   >
                     {dim}
@@ -531,7 +531,7 @@ function EmptyPhase({ onClick }: { onClick: () => void }) {
 function InsertAffordance({ onClick }: { onClick: () => void }) {
   return (
     <div className="group flex items-center justify-center h-5 my-0.5 relative">
-      <div className="absolute inset-x-0 top-1/2 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+      <div className="absolute inset-x-0 top-1/2 h-px bg-linear-to-r from-transparent via-white/6 to-transparent" />
       <button
         onClick={onClick}
         className="relative opacity-0 group-hover:opacity-100 transition-opacity bg-[#111] border border-white/15 text-[11px] font-semibold text-white/40 hover:text-white/70 hover:border-white/25 rounded-full px-3 py-0.5"

@@ -11,7 +11,7 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <p className="text-slate-mid text-[14px]">Loading...</p>
       </div>
     )
@@ -25,9 +25,9 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (!isAnyAdmin) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <p className="font-display font-bold text-[18px] text-[#f5f3ee] mb-2">
+          <p className="font-display font-bold text-[18px] text-cream-light mb-2">
             Access restricted
           </p>
           <p className="text-[14px] text-slate-mid mb-6">

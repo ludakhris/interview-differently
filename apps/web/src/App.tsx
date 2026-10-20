@@ -65,7 +65,7 @@ function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
       : `/welcome?next=${encodeURIComponent(redirectUrl)}`
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+    <div className="min-h-screen bg-black flex items-center justify-center">
       {mode === 'sign-in' ? (
         <SignIn routing="path" path="/sign-in" forceRedirectUrl={redirectUrl} />
       ) : (

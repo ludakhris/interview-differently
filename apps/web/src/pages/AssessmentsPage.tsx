@@ -45,14 +45,14 @@ export function AssessmentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Nav trackLabel="Assessments" />
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-8">
           <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
             Tools
           </p>
-          <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
+          <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
             Assessments
           </h1>
           <p className="text-[13px] text-slate-mid mt-1">
@@ -88,7 +88,7 @@ export function AssessmentsPage() {
                   <div className="h-1.5 w-full" style={{ backgroundColor: ACCENT }} />
                   <div className="p-5 flex items-start gap-4">
                     <div
-                      className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
+                      className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
                       style={{ backgroundColor: `${ACCENT}22`, color: ACCENT }}
                     >
                       <ClipboardCheck size={20} />
@@ -100,7 +100,7 @@ export function AssessmentsPage() {
                       >
                         {d.label} · {d.cohortName ?? 'cohort removed'}
                       </p>
-                      <h3 className="mt-0.5 font-display font-bold text-[16px] text-[#f5f3ee] leading-snug">
+                      <h3 className="mt-0.5 font-display font-bold text-[16px] text-cream-light leading-snug">
                         {d.title}
                       </h3>
                       <p className="text-[12px] text-slate-mid mt-1">
@@ -115,13 +115,13 @@ export function AssessmentsPage() {
                         </p>
                       )}
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       {submitted ? (
                         <button
                           onClick={() =>
                             navigate(`/tools/assessments/attempt/${d.attempt!.id}/result`)
                           }
-                          className="px-3 py-1.5 rounded-md border border-white/15 hover:border-white/30 text-[12px] font-semibold text-[#f5f3ee] transition-colors"
+                          className="px-3 py-1.5 rounded-md border border-white/15 hover:border-white/30 text-[12px] font-semibold text-cream-light transition-colors"
                         >
                           View result
                         </button>

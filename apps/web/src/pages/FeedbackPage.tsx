@@ -85,7 +85,7 @@ export function FeedbackPage() {
     result.overallScore >= 80 ? 'strong' : result.overallScore >= 60 ? 'proficient' : 'developing'
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Nav trackLabel={meta?.label} />
 
       <div className="max-w-3xl mx-auto px-6 py-12 animate-fade-in">
@@ -93,7 +93,7 @@ export function FeedbackPage() {
           <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-2">
             Simulation Complete
           </p>
-          <h1 className="font-display font-extrabold text-[26px] text-[#f5f3ee] tracking-tight mb-8">
+          <h1 className="font-display font-extrabold text-[26px] text-cream-light tracking-tight mb-8">
             Your Performance Report
           </h1>
 
@@ -129,7 +129,7 @@ export function FeedbackPage() {
                 className="bg-[#111111] rounded-xl border border-white/10 p-5"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-display font-bold text-[15px] text-[#f5f3ee]">
+                  <span className="font-display font-bold text-[15px] text-cream-light">
                     {dim.dimension}
                   </span>
                   <div className="flex items-center gap-3">
@@ -207,11 +207,11 @@ export function FeedbackPage() {
             .map((dim) => (
               <div key={dim.dimension} className="flex items-start gap-3 mb-3 last:mb-0">
                 <span className="text-red-400 mt-0.5">→</span>
-                <span className="text-[14px] text-[#f5f3ee] font-light">{dim.dimension}</span>
+                <span className="text-[14px] text-cream-light font-light">{dim.dimension}</span>
               </div>
             ))}
           {result.dimensionScores.every((d) => d.quality !== 'developing') && (
-            <p className="text-[14px] text-[#f5f3ee] font-light">
+            <p className="text-[14px] text-cream-light font-light">
               No critical gaps identified. Try a harder track to push your ceiling.
             </p>
           )}
@@ -220,7 +220,7 @@ export function FeedbackPage() {
         <div className="flex items-center justify-between">
           <button
             onClick={() => navigate(`/scenario/${scenarioId}/briefing`)}
-            className="text-[13px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+            className="text-[13px] text-slate-mid hover:text-cream-light transition-colors"
           >
             Retry this scenario
           </button>

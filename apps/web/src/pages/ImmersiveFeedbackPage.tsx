@@ -109,7 +109,7 @@ export function ImmersiveFeedbackPage() {
   // ── Loading ────────────────────────────────────────────────────────────────
   if (summaryStatus === 'loading') {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+      <div className="min-h-screen bg-black flex flex-col">
         <Nav />
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
           <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -123,7 +123,7 @@ export function ImmersiveFeedbackPage() {
   const recClass = recommendationColor[rec] ?? recommendationColor.maybe
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+    <div className="min-h-screen bg-black flex flex-col">
       <Nav trackLabel={scenario?.title} />
 
       <div className="max-w-2xl mx-auto px-6 py-10 space-y-8 w-full">
@@ -132,7 +132,7 @@ export function ImmersiveFeedbackPage() {
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
             Interview Feedback
           </p>
-          <h1 className="font-display font-bold text-[24px] text-[#f5f3ee] mb-1">
+          <h1 className="font-display font-bold text-[24px] text-cream-light mb-1">
             {scenario?.title ?? 'Interview Complete'}
           </h1>
         </div>
@@ -153,7 +153,7 @@ export function ImmersiveFeedbackPage() {
             </div>
 
             {/* Overall assessment */}
-            <p className="text-[14px] text-[#f5f3ee] leading-relaxed">
+            <p className="text-[14px] text-cream-light leading-relaxed">
               {summary.overallAssessment}
             </p>
 
@@ -165,8 +165,8 @@ export function ImmersiveFeedbackPage() {
                 </p>
                 <ul className="space-y-1.5">
                   {summary.strengths.map((s, i) => (
-                    <li key={i} className="text-[13px] text-[#f5f3ee]/80 flex gap-2">
-                      <span className="text-green mt-0.5 flex-shrink-0">+</span>
+                    <li key={i} className="text-[13px] text-cream-light/80 flex gap-2">
+                      <span className="text-green mt-0.5 shrink-0">+</span>
                       {s}
                     </li>
                   ))}
@@ -180,8 +180,8 @@ export function ImmersiveFeedbackPage() {
                 </p>
                 <ul className="space-y-1.5">
                   {summary.developmentAreas.map((d, i) => (
-                    <li key={i} className="text-[13px] text-[#f5f3ee]/80 flex gap-2">
-                      <span className="text-amber-400 mt-0.5 flex-shrink-0">→</span>
+                    <li key={i} className="text-[13px] text-cream-light/80 flex gap-2">
+                      <span className="text-amber-400 mt-0.5 shrink-0">→</span>
                       {d}
                     </li>
                   ))}
@@ -213,11 +213,11 @@ export function ImmersiveFeedbackPage() {
                     onClick={() => toggleExpand(resp.id)}
                     className="w-full flex items-start justify-between gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
                   >
-                    <p className="text-[14px] text-[#f5f3ee] leading-snug flex-1">
+                    <p className="text-[14px] text-cream-light leading-snug flex-1">
                       {resp.questionText}
                     </p>
                     <span
-                      className={`text-slate-mid text-[18px] mt-0.5 flex-shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                      className={`text-slate-mid text-[18px] mt-0.5 shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`}
                     >
                       ›
                     </span>
@@ -275,7 +275,7 @@ export function ImmersiveFeedbackPage() {
                       {/* AI feedback */}
                       {fb ? (
                         <div className="space-y-2">
-                          <p className="text-[13px] text-[#f5f3ee] leading-relaxed">
+                          <p className="text-[13px] text-cream-light leading-relaxed">
                             {fb.feedback}
                           </p>
                           <div className="grid grid-cols-2 gap-3 pt-1">
@@ -283,13 +283,13 @@ export function ImmersiveFeedbackPage() {
                               <p className="text-[10px] font-bold uppercase tracking-widest text-green mb-1">
                                 What worked
                               </p>
-                              <p className="text-[12px] text-[#f5f3ee]/80">{fb.strengths}</p>
+                              <p className="text-[12px] text-cream-light/80">{fb.strengths}</p>
                             </div>
                             <div className="rounded-lg bg-amber-400/5 border border-amber-400/20 px-3 py-2">
                               <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">
                                 To improve
                               </p>
-                              <p className="text-[12px] text-[#f5f3ee]/80">{fb.development}</p>
+                              <p className="text-[12px] text-cream-light/80">{fb.development}</p>
                             </div>
                           </div>
                         </div>
@@ -314,7 +314,7 @@ export function ImmersiveFeedbackPage() {
           </button>
           <button
             onClick={() => navigate('/dashboard')}
-            className="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#f5f3ee] text-[13px] font-medium transition-colors"
+            className="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-cream-light text-[13px] font-medium transition-colors"
           >
             Back to dashboard
           </button>

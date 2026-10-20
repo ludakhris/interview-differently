@@ -111,7 +111,7 @@ export function BriefingPage({
               { label: 'Time in role', value: briefing.timeInRole },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-start gap-3">
-                <span className="text-[12px] font-medium text-slate-mid w-28 flex-shrink-0 pt-0.5">
+                <span className="text-[12px] font-medium text-slate-mid w-28 shrink-0 pt-0.5">
                   {label}
                 </span>
                 <span className="text-[14px] text-fg font-medium">{value}</span>
@@ -128,7 +128,7 @@ export function BriefingPage({
             {scenario.rubric.dimensions.map((dim) => (
               <div key={dim.name} className="flex items-start gap-3">
                 <span
-                  className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
                   style={{ backgroundColor: accent }}
                 />
                 <div>
@@ -159,7 +159,7 @@ export function BriefingPage({
                   }`}
                 >
                   <span
-                    className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${
+                    className={`w-4 h-4 rounded-full border-2 shrink-0 transition-colors ${
                       narrationMode === mode ? 'border-green bg-green' : 'border-edge/30'
                     }`}
                   />

@@ -154,7 +154,7 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
         )}
       </div>
       {test.state === 'ok' && test.result && (
-        <div className="max-h-[220px] overflow-auto rounded-lg border border-white/10 bg-[#0a0a0a]">
+        <div className="max-h-[220px] overflow-auto rounded-lg border border-white/10 bg-black">
           <ResultsGrid result={test.result} />
         </div>
       )}

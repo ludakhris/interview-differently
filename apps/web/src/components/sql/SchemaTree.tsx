@@ -38,16 +38,16 @@ export function SchemaTree({
                 className="flex items-center gap-1 flex-1 min-w-0 py-1 text-left text-fg hover:text-green-light transition-colors"
               >
                 {expanded ? (
-                  <ChevronDown size={12} className="text-ink/30 flex-shrink-0" />
+                  <ChevronDown size={12} className="text-ink/30 shrink-0" />
                 ) : (
-                  <ChevronRight size={12} className="text-ink/30 flex-shrink-0" />
+                  <ChevronRight size={12} className="text-ink/30 shrink-0" />
                 )}
                 <span className="font-mono text-[12px] font-semibold truncate">{t.table}</span>
               </button>
               <button
                 onClick={() => onPick(t.table)}
                 title={`${t.rowCount} rows — click to insert table name`}
-                className="font-mono text-[10px] text-ink/30 group-hover:text-ink/60 hover:!text-green-light px-1.5 py-0.5 rounded bg-ink/5 transition-colors"
+                className="font-mono text-[10px] text-ink/30 group-hover:text-ink/60 hover:text-green-light! px-1.5 py-0.5 rounded-sm bg-ink/5 transition-colors"
               >
                 {t.rowCount}
               </button>
@@ -66,7 +66,7 @@ export function SchemaTree({
                         <span className="font-mono text-[11px] text-ink/60 group-hover/col:text-fg truncate transition-colors">
                           {c.name}
                         </span>
-                        <span className={`font-mono text-[9px] px-1 py-px rounded ${b.cls}`}>
+                        <span className={`font-mono text-[9px] px-1 py-px rounded-sm ${b.cls}`}>
                           {b.label}
                         </span>
                       </button>

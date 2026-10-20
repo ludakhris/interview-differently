@@ -57,10 +57,10 @@ export function AnalyticsTabs({ institutionId, active, available }: AnalyticsTab
           const isDisabled = !available.includes(tab.key)
           const className = `px-4 py-2.5 text-[13px] font-semibold transition-colors border-b-2 -mb-px ${
             isActive
-              ? 'text-[#f5f3ee] border-green'
+              ? 'text-cream-light border-green'
               : isDisabled
                 ? 'text-white/20 border-transparent cursor-not-allowed'
-                : 'text-slate-mid hover:text-[#f5f3ee] border-transparent'
+                : 'text-slate-mid hover:text-cream-light border-transparent'
           }`
           if (isDisabled) {
             return (

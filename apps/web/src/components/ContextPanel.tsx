@@ -38,7 +38,7 @@ function MonitorGrid({ panels }: { panels: ContextPanelType[] }) {
         return (
           <div key={i} className={`rounded-xl border px-3 py-3 ${s.tile}`}>
             <div className="flex items-center gap-1.5 mb-2">
-              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot}`} />
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`} />
               <span
                 className={`text-[9px] font-bold uppercase tracking-widest ${s.val} opacity-80`}
               >
@@ -127,7 +127,7 @@ function FindingDisplay({
               {incidentMeta.id}
             </span>
             <div className="flex items-center gap-1.5 bg-red-500/15 border border-red-500/30 px-2 py-1 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
               <span className="text-[9px] font-bold uppercase tracking-widest text-red-400">
                 {incidentMeta.status}
               </span>
@@ -179,7 +179,7 @@ function FindingDisplay({
 
       {/* ── Finding details (context panels) ── */}
       <div className="flex">
-        <div className="w-1 bg-red-500 flex-shrink-0" />
+        <div className="w-1 bg-red-500 shrink-0" />
         <div className="flex-1 px-5 py-4">
           <div className="text-[10px] font-bold uppercase tracking-widest text-red-400 mb-3">
             Finding Details

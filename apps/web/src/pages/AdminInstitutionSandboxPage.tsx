@@ -95,12 +95,12 @@ export function AdminInstitutionSandboxPage() {
   }, [auto, autoSec, refresh])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Nav />
-      <div className="max-w-screen-2xl mx-auto px-6 py-12">
+      <div className="max-w-(--breakpoint-2xl) mx-auto px-6 py-12">
         <button
           onClick={() => navigate('/admin/institutions')}
-          className="text-[12px] text-slate-mid hover:text-[#f5f3ee] transition-colors mb-3"
+          className="text-[12px] text-slate-mid hover:text-cream-light transition-colors mb-3"
         >
           ← Back to institutions
         </button>
@@ -110,7 +110,7 @@ export function AdminInstitutionSandboxPage() {
             <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
               Analytics
             </p>
-            <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
+            <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
               {detail?.name ?? 'SQL activity'}
             </h1>
           </div>
@@ -124,7 +124,7 @@ export function AdminInstitutionSandboxPage() {
                 id="cohort-filter"
                 value={cohortId}
                 onChange={(e) => setSearchParams({ cohortId: e.target.value }, { replace: true })}
-                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
+                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
               >
                 {cohorts.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -154,7 +154,7 @@ export function AdminInstitutionSandboxPage() {
           <button
             onClick={() => refresh()}
             disabled={loading || !cohortId}
-            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-[#f5f3ee] disabled:opacity-40 transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-cream-light disabled:opacity-40 transition-colors"
           >
             {loading ? 'Refreshing…' : 'Refresh'}
           </button>
@@ -171,7 +171,7 @@ export function AdminInstitutionSandboxPage() {
             aria-label="Auto-refresh interval"
             value={autoSec}
             onChange={(e) => setAutoSec(Number(e.target.value))}
-            className="bg-[#111111] border border-white/10 rounded-lg px-2 py-1 text-[12px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
+            className="bg-[#111111] border border-white/10 rounded-lg px-2 py-1 text-[12px] text-cream-light focus:outline-hidden focus:border-white/30"
           >
             {AUTO_REFRESH_OPTIONS.map((sec) => (
               <option key={sec} value={sec}>
@@ -185,7 +185,7 @@ export function AdminInstitutionSandboxPage() {
               aria-label="Queries shown per student"
               value={visibleQueries}
               onChange={(e) => setVisibleQueries(Number(e.target.value))}
-              className="bg-[#111111] border border-white/10 rounded-lg px-2 py-1 text-[12px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
+              className="bg-[#111111] border border-white/10 rounded-lg px-2 py-1 text-[12px] text-cream-light focus:outline-hidden focus:border-white/30"
             >
               {VISIBLE_QUERY_OPTIONS.map((n) => (
                 <option key={n} value={n}>
@@ -196,13 +196,13 @@ export function AdminInstitutionSandboxPage() {
           </label>
           <button
             onClick={() => setBulk((b) => ({ open: true, seq: (b?.seq ?? 0) + 1 }))}
-            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-[#f5f3ee] transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-cream-light transition-colors"
           >
             Expand all
           </button>
           <button
             onClick={() => setBulk((b) => ({ open: false, seq: (b?.seq ?? 0) + 1 }))}
-            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-[#f5f3ee] transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-cream-light transition-colors"
           >
             Collapse all
           </button>
@@ -283,7 +283,7 @@ function StudentCard({
       className="bg-[#111111] rounded-xl border border-white/10"
     >
       <summary className="cursor-pointer px-5 py-3 flex items-center justify-between gap-4">
-        <span className="text-[14px] font-semibold text-[#f5f3ee]">
+        <span className="text-[14px] font-semibold text-cream-light">
           {s.name}
           {s.email && s.email !== s.name && (
             <span className="ml-2 text-[12px] font-normal text-slate-mid">{s.email}</span>
@@ -319,7 +319,7 @@ function StudentCard({
                 )}
                 {q.durationMs != null && <span>· {q.durationMs} ms</span>}
               </div>
-              <pre className="text-[12px] text-[#f5f3ee] font-mono whitespace-pre-wrap break-words">
+              <pre className="text-[12px] text-cream-light font-mono whitespace-pre-wrap wrap-break-word">
                 {q.queryText}
               </pre>
               {q.errorMessage && (
@@ -332,7 +332,7 @@ function StudentCard({
       {hidden > 0 && (
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="w-full border-t border-white/10 px-5 py-2 text-left text-[12px] font-semibold text-slate-mid hover:text-[#f5f3ee] transition-colors"
+          className="w-full border-t border-white/10 px-5 py-2 text-left text-[12px] font-semibold text-slate-mid hover:text-cream-light transition-colors"
         >
           {expanded ? 'Show fewer' : `Show ${hidden} older ${hidden === 1 ? 'query' : 'queries'}`}
         </button>

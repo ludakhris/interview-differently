@@ -73,14 +73,14 @@ export function AdminDatasetsPage() {
   }, [selectedId, getToken])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Nav />
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="mb-8">
           <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
             Admin · Tools
           </p>
-          <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
+          <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
             SQL Datasets
           </h1>
           <p className="text-[13px] text-slate-mid mt-1">
@@ -124,7 +124,7 @@ export function AdminDatasetsPage() {
                           : 'border border-transparent hover:bg-white/5'
                       }`}
                     >
-                      <p className="text-[13px] font-semibold text-[#f5f3ee] flex items-center gap-2">
+                      <p className="text-[13px] font-semibold text-cream-light flex items-center gap-2">
                         {d.name}
                         <OwnerBadge institutionName={d.institutionName} />
                       </p>
@@ -190,7 +190,7 @@ export function AdminDatasetsPage() {
 export function OwnerBadge({ institutionName }: { institutionName: string | null }) {
   return (
     <span
-      className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded flex-shrink-0 ${
+      className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded shrink-0 ${
         institutionName ? 'bg-green/20 text-green-light' : 'bg-white/10 text-white/50'
       }`}
     >
@@ -202,7 +202,7 @@ export function OwnerBadge({ institutionName }: { institutionName: string | null
 // ── Editor ─────────────────────────────────────────────────────────────────
 
 const inputCls =
-  'w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-[#f5f3ee] placeholder:text-white/25 focus:outline-none focus:border-white/30 disabled:opacity-60'
+  'w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-cream-light placeholder:text-white/25 focus:outline-hidden focus:border-white/30 disabled:opacity-60'
 
 function DatasetEditor({
   getToken,
@@ -407,10 +407,10 @@ function DatasetEditor({
                 {schema.map((t) => (
                   <li key={t.table} className="rounded-lg border border-white/8 px-3 py-2">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="font-mono text-[12px] font-semibold text-[#f5f3ee] truncate">
+                      <span className="font-mono text-[12px] font-semibold text-cream-light truncate">
                         {t.table}
                       </span>
-                      <span className="font-mono text-[10px] text-white/30 flex-shrink-0">
+                      <span className="font-mono text-[10px] text-white/30 shrink-0">
                         {t.rowCount} rows
                       </span>
                     </div>
@@ -454,7 +454,7 @@ function DatasetEditor({
                             }
                             className={`px-2.5 py-1 rounded-full text-[12px] border transition-colors ${
                               on
-                                ? 'bg-[#1a6b3c]/30 border-[#2d9e5f]/60 text-[#f5f3ee]'
+                                ? 'bg-[#1a6b3c]/30 border-[#2d9e5f]/60 text-cream-light'
                                 : 'border-white/10 text-slate-mid hover:border-white/30'
                             }`}
                           >
@@ -500,7 +500,7 @@ function DatasetEditor({
                   setMsg({ kind: 'err', text: e instanceof Error ? e.message : 'Delete failed' })
                 }
               }}
-              className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors flex-shrink-0"
+              className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors shrink-0"
             >
               Delete
             </button>
@@ -508,7 +508,7 @@ function DatasetEditor({
           {initial && (
             <button
               onClick={() => navigate(`/tools/sql?dataset=${encodeURIComponent(initial.slug)}`)}
-              className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors flex-shrink-0"
+              className="text-[11px] text-slate-mid hover:text-cream-light transition-colors shrink-0"
             >
               Open in sandbox →
             </button>
@@ -522,12 +522,12 @@ function DatasetEditor({
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {!readOnly && (
             <button
               onClick={validate}
               disabled={validating || !setupSql.trim()}
-              className="px-3 py-1.5 rounded-md border border-white/15 hover:border-white/30 text-[12px] font-semibold text-[#f5f3ee] disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 rounded-md border border-white/15 hover:border-white/30 text-[12px] font-semibold text-cream-light disabled:opacity-50 transition-colors"
             >
               {validating ? 'Validating…' : 'Validate'}
             </button>

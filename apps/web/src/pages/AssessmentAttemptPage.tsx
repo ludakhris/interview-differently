@@ -238,10 +238,10 @@ export function AssessmentAttemptPage({
       <div className="flex flex-1" style={{ minHeight: `calc(100vh - ${NAV_HEIGHT}px)` }}>
         {/* ── Sidebar ── */}
         <aside
-          className="flex flex-col w-[240px] flex-shrink-0 bg-surface-deep border-r border-edge/8 sticky top-[57px] self-start"
+          className="flex flex-col w-[240px] shrink-0 bg-surface-deep border-r border-edge/8 sticky top-[57px] self-start"
           style={{ height: `calc(100vh - ${NAV_HEIGHT}px)` }}
         >
-          <div className="h-[3px] w-full flex-shrink-0 bg-green-light" />
+          <div className="h-[3px] w-full shrink-0 bg-green-light" />
           <div className="px-5 pt-5 pb-3">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-green-light">
               {paper.title}
@@ -353,7 +353,7 @@ export function AssessmentAttemptPage({
             {section.questions.map((q, i) => (
               <li key={q.id} className="bg-surface-alt rounded-2xl border border-edge/10 p-6">
                 <div className="flex items-start gap-3 mb-4">
-                  <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-ink/5 text-[12px] font-bold text-slate-light flex items-center justify-center">
+                  <span className="shrink-0 w-7 h-7 rounded-lg bg-ink/5 text-[12px] font-bold text-slate-light flex items-center justify-center">
                     {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -448,13 +448,13 @@ function QuestionBody({
               }`}
             >
               <span
-                className={`flex-shrink-0 w-6 h-6 rounded-md text-[11px] font-bold flex items-center justify-center ${
+                className={`shrink-0 w-6 h-6 rounded-md text-[11px] font-bold flex items-center justify-center ${
                   on ? 'bg-green-light text-on-primary' : 'bg-ink/10 text-slate-light'
                 }`}
               >
                 {o.key}
               </span>
-              <span className="min-w-0 [overflow-wrap:anywhere] text-[13px] text-fg/90 leading-snug pt-0.5">
+              <span className="min-w-0 wrap-anywhere text-[13px] text-fg/90 leading-snug pt-0.5">
                 {renderPrompt(o.text)}
               </span>
             </button>
@@ -493,7 +493,7 @@ function renderPrompt(text: string): React.ReactNode {
   const parts = text.split(/(`[^`]+`)/g)
   return parts.map((p, i) =>
     p.startsWith('`') && p.endsWith('`') ? (
-      <code key={i} className="font-mono text-[13px] bg-ink/8 px-1.5 py-0.5 rounded text-fg">
+      <code key={i} className="font-mono text-[13px] bg-ink/8 px-1.5 py-0.5 rounded-sm text-fg">
         {p.slice(1, -1)}
       </code>
     ) : (

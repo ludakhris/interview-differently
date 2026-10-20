@@ -226,7 +226,7 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
               onClick={stopRecording}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[13px] font-medium transition-colors"
             >
-              <span className="w-2 h-2 rounded-sm bg-white" />
+              <span className="w-2 h-2 rounded-xs bg-white" />
               Stop recording
             </button>
           )}

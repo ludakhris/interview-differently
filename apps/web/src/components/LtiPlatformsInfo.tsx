@@ -73,7 +73,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
         clearTimeout(timer.current)
         timer.current = setTimeout(() => setState('idle'), 2000)
       }}
-      className="shrink-0 px-2.5 py-1 rounded-md border border-edge/15 text-[11px] font-semibold text-ink/70 hover:text-ink hover:border-edge/30 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-light"
+      className="shrink-0 px-2.5 py-1 rounded-md border border-edge/15 text-[11px] font-semibold text-ink/70 hover:text-ink hover:border-edge/30 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-light"
     >
       {state === 'copied' ? 'Copied' : state === 'failed' ? 'Select it' : 'Copy'}
     </button>
@@ -138,7 +138,7 @@ export function LtiPlatformsInfoDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-3 sm:p-6"
+      className="fixed inset-0 z-90 flex items-center justify-center bg-black/70 p-3 sm:p-6"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()
@@ -168,7 +168,7 @@ export function LtiPlatformsInfoDialog({
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="shrink-0 p-1.5 rounded-lg text-ink/60 hover:text-ink hover:bg-ink/10 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-light"
+            className="shrink-0 p-1.5 rounded-lg text-ink/60 hover:text-ink hover:bg-ink/10 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-light"
           >
             <svg {...svg(20, 2.2)}>
               <path d="M6 6l12 12M18 6L6 18" />
@@ -208,7 +208,7 @@ export function LtiPlatformsInfoDialog({
                     <div className="flex flex-wrap items-center gap-2">
                       <strong className="text-fg">{s.lead}</strong>
                       <span
-                        className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${ACTOR[s.actor]}`}
+                        className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm ${ACTOR[s.actor]}`}
                       >
                         {s.actor}
                       </span>

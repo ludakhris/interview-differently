@@ -185,7 +185,7 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
         {panels.map((panel, i) => (
           <div
             key={i}
-            className="flex flex-col gap-2 p-3 border border-white/[0.06] rounded-xl bg-white/[0.01]"
+            className="flex flex-col gap-2 p-3 border border-white/6 rounded-xl bg-white/1"
           >
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">
@@ -238,11 +238,11 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
           return (
             <div
               key={choice.id}
-              className="flex flex-col gap-2 p-3 border border-white/[0.06] rounded-xl bg-white/[0.01]"
+              className="flex flex-col gap-2 p-3 border border-white/6 rounded-xl bg-white/1"
             >
               {/* Row 1: badge + text */}
               <div className="flex items-start gap-2">
-                <span className="w-[22px] h-[22px] rounded-[6px] bg-white/[0.06] border border-white/10 text-[11px] font-bold flex items-center justify-center flex-none mt-1.5">
+                <span className="w-[22px] h-[22px] rounded-[6px] bg-white/6 border border-white/10 text-[11px] font-bold flex items-center justify-center flex-none mt-1.5">
                   {choice.id}
                 </span>
                 <Textarea

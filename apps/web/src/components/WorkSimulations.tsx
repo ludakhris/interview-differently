@@ -88,7 +88,7 @@ export function WorkSimulationCards({
           <div className="p-5">
             <div className="flex items-start gap-3 mb-2">
               <div
-                className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
+                className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
                 style={{ backgroundColor: `${color}22`, color }}
               >
                 <MessagesSquare size={20} aria-hidden="true" />
@@ -97,7 +97,7 @@ export function WorkSimulationCards({
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color }}>
                   Chat with your team
                 </p>
-                <h4 className="mt-0.5 font-display font-bold text-[15px] text-[#f5f3ee] leading-snug">
+                <h4 className="mt-0.5 font-display font-bold text-[15px] text-cream-light leading-snug">
                   {s.title}
                 </h4>
               </div>

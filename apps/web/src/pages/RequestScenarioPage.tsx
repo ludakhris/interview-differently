@@ -17,7 +17,7 @@ const TRACKS: Array<{ value: string; label: string }> = [
 ]
 
 const inputCls =
-  'w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[14px] text-[#f5f3ee] placeholder:text-white/25 focus:outline-none focus:border-white/30 transition-colors'
+  'w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[14px] text-cream-light placeholder:text-white/25 focus:outline-hidden focus:border-white/30 transition-colors'
 const labelCls = 'block text-[12px] font-bold uppercase tracking-widest text-white/60 mb-1.5'
 const helpCls = 'text-[12px] text-white/35 mb-2 leading-relaxed'
 const requiredMark = (
@@ -62,12 +62,12 @@ export function RequestScenarioPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+      <div className="min-h-screen bg-black flex flex-col">
         <Nav />
         <div className="flex-1 flex items-center justify-center px-6 py-12">
           <div className="max-w-lg text-center animate-fade-in">
             <div className="text-[48px] mb-4">✓</div>
-            <h1 className="font-display font-extrabold text-[28px] text-[#f5f3ee] mb-3">
+            <h1 className="font-display font-extrabold text-[28px] text-cream-light mb-3">
               Request received
             </h1>
             <p className="text-[15px] text-slate-light leading-relaxed mb-8">
@@ -89,14 +89,14 @@ export function RequestScenarioPage() {
   // ── Form ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Nav />
 
       <div className="max-w-2xl mx-auto px-6 py-10">
         <p className="text-[12px] font-medium tracking-widest uppercase text-slate-mid mb-2">
           Custom scenario
         </p>
-        <h1 className="font-display font-extrabold text-[32px] text-[#f5f3ee] tracking-tight mb-3">
+        <h1 className="font-display font-extrabold text-[32px] text-cream-light tracking-tight mb-3">
           Help us build your simulation
         </h1>
         <p className="text-[14px] text-slate-light leading-relaxed mb-2">

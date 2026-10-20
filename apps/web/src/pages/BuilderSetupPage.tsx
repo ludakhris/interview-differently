@@ -197,7 +197,7 @@ export function BuilderSetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <MobileWarning />
       <Nav />
       <div className="max-w-lg mx-auto px-6 py-16">
@@ -205,7 +205,7 @@ export function BuilderSetupPage() {
           <p className="text-[12px] font-medium tracking-widest uppercase text-white/30 mb-1">
             New Scenario
           </p>
-          <h2 className="font-display font-extrabold text-[28px] text-[#f5f3ee] tracking-tight">
+          <h2 className="font-display font-extrabold text-[28px] text-cream-light tracking-tight">
             Set Up Your Scenario
           </h2>
         </div>
@@ -238,7 +238,7 @@ export function BuilderSetupPage() {
                   borderColor: startFrom === opt.value ? '#2d9e5f' : 'rgba(255,255,255,0.1)',
                 }}
               >
-                <div className="text-[13px] font-bold text-[#f5f3ee]">{opt.label}</div>
+                <div className="text-[13px] font-bold text-cream-light">{opt.label}</div>
                 <div className="text-[11px] text-white/30">{opt.hint}</div>
               </button>
             ))}
@@ -260,7 +260,7 @@ export function BuilderSetupPage() {
                 setCloneId(e.target.value)
                 setError(null)
               }}
-              className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[15px] text-[#f5f3ee] focus:outline-none focus:border-white/30 transition-colors"
+              className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[15px] text-cream-light focus:outline-hidden focus:border-white/30 transition-colors"
             >
               <option value="">{sources.length ? '— pick one —' : 'Loading…'}</option>
               {sources.map((sc) => (
@@ -327,7 +327,7 @@ export function BuilderSetupPage() {
               setError(null)
             }}
             placeholder="e.g. Payment System Outage"
-            className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[15px] text-[#f5f3ee] placeholder:text-white/20 focus:outline-none focus:border-white/30 transition-colors"
+            className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[15px] text-cream-light placeholder:text-white/20 focus:outline-hidden focus:border-white/30 transition-colors"
           />
         </div>
 
@@ -345,7 +345,7 @@ export function BuilderSetupPage() {
               owners={owners}
               value={ownerId}
               onChange={setOwnerId}
-              className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[15px] text-[#f5f3ee] focus:outline-none focus:border-white/30 transition-colors"
+              className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[15px] text-cream-light focus:outline-hidden focus:border-white/30 transition-colors"
               optionLabel={(o) => (o.id === null ? 'Everyone (public)' : `${o.label} members only`)}
             />
           </div>
@@ -441,11 +441,11 @@ export function BuilderSetupPage() {
                   {previewDimensions.map((dim) => (
                     <div key={dim.name} className="flex items-start gap-3">
                       <span
-                        className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0"
+                        className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
                         style={{ background: selectedTrackOption?.color ?? '#888' }}
                       />
                       <div>
-                        <p className="text-[12px] font-semibold text-[#f5f3ee]">{dim.name}</p>
+                        <p className="text-[12px] font-semibold text-cream-light">{dim.name}</p>
                         <p className="text-[11px] text-white/30 leading-relaxed">
                           {dim.description}
                         </p>

@@ -95,7 +95,7 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
                 'group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer select-none transition-all',
                 isActive
                   ? 'bg-emerald-400/10 border border-emerald-400/30'
-                  : 'border border-transparent hover:bg-white/[0.04]',
+                  : 'border border-transparent hover:bg-white/4',
                 isDragging ? 'opacity-40' : '',
                 isDragOver ? 'border-t-2 border-t-emerald-400/60' : '',
               ].join(' ')}
@@ -120,7 +120,7 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
                   onBlur={commitEdit}
                   onKeyDown={handleEditKey}
                   onClick={(e) => e.stopPropagation()}
-                  className="flex-1 text-[13px] font-semibold bg-transparent border-b border-emerald-400/60 text-white outline-none min-w-0"
+                  className="flex-1 text-[13px] font-semibold bg-transparent border-b border-emerald-400/60 text-white outline-hidden min-w-0"
                   autoFocus
                 />
               ) : (
@@ -166,7 +166,7 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
         </button>
       </div>
 
-      <div className="px-4 py-4 border-t border-white/[0.06]">
+      <div className="px-4 py-4 border-t border-white/6">
         <p className="text-[11px] text-white/25 leading-relaxed">
           Drag <span className="text-white/40">⋮⋮</span> to reorder. Phase order = the order the
           candidate walks the case.

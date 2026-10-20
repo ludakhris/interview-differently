@@ -30,7 +30,7 @@ export function PhaseScoreCard({ phase, index }: Props) {
           <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
             Phase {index + 1}
           </p>
-          <h3 className="mt-0.5 text-[16px] font-display font-bold text-[#f5f3ee] leading-tight">
+          <h3 className="mt-0.5 text-[16px] font-display font-bold text-cream-light leading-tight">
             {phase.label}
           </h3>
           {phase.description && (
@@ -40,7 +40,7 @@ export function PhaseScoreCard({ phase, index }: Props) {
           )}
         </div>
         {showOverall && (
-          <div className="flex-shrink-0 text-right">
+          <div className="shrink-0 text-right">
             <p className="text-[10px] uppercase tracking-widest text-white/40">Phase score</p>
             <p
               className="text-[24px] font-display font-extrabold tabular-nums"
@@ -57,8 +57,10 @@ export function PhaseScoreCard({ phase, index }: Props) {
           <div className="space-y-2">
             {phase.dimensionScores.map((dim) => (
               <div key={dim.dimension} className="flex items-center justify-between gap-3">
-                <span className="text-[13px] text-[#f5f3ee] flex-1 truncate">{dim.dimension}</span>
-                <div className="flex items-center gap-3 flex-shrink-0">
+                <span className="text-[13px] text-cream-light flex-1 truncate">
+                  {dim.dimension}
+                </span>
+                <div className="flex items-center gap-3 shrink-0">
                   <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-700"

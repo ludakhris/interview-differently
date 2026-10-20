@@ -147,7 +147,7 @@ export function CheckpointChat({
             </li>
           )}
         </ol>
-        <div ref={wrapUp} tabIndex={-1} className="outline-none">
+        <div ref={wrapUp} tabIndex={-1} className="outline-hidden">
           {active === null && !view.done && (
             <p className="text-[13px] text-slate-mid" role="status">
               All requests answered. Finishing up…
@@ -350,7 +350,7 @@ function Bubble({
         className={`min-w-0 px-3 py-2 ${
           mine
             ? 'rounded-[14px_14px_4px_14px] bg-green text-on-primary'
-            : 'rounded-[14px_14px_14px_4px] bg-ink/[0.06] text-fg'
+            : 'rounded-[14px_14px_14px_4px] bg-ink/6 text-fg'
         }`}
       >
         <span className={`block text-[11px] font-bold ${mine ? 'opacity-80' : 'text-slate-mid'}`}>

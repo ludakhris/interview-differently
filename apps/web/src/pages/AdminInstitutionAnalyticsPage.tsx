@@ -61,12 +61,12 @@ export function AdminInstitutionAnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Nav />
-      <div className="max-w-screen-2xl mx-auto px-6 py-12">
+      <div className="max-w-(--breakpoint-2xl) mx-auto px-6 py-12">
         <button
           onClick={() => navigate('/admin/institutions')}
-          className="text-[12px] text-slate-mid hover:text-[#f5f3ee] transition-colors mb-3"
+          className="text-[12px] text-slate-mid hover:text-cream-light transition-colors mb-3"
         >
           ← Back to institutions
         </button>
@@ -76,7 +76,7 @@ export function AdminInstitutionAnalyticsPage() {
             <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
               Analytics
             </p>
-            <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
+            <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
               {detail?.name ?? 'Institution analytics'}
             </h1>
           </div>
@@ -90,7 +90,7 @@ export function AdminInstitutionAnalyticsPage() {
                 id="cohort-filter"
                 value={cohortId}
                 onChange={(e) => setCohort(e.target.value)}
-                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-[#f5f3ee] focus:outline-none focus:border-white/30"
+                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
               >
                 <option value="">All cohorts</option>
                 {detail.cohorts.map((c) => (
@@ -145,7 +145,7 @@ function AnalyticsSections({ analytics }: { analytics: InstitutionAnalytics }) {
       {isFiltered && analytics.cohort && (
         <p className="text-[13px] text-slate-light">
           Showing data for cohort{' '}
-          <span className="font-semibold text-[#f5f3ee]">{analytics.cohort.name}</span>.
+          <span className="font-semibold text-cream-light">{analytics.cohort.name}</span>.
         </p>
       )}
 
@@ -273,7 +273,7 @@ function CsvButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="text-[11px] font-semibold text-slate-mid hover:text-[#f5f3ee] transition-colors"
+      className="text-[11px] font-semibold text-slate-mid hover:text-cream-light transition-colors"
       title="Download as CSV"
     >
       ↓ CSV
@@ -337,7 +337,7 @@ function BreakdownTable({
             <tbody>
               {rows.map((r) => (
                 <tr key={r.key} className="border-b border-white/5 last:border-0">
-                  <td className="py-2 text-[#f5f3ee] capitalize">{r.key}</td>
+                  <td className="py-2 text-cream-light capitalize">{r.key}</td>
                   <td className="py-2 text-right text-slate-light">{r.count}</td>
                   <td
                     className="py-2 text-right font-semibold"
@@ -404,7 +404,7 @@ function CohortBreakdownTable({
               {sorted.map((r) => (
                 <tr key={r.cohortId ?? 'none'} className="border-b border-white/5 last:border-0">
                   <td
-                    className={`py-2 ${r.cohortId === null ? 'italic text-slate-mid' : 'text-[#f5f3ee]'}`}
+                    className={`py-2 ${r.cohortId === null ? 'italic text-slate-mid' : 'text-cream-light'}`}
                   >
                     {r.name}
                   </td>

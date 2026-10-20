@@ -98,7 +98,7 @@ export function PrerenderedAvatarPlayer({
         </div>
       )}
 
-      <div className="absolute bottom-0 left-0 right-0 flex items-center justify-end px-4 py-2 bg-gradient-to-t from-black/70 to-transparent">
+      <div className="absolute bottom-0 left-0 right-0 flex items-center justify-end px-4 py-2 bg-linear-to-t from-black/70 to-transparent">
         <button
           onClick={togglePause}
           className="flex items-center gap-1.5 text-[12px] text-white/70 hover:text-white transition-colors bg-black/40 rounded-full px-3 py-1"

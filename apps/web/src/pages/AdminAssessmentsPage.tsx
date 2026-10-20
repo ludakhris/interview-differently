@@ -38,7 +38,7 @@ import {
 type GetToken = () => Promise<string | null>
 
 const inputCls =
-  'w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-[#f5f3ee] placeholder:text-white/25 focus:outline-none focus:border-white/30'
+  'w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-cream-light placeholder:text-white/25 focus:outline-hidden focus:border-white/30'
 
 /** `draw` spec → "all" | "4" | "mc 3, sql 1" — mirrors formatDrawSpec in the API. */
 function formatDraw(spec: number | Record<string, number> | null): string {
@@ -106,14 +106,14 @@ export function AdminAssessmentsPage() {
   }, [selectedId, refreshDetail])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       <Nav />
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="mb-8">
           <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
             Admin · Tools
           </p>
-          <h1 className="font-display font-extrabold text-[24px] text-[#f5f3ee] tracking-tight">
+          <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
             Assessments
           </h1>
           <p className="text-[13px] text-slate-mid mt-1">
@@ -123,7 +123,7 @@ export function AdminAssessmentsPage() {
               href="https://github.com/ludakhris/interview-differently/blob/main/docs/assessment-format.md"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono underline hover:text-[#f5f3ee] transition-colors"
+              className="font-mono underline hover:text-cream-light transition-colors"
             >
               docs/assessment-format.md
             </a>
@@ -132,7 +132,7 @@ export function AdminAssessmentsPage() {
               href="https://github.com/ludakhris/interview-differently/blob/main/docs/instructor-guide.md"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono underline hover:text-[#f5f3ee] transition-colors"
+              className="font-mono underline hover:text-cream-light transition-colors"
             >
               docs/instructor-guide.md
             </a>
@@ -180,7 +180,7 @@ export function AdminAssessmentsPage() {
                           : 'border border-transparent hover:bg-white/5'
                       }`}
                     >
-                      <p className="text-[13px] font-semibold text-[#f5f3ee] flex items-center gap-2">
+                      <p className="text-[13px] font-semibold text-cream-light flex items-center gap-2">
                         {a.title}
                         <OwnerBadge institutionName={a.institutionName} />
                       </p>
@@ -300,7 +300,7 @@ function ImportPanel({
       <div className="p-6 space-y-4">
         {updating ? (
           <p className="text-[12px] text-white/50 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-            Updating <span className="text-[#f5f3ee]">{updating.title}</span> — owner stays{' '}
+            Updating <span className="text-cream-light">{updating.title}</span> — owner stays{' '}
             {updating.institutionName ?? 'platform-wide'}.
           </p>
         ) : (
@@ -347,7 +347,7 @@ function ImportPanel({
         {preview && (
           <div className="rounded-lg border border-white/10 bg-[#0d0d0d] p-4 space-y-3">
             <div className="flex items-baseline justify-between">
-              <p className="text-[13px] font-semibold text-[#f5f3ee]">
+              <p className="text-[13px] font-semibold text-cream-light">
                 {preview.parsed.title}{' '}
                 <span className="font-mono text-[11px] text-white/40 ml-2">
                   {preview.parsed.slug}
@@ -370,7 +370,7 @@ function ImportPanel({
                     key={s.id}
                     className="flex items-baseline justify-between font-mono text-[11px]"
                   >
-                    <span className="text-[#f5f3ee]/85">
+                    <span className="text-cream-light/85">
                       {s.number}. {s.title}
                     </span>
                     <span className="text-white/40">
@@ -386,7 +386,7 @@ function ImportPanel({
                 <p className="text-[11px] font-bold uppercase tracking-widest text-red-400 mb-1">
                   Reference queries failed
                 </p>
-                <ul className="font-mono text-[11px] text-[#f5f3ee]/85 space-y-0.5">
+                <ul className="font-mono text-[11px] text-cream-light/85 space-y-0.5">
                   {preview.sqlErrors.map((e) => (
                     <li key={e.questionId}>
                       {e.questionId}: {e.error}
@@ -400,7 +400,7 @@ function ImportPanel({
                 <p className="text-[11px] font-bold uppercase tracking-widest text-amber-400 mb-1">
                   Warnings
                 </p>
-                <ul className="text-[11px] text-[#f5f3ee]/75 space-y-0.5">
+                <ul className="text-[11px] text-cream-light/75 space-y-0.5">
                   {preview.parsed.warnings.map((w, i) => (
                     <li key={i}>{w}</li>
                   ))}
@@ -416,7 +416,7 @@ function ImportPanel({
         <button
           onClick={doPreview}
           disabled={busy !== null || !markdown.trim()}
-          className="px-3 py-1.5 rounded-md border border-white/15 hover:border-white/30 text-[12px] font-semibold text-[#f5f3ee] disabled:opacity-50 transition-colors"
+          className="px-3 py-1.5 rounded-md border border-white/15 hover:border-white/30 text-[12px] font-semibold text-cream-light disabled:opacity-50 transition-colors"
         >
           {busy === 'preview' ? 'Checking…' : 'Preview'}
         </button>
@@ -469,7 +469,7 @@ function DetailPanel({
       <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
-            <h2 className="font-display font-bold text-[18px] text-[#f5f3ee] flex items-center gap-2">
+            <h2 className="font-display font-bold text-[18px] text-cream-light flex items-center gap-2">
               {detail.title}
               <OwnerBadge institutionName={detail.institutionName} />
             </h2>
@@ -481,10 +481,10 @@ function DetailPanel({
             </p>
           </div>
           {canEdit && (
-            <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-3 shrink-0">
               <button
                 onClick={onReimport}
-                className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
               >
                 Edit markdown →
               </button>
@@ -514,8 +514,8 @@ function DetailPanel({
             const mc = s.questions.filter((q) => q.type === 'mc').length
             const scen = s.questions.filter((q) => q.type === 'scenario').length
             return (
-              <li key={s.id} className="bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2">
-                <p className="text-[12px] font-semibold text-[#f5f3ee]">
+              <li key={s.id} className="bg-black border border-white/10 rounded-lg px-3 py-2">
+                <p className="text-[12px] font-semibold text-cream-light">
                   {s.number}. {s.title}
                 </p>
                 <p className="font-mono text-[10px] text-white/40">
@@ -587,7 +587,7 @@ function DetailPanel({
                 className="border border-white/10 rounded-lg px-4 py-3 flex items-center justify-between gap-4"
               >
                 <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-[#f5f3ee]">
+                  <p className="text-[13px] font-semibold text-cream-light">
                     <span className="uppercase tracking-widest text-[10px] text-[#2d9e5f] mr-2">
                       {d.label}
                     </span>
@@ -619,10 +619,10 @@ function DetailPanel({
                     onChange={onChange}
                   />
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="flex items-center gap-3 shrink-0">
                   <button
                     onClick={() => setResultsFor(resultsFor === d.id ? null : d.id)}
-                    className="text-[11px] text-slate-mid hover:text-[#f5f3ee] transition-colors"
+                    className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
                   >
                     {resultsFor === d.id ? 'Hide results' : 'Results →'}
                   </button>
@@ -697,7 +697,7 @@ function InviteLink({
           </span>
           <button
             onClick={copy}
-            className="font-semibold text-green-light hover:text-green transition-colors flex-shrink-0"
+            className="font-semibold text-green-light hover:text-green transition-colors shrink-0"
           >
             {copied ? 'Copied ✓' : 'Copy link'}
           </button>
@@ -721,7 +721,7 @@ function InviteLink({
                 setBusy(false)
               }
             }}
-            className="text-slate-mid hover:text-red-400 disabled:opacity-50 transition-colors flex-shrink-0"
+            className="text-slate-mid hover:text-red-400 disabled:opacity-50 transition-colors shrink-0"
           >
             Revoke
           </button>
@@ -792,7 +792,7 @@ function NewDeliveryForm({
           setSubmitting(false)
         }
       }}
-      className="bg-[#0a0a0a] rounded-lg border border-white/10 p-4 mb-3 grid grid-cols-1 sm:grid-cols-2 gap-3"
+      className="bg-black rounded-lg border border-white/10 p-4 mb-3 grid grid-cols-1 sm:grid-cols-2 gap-3"
     >
       <label className="block sm:col-span-2">
         <span className="text-[11px] text-white/40">Cohort</span>
@@ -967,7 +967,7 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
           <button
             onClick={load}
             disabled={refreshing}
-            className="text-[12px] font-semibold text-slate-mid hover:text-[#f5f3ee] disabled:opacity-40 transition-colors"
+            className="text-[12px] font-semibold text-slate-mid hover:text-cream-light disabled:opacity-40 transition-colors"
           >
             {refreshing ? 'Refreshing…' : '↻ Refresh'}
           </button>
@@ -982,8 +982,8 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
       </div>
       <p className="text-[12px] text-slate-mid mb-3">
         <span className="text-[#2d9e5f]">{submittedN} submitted</span> ·{' '}
-        <span className="text-[#d4830a]">{inProgressN} in progress</span> · {data.notStarted.length}{' '}
-        not started
+        <span className="text-amber">{inProgressN} in progress</span> · {data.notStarted.length} not
+        started
       </p>
       {data.attempts.length === 0 && data.notStarted.length === 0 ? (
         <p className="text-[13px] text-slate-mid">No attempts yet.</p>
@@ -1010,7 +1010,7 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
               {data.attempts.map((a) => (
                 <tr key={a.attemptId} className="border-t border-white/5">
                   <td className="py-2 pr-4">
-                    <p className="text-[#f5f3ee]">{a.displayName ?? a.email ?? a.userId}</p>
+                    <p className="text-cream-light">{a.displayName ?? a.email ?? a.userId}</p>
                     <p className="text-[11px] text-white/40">
                       {a.submittedAt
                         ? `submitted ${fmt(a.submittedAt)}${a.submittedLate ? ' · late' : ''}`
@@ -1028,7 +1028,7 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
                       </td>
                     )
                   })}
-                  <td className="text-right py-2 pl-4 font-mono font-semibold text-[#f5f3ee]">
+                  <td className="text-right py-2 pl-4 font-mono font-semibold text-cream-light">
                     {a.overall ? `${a.overall.percent}%` : '—'}
                     {a.submittedAt && (
                       <button
@@ -1038,7 +1038,7 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
                             who: a.displayName ?? a.email ?? a.userId,
                           })
                         }
-                        className="block ml-auto font-sans text-[11px] font-normal text-slate-mid hover:text-[#f5f3ee]"
+                        className="block ml-auto font-sans text-[11px] font-normal text-slate-mid hover:text-cream-light"
                       >
                         Answers →
                       </button>
