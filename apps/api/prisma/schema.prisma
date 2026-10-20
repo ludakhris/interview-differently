@@ -2,12 +2,11 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Connections are not set here: the API passes its own (DATABASE_URL, the restricted role) through a driver adapter
+// (src/prisma/client.ts), and Prisma's CLI (migrate, db execute) uses the owner connection from prisma.config.ts.
+// See docs/tenant-isolation.md.
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  // The owner connection, which Prisma's CLI (migrate, db execute) uses instead of `url`: DATABASE_URL is the API's
-  // restricted role, which cannot change the schema. See docs/tenant-isolation.md.
-  directUrl = env("SCHEMA_DATABASE_URL")
+  provider = "postgresql"
 }
 
 model Scenario {

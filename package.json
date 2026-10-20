@@ -31,5 +31,16 @@
   "packageManager": "npm@10.5.0",
   "dependencies": {
     "js-yaml": "^4.1.1"
+  },
+  "overrides": {
+    "@visx/curve": "4.0.0",
+    "@visx/event": "4.0.0",
+    "@visx/grid": "4.0.0",
+    "@visx/group": "4.0.0",
+    "@visx/point": "4.0.0",
+    "@visx/responsive": "4.0.0",
+    "@visx/scale": "4.0.0",
+    "@visx/shape": "4.0.0",
+    "@visx/vendor": "4.0.0"
   }
 }

@@ -14,6 +14,7 @@
 
 import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 import {
   DEMO_BANK,
   DEMO_COURSE_SLUG,
@@ -113,7 +114,7 @@ const SKILL_TASKS: Record<DemoSkill, { section: number }> = {
 const SKILLS = Object.keys(SKILL_TASKS) as DemoSkill[]
 async function main() {
   guard()
-  const prisma = new PrismaClient()
+  const prisma = new PrismaClient({ adapter: prismaAdapter() })
   try {
     const provider = await prisma.institution.findUnique({ where: { id: PROVIDER_ID } })
     if (!provider) throw new Error(`No ${PROVIDER_ID}: run npm run seed:learn-demo first`)

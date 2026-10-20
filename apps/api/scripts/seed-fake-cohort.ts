@@ -35,6 +35,7 @@
 
 import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 import { createClerkClient, type ClerkClient } from '@clerk/backend'
 import * as readline from 'readline'
 import { ensureStandaloneAgency } from '../src/core/standalone-agency'
@@ -432,7 +433,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2))
   const subcommand = args._[0]
 
-  const prisma = new PrismaClient()
+  const prisma = new PrismaClient({ adapter: prismaAdapter() })
   const secretKey = process.env.CLERK_SECRET_KEY
   if (!secretKey) {
     console.error('CLERK_SECRET_KEY not set. Add it to apps/api/.env.')

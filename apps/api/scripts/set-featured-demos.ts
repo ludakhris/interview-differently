@@ -14,6 +14,7 @@
 
 import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 
 const DEV_HOSTS = ['localhost', '127.0.0.1']
 const FEATURED_IDS = [
@@ -39,7 +40,7 @@ async function main() {
   const i = argv.indexOf('--allow-host')
   const host = targetHost(i >= 0 ? argv[i + 1] : undefined)
   const dryRun = argv.includes('--dry-run')
-  const prisma = new PrismaClient()
+  const prisma = new PrismaClient({ adapter: prismaAdapter() })
   try {
     console.log(`Database: ${host}${dryRun ? ' (dry run: nothing is written)' : ''}`)
     const rows = await prisma.institution.findMany({

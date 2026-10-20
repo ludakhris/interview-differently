@@ -36,6 +36,7 @@
 
 import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 
 interface Args {
   from?: string
@@ -69,7 +70,7 @@ async function main() {
     process.exit(1)
   }
 
-  const prisma = new PrismaClient()
+  const prisma = new PrismaClient({ adapter: prismaAdapter() })
 
   try {
     // ── Pre-flight ─────────────────────────────────────────────────────────

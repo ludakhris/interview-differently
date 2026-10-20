@@ -11,6 +11,7 @@
  */
 import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 import { dbHost } from './lib/db-guard'
 
 const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]
@@ -46,8 +47,8 @@ async function serverMs(
 
 async function main(): Promise<void> {
   console.log(`Database host: ${dbHost()}`)
-  const restricted = new PrismaClient()
-  const owner = new PrismaClient({ datasourceUrl: process.env.SCHEMA_DATABASE_URL })
+  const restricted = new PrismaClient({ adapter: prismaAdapter() })
+  const owner = new PrismaClient({ adapter: prismaAdapter(process.env.SCHEMA_DATABASE_URL) })
   const ids = (
     await owner.$queryRawUnsafe<{ ids: string }[]>(
       `SELECT string_agg("id", ',') AS ids FROM "Institution" WHERE "kind" = 'agency'`

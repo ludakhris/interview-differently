@@ -20,6 +20,7 @@
 
 import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 import { platformCreated } from '../src/lti/tool/platform-registry.service'
 import { platformRegistration } from '../src/lti/tool/lti-tool.config'
 
@@ -49,7 +50,7 @@ async function main() {
       throw new Error('With --allow-host, set LTI_API_BASE to that environment’s public API URL.')
   }
   const dryRun = argv.includes('--dry-run')
-  const prisma = new PrismaClient()
+  const prisma = new PrismaClient({ adapter: prismaAdapter() })
   try {
     console.log(`Database: ${host}${dryRun ? ' (dry run: nothing is written)' : ''}`)
     const p = { name: 'LearnDifferently', ...platformRegistration() }

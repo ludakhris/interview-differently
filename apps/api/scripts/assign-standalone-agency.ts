@@ -19,11 +19,12 @@
  */
 import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 import { readFileSync, writeFileSync } from 'fs'
 import { STANDALONE_AGENCY_ID, ensureStandaloneAgency } from '../src/core/standalone-agency'
 import { assertBypassesRls, dbHost, requireHostConfirmation } from './lib/db-guard'
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient({ adapter: prismaAdapter() })
 
 async function orphans() {
   return prisma.institution.findMany({

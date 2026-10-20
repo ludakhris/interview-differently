@@ -19,6 +19,7 @@
 
 import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 import { defaultConnections, defaultTools } from '../src/lti/platform/default-tools'
 import { diffConnection, diffTool } from '../src/lti/platform/tool-config'
 
@@ -41,7 +42,7 @@ async function main() {
   const i = argv.indexOf('--allow-host')
   const host = targetHost(i >= 0 ? argv[i + 1] : undefined)
   const dryRun = argv.includes('--dry-run')
-  const prisma = new PrismaClient()
+  const prisma = new PrismaClient({ adapter: prismaAdapter() })
   try {
     console.log(`Database: ${host}${dryRun ? ' (dry run: nothing is written)' : ''}`)
     const connections = await prisma.ltiConnection.findMany({

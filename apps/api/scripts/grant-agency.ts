@@ -17,9 +17,10 @@
  */
 import './lib/owner-env'
 import { PrismaClient } from '@prisma/client'
+import { prismaAdapter } from '../src/prisma/client'
 import { assertBypassesRls, requireHostConfirmation } from './lib/db-guard'
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient({ adapter: prismaAdapter() })
 
 function flag(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`)
