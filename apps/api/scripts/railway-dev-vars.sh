@@ -62,7 +62,8 @@ if [ -z "$DEV_URL" ] || [ -z "$LOCAL_URL" ] || [ "$(host_of "$DEV_URL")" != "$(h
 fi
 
 
-API_DOMAIN="$(railway domain list -s "$SERVICE" -e "$ENVIRONMENT" 2>/dev/null | grep -oE '[a-z0-9-]+\.up\.railway\.app' | head -1)"
+# API_DOMAIN=<host> overrides the lookup (some CLI versions list no Railway-provided domains).
+API_DOMAIN="${API_DOMAIN:-$(railway domain list -s "$SERVICE" -e "$ENVIRONMENT" 2>/dev/null | grep -oE '[a-z0-9-]+\.up\.railway\.app' | head -1 || true)}"
 [ -n "$API_DOMAIN" ] || { echo "No domain on $SERVICE. Run: railway domain -s $SERVICE -e $ENVIRONMENT" >&2; exit 1; }
 
 set_var() { # NAME VALUE
