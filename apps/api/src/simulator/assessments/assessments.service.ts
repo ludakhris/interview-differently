@@ -8,6 +8,7 @@ import {
 import { randomBytes } from 'crypto'
 import { Prisma } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
+import { runAsSystem } from '../../core/tenant-context'
 import { ClerkService } from '../../auth/clerk.service'
 import { SqlRunnerService, type QueryOutcome } from '../sql-runner/sql-runner.service'
 import { AssessmentParseError, parseAssessmentMarkdown, questionIndex } from './parse-markdown'
@@ -353,15 +354,19 @@ export class AssessmentsService {
   }
 
   private async loadInvite(code: string) {
-    const d = await this.prisma.assessmentDelivery.findUnique({
-      where: { inviteCode: code },
-      include: {
-        assessment: { select: { title: true, sections: true } },
-        cohort: {
-          select: { name: true, institutionId: true, institution: { select: { name: true } } },
+    // The one lookup made before the caller is in the cohort's agency (like join by key): the code is the
+    // secret, and under row-level security the caller could not see the cohort yet.
+    const d = await runAsSystem(() =>
+      this.prisma.assessmentDelivery.findUnique({
+        where: { inviteCode: code },
+        include: {
+          assessment: { select: { title: true, sections: true } },
+          cohort: {
+            select: { name: true, institutionId: true, institution: { select: { name: true } } },
+          },
         },
-      },
-    })
+      })
+    )
     // A delivery whose cohort was deleted has nothing to invite into.
     if (!d || !d.cohort || !d.cohortId)
       throw new NotFoundException('This invite link is no longer valid')

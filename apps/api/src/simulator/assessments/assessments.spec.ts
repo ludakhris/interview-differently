@@ -774,3 +774,32 @@ describe('drawSpecFromYaml with a reserved key', () => {
     expect(spec['__proto__']).toBe(2)
   })
 })
+
+describe('invite links', () => {
+  it('looks the invite up as the system, since the caller cannot see the cohort before joining', async () => {
+    const { tenantContext } = await import('../../core/tenant-context')
+    let seen: unknown
+    const prisma = {
+      assessmentDelivery: {
+        findUnique: async () => {
+          seen = tenantContext()
+          return {
+            id: 'd1',
+            label: 'post',
+            opensAt: null,
+            closesAt: null,
+            timeLimitMinutes: null,
+            cohortId: 'c1',
+            assessment: { title: 'SQL', sections: [] },
+            cohort: { name: 'Fall', institutionId: 'i1', institution: { name: 'Org' } },
+          }
+        },
+      },
+    }
+    const info = await new AssessmentsService(prisma as never, {} as never, {} as never).inviteInfo(
+      'code'
+    )
+    expect(seen).toEqual({ allAgencies: true })
+    expect(info).toMatchObject({ title: 'SQL', cohortName: 'Fall', isOpen: true })
+  })
+})
