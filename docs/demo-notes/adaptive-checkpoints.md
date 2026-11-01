@@ -15,14 +15,15 @@ programs.
 - Run four dev servers: the API, the LMS (`learn`, 5174), Interview Differently (`web`, 5173, which serves the checkpoint
   chat) and Spark (`spark`, 5175, which plays the videos). The checkpoint and the video run inside the course page.
 - Full reset (also needed after changing the seed or the scripts). The first line adds the checkpoint tool once per
-  environment:
+  environment. On dev, run both inside the dev API's container (`railway ssh -s api-dev -e dev`, from a deploy that has
+  the current scripts; `docs/dev-api.md`); locally, drop the `--allow-host` flag:
 
 ```bash
-npm run seed:lti-tools -w @id/api -- --allow-host zephyr.proxy.rlwy.net
+npm run seed:lti-tools -- --allow-host postgres.railway.internal
 ```
 
 ```bash
-npm run seed:adaptive-demo -w @id/api -- --allow-host zephyr.proxy.rlwy.net
+npm run seed:adaptive-demo -- --allow-host postgres.railway.internal
 ```
 
 How the pieces fit (who owns what, the LTI launch into a frame, the evidence feed): `docs/adaptive-integration.md`.

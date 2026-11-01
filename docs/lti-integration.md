@@ -100,7 +100,7 @@ Rules:
   `LTI_TOOL_*` variables of the environment it runs against (so each environment points at its own host). It only
   adds what is missing, never changes a row an admin has edited, matches an existing connection by id or client id,
   and logs what it added as "System (seed script)". `--dry-run` shows what it would add. It refuses a database that
-  is not local or the Railway dev database unless you pass `--allow-host <host>`; do that for production only with
+  is not local unless you pass `--allow-host <host>` (on dev, run it inside the dev API's container: `docs/dev-api.md`); do that for production only with
   the owner's OK, and with production's `LTI_API_BASE` set. The running API never reads those variables or any
   defaults in code: the tables are the only source.
 - Only the LearnDifferently Clerk role `system-admin` can list, add, change or remove anything here (it is a

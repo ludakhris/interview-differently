@@ -66,7 +66,7 @@ It prints `Removed N institutions and M demo learners`. The same catalog URL sho
 
 ### Local or dev database
 
-`npm run seed:learn-demo` with `DATABASE_URL` pointing at localhost needs no flags; for the shared development database pass `--allow-host` with its host.
+`npm run seed:learn-demo` with `DATABASE_URL` pointing at localhost (your Docker database) needs no flags. The shared development database has no public address: run it inside the dev API's container (`railway ssh -s api-dev -e dev`, then `npm run seed:learn-demo -- --allow-host postgres.railway.internal`; see `docs/dev-api.md`).
 
 ### Sample waiting items for the attention bell (dev only)
 
