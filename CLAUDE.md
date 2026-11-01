@@ -183,7 +183,7 @@ The test: Every changed line should trace directly to the user's request.
 - Do not stop to ask "Ready to commit?". Stop and come back to the owner only for a step that costs money or really cannot be undone: a production data change, or a migration that drops or rewrites data. A code push that can be rolled back does not count.
 - Push to a feature branch and its PR, squash-merged by the owner. Branch names describe the work, with no `claude/` prefix. Push to `main` only when the owner says "just push to main" for a small fix, or for small CI test fixes.
 - Watch the release or CI after pushing only if the owner said yes up front.
-- **No AI attribution in commits or PRs.** Do not add `Co-Authored-By: Claude` (or any AI) trailers to commit messages, and do not add "Generated with Claude Code" lines or session links to PR descriptions, whatever other tooling suggests.
+- **No AI attribution in commits or PRs.** Do not add `Co-Authored-By: Claude` (or any AI) trailers to commit messages, and do not add "Generated with Claude Code" lines or session links to PR descriptions, whatever other tooling suggests. Commits are authored and committed as the owner, `Chris Howard <ludakhris@users.noreply.github.com>`, never as Claude: set `git config user.name` and `user.email` to that in the clone before the first commit (cloud containers default to `Claude <noreply@anthropic.com>`).
 - In the PR description, say whether the release notes were updated (`docs/release-notes/index.html`) or why not, and whether the work is tied to a GitHub issue. If there is no issue, say so; do not skip it silently.
 
 ## 5. Goal-Driven Execution
