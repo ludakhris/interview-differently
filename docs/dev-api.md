@@ -10,7 +10,9 @@ environment or per-PR copies.
 - Nothing deploys it automatically (no GitHub source). You deploy the working tree you are on (uncommitted changes
   included) with a script that uploads a clean copy of `apps/api`; the Railway CLI's own upload applies the repo's
   `.gitignore` too loosely and would drop `src/storage`:
-  `apps/api/scripts/deploy-dev.sh`
+  `apps/api/scripts/deploy-dev.sh`. It stops unless `railway status` shows the interview-differently project's dev
+  environment (link a folder once with `railway link -p 31736977-0627-4dcf-88de-5c09f7b41e79 -e dev`), because
+  `railway up` in an unlinked folder creates a new Railway project.
 - It runs with row-level security on, like your local API: the API connects as the restricted role
   (`DATABASE_URL`), and migrations and the seed run as the database owner (`SCHEMA_DATABASE_URL`). See `docs/tenant-isolation.md`.
 - It holds **dev keys only**: the dev Clerk instances (`sk_test_`) and no production secrets. Storage (R2) and email
