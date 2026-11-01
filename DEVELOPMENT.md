@@ -31,6 +31,27 @@ VITE_API_URL=<dev API address>/api npm run dev -w @id/learn    # the LMS takes t
 API changes then go up with `apps/api/scripts/deploy-dev.sh`, which also applies their migrations to dev. To run a
 script against the dev database, see "Running a script against the dev database" in `docs/dev-api.md`.
 
+### Deploying dev from a cloud Claude Code session
+
+Cloud sessions (Claude Code on the web) can deploy a branch to dev with the same script. The cloud environment holds
+`RAILWAY_TOKEN`, a Railway **project token** for the interview-differently project scoped to the `dev` environment
+only, so a cloud session can neither see nor deploy production. Its setup script installs `rsync` and the Railway CLI:
+
+```bash
+command -v rsync >/dev/null || (apt-get update -qq && apt-get install -y -qq rsync)
+command -v railway >/dev/null || npm i -g @railway/cli
+```
+
+With a project token no `railway link` is needed: `railway status` already prints the project id and
+`Environment: dev`, which is what `deploy-dev.sh` checks, so the script runs as is. `railway logs -s api-dev -e dev`
+shows the start-up. The session cannot reach the dev database (it has no public address), so migrations and the seed
+apply only through `api-dev`'s start command when the deploy starts. Deploying replaces whatever branch dev was
+running; if dev is running an unmerged branch someone is using, deploy your work merged with that branch.
+
+The token lives only in the cloud environment's settings, never in the repo. To replace it: Railway → project
+interview-differently → Settings → Tokens, create a token for environment `dev`, and set it as `RAILWAY_TOKEN` in the
+cloud environment. Never give a cloud environment a token for production or an account token.
+
 ### Database setup (to run the API locally)
 
 Running the API on your machine needs a database of its own: a local Postgres in Docker (`docker-compose.yml`), never
