@@ -7,14 +7,16 @@
 #   add --with-storage-and-email to also copy the storage (R2) and email (Resend) keys. Off by default: your local
 #   .env may point at the real media buckets, and a dev API should not hold keys that can write there or send mail.
 #
-# Reads apps/api/.env (your dev keys and DATABASE_URL, the restricted database role). The two database URLs
-# use Railway's private network, so the API reaches the dev database directly:
+# Reads apps/api/.env for your dev keys. The two database URLs are not read from it (your local database is your own
+# Docker Postgres) and use Railway's private network, since the dev database has no public address:
 #   DATABASE_URL         the restricted role `ld_app` on the private host (the API connects with it, so row-level
-#                        security applies)
+#                        security applies). Kept as it is, unless you pass the dev role's password:
+#                        DEV_APP_ROLE_PASSWORD=... apps/api/scripts/railway-dev-vars.sh --apply
 #   SCHEMA_DATABASE_URL  a reference to the dev Postgres service (the owner; Prisma's migrations and the seed use it)
 # Variables that are not in your .env are skipped and listed at the end.
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
+[ -f apps/api/.env ] || { echo "apps/api/.env not found: this script copies your dev keys from it. Stopping." >&2; exit 1; }
 
 ENVIRONMENT=dev
 SERVICE=api-dev
@@ -52,16 +54,6 @@ for line in open(path):
 PY
 }
 
-# Refuse a database that is not the dev one: the owner URL in your local .env must be the dev Postgres's public address
-# according to Railway itself (nothing about the host is written down here).
-host_of() { python3 -c "import sys; from urllib.parse import urlsplit; print(urlsplit(sys.argv[1]).netloc.split('@')[-1])" "$1"; }
-DEV_URL="$(railway variables -s Postgres -e "$ENVIRONMENT" --json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('DATABASE_PUBLIC_URL',''))")"
-LOCAL_URL="$(get SCHEMA_DATABASE_URL apps/api/.env || true)"
-if [ -z "$DEV_URL" ] || [ -z "$LOCAL_URL" ] || [ "$(host_of "$DEV_URL")" != "$(host_of "$LOCAL_URL")" ]; then
-  echo "SCHEMA_DATABASE_URL in apps/api/.env is not the dev database ($ENVIRONMENT's Postgres). Stopping." >&2; exit 1
-fi
-
-
 # API_DOMAIN=<host> overrides the lookup (some CLI versions list no Railway-provided domains).
 API_DOMAIN="${API_DOMAIN:-$(railway domain list -s "$SERVICE" -e "$ENVIRONMENT" 2>/dev/null | grep -oE '[a-z0-9-]+\.up\.railway\.app' | head -1 || true)}"
 [ -n "$API_DOMAIN" ] || { echo "No domain on $SERVICE. Run: railway domain -s $SERVICE -e $ENVIRONMENT" >&2; exit 1; }
@@ -80,19 +72,18 @@ for name in "${COPY[@]}"; do
   if [ -n "$value" ]; then set_var "$name" "$value"; else missing+=("$name"); fi
 done
 
-# Database: the restricted role built from DATABASE_URL in your local .env, on the private host; the owner by reference.
-RLS_URL="$(get DATABASE_URL apps/api/.env || true)"
-case "$RLS_URL" in *://ld_app:*) ;; *) echo "DATABASE_URL in apps/api/.env is not the restricted ld_app role (run apps/api/scripts/create-app-role.ts, then set it)." >&2; exit 1 ;; esac
-PRIVATE_URL="$(python3 - "$RLS_URL" <<'PY'
-import sys
-from urllib.parse import urlsplit, urlunsplit
-u=urlsplit(sys.argv[1])
-host='postgres.railway.internal:5432'
-netloc=(u.username or '')+(':'+u.password if u.password else '')+'@'+host
-print(urlunsplit((u.scheme,netloc,u.path,u.query,u.fragment)))
-PY
-)"
-set_var DATABASE_URL "$PRIVATE_URL"
+# Database: the restricted role on the private host, and the owner by reference. Your local database is your own
+# (Docker), so neither comes from your .env. DATABASE_URL is set only when you pass the dev role's password; otherwise
+# api-dev keeps the value it has.
+if [ -n "${DEV_APP_ROLE_PASSWORD:-}" ]; then
+  PW="$(python3 -c "import sys; from urllib.parse import quote; print(quote(sys.argv[1], safe=''))" "$DEV_APP_ROLE_PASSWORD")"
+  set_var DATABASE_URL "postgresql://ld_app:$PW@\${{Postgres.RAILWAY_PRIVATE_DOMAIN}}:5432/\${{Postgres.PGDATABASE}}"
+elif railway variables -s "$SERVICE" -e "$ENVIRONMENT" --json 2>/dev/null | grep -q '"DATABASE_URL": *"postgresql://ld_app:'; then
+  echo "  kept DATABASE_URL (api-dev already connects as ld_app)"
+else
+  echo "api-dev has no ld_app DATABASE_URL. Re-run with DEV_APP_ROLE_PASSWORD=<the dev role's password> (docs/dev-api.md)." >&2
+  exit 1
+fi
 set_var SCHEMA_DATABASE_URL '${{Postgres.DATABASE_URL}}'
 set_var REQUIRE_TENANT_RLS on
 

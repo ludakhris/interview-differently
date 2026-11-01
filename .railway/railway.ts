@@ -12,16 +12,14 @@ import {
 
 export default defineRailway((ctx) => {
   const Postgres = postgres('Postgres', { region: 'us-east4-eqdc4a' })
-  // Production's database and cache are reachable only on Railway's private network: no public TCP proxy. The dev
-  // database keeps one, since apps/api/.env and the hand-run scripts connect to it from outside Railway. To run a
-  // script against production, add a TCP proxy in the Railway dashboard for that job and remove it afterwards
-  // (docs/admin-setup.md).
-  Postgres.networking = ctx.isEnvironment('dev')
-    ? { privateNetworkEndpoint: 'postgres', tcpProxies: { '5432': {} } }
-    : { privateNetworkEndpoint: 'postgres' }
+  // The databases (dev and production) and the cache are reachable only on Railway's private network: no public TCP
+  // proxy. Local development uses its own Docker Postgres (DEVELOPMENT.md); hand-run scripts against dev run inside
+  // the api-dev container with `railway ssh` (docs/dev-api.md). To run a script against production, add a TCP proxy
+  // in the Railway dashboard for that job and remove it afterwards (docs/admin-setup.md).
+  Postgres.networking = { privateNetworkEndpoint: 'postgres' }
 
-  // `dev`: the shared development environment. Its database is what apps/api/.env points at (its
-  // DATABASE_PUBLIC_URL), and `api-dev` is an API that runs beside it, deployed by hand from any branch:
+  // `dev`: the shared development environment. `api-dev` is an API that runs beside its database, deployed by hand
+  // from any branch:
   //   apps/api/scripts/deploy-dev.sh
   // so a branch can be tried against dev data on Railway's own network (with row-level security on)
   // before it reaches production. It has no GitHub source, so nothing deploys it automatically, and none

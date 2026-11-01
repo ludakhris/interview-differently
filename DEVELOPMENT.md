@@ -18,27 +18,55 @@ cp apps/api/.env.example apps/api/.env
 # Then fill in the values — DATABASE_URL and VITE_CLERK_PUBLISHABLE_KEY are required to run locally
 ```
 
-### Database setup (required before first run)
+### Working against the shared dev data (no local API)
 
-The project uses **Railway Postgres** — no local Postgres or Docker needed.
-
-**Get your DATABASE_URL:**
-
-1. Open [railway.app](https://railway.app) → your project → **PostgreSQL** service
-2. Click the **Connect** tab
-3. Copy the **DATABASE_URL** and paste it into `apps/api/.env`
-
-**Run migrations and seed:**
+The shared dev database on Railway has no public address, so nothing on your machine connects to it. To work on the
+front ends with the shared dev data, run only the web apps locally and point them at the dev API (`docs/dev-api.md`):
 
 ```bash
+VITE_API_URL=<dev API address, without /api> npm run dev -w @id/web
+VITE_API_URL=<dev API address>/api npm run dev -w @id/learn    # the LMS takes the address with /api
+```
+
+API changes then go up with `apps/api/scripts/deploy-dev.sh`, which also applies their migrations to dev. To run a
+script against the dev database, see "Running a script against the dev database" in `docs/dev-api.md`.
+
+### Database setup (to run the API locally)
+
+Running the API on your machine needs a database of its own: a local Postgres in Docker (`docker-compose.yml`), never
+the shared one.
+
+**Prerequisite:** Docker Desktop (or any Docker engine with Compose).
+
+```bash
+# 1. Start Postgres (and Redis) in the background; the data lives in a Docker volume
+docker compose up -d
+
 cd apps/api
 npx prisma generate       # generates the Prisma client
-npm run db:migrate        # creates tables in Railway Postgres
-npm run db:seed           # populates built-in scenarios from YAML files
+
+# 2. Create the tables, as the database owner (SCHEMA_DATABASE_URL in apps/api/.env)
+npx prisma migrate deploy
+
+# 3. Create the restricted role the API connects as, so row-level security applies (docs/tenant-isolation.md).
+#    Pick a password of 32+ characters and keep it for DATABASE_URL.
+APP_ROLE_PASSWORD=<password> npx ts-node -r tsconfig-paths/register scripts/create-app-role.ts --confirm-host localhost:5432
+
+# 4. Load the built-in scenarios from the YAML files
+npm run db:seed
 cd ../..
 ```
 
-> **Note:** Run these from inside `apps/api/`, not the monorepo root.
+`apps/api/.env` then holds the two connections (`apps/api/.env.example` has them):
+
+```
+DATABASE_URL=postgresql://ld_app:<password>@localhost:5432/interview_differently
+SCHEMA_DATABASE_URL=postgresql://id_user:id_password@localhost:5432/interview_differently
+```
+
+> **Note:** Run these from inside `apps/api/`, not the monorepo root. Run step 3 again (without `--rotate`, so the
+> password is kept) after pulling a migration that adds a database function the API calls. New migrations you write are
+> created with `npx prisma migrate dev --create-only` against this local database only.
 
 **Start everything:**
 
@@ -55,7 +83,7 @@ API runs at http://localhost:3000/api/health
 cd apps/api && npm run db:reset
 ```
 
-This wipes all data and re-seeds from the static YAML files in `apps/api/prisma/scenarios/`. The YAML files are the source of truth for built-in scenarios.
+This wipes all data and re-seeds from the static YAML files in `apps/api/prisma/scenarios/`. The YAML files are the source of truth for built-in scenarios. It runs against your local Docker database only. Run step 3 of Database setup again afterwards (the role survives, and running it again restores its grants on the new tables).
 
 > **After a wipe: re-render avatar media.** The reset drops the `ScenarioMediaAsset` rows so every immersive scenario node will need its D-ID clip re-rendered before students can play it. Two ways:
 >
@@ -189,8 +217,9 @@ VITE_API_URL=http://localhost:3000
 ```
 PORT=3000
 FRONTEND_URL=http://localhost:5173
-DATABASE_URL=postgresql://...            # from Railway → PostgreSQL → Connect
-REDIS_URL=redis://...                    # from Railway → Redis → Connect (Phase 4+)
+DATABASE_URL=postgresql://ld_app:...@localhost:5432/interview_differently   # the restricted role (see Database setup)
+SCHEMA_DATABASE_URL=postgresql://id_user:id_password@localhost:5432/interview_differently   # the owner, local Docker
+REDIS_URL=redis://localhost:6379         # local Docker
 ANTHROPIC_API_KEY=your_key_here          # from console.anthropic.com (Phase 4+)
 CLERK_SECRET_KEY=your_key_here           # from dashboard.clerk.com (Phase 4+)
 ```

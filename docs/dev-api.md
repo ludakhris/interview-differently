@@ -21,12 +21,39 @@ environment or per-PR copies.
 ## Set it up (once)
 
 1. `apps/api/scripts/railway-dev-vars.sh` shows what it would set; `--apply` sets the variables from your local
-   `apps/api/.env` (its `DATABASE_URL` must be the restricted role). It prints names, never values, and refuses a live Clerk key or a non-dev database.
+   `apps/api/.env`. It prints names, never values, and refuses a live Clerk key. The database URLs do not come from your
+   `.env` (your local database is your own Docker Postgres): `SCHEMA_DATABASE_URL` is a reference to the dev Postgres,
+   and `DATABASE_URL` (the restricted role) is kept as it is on `api-dev`. To set it the first time, or after rotating
+   the role's password, pass `DEV_APP_ROLE_PASSWORD=<password>` to the script.
    Add `--with-storage-and-email` only if you accept dev writing to those services.
 2. Deploy: `apps/api/scripts/deploy-dev.sh`.
 3. Check: `curl https://<domain>/api/health`.
 
-The shared dev database means branches share migrations, as they do for local work today.
+The shared dev database means branches deployed to `api-dev` share migrations. It has no public address, so nothing
+outside Railway connects to it: migrations reach it only through `api-dev`'s start command (`prisma migrate deploy`)
+when you deploy, and local work uses its own Docker database (`DEVELOPMENT.md`).
+
+## Running a script against the dev database
+
+Hand-run scripts (the demo seeds, `create-app-role.ts`, and the like) run inside the `api-dev` container, which reaches
+the dev database on Railway's private network. The container holds the code you last deployed with `deploy-dev.sh`,
+so deploy the branch that has the script first (for example the DSU demo seed, which lives on its own branch).
+
+```bash
+railway ssh -s api-dev -e dev -- sh -c 'npm run seed:adaptive-demo -- --allow-host postgres.railway.internal' </dev/null
+```
+
+The command runs in `/app`. `railway ssh -s api-dev -e dev` on its own opens a shell there instead.
+
+The scripts connect as the owner (`SCHEMA_DATABASE_URL`, already set on `api-dev`). Their host check sees
+`postgres.railway.internal`, which is production's private host too, so the `-e dev` on `railway ssh` is what keeps
+you on dev: never run these in a shell on the production service.
+
+To create or refresh the restricted role on dev (after a migration adds a function the API calls, or after a reset):
+
+```bash
+APP_ROLE_PASSWORD=<dev role password> npx ts-node -r tsconfig-paths/register scripts/create-app-role.ts --confirm-host postgres.railway.internal:5432
+```
 
 ## Vercel previews
 
@@ -56,10 +83,9 @@ API service (Railway variables of `api-dev` and of the production API; nothing o
 
 ## LTI on dev and local
 
-The local API and `api-dev` share one database, so they share the stored tool connections, and a stored address can only
-point at one of them. To avoid breaking one for the other, outside production the API ignores the stored login, launch and
-key addresses of Interview Differently's own connection (the one whose client id is the platform's own) and uses its own
-address (`LTI_API_BASE`) instead. Third-party connections, and every connection in production, use what is stored. The
+The local API once shared the dev database with `api-dev`, and a stored address can only point at one API. So outside
+production the API ignores the stored login, launch and key addresses of Interview Differently's own connection (the
+one whose client id is the platform's own) and uses its own address (`LTI_API_BASE`) instead. Third-party connections, and every connection in production, use what is stored. The
 Tools page shows a warning on that connection when this applies, because editing its addresses there has no effect
 outside production. The switch is the environment name that `GET /health` reports.
 
