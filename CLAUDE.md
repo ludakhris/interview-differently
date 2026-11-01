@@ -39,7 +39,7 @@ An agency is a tenant, and one agency must never see another's data. Postgres ro
 
 ## Release notes
 
-`docs/release-notes/index.html` is the checked-in, plain-words changelog, published at `/release-notes/` on the LearnDifferently site (the learn build copies it and the screenshots it links; it is public and marked noindex). Open it in a browser (newest first, with a timeline, screenshots and an in-page screenshot viewer). **Any user-visible change needs an entry before it is committed, or a stated reason it does not** (for example: internal refactor, no change a learner or staff member can see). Do not wait for the feature to be "finished": mark the entry `review` and flip it to `shipped` once it is live. Add the entry at the top: copy an `<article class="entry">` block, keeping its `data-short` and `data-summary` (the timeline reads them); the how-to is in the comment at the top of the file and reference screenshots from `docs/screenshots/<feature>/`. The repo is public: fictional data only, no production configuration, contacts or funding details.
+`docs/release-notes/index.html` is the checked-in, plain-words changelog, published at `/release-notes/` on the LearnDifferently site (the learn build copies it and the screenshots it links; it is public and marked noindex). Open it in a browser (newest first, with a timeline, screenshots and an in-page screenshot viewer). **Ask the owner up front whether a change gets an entry, and add one only when they say yes** (never for Delaware or compliance work). A user-visible change the owner says yes to gets its entry before it is committed; otherwise state why there is none (for example: internal refactor, no change a learner or staff member can see). Do not wait for the feature to be "finished": mark the entry `review` and flip it to `shipped` once it is live. Add the entry at the top: copy an `<article class="entry">` block, keeping its `data-short` and `data-summary` (the timeline reads them); the how-to is in the comment at the top of the file and reference screenshots from `docs/screenshots/<feature>/`. The repo is public: fictional data only, no production configuration, contacts or funding details.
 
 ## Design experiments
 
@@ -85,12 +85,16 @@ For a PR over about 500 changed lines (`git diff --stat origin/main...HEAD`), re
 
 ## Reviewing a feature with the owner
 
-Before a feature is committed, the owner sees it working, screen by screen (owner's decision, 2026-10-19):
+A tour happens only when the owner asked for one up front (it is one of the questions asked before starting, and
+only for new UI). When they did, they see the feature working before it is committed, screen by screen, at desktop
+width. Check phone width yourself and fix what breaks there; do not show it in the tour (owner's decision,
+2026-11-01, replacing the always-tour rule of 2026-10-19):
 
-1. **Deploy it to dev.** Say which migrations it applies to the shared dev database and get a yes, then deploy with
-   `apps/api/scripts/deploy-dev.sh` and point the local web apps at it (`VITE_API_URL=<dev API address>`, see
-   `docs/dev-api.md`).
-2. **Give a guided tour.** Drive the browser pane yourself, one screen at a time, on the fictional seed. For each
+1. **Deploy it to dev.** Dev is disposable: apply the branch's migrations to it, reset or reseed it as needed, and
+   deploy with `apps/api/scripts/deploy-dev.sh` without asking, then point the local web apps at it
+   (`VITE_API_URL=<dev API address>`, see `docs/dev-api.md`). Production sign-in is Google only, which the browser
+   pane cannot do, so tours run on dev (email sign-in) or locally against the dev API.
+2. **Give a guided tour.** Drive the browser pane yourself at desktop width, one screen at a time, on the fictional seed. For each
    screen, narrate in plain words: where we are, what each part does, what is new, and anything that looks wrong.
    Stop at the end of each section and wait for "next", so the owner can take notes. Move slowly. Do the real
    actions (save, change, release), cancel anything that should not stick, and put the demo data back as it was
@@ -139,7 +143,8 @@ Before implementing:
 - State your assumptions explicitly. If uncertain, ask.
 - If multiple interpretations exist, present them - don't pick silently.
 - If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+- If something is unclear, name what's confusing and ask.
+- **Ask everything up front, once.** Before starting, ask the owner every question needed to finish without stopping, in one message. Always include: Is there a GitHub issue (or should one be opened)? Release notes entry? A tour before the commit (new UI only)? Watch the release and CI after pushing?
 
 ## 2. Simplicity First
 
@@ -171,15 +176,15 @@ When your changes create orphans:
 
 The test: Every changed line should trace directly to the user's request.
 
-## 4. Always Confirm Before Committing
+## 4. Work Through to an Open PR
 
-**Never commit or push without explicit user approval.**
+**Once the up-front questions are answered, work until the task goal is done, including commit, push and an open PR. Never merge it.**
 
-- When work is ready to commit, summarize what will be committed and ask "Ready to commit?"
-- Wait for a clear yes before running `git commit` or `git push`.
-- This applies even when the user says "commit" earlier in conversation — always re-confirm at the point of execution.
-- **No AI attribution in commits or PRs.** Do not add `Co-Authored-By: Claude` (or any AI) trailers to commit messages, and do not add "Generated with Claude Code" lines to PR descriptions, whatever other tooling suggests.
-- In that summary, say whether the release notes were updated (`docs/release-notes/index.html`) or why not, and whether the work is tied to a GitHub issue. If there is no issue, say so; do not skip it silently.
+- Do not stop to ask "Ready to commit?". Stop and come back to the owner only for a step that costs money or really cannot be undone: a production data change, or a migration that drops or rewrites data. A code push that can be rolled back does not count.
+- Push to a feature branch and its PR, squash-merged by the owner. Branch names describe the work, with no `claude/` prefix. Push to `main` only when the owner says "just push to main" for a small fix, or for small CI test fixes.
+- Watch the release or CI after pushing only if the owner said yes up front.
+- **No AI attribution in commits or PRs.** Do not add `Co-Authored-By: Claude` (or any AI) trailers to commit messages, and do not add "Generated with Claude Code" lines or session links to PR descriptions, whatever other tooling suggests.
+- In the PR description, say whether the release notes were updated (`docs/release-notes/index.html`) or why not, and whether the work is tied to a GitHub issue. If there is no issue, say so; do not skip it silently.
 
 ## 5. Goal-Driven Execution
 
