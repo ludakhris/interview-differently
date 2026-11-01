@@ -38,10 +38,10 @@ the dev database on Railway's private network. The container holds the code you 
 so deploy the branch that has the script first (for example the DSU demo seed, which lives on its own branch).
 
 ```bash
-railway ssh -s api-dev -e dev
-# then, inside the container (in /app):
-npm run seed:adaptive-demo -- --allow-host postgres.railway.internal
+railway ssh -s api-dev -e dev -- sh -c 'npm run seed:adaptive-demo -- --allow-host postgres.railway.internal' </dev/null
 ```
+
+The command runs in `/app`. `railway ssh -s api-dev -e dev` on its own opens a shell there instead.
 
 The scripts connect as the owner (`SCHEMA_DATABASE_URL`, already set on `api-dev`). Their host check sees
 `postgres.railway.internal`, which is production's private host too, so the `-e dev` on `railway ssh` is what keeps

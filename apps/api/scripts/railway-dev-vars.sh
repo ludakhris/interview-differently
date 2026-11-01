@@ -16,6 +16,7 @@
 # Variables that are not in your .env are skipped and listed at the end.
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
+[ -f apps/api/.env ] || { echo "apps/api/.env not found: this script copies your dev keys from it. Stopping." >&2; exit 1; }
 
 ENVIRONMENT=dev
 SERVICE=api-dev
