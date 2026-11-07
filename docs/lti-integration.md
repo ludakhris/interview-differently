@@ -292,12 +292,13 @@ the project), which never throws and drops what it cannot trust. The tool re-val
 
 Schema v1, a JSON object, every field optional except `name`; unknown fields are dropped:
 
-| Field                                                                      | Rule                                                                                                                                |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                                                                     | string, trimmed, 1-60 chars, no control characters or `<` `>`. Missing or invalid: the whole brand is absent                        |
-| `logoUrl`                                                                  | `https` URL, or `http` only for host `localhost` / `127.0.0.1`; at most 300 chars; no credentials; no whitespace or `" ' ( ) < > \` |
-| `scheme`                                                                   | `"light"` or `"dark"`                                                                                                               |
-| `primary`, `accent`, `surface`, `surfaceAlt`, `text`, `textSoft`, `border` | exactly `#rrggbb` (`/^#[0-9a-fA-F]{6}$/`), lowercased                                                                               |
+| Field                                                                      | Rule                                                                                                                                                                    |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                                                                     | string, trimmed, 1-60 chars, no control characters or `<` `>`. Missing or invalid: the whole brand is absent                                                            |
+| `logoUrl`                                                                  | `https` URL, or `http` only for host `localhost` / `127.0.0.1`; at most 300 chars; no credentials; no whitespace or `" ' ( ) < > \`                                     |
+| `scheme`                                                                   | `"light"` or `"dark"`                                                                                                                                                   |
+| `primary`, `accent`, `surface`, `surfaceAlt`, `text`, `textSoft`, `border` | exactly `#rrggbb` (`/^#[0-9a-fA-F]{6}$/`), lowercased                                                                                                                   |
+| `font`                                                                     | one of `BRAND_FONTS` in `lti-brand.ts` (Inter, Manrope, Open Sans, Lato, Roboto, Source Sans 3, Montserrat), exactly as written; the web app loads it from Google Fonts |
 
 An invalid optional field is dropped on its own; the rest of the brand survives.
 
@@ -305,6 +306,11 @@ The tool carries the sanitized brand inside the signed LTI session (optional `br
 verifies, one whose brand is not already in sanitized form is refused with 401). `GET /api/lti/tool/session` (LTI session
 required; allowlisted for GET only) answers `{ brand: <brand or null>, ref }` so the web app can theme the player.
 Typed placeholder pages (immersive scenarios without an interviewer) ignore the brand.
+
+A brand sets every colour the web app's screens use, so nothing of the standalone Interview Differently look shows
+in a tenant's launch: a `light` brand starts from neutral light defaults and a `dark` brand (or colours with no
+scheme) from the dark look Interview Differently had before its Nov 2026 rebrand, for whatever the brand leaves out
+(`apps/web/src/lib/brand.ts`). A launch with no brand, or a brand that names only itself, wears the standalone look.
 
 ## Key fetching
 

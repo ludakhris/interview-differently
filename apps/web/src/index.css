@@ -54,8 +54,8 @@
 
   --color-border: rgb(var(--ld-border, 227 229 234));
 
-  --font-body: Inter, sans-serif;
-  --font-display: Inter, sans-serif;
+  --font-body: var(--ld-font, Inter), sans-serif;
+  --font-display: var(--ld-font, Inter), sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --shadow-card: 0 16px 34px -16px rgba(20, 33, 58, 0.35);
@@ -81,7 +81,7 @@
 }
 
 @utility font-display {
-  font-family: var(--font-display);
+  font-family: var(--ld-font, Inter), sans-serif;
 }
 
 @utility animate-fade-in {
@@ -130,6 +130,33 @@
   color-scheme: dark;
   color: rgb(var(--ld-text));
 }
+/* A brand's typeface (BRAND_FONTS in src/lib/brand.ts): text and headings inside the LTI wrapper. */
+[data-lti-font='Inter'] {
+  --ld-font: 'Inter';
+}
+[data-lti-font='Manrope'] {
+  --ld-font: 'Manrope';
+}
+[data-lti-font='Open Sans'] {
+  --ld-font: 'Open Sans';
+}
+[data-lti-font='Lato'] {
+  --ld-font: 'Lato';
+}
+[data-lti-font='Roboto'] {
+  --ld-font: 'Roboto';
+}
+[data-lti-font='Source Sans 3'] {
+  --ld-font: 'Source Sans 3';
+}
+[data-lti-font='Montserrat'] {
+  --ld-font: 'Montserrat';
+}
+/* var() is resolved here, inside the wrapper, so the brand's --ld-font applies. */
+[data-lti-font] {
+  font-family: var(--ld-font, Inter), sans-serif;
+}
+
 [data-lti-brand='light'] .sim-dark,
 [data-lti-brand='dark'] .sim-dark {
   --ld-surface: inherit;
@@ -171,7 +198,7 @@
   }
 
   body {
-    font-family: var(--font-body);
+    font-family: var(--ld-font, Inter), sans-serif;
     background: rgb(var(--ld-surface, 246 246 244));
     color: rgb(var(--ld-text, 20 33 58));
     -webkit-font-smoothing: antialiased;
@@ -184,7 +211,7 @@
   h4,
   h5,
   h6 {
-    font-family: var(--font-display);
+    font-family: var(--ld-font, Inter), sans-serif;
   }
 }
 

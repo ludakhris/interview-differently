@@ -29,7 +29,19 @@ export interface Brand {
   text?: string
   textSoft?: string
   border?: string
+  font?: string
 }
+
+/** The typefaces a brand may name: the same fixed list as BRAND_FONTS in the API's lti-brand.ts. */
+export const BRAND_FONTS = [
+  'Inter',
+  'Manrope',
+  'Open Sans',
+  'Lato',
+  'Roboto',
+  'Source Sans 3',
+  'Montserrat',
+] as const
 
 export interface AppliedBrand {
   /** `--ld-*` variables for the LTI root element; empty when nothing differs from the defaults. */
@@ -41,6 +53,8 @@ export interface AppliedBrand {
   scheme: BrandScheme
   /** The tenant accent as `#rrggbb`, for the places that take a colour prop (track accents). */
   accent: string | null
+  /** The tenant's typeface, one of BRAND_FONTS; null keeps the standalone fonts. */
+  font: string | null
 }
 
 export const NO_BRAND: AppliedBrand = {
@@ -49,6 +63,7 @@ export const NO_BRAND: AppliedBrand = {
   logoUrl: null,
   scheme: 'light',
   accent: null,
+  font: null,
 }
 
 const HEX = /^#[0-9a-fA-F]{6}$/
@@ -177,6 +192,10 @@ export function applyBrand(input: unknown): AppliedBrand {
   if (!name) return NO_BRAND
 
   const logoUrl = cleanLogoUrl(src.logoUrl)
+  const font =
+    typeof src.font === 'string' && (BRAND_FONTS as readonly string[]).includes(src.font)
+      ? src.font
+      : null
   const primary = cleanHex(src.primary)
   const accent = cleanHex(src.accent)
   const surfaceIn = cleanHex(src.surface)
@@ -190,7 +209,7 @@ export function applyBrand(input: unknown): AppliedBrand {
 
   // No colours and no scheme: the tenant only named itself, so the screens keep the standalone look.
   if (!anyColour && src.scheme !== 'light' && src.scheme !== 'dark') {
-    return { cssVars: {}, name, logoUrl, scheme: 'light', accent: null }
+    return { cssVars: {}, name, logoUrl, scheme: 'light', accent: null, font }
   }
   // Colours without a scheme have always meant a dark page.
   const scheme: BrandScheme = src.scheme === 'light' ? 'light' : 'dark'
@@ -256,5 +275,5 @@ export function applyBrand(input: unknown): AppliedBrand {
 
   for (const [k, v] of Object.entries(light ? LIGHT_STATUS : DARK_STATUS)) set(k, hex(v))
 
-  return { cssVars: vars, name, logoUrl, scheme, accent: accent ? toHex(accent) : null }
+  return { cssVars: vars, name, logoUrl, scheme, accent: accent ? toHex(accent) : null, font }
 }

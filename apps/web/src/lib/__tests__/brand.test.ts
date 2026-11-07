@@ -116,6 +116,16 @@ describe('applyBrand', () => {
     expect(b.cssVars['--ld-red-400']).toBeDefined()
   })
 
+  it('keeps a font only from the allowed list, and never as a CSS variable', () => {
+    expect(applyBrand({ ...ok, font: 'Open Sans' }).font).toBe('Open Sans')
+    expect(applyBrand({ ...ok, font: 'Open Sans', scheme: 'light' }).font).toBe('Open Sans')
+    for (const font of ['open sans', 'Comic Sans MS', "Lato'; color:red", 'url(x)', 3]) {
+      expect(applyBrand({ ...ok, font }).font).toBeNull()
+    }
+    const vars = applyBrand({ ...ok, scheme: 'light', font: 'Lato' }).cssVars
+    for (const v of Object.values(vars)) expect(v).toMatch(/^[\d ]+$/)
+  })
+
   it('picks a readable text colour for the primary button', () => {
     expect(applyBrand({ ...ok, primary: '#ffee00' }).cssVars['--ld-on-primary']).toBe('17 17 17')
     expect(applyBrand({ ...ok, primary: '#102030' }).cssVars['--ld-on-primary']).toBe('255 255 255')
