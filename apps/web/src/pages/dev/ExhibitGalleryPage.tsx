@@ -198,8 +198,8 @@ function Section({ id, kind, blurb, children }: SectionProps) {
   return (
     <section id={id} className="space-y-3">
       <header>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">{kind}</p>
-        <p className="mt-1 text-[13px] text-white/70 leading-relaxed max-w-2xl">{blurb}</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40">{kind}</p>
+        <p className="mt-1 text-[13px] text-ink/70 leading-relaxed max-w-2xl">{blurb}</p>
       </header>
       <div data-screenshot-target={id}>{children}</div>
     </section>
@@ -208,16 +208,16 @@ function Section({ id, kind, blurb, children }: SectionProps) {
 
 export function ExhibitGalleryPage() {
   return (
-    <div className="min-h-screen bg-black text-cream-light">
+    <div className="min-h-screen bg-surface text-fg">
       <div className="max-w-3xl mx-auto px-6 py-12 space-y-12">
         <header>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40">
             Exhibit library
           </p>
           <h1 className="mt-1 text-[28px] font-display font-extrabold leading-tight">
             Visual reference — every exhibit subtype
           </h1>
-          <p className="mt-3 text-[14px] text-white/65 leading-relaxed max-w-2xl">
+          <p className="mt-3 text-[14px] text-ink/65 leading-relaxed max-w-2xl">
             Each block below is one of the five exhibit subtypes available to case authors. Pick a
             subtype based on the kind of evidence you want the candidate to read — they all share
             the same chrome (title, caption, footnote) so cases feel consistent across authors.
@@ -264,7 +264,7 @@ export function ExhibitGalleryPage() {
           <SegmentationMatrix exhibit={SAMPLE_MATRIX} />
         </Section>
 
-        <footer className="pt-6 border-t border-white/10 text-[11px] text-white/35 leading-relaxed">
+        <footer className="pt-6 border-t border-edge/10 text-[11px] text-ink/35 leading-relaxed">
           Reference page for the scenario-author userguide. Renders the live components from{' '}
           <code className="font-mono">apps/web/src/components/exhibits/</code> — any regression in a
           subtype shows up here immediately.

@@ -50,17 +50,17 @@ export function AnalyticsTabs({ institutionId, active, available }: AnalyticsTab
   }, [location.search])
 
   return (
-    <div className="border-b border-white/10 mb-6">
+    <div className="border-b border-edge/10 mb-6">
       <nav className="flex flex-wrap items-center gap-x-1" aria-label="Analytics sections">
         {ALL_TABS.map((tab) => {
           const isActive = tab.key === active
           const isDisabled = !available.includes(tab.key)
           const className = `px-4 py-2.5 text-[13px] font-semibold transition-colors border-b-2 -mb-px ${
             isActive
-              ? 'text-cream-light border-green'
+              ? 'text-fg border-primary'
               : isDisabled
-                ? 'text-white/20 border-transparent cursor-not-allowed'
-                : 'text-slate-mid hover:text-cream-light border-transparent'
+                ? 'text-ink/20 border-transparent cursor-not-allowed'
+                : 'text-slate-mid hover:text-fg border-transparent'
           }`
           if (isDisabled) {
             return (

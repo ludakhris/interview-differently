@@ -33,7 +33,7 @@ export function LtiNav({ trackLabel, stepLabel }: { trackLabel?: string; stepLab
         </span>
       ) : (
         <span className="font-display font-extrabold text-[17px] text-fg tracking-tight">
-          Interview<span className="text-green-light">Differently</span>
+          Interview<span className="text-accent">Differently</span>
         </span>
       )}
       <span className="flex items-center gap-4">

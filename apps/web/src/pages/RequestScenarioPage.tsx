@@ -17,9 +17,9 @@ const TRACKS: Array<{ value: string; label: string }> = [
 ]
 
 const inputCls =
-  'w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[14px] text-cream-light placeholder:text-white/25 focus:outline-hidden focus:border-white/30 transition-colors'
-const labelCls = 'block text-[12px] font-bold uppercase tracking-widest text-white/60 mb-1.5'
-const helpCls = 'text-[12px] text-white/35 mb-2 leading-relaxed'
+  'w-full bg-surface-alt border border-edge/10 rounded-xl px-4 py-3 text-[14px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30 transition-colors'
+const labelCls = 'block text-[12px] font-bold uppercase tracking-widest text-ink/60 mb-1.5'
+const helpCls = 'text-[12px] text-ink/35 mb-2 leading-relaxed'
 const requiredMark = (
   <span className="text-amber-400 ml-1" aria-label="required">
     *
@@ -62,12 +62,12 @@ export function RequestScenarioPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-black flex flex-col">
+      <div className="min-h-screen bg-surface flex flex-col">
         <Nav />
         <div className="flex-1 flex items-center justify-center px-6 py-12">
           <div className="max-w-lg text-center animate-fade-in">
             <div className="text-[48px] mb-4">✓</div>
-            <h1 className="font-display font-extrabold text-[28px] text-cream-light mb-3">
+            <h1 className="font-display font-extrabold text-[28px] text-fg mb-3">
               Request received
             </h1>
             <p className="text-[15px] text-slate-light leading-relaxed mb-8">
@@ -76,7 +76,7 @@ export function RequestScenarioPage() {
             </p>
             <button
               onClick={() => navigate('/dashboard')}
-              className="px-6 py-2.5 rounded-lg bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[14px] font-semibold text-white transition-colors"
+              className="px-6 py-2.5 rounded-lg bg-primary hover:bg-accent text-[14px] font-semibold text-ink transition-colors"
             >
               Back to scenarios
             </button>
@@ -89,21 +89,21 @@ export function RequestScenarioPage() {
   // ── Form ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav />
 
       <div className="max-w-2xl mx-auto px-6 py-10">
         <p className="text-[12px] font-medium tracking-widest uppercase text-slate-mid mb-2">
           Custom scenario
         </p>
-        <h1 className="font-display font-extrabold text-[32px] text-cream-light tracking-tight mb-3">
+        <h1 className="font-display font-extrabold text-[32px] text-fg tracking-tight mb-3">
           Help us build your simulation
         </h1>
         <p className="text-[14px] text-slate-light leading-relaxed mb-2">
           The more specific you are, the better the scenario. Only the first two questions are
           required — fill what you can, we'll come back with follow-up questions if we need more.
         </p>
-        <p className="text-[12px] text-white/30 mb-10">
+        <p className="text-[12px] text-ink/30 mb-10">
           Takes about 5 minutes. Fields marked {requiredMark} are required.
         </p>
 
@@ -282,7 +282,7 @@ export function RequestScenarioPage() {
           </div>
 
           {/* Contact */}
-          <div className="border-t border-white/10 pt-8">
+          <div className="border-t border-edge/10 pt-8">
             <p className={labelCls}>Contact (optional)</p>
             <p className={helpCls}>
               We sometimes have a quick follow-up question while building your scenario. No sales
@@ -324,14 +324,14 @@ export function RequestScenarioPage() {
             <button
               type="button"
               onClick={() => navigate('/dashboard')}
-              className="text-[13px] text-white/50 hover:text-white/70 transition-colors"
+              className="text-[13px] text-ink/50 hover:text-ink/70 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2.5 rounded-lg bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[14px] font-semibold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2.5 rounded-lg bg-primary hover:bg-accent text-[14px] font-semibold text-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? 'Submitting…' : 'Submit request'}
             </button>
@@ -367,10 +367,10 @@ function Field({
       {children}
       {example && (
         <details className="mt-2 group">
-          <summary className="text-[11px] text-white/30 hover:text-white/60 cursor-pointer select-none transition-colors">
+          <summary className="text-[11px] text-ink/30 hover:text-ink/60 cursor-pointer select-none transition-colors">
             Show example
           </summary>
-          <pre className="mt-2 text-[12px] text-white/40 leading-relaxed whitespace-pre-wrap font-mono bg-black/30 rounded-lg px-3 py-2 border border-white/5">
+          <pre className="mt-2 text-[12px] text-ink/40 leading-relaxed whitespace-pre-wrap font-mono bg-ink/30 rounded-lg px-3 py-2 border border-edge/5">
             {example}
           </pre>
         </details>

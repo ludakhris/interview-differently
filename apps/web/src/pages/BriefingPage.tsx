@@ -154,13 +154,13 @@ export function BriefingPage({
                   onClick={() => setNarrationMode(mode)}
                   className={`flex-1 flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
                     narrationMode === mode
-                      ? 'border-green/50 bg-green/5'
+                      ? 'border-primary/50 bg-primary/5'
                       : 'border-edge/10 hover:border-edge/20'
                   }`}
                 >
                   <span
                     className={`w-4 h-4 rounded-full border-2 shrink-0 transition-colors ${
-                      narrationMode === mode ? 'border-green bg-green' : 'border-edge/30'
+                      narrationMode === mode ? 'border-primary bg-primary' : 'border-edge/30'
                     }`}
                   />
                   <div>
@@ -197,17 +197,17 @@ export function BriefingPage({
           <button
             onClick={handleBegin}
             disabled={ltiMode && scenario.mode === 'immersive' && !isVoiceInterview(scenario)}
-            className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors tracking-wide disabled:opacity-40 disabled:cursor-not-allowed"
+            className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors tracking-wide disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {scenario.mode === 'immersive' ? 'Begin Interview' : 'Begin Simulation'}
           </button>
         </div>
 
         {showSignInPrompt && (
-          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="fixed inset-0 bg-ink/70 z-50 flex items-center justify-center p-4 animate-fade-in">
             <div className="bg-surface-alt border border-edge/10 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
-              <div className="w-10 h-10 rounded-full bg-green/10 border border-green/20 flex items-center justify-center mx-auto mb-5">
-                <span className="text-green text-[18px]">◈</span>
+              <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-5">
+                <span className="text-primary text-[18px]">◈</span>
               </div>
               <h2 className="font-display font-bold text-[20px] text-fg mb-2">
                 Ready to continue?
@@ -220,7 +220,7 @@ export function BriefingPage({
                 onClick={() =>
                   navigate(`/sign-up?redirect_url=${encodeURIComponent(immersiveUrl)}`)
                 }
-                className="w-full bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] py-3 rounded-lg transition-colors mb-3"
+                className="w-full bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] py-3 rounded-lg transition-colors mb-3"
               >
                 Create free account
               </button>

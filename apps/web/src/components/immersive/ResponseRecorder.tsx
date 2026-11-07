@@ -157,11 +157,11 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
       <div className="p-5 space-y-4">
         {/* Video preview area */}
         {state === 'recording' && mode === 'video' && (
-          <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
+          <div className="relative rounded-lg overflow-hidden bg-surface aspect-video">
             <video ref={videoPreviewRef} className="w-full h-full object-cover" playsInline muted />
-            <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/60 rounded-full px-2.5 py-1">
+            <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-ink/60 rounded-full px-2.5 py-1">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-[12px] text-white font-mono">{formatTime(elapsed)}</span>
+              <span className="text-[12px] text-ink font-mono">{formatTime(elapsed)}</span>
             </div>
           </div>
         )}
@@ -204,7 +204,7 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
               <button
                 onClick={startRecording}
                 disabled={disabled}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-green hover:bg-green/90 text-on-primary text-[13px] font-medium transition-colors disabled:opacity-40"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-on-primary text-[13px] font-medium transition-colors disabled:opacity-40"
               >
                 <span className="w-2 h-2 rounded-full bg-on-primary" />
                 Start recording
@@ -224,7 +224,7 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
           {state === 'recording' && (
             <button
               onClick={stopRecording}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[13px] font-medium transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-on-primary text-[13px] font-medium transition-colors"
             >
               <span className="w-2 h-2 rounded-xs bg-white" />
               Stop recording
@@ -235,7 +235,7 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
             <>
               <button
                 onClick={handleSubmit}
-                className="flex-1 py-2.5 rounded-lg bg-green hover:bg-green/90 text-on-primary text-[13px] font-medium transition-colors"
+                className="flex-1 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-on-primary text-[13px] font-medium transition-colors"
               >
                 Submit response
               </button>

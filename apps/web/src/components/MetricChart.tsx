@@ -2,10 +2,10 @@ import type { ChartConfig } from '@id/types'
 
 const palette = {
   red: {
-    line: '#ef4444',
+    line: '#c62828',
     gradientStart: 'rgba(239,68,68,0.22)',
     gradientEnd: 'rgba(239,68,68,0)',
-    dot: '#ef4444',
+    dot: '#c62828',
     value: 'rgb(var(--ld-red-400, 248 113 113))',
     annotation: 'rgba(239,68,68,0.6)',
   },

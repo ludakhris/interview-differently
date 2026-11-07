@@ -21,6 +21,7 @@ import {
   type InstitutionDetail,
 } from '@/services/institutionsService'
 import { listCohortTools, setCohortTool, type CohortToolState } from '@/services/toolsService'
+import { AdminCrumb } from '@/pages/AdminToolboxPage'
 import { TOOL_META } from '@id/types'
 
 /**
@@ -84,14 +85,15 @@ export function AdminInstitutionsPage() {
   }, [selectedId, refreshDetail])
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav />
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="mb-8">
-          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+          <AdminCrumb />
+          <p className="font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
             Admin
           </p>
-          <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
+          <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
             Institutions &amp; Cohorts
           </h1>
           <p className="text-[13px] text-slate-mid mt-1">
@@ -117,7 +119,7 @@ export function AdminInstitutionsPage() {
               {isAdmin && (
                 <button
                   onClick={() => setShowCreate((v) => !v)}
-                  className="text-[12px] font-semibold text-green-light hover:text-green transition-colors"
+                  className="text-[12px] font-semibold text-accent hover:text-primary transition-colors"
                 >
                   {showCreate ? 'Cancel' : '+ New'}
                 </button>
@@ -152,11 +154,11 @@ export function AdminInstitutionsPage() {
                       onClick={() => setSelectedId(inst.id)}
                       className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${
                         selectedId === inst.id
-                          ? 'bg-white/10 border border-white/15'
-                          : 'border border-transparent hover:bg-white/5'
+                          ? 'bg-ink/10 border border-edge/15'
+                          : 'border border-transparent hover:bg-ink/5'
                       }`}
                     >
-                      <p className="text-[13px] font-semibold text-cream-light">{inst.name}</p>
+                      <p className="text-[13px] font-semibold text-fg">{inst.name}</p>
                       <p className="text-[11px] text-slate-mid">
                         {inst.emailDomain && <>{inst.emailDomain} · </>}
                         {inst.cohortCount} cohort{inst.cohortCount !== 1 ? 's' : ''} ·{' '}
@@ -172,7 +174,7 @@ export function AdminInstitutionsPage() {
           {/* ── Detail pane ── */}
           <div>
             {!selectedId ? (
-              <div className="bg-[#111111] rounded-xl border border-white/10 px-6 py-12 text-center">
+              <div className="bg-surface-alt rounded-xl border border-edge/10 px-6 py-12 text-center">
                 <p className="text-[13px] text-slate-mid">
                   Select an institution to manage its cohorts.
                 </p>
@@ -238,22 +240,22 @@ function NewInstitutionForm({
           setSubmitting(false)
         }
       }}
-      className="bg-[#111111] rounded-xl border border-white/10 p-3 mb-3 space-y-2"
+      className="bg-surface-alt rounded-xl border border-edge/10 p-3 mb-3 space-y-2"
     >
       <input
         required
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Institution name"
-        className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-[13px] text-cream-light placeholder:text-white/25 focus:outline-hidden focus:border-white/30"
+        className="w-full bg-surface border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30"
       />
       <input
         value={domain}
         onChange={(e) => setDomain(e.target.value)}
         placeholder="Email domain (optional, e.g. harvard.edu)"
-        className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-[13px] text-cream-light placeholder:text-white/25 focus:outline-hidden focus:border-white/30"
+        className="w-full bg-surface border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30"
       />
-      <p className="text-[11px] text-white/40 leading-relaxed px-1">
+      <p className="text-[11px] text-ink/40 leading-relaxed px-1">
         Leave blank if students don't share an email domain — they'll join via the cohort key
         instead.
       </p>
@@ -262,14 +264,14 @@ function NewInstitutionForm({
         <button
           type="button"
           onClick={onCancel}
-          className="text-[12px] text-slate-mid hover:text-cream-light"
+          className="text-[12px] text-slate-mid hover:text-fg"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={submitting}
-          className="px-3 py-1.5 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white disabled:opacity-50"
+          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink disabled:opacity-50"
         >
           {submitting ? 'Creating…' : 'Create'}
         </button>
@@ -298,10 +300,10 @@ function InstitutionDetailView({
   const [expandedCohort, setExpandedCohort] = useState<string | null>(null)
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
+    <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
       <div className="flex items-start justify-between mb-6 gap-4">
         <div>
-          <h2 className="font-display font-bold text-[18px] text-cream-light">{detail.name}</h2>
+          <h2 className="font-display font-bold text-[18px] text-fg">{detail.name}</h2>
           <p className="text-[12px] text-slate-mid">
             {detail.emailDomain ? (
               <>{detail.emailDomain} · </>
@@ -314,7 +316,7 @@ function InstitutionDetailView({
         <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={() => navigate(`/admin/institutions/${detail.id}/analytics`)}
-            className="text-[12px] font-semibold text-green-light hover:text-green transition-colors"
+            className="text-[12px] font-semibold text-accent hover:text-primary transition-colors"
           >
             View analytics →
           </button>
@@ -349,7 +351,7 @@ function InstitutionDetailView({
         <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Cohorts</h3>
         <button
           onClick={() => setShowNewCohort((v) => !v)}
-          className="text-[12px] font-semibold text-green-light hover:text-green transition-colors"
+          className="text-[12px] font-semibold text-accent hover:text-primary transition-colors"
         >
           {showNewCohort ? 'Cancel' : '+ New cohort'}
         </button>
@@ -423,22 +425,22 @@ function NewCohortForm({
           setSubmitting(false)
         }
       }}
-      className="bg-black rounded-lg border border-white/10 p-3 mb-3 space-y-2"
+      className="bg-surface rounded-lg border border-edge/10 p-3 mb-3 space-y-2"
     >
       <input
         required
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Cohort name (e.g. Fall 2026)"
-        className="w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-cream-light placeholder:text-white/25 focus:outline-hidden focus:border-white/30"
+        className="w-full bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30"
       />
       <input
         value={joinKey}
         onChange={(e) => setJoinKey(e.target.value)}
         placeholder="Join key (optional, for student self-join)"
-        className="w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-cream-light placeholder:text-white/25 focus:outline-hidden focus:border-white/30"
+        className="w-full bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30"
       />
-      <p className="text-[11px] text-white/40 leading-relaxed px-1">
+      <p className="text-[11px] text-ink/40 leading-relaxed px-1">
         Per-institution — other institutions can use the same key without colliding.
       </p>
       {err && <p className="text-[12px] text-red-400">{err}</p>}
@@ -446,14 +448,14 @@ function NewCohortForm({
         <button
           type="button"
           onClick={onCancel}
-          className="text-[12px] text-slate-mid hover:text-cream-light"
+          className="text-[12px] text-slate-mid hover:text-fg"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={submitting}
-          className="px-3 py-1.5 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white disabled:opacity-50"
+          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink disabled:opacity-50"
         >
           {submitting ? 'Creating…' : 'Create'}
         </button>
@@ -504,13 +506,13 @@ function CohortRow({
   }, [expanded, members, refreshMembers])
 
   return (
-    <div className="border border-white/10 rounded-lg overflow-hidden">
+    <div className="border border-edge/10 rounded-lg overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors text-left"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-ink/5 transition-colors text-left"
       >
         <div>
-          <p className="text-[13px] font-semibold text-cream-light">{cohort.name}</p>
+          <p className="text-[13px] font-semibold text-fg">{cohort.name}</p>
           <p className="text-[11px] text-slate-mid">
             {cohort.memberCount} member{cohort.memberCount !== 1 ? 's' : ''}
             {cohort.joinKey && (
@@ -525,7 +527,7 @@ function CohortRow({
       </button>
 
       {expanded && (
-        <div className="border-t border-white/10 p-4 bg-black">
+        <div className="border-t border-edge/10 p-4 bg-surface">
           <CohortToolsToggles getToken={getToken} cohortId={cohort.id} />
 
           <AddMemberForm
@@ -548,18 +550,18 @@ function CohortRow({
               {members.map((m) => (
                 <li
                   key={m.membershipId}
-                  className="flex items-center justify-between py-2 border-b border-white/5 last:border-0"
+                  className="flex items-center justify-between py-2 border-b border-edge/5 last:border-0"
                 >
                   <div>
-                    <p className="text-[13px] text-cream-light flex items-center gap-2">
+                    <p className="text-[13px] text-fg flex items-center gap-2">
                       {m.displayName ?? m.email ?? m.userId}
                       {m.role === 'institution-admin' && (
-                        <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-green/20 text-green-light">
+                        <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-primary/20 text-accent">
                           Cohort admin
                         </span>
                       )}
                       {m.role === 'admin' && (
-                        <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-white/10 text-white/60">
+                        <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-ink/10 text-ink/60">
                           Platform admin
                         </span>
                       )}
@@ -598,7 +600,7 @@ function CohortRow({
                             await notify(e instanceof Error ? e.message : 'Failed to update role')
                           }
                         }}
-                        className="text-[11px] text-slate-mid hover:text-green-light transition-colors"
+                        className="text-[11px] text-slate-mid hover:text-accent transition-colors"
                       >
                         {m.role === 'institution-admin' ? 'Remove admin' : 'Make cohort admin'}
                       </button>
@@ -609,7 +611,7 @@ function CohortRow({
                           `/admin/institutions/${institutionId}/students/${encodeURIComponent(m.userId)}`
                         )
                       }
-                      className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
+                      className="text-[11px] text-slate-mid hover:text-fg transition-colors"
                     >
                       View detail →
                     </button>
@@ -642,7 +644,7 @@ function CohortRow({
             </ul>
           )}
 
-          <div className="mt-4 pt-3 border-t border-white/5 flex justify-end">
+          <div className="mt-4 pt-3 border-t border-edge/5 flex justify-end">
             <button
               onClick={async () => {
                 if (
@@ -693,7 +695,7 @@ function CohortToolsToggles({
   }, [getToken, cohortId])
 
   return (
-    <div className="mb-4 pb-4 border-b border-white/5">
+    <div className="mb-4 pb-4 border-b border-edge/5">
       <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">Tools</p>
       {err && <p className="text-[11px] text-red-400">{err}</p>}
       {!tools ? (
@@ -723,15 +725,15 @@ function CohortToolsToggles({
               }}
               className={`flex items-center gap-2 px-2.5 py-1 rounded-full text-[12px] border transition-colors ${
                 t.enabled
-                  ? 'bg-[#1a6b3c]/30 border-[#2d9e5f]/60 text-cream-light'
-                  : 'border-white/10 text-slate-mid hover:border-white/30'
+                  ? 'bg-primary/30 border-accent/60 text-fg'
+                  : 'border-edge/10 text-slate-mid hover:border-edge/30'
               }`}
             >
               <span
-                className={`w-1.5 h-1.5 rounded-full ${t.enabled ? 'bg-[#2d9e5f]' : 'bg-white/20'}`}
+                className={`w-1.5 h-1.5 rounded-full ${t.enabled ? 'bg-accent' : 'bg-ink/20'}`}
               />
               {TOOL_META[t.toolKey].label}
-              <span className="text-[10px] text-white/40">{t.enabled ? 'on' : 'off'}</span>
+              <span className="text-[10px] text-ink/40">{t.enabled ? 'on' : 'off'}</span>
             </button>
           ))}
         </div>
@@ -778,12 +780,12 @@ function AddMemberForm({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Add by email (user must have signed in once)"
-          className="flex-1 bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-cream-light placeholder:text-white/25 focus:outline-hidden focus:border-white/30"
+          className="flex-1 bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30"
         />
         <button
           type="submit"
           disabled={submitting}
-          className="px-3 py-2 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white disabled:opacity-50 whitespace-nowrap"
+          className="px-3 py-2 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink disabled:opacity-50 whitespace-nowrap"
         >
           {submitting ? 'Adding…' : 'Add'}
         </button>

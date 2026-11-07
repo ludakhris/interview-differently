@@ -118,7 +118,7 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
         />
       </Field>
       <Field label="Reference query — its result set is the answer key">
-        <div className="rounded-lg border border-white/12 overflow-hidden">
+        <div className="rounded-lg border border-edge/12 overflow-hidden">
           <SqlEditor
             value={referenceSql}
             onChange={setReferenceSql}
@@ -134,7 +134,7 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
           type="button"
           onClick={testQuery}
           disabled={!datasetSlug || !referenceSql.trim() || test.state === 'running'}
-          className="px-3 py-1.5 rounded-lg text-[12px] font-semibold border border-white/15 text-white/80 hover:border-white/30 disabled:opacity-40 transition-colors"
+          className="px-3 py-1.5 rounded-lg text-[12px] font-semibold border border-edge/15 text-ink/80 hover:border-edge/30 disabled:opacity-40 transition-colors"
         >
           {test.state === 'running' ? 'Running…' : '▶ Test query'}
         </button>
@@ -154,13 +154,13 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
         )}
       </div>
       {test.state === 'ok' && test.result && (
-        <div className="max-h-[220px] overflow-auto rounded-lg border border-white/10 bg-black">
+        <div className="max-h-[220px] overflow-auto rounded-lg border border-edge/10 bg-surface">
           <ResultsGrid result={test.result} />
         </div>
       )}
 
       <SectionLabel label="Grading" />
-      <div className="flex flex-wrap gap-4 text-[12px] text-white/70">
+      <div className="flex flex-wrap gap-4 text-[12px] text-ink/70">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
@@ -180,7 +180,7 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
           Column names must match
         </label>
       </div>
-      <p className="text-[11px] text-white/35 -mt-2">
+      <p className="text-[11px] text-ink/35 -mt-2">
         Without flags, any query returning the same rows (in any order, any column names) counts as
         correct. Numbers compare to 6 decimals.
       </p>

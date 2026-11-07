@@ -11,7 +11,11 @@ const qualityLabel = {
   proficient: 'Proficient',
   developing: 'Developing',
 } as const
-const qualityColor = { strong: '#2d9e5f', proficient: '#d4830a', developing: '#c0392b' } as const
+const qualityColor = {
+  strong: 'rgb(var(--ld-emerald-400, 31 138 85))',
+  proficient: 'rgb(var(--ld-amber-400, 180 83 9))',
+  developing: 'rgb(var(--ld-red-400, 198 40 40))',
+} as const
 
 interface Props {
   phase: PhaseScore
@@ -24,24 +28,24 @@ export function PhaseScoreCard({ phase, index }: Props) {
   const showOverall = phase.dimensionScores.length > 0
 
   return (
-    <section className="bg-[#111111] border border-white/10 rounded-2xl overflow-hidden">
-      <header className="px-5 py-4 border-b border-white/8 flex items-center justify-between gap-4">
+    <section className="bg-surface-alt border border-edge/10 rounded-2xl overflow-hidden">
+      <header className="px-5 py-4 border-b border-edge/8 flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">
             Phase {index + 1}
           </p>
-          <h3 className="mt-0.5 text-[16px] font-display font-bold text-cream-light leading-tight">
+          <h3 className="mt-0.5 text-[16px] font-display font-bold text-fg leading-tight">
             {phase.label}
           </h3>
           {phase.description && (
-            <p className="mt-1 text-[12px] text-white/55 leading-snug max-w-md">
+            <p className="mt-1 text-[12px] text-ink/55 leading-snug max-w-md">
               {phase.description}
             </p>
           )}
         </div>
         {showOverall && (
           <div className="shrink-0 text-right">
-            <p className="text-[10px] uppercase tracking-widest text-white/40">Phase score</p>
+            <p className="text-[10px] uppercase tracking-widest text-ink/40">Phase score</p>
             <p
               className="text-[24px] font-display font-extrabold tabular-nums"
               style={{ color: qualityColor[overallTone] }}
@@ -57,11 +61,9 @@ export function PhaseScoreCard({ phase, index }: Props) {
           <div className="space-y-2">
             {phase.dimensionScores.map((dim) => (
               <div key={dim.dimension} className="flex items-center justify-between gap-3">
-                <span className="text-[13px] text-cream-light flex-1 truncate">
-                  {dim.dimension}
-                </span>
+                <span className="text-[13px] text-fg flex-1 truncate">{dim.dimension}</span>
                 <div className="flex items-center gap-3 shrink-0">
-                  <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div className="w-24 h-1.5 bg-ink/10 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-700"
                       style={{ width: `${dim.score}%`, backgroundColor: qualityColor[dim.quality] }}
@@ -98,7 +100,7 @@ export function PhaseScoreCard({ phase, index }: Props) {
         {phase.dimensionScores.length === 0 &&
           phase.quantResults.length === 0 &&
           !phase.sqlResults?.length && (
-            <p className="text-[12px] text-white/35 italic">No scored interaction in this phase.</p>
+            <p className="text-[12px] text-ink/35 italic">No scored interaction in this phase.</p>
           )}
       </div>
     </section>

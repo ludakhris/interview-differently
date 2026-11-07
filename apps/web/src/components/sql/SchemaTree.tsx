@@ -35,7 +35,7 @@ export function SchemaTree({
             <div className="flex items-center gap-1 group">
               <button
                 onClick={() => setOpen((o) => ({ ...o, [t.table]: !expanded }))}
-                className="flex items-center gap-1 flex-1 min-w-0 py-1 text-left text-fg hover:text-green-light transition-colors"
+                className="flex items-center gap-1 flex-1 min-w-0 py-1 text-left text-fg hover:text-accent transition-colors"
               >
                 {expanded ? (
                   <ChevronDown size={12} className="text-ink/30 shrink-0" />
@@ -47,7 +47,7 @@ export function SchemaTree({
               <button
                 onClick={() => onPick(t.table)}
                 title={`${t.rowCount} rows — click to insert table name`}
-                className="font-mono text-[10px] text-ink/30 group-hover:text-ink/60 hover:text-green-light! px-1.5 py-0.5 rounded-sm bg-ink/5 transition-colors"
+                className="font-mono text-[10px] text-ink/30 group-hover:text-ink/60 hover:text-accent! px-1.5 py-0.5 rounded-sm bg-ink/5 transition-colors"
               >
                 {t.rowCount}
               </button>

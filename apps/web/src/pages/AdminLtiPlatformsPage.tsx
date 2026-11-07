@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Nav } from '@/components/Nav'
 import { LtiPlatformsPanel } from '@/components/LtiPlatformsPanel'
 import { InfoIcon, LtiPlatformsInfoDialog } from '@/components/LtiPlatformsInfo'
+import { AdminCrumb } from '@/pages/AdminToolboxPage'
 import type { ToolEndpointsResponse } from '@/services/ltiPlatformsService'
 
 /** Admin page: approve or switch off the learning systems that can launch Interview Differently. */
@@ -13,7 +14,8 @@ export function AdminLtiPlatformsPage() {
       <Nav />
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
         <div className="mb-8">
-          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+          <AdminCrumb />
+          <p className="font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
             Admin · Platforms
           </p>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -27,7 +29,7 @@ export function AdminLtiPlatformsPage() {
             <button
               type="button"
               onClick={() => setInfoOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge/15 text-[13px] font-semibold text-ink/70 hover:text-ink hover:border-edge/30 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-light"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge/15 text-[13px] font-semibold text-ink/70 hover:text-ink hover:border-edge/30 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               <InfoIcon size={16} />
               How this works

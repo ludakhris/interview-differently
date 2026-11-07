@@ -7,7 +7,7 @@ interface Props {
 
 const qualityColors: Record<string, string> = {
   strong: '#1a6b3c',
-  proficient: '#d4830a',
+  proficient: '#b45309',
   developing: '#c0392b',
 }
 

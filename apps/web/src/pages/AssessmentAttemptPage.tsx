@@ -241,9 +241,9 @@ export function AssessmentAttemptPage({
           className="flex flex-col w-[240px] shrink-0 bg-surface-deep border-r border-edge/8 sticky top-[57px] self-start"
           style={{ height: `calc(100vh - ${NAV_HEIGHT}px)` }}
         >
-          <div className="h-[3px] w-full shrink-0 bg-green-light" />
+          <div className="h-[3px] w-full shrink-0 bg-accent" />
           <div className="px-5 pt-5 pb-3">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-green-light">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-accent">
               {paper.title}
             </p>
             {remainingMs !== null && (
@@ -274,7 +274,7 @@ export function AssessmentAttemptPage({
                     {s.questions.map((q) => (
                       <span
                         key={q.id}
-                        className={`h-1.5 flex-1 rounded-full ${answers[q.id]?.trim() ? 'bg-green-light' : 'bg-ink/10'}`}
+                        className={`h-1.5 flex-1 rounded-full ${answers[q.id]?.trim() ? 'bg-accent' : 'bg-ink/10'}`}
                       />
                     ))}
                     <span className="font-mono text-[10px] text-ink/30 ml-1">
@@ -301,7 +301,7 @@ export function AssessmentAttemptPage({
             <button
               onClick={() => submit()}
               disabled={submitting}
-              className="w-full px-3 py-2 rounded-md bg-green hover:bg-green-light text-[12px] font-semibold text-on-primary disabled:opacity-50 transition-colors"
+              className="w-full px-3 py-2 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-on-primary disabled:opacity-50 transition-colors"
             >
               {submitting ? 'Submitting…' : 'Submit assessment'}
             </button>
@@ -405,7 +405,7 @@ export function AssessmentAttemptPage({
               <button
                 onClick={() => submit()}
                 disabled={submitting}
-                className="px-4 py-2 rounded-md bg-green hover:bg-green-light text-[12px] font-semibold text-on-primary disabled:opacity-50 transition-colors"
+                className="px-4 py-2 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-on-primary disabled:opacity-50 transition-colors"
               >
                 {submitting ? 'Submitting…' : 'Submit assessment'}
               </button>
@@ -443,13 +443,13 @@ function QuestionBody({
               onClick={() => onChange(o.key)}
               className={`flex items-start gap-3 text-left px-4 py-3 rounded-xl border transition-colors ${
                 on
-                  ? 'border-green-light/70 bg-green/20'
+                  ? 'border-accent/70 bg-primary/20'
                   : 'border-edge/10 hover:border-edge/25 bg-surface-deep'
               }`}
             >
               <span
                 className={`shrink-0 w-6 h-6 rounded-md text-[11px] font-bold flex items-center justify-center ${
-                  on ? 'bg-green-light text-on-primary' : 'bg-ink/10 text-slate-light'
+                  on ? 'bg-accent text-on-primary' : 'bg-ink/10 text-slate-light'
                 }`}
               >
                 {o.key}

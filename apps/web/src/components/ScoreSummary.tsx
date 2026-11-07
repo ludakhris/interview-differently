@@ -42,7 +42,12 @@ export function ScoreSummary({
                     className="h-full rounded-full transition-all"
                     style={{
                       width: `${pct}%`,
-                      backgroundColor: pct >= 70 ? '#2d9e5f' : pct >= 40 ? '#d4830a' : '#ef4444',
+                      backgroundColor:
+                        pct >= 70
+                          ? 'rgb(var(--ld-emerald-400, 31 138 85))'
+                          : pct >= 40
+                            ? 'rgb(var(--ld-amber-400, 180 83 9))'
+                            : 'rgb(var(--ld-red-400, 198 40 40))',
                     }}
                   />
                 </div>

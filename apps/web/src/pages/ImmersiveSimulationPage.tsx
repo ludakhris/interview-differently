@@ -282,7 +282,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
               setPageState('loading')
               startSession()
             }}
-            className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+            className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
           >
             Retry
           </button>
@@ -335,7 +335,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
               <p className="text-[14px] text-slate-mid mb-6">{ltiError}</p>
               <button
                 onClick={() => void finishLti()}
-                className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
               >
                 Retry
               </button>
@@ -520,7 +520,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
                 <div className="flex justify-end">
                   <button
                     onClick={() => setPageState('responding')}
-                    className="px-6 py-2.5 rounded-lg bg-green hover:bg-green/90 text-on-primary text-[14px] font-medium transition-colors"
+                    className="px-6 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-on-primary text-[14px] font-medium transition-colors"
                   >
                     Ready to respond
                   </button>

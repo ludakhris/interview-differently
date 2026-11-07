@@ -235,18 +235,18 @@ export function SqlSandboxPage() {
   const needsPick = !slug && datasets !== null && datasets.length > 1
 
   return (
-    <div className="h-screen bg-black flex flex-col overflow-hidden">
+    <div className="h-screen bg-surface flex flex-col overflow-hidden">
       <Nav trackLabel="SQL Sandbox" stepLabel={dataset?.name} />
 
       {newBuild && (
         <div className="mx-6 mt-4 rounded-xl bg-amber-500/10 border border-amber-500/40 px-4 py-3 flex items-center gap-3 flex-wrap">
-          <p className="text-[13px] text-cream-light">
+          <p className="text-[13px] text-fg">
             <span className="font-semibold">A new version is available.</span> Reload so your
             queries are saved for your instructor.
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="rounded-full border border-amber-500/50 hover:bg-amber-500/20 px-3 py-1 text-[12px] font-semibold text-cream-light transition-colors"
+            className="rounded-full border border-amber-500/50 hover:bg-amber-500/20 px-3 py-1 text-[12px] font-semibold text-fg transition-colors"
           >
             Reload
           </button>
@@ -254,8 +254,8 @@ export function SqlSandboxPage() {
       )}
 
       {needsPick && (
-        <div className="mx-6 mt-4 rounded-xl bg-[#2d9e5f]/10 border border-[#2d9e5f]/40 px-4 py-3 flex items-center gap-3 flex-wrap">
-          <p className="text-[13px] text-cream-light">
+        <div className="mx-6 mt-4 rounded-xl bg-accent/10 border border-accent/40 px-4 py-3 flex items-center gap-3 flex-wrap">
+          <p className="text-[13px] text-fg">
             <span className="font-semibold">Choose a dataset to start.</span> Your cohort has{' '}
             {datasets.length} — pick the one your instructor asked you to use. You can switch any
             time from the menu on the left.
@@ -266,7 +266,7 @@ export function SqlSandboxPage() {
                 key={d.id}
                 onClick={() => setParams({ dataset: d.slug })}
                 title={d.description ?? undefined}
-                className="rounded-full border border-[#2d9e5f]/50 hover:bg-[#2d9e5f]/20 px-3 py-1 text-[12px] font-semibold text-cream-light transition-colors"
+                className="rounded-full border border-accent/50 hover:bg-accent/20 px-3 py-1 text-[12px] font-semibold text-fg transition-colors"
               >
                 {d.name}
               </button>
@@ -283,14 +283,14 @@ export function SqlSandboxPage() {
 
       {datasets && datasets.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
-          <div className="bg-[#111111] rounded-xl border border-white/10 px-8 py-10 text-center max-w-md">
-            <p className="text-[14px] text-cream-light font-semibold">No datasets yet</p>
+          <div className="bg-surface-alt rounded-xl border border-edge/10 px-8 py-10 text-center max-w-md">
+            <p className="text-[14px] text-fg font-semibold">No datasets yet</p>
             <p className="text-[13px] text-slate-mid mt-1">
               Ask your instructor to enable the SQL Sandbox for your cohort and assign a dataset.
             </p>
             <button
               onClick={() => navigate('/dashboard')}
-              className="mt-4 text-[12px] text-green-light hover:underline"
+              className="mt-4 text-[12px] text-accent hover:underline"
             >
               ← Back to dashboard
             </button>
@@ -300,18 +300,18 @@ export function SqlSandboxPage() {
         <div className="flex flex-1 min-h-0" style={{ height: `calc(100vh - ${NAV_HEIGHT}px)` }}>
           {/* ── Rail ── */}
           <aside
-            className={`${railOpen ? 'flex' : 'hidden'} flex-col w-[240px] shrink-0 bg-[#0d0d0d] border-r border-white/8`}
+            className={`${railOpen ? 'flex' : 'hidden'} flex-col w-[240px] shrink-0 bg-surface-deep border-r border-edge/8`}
           >
-            <div className="h-[3px] w-full shrink-0 bg-[#2d9e5f]" />
+            <div className="h-[3px] w-full shrink-0 bg-accent" />
             <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#2d9e5f]">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-accent">
                 Workspace
               </p>
               <button
                 onClick={reset}
                 disabled={!ready}
                 title="Reset dataset — rebuilds your private copy from scratch"
-                className="text-slate-mid hover:text-cream-light disabled:opacity-30 transition-colors"
+                className="text-slate-mid hover:text-fg disabled:opacity-30 transition-colors"
               >
                 <RotateCcw size={14} />
               </button>
@@ -322,7 +322,7 @@ export function SqlSandboxPage() {
                 <select
                   value={slug ?? ''}
                   onChange={(e) => setParams({ dataset: e.target.value })}
-                  className="w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
+                  className="w-full bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg focus:outline-hidden focus:border-edge/30"
                 >
                   {!slug && (
                     <option value="" disabled>
@@ -340,7 +340,7 @@ export function SqlSandboxPage() {
 
             <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-6">
               <section>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-2">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-2">
                   Schema
                 </p>
                 {dataset ? (
@@ -356,7 +356,7 @@ export function SqlSandboxPage() {
 
               {history.length > 0 && (
                 <section>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-2">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-2">
                     History
                   </p>
                   <ul className="space-y-0.5">
@@ -365,7 +365,7 @@ export function SqlSandboxPage() {
                         <button
                           onClick={() => setAndFocus(h)}
                           title={h}
-                          className="w-full text-left font-mono text-[11px] text-white/50 hover:text-cream-light truncate py-0.5 transition-colors"
+                          className="w-full text-left font-mono text-[11px] text-ink/50 hover:text-fg truncate py-0.5 transition-colors"
                         >
                           {h.replace(/\s+/g, ' ')}
                         </button>
@@ -380,38 +380,38 @@ export function SqlSandboxPage() {
           {/* ── Editor + results ── */}
           <div ref={bodyRef} className="flex-1 min-w-0 flex flex-col">
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-5 py-2.5 border-b border-white/8 bg-[#0d0d0d]">
+            <div className="flex items-center justify-between px-5 py-2.5 border-b border-edge/8 bg-surface-deep">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setRailOpen((o) => !o)}
                   title={railOpen ? 'Hide workspace panel' : 'Show workspace panel'}
                   aria-label={railOpen ? 'Hide workspace panel' : 'Show workspace panel'}
                   aria-expanded={railOpen}
-                  className="text-slate-mid hover:text-cream-light transition-colors"
+                  className="text-slate-mid hover:text-fg transition-colors"
                 >
                   {railOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
                 </button>
                 <button
                   onClick={run}
                   disabled={!ready || running || !query.trim()}
-                  className="inline-flex items-center gap-2 pl-3 pr-3.5 py-1.5 rounded-full bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white disabled:opacity-40 transition-colors"
+                  className="inline-flex items-center gap-2 pl-3 pr-3.5 py-1.5 rounded-full bg-primary hover:bg-accent text-[12px] font-semibold text-ink disabled:opacity-40 transition-colors"
                 >
                   <Play size={12} fill="currentColor" />
                   {running ? 'Running…' : 'Run'}
-                  <span className="font-mono text-[10px] text-white/60 ml-0.5">⌘↵</span>
+                  <span className="font-mono text-[10px] text-ink/60 ml-0.5">⌘↵</span>
                 </button>
                 {dbState.status === 'loading' && (
                   <span className="text-[11px] text-amber-400">Building your private copy…</span>
                 )}
               </div>
-              <p className="text-[11px] text-white/30">
+              <p className="text-[11px] text-ink/30">
                 Your own copy of the data. Break it freely —{' '}
                 <RotateCcw size={10} className="inline -mt-0.5" /> rebuilds it.
               </p>
             </div>
 
             {/* Editor */}
-            <div style={{ height: editorHeight }} className="shrink-0 bg-[#0d0d0d]">
+            <div style={{ height: editorHeight }} className="shrink-0 bg-surface-deep">
               <SqlEditor
                 ref={editorRef}
                 value={query}
@@ -427,12 +427,12 @@ export function SqlSandboxPage() {
             {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
             <div
               onMouseDown={onSplitterDown}
-              className="h-[5px] shrink-0 cursor-row-resize bg-white/5 hover:bg-[#2d9e5f]/60 transition-colors"
+              className="h-[5px] shrink-0 cursor-row-resize bg-ink/5 hover:bg-accent/60 transition-colors"
               title="Drag to resize"
             />
 
             {/* Results */}
-            <div className="flex-1 min-h-0 flex flex-col bg-black">
+            <div className="flex-1 min-h-0 flex flex-col bg-surface">
               {queryError && (
                 <div className="m-4 mb-0 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 flex gap-3">
                   <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
@@ -440,7 +440,7 @@ export function SqlSandboxPage() {
                     <p className="text-[11px] font-bold uppercase tracking-widest text-red-400 mb-0.5">
                       Query error
                     </p>
-                    <p className="text-[13px] text-cream-light/85 font-mono whitespace-pre-wrap">
+                    <p className="text-[13px] text-fg/85 font-mono whitespace-pre-wrap">
                       {queryError}
                     </p>
                   </div>
@@ -456,7 +456,7 @@ export function SqlSandboxPage() {
                 {result ? (
                   <ResultsGrid result={result} limit={rowLimit} />
                 ) : ready ? (
-                  <p className="px-5 py-8 text-[12px] text-white/30">
+                  <p className="px-5 py-8 text-[12px] text-ink/30">
                     Write a query above and press <span className="font-mono">⌘↵</span>. Click a
                     table or column in the rail to drop its name into the editor.
                   </p>
@@ -464,7 +464,7 @@ export function SqlSandboxPage() {
               </div>
 
               {/* Status strip */}
-              <div className="flex items-center justify-between px-5 py-1.5 border-t border-white/8 bg-[#0d0d0d] font-mono text-[11px] text-white/40">
+              <div className="flex items-center justify-between px-5 py-1.5 border-t border-edge/8 bg-surface-deep font-mono text-[11px] text-ink/40">
                 <span className={queryError ? 'text-red-400' : undefined}>
                   {queryError
                     ? 'error'
@@ -499,7 +499,7 @@ export function SqlSandboxPage() {
                           /* ignore */
                         }
                       }}
-                      className="bg-[#111111] border border-white/10 rounded-sm px-1 py-0.5 text-white/70 focus:outline-hidden focus:border-white/30"
+                      className="bg-surface-alt border border-edge/10 rounded-sm px-1 py-0.5 text-ink/70 focus:outline-hidden focus:border-edge/30"
                     >
                       {ROW_LIMITS.map((n) => (
                         <option key={n} value={n}>

@@ -110,10 +110,10 @@ export function ChartEditor({ exhibit, onDone }: Props) {
       <div className="flex flex-col gap-2">
         <SectionLabel label="Data series" />
         <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
-          <span className="text-[10px] font-semibold text-white/25 uppercase tracking-wider">
+          <span className="text-[10px] font-semibold text-ink/25 uppercase tracking-wider">
             Label (t)
           </span>
-          <span className="text-[10px] font-semibold text-white/25 uppercase tracking-wider">
+          <span className="text-[10px] font-semibold text-ink/25 uppercase tracking-wider">
             Value (v)
           </span>
           <span />

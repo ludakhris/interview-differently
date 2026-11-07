@@ -48,7 +48,7 @@ const TRACK_OPTIONS = [
     value: 'customer-success',
     label: 'Customer Success',
     subtitle: 'CS & Support',
-    color: '#2d9e5f',
+    color: '#1f8a55',
     icon: '🤝',
   },
   {
@@ -69,7 +69,7 @@ const TRACK_OPTIONS = [
     value: 'custom',
     label: 'Custom',
     subtitle: 'Build from scratch',
-    color: '#888888',
+    color: '#5b6273',
     icon: '✦',
   },
 ]
@@ -197,15 +197,15 @@ export function BuilderSetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <MobileWarning />
       <Nav />
       <div className="max-w-lg mx-auto px-6 py-16">
         <div className="mb-10">
-          <p className="text-[12px] font-medium tracking-widest uppercase text-white/30 mb-1">
+          <p className="text-[12px] font-medium tracking-widest uppercase text-ink/30 mb-1">
             New Scenario
           </p>
-          <h2 className="font-display font-extrabold text-[28px] text-cream-light tracking-tight">
+          <h2 className="font-display font-extrabold text-[28px] text-fg tracking-tight">
             Set Up Your Scenario
           </h2>
         </div>
@@ -214,7 +214,7 @@ export function BuilderSetupPage() {
         <div className="mb-8">
           <p
             id="setup-start-from"
-            className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3"
+            className="block text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3"
           >
             Start from
           </p>
@@ -234,12 +234,12 @@ export function BuilderSetupPage() {
                 }}
                 className="text-left rounded-xl p-3 border transition-all"
                 style={{
-                  background: startFrom === opt.value ? '#2d9e5f15' : '#111111',
-                  borderColor: startFrom === opt.value ? '#2d9e5f' : 'rgba(255,255,255,0.1)',
+                  background: startFrom === opt.value ? '#2563eb15' : '#ffffff',
+                  borderColor: startFrom === opt.value ? '#2563eb' : 'rgba(20,33,58,0.12)',
                 }}
               >
-                <div className="text-[13px] font-bold text-cream-light">{opt.label}</div>
-                <div className="text-[11px] text-white/30">{opt.hint}</div>
+                <div className="text-[13px] font-bold text-fg">{opt.label}</div>
+                <div className="text-[11px] text-ink/30">{opt.hint}</div>
               </button>
             ))}
           </div>
@@ -249,7 +249,7 @@ export function BuilderSetupPage() {
           <div className="mb-8">
             <label
               htmlFor="setup-clone"
-              className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3"
+              className="block text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3"
             >
               Scenario to clone
             </label>
@@ -260,7 +260,7 @@ export function BuilderSetupPage() {
                 setCloneId(e.target.value)
                 setError(null)
               }}
-              className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[15px] text-cream-light focus:outline-hidden focus:border-white/30 transition-colors"
+              className="w-full bg-surface-alt border border-edge/10 rounded-xl px-4 py-3 text-[15px] text-fg focus:outline-hidden focus:border-edge/30 transition-colors"
             >
               <option value="">{sources.length ? '— pick one —' : 'Loading…'}</option>
               {sources.map((sc) => (
@@ -270,7 +270,7 @@ export function BuilderSetupPage() {
                 </option>
               ))}
             </select>
-            <p className="text-[11px] text-white/30 mt-2">
+            <p className="text-[11px] text-ink/30 mt-2">
               Track, rubric, phases, exhibits and questions are copied. The copy starts as a draft.
             </p>
           </div>
@@ -278,7 +278,7 @@ export function BuilderSetupPage() {
 
         {startFrom === 'import' && (
           <div className="mb-8">
-            <p className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3">
+            <p className="block text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3">
               File
             </p>
             <input
@@ -290,13 +290,13 @@ export function BuilderSetupPage() {
             />
             <button
               onClick={() => fileRef.current?.click()}
-              className="w-full text-left bg-[#111111] border border-dashed border-white/15 hover:border-white/30 rounded-xl px-4 py-3 text-[13px] text-white/60 transition-colors"
+              className="w-full text-left bg-surface-alt border border-dashed border-edge/15 hover:border-edge/30 rounded-xl px-4 py-3 text-[13px] text-ink/60 transition-colors"
             >
               {importDoc
                 ? `✓ ${importDoc.name} — ${importDoc.scenario.nodes.length} blocks, ${importDoc.scenario.phases?.length ?? 0} phases`
                 : 'Choose a .yaml or .json scenario file…'}
             </button>
-            <p className="text-[11px] text-white/30 mt-2">
+            <p className="text-[11px] text-ink/30 mt-2">
               Write the YAML offline (AI-assisted works well — see{' '}
               <span className="font-mono">apps/api/prisma/scenarios/</span> for the format). Imports
               start as drafts.
@@ -308,11 +308,11 @@ export function BuilderSetupPage() {
         <div className="mb-8">
           <label
             htmlFor="setup-title"
-            className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3"
+            className="block text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3"
           >
             Scenario Title
             {startFrom !== 'blank' && (
-              <span className="normal-case tracking-normal font-normal text-white/25">
+              <span className="normal-case tracking-normal font-normal text-ink/25">
                 {' '}
                 — optional, keeps the source title if blank
               </span>
@@ -327,7 +327,7 @@ export function BuilderSetupPage() {
               setError(null)
             }}
             placeholder="e.g. Payment System Outage"
-            className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[15px] text-cream-light placeholder:text-white/20 focus:outline-hidden focus:border-white/30 transition-colors"
+            className="w-full bg-surface-alt border border-edge/10 rounded-xl px-4 py-3 text-[15px] text-fg placeholder:text-ink/20 focus:outline-hidden focus:border-edge/30 transition-colors"
           />
         </div>
 
@@ -336,7 +336,7 @@ export function BuilderSetupPage() {
           <div className="mb-8">
             <label
               htmlFor="setup-owner"
-              className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3"
+              className="block text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3"
             >
               Visible to
             </label>
@@ -345,7 +345,7 @@ export function BuilderSetupPage() {
               owners={owners}
               value={ownerId}
               onChange={setOwnerId}
-              className="w-full bg-[#111111] border border-white/10 rounded-xl px-4 py-3 text-[15px] text-cream-light focus:outline-hidden focus:border-white/30 transition-colors"
+              className="w-full bg-surface-alt border border-edge/10 rounded-xl px-4 py-3 text-[15px] text-fg focus:outline-hidden focus:border-edge/30 transition-colors"
               optionLabel={(o) => (o.id === null ? 'Everyone (public)' : `${o.label} members only`)}
             />
           </div>
@@ -357,7 +357,7 @@ export function BuilderSetupPage() {
             <div className="mb-8">
               <p
                 id="setup-track"
-                className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3"
+                className="block text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3"
               >
                 Track
               </p>
@@ -374,19 +374,19 @@ export function BuilderSetupPage() {
                       }}
                       className="relative text-left rounded-xl p-4 border transition-all"
                       style={{
-                        background: isSelected ? `${option.color}15` : '#111111',
-                        borderColor: isSelected ? option.color : 'rgba(255,255,255,0.1)',
+                        background: isSelected ? `${option.color}15` : '#ffffff',
+                        borderColor: isSelected ? option.color : 'rgba(20,33,58,0.12)',
                         boxShadow: isSelected ? `0 0 0 1px ${option.color}` : 'none',
                       }}
                     >
                       <div className="text-[18px] mb-2">{option.icon}</div>
                       <div
                         className="text-[13px] font-bold mb-0.5"
-                        style={{ color: isSelected ? option.color : '#f5f3ee' }}
+                        style={{ color: isSelected ? option.color : '#14213a' }}
                       >
                         {option.label}
                       </div>
-                      <div className="text-[11px] text-white/30">{option.subtitle}</div>
+                      <div className="text-[11px] text-ink/30">{option.subtitle}</div>
                     </button>
                   )
                 })}
@@ -398,7 +398,7 @@ export function BuilderSetupPage() {
               <div className="mb-8">
                 <p
                   id="setup-subtrack"
-                  className="block text-[11px] font-bold uppercase tracking-widest text-white/40 mb-3"
+                  className="block text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3"
                 >
                   Sub-track
                 </p>
@@ -418,9 +418,9 @@ export function BuilderSetupPage() {
                         }}
                         className="text-left rounded-lg px-3 py-2 border transition-all text-[12px]"
                         style={{
-                          background: isSelected ? '#0f5b8915' : '#111111',
-                          borderColor: isSelected ? '#0f5b89' : 'rgba(255,255,255,0.1)',
-                          color: isSelected ? '#0f5b89' : '#f5f3ee',
+                          background: isSelected ? '#0f5b8915' : '#ffffff',
+                          borderColor: isSelected ? '#0f5b89' : 'rgba(20,33,58,0.12)',
+                          color: isSelected ? '#0f5b89' : '#14213a',
                         }}
                       >
                         {BUSINESS_CASE_SUBCATEGORY_LABELS[slug]}
@@ -433,8 +433,8 @@ export function BuilderSetupPage() {
 
             {/* Rubric preview */}
             {track && previewDimensions.length > 0 && (
-              <div className="mb-8 bg-[#111111] border border-white/10 rounded-xl p-5">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-3">
+              <div className="mb-8 bg-surface-alt border border-edge/10 rounded-xl p-5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-ink/30 mb-3">
                   Pre-filled Rubric — {TRACK_LABELS[track]}
                 </p>
                 <div className="space-y-2">
@@ -442,26 +442,24 @@ export function BuilderSetupPage() {
                     <div key={dim.name} className="flex items-start gap-3">
                       <span
                         className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
-                        style={{ background: selectedTrackOption?.color ?? '#888' }}
+                        style={{ background: selectedTrackOption?.color ?? '#5b6273' }}
                       />
                       <div>
-                        <p className="text-[12px] font-semibold text-cream-light">{dim.name}</p>
-                        <p className="text-[11px] text-white/30 leading-relaxed">
-                          {dim.description}
-                        </p>
+                        <p className="text-[12px] font-semibold text-fg">{dim.name}</p>
+                        <p className="text-[11px] text-ink/30 leading-relaxed">{dim.description}</p>
                       </div>
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-white/20 mt-4">
+                <p className="text-[11px] text-ink/20 mt-4">
                   You can edit or add dimensions in the canvas rubric editor.
                 </p>
               </div>
             )}
 
             {track === 'custom' && (
-              <div className="mb-8 bg-[#111111] border border-white/10 rounded-xl p-5">
-                <p className="text-[11px] text-white/30 leading-relaxed">
+              <div className="mb-8 bg-surface-alt border border-edge/10 rounded-xl p-5">
+                <p className="text-[11px] text-ink/30 leading-relaxed">
                   A blank rubric will be created. Add your dimensions in the canvas rubric editor.
                 </p>
               </div>
@@ -481,7 +479,7 @@ export function BuilderSetupPage() {
         <div className="flex gap-3">
           <button
             onClick={() => navigate('/builder')}
-            className="py-3 px-6 rounded-xl border border-white/10 text-[13px] text-white/40 hover:text-white/60 hover:border-white/20 transition-all"
+            className="py-3 px-6 rounded-xl border border-edge/10 text-[13px] text-ink/40 hover:text-ink/60 hover:border-edge/20 transition-all"
           >
             Cancel
           </button>
@@ -495,7 +493,7 @@ export function BuilderSetupPage() {
                   ? !cloneId
                   : !importDoc)
             }
-            className="flex-1 py-3 rounded-xl text-[13px] font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex-1 py-3 rounded-xl text-[13px] font-semibold text-ink transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
               background: (
                 startFrom === 'blank'

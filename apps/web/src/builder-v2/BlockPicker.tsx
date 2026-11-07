@@ -18,9 +18,9 @@ function NodePreview({ kind }: { kind: EntityKind }) {
 
 function DecisionPreview() {
   return (
-    <div className="w-full h-full flex items-center justify-center p-10 bg-[#0d0d0d]">
+    <div className="w-full h-full flex items-center justify-center p-10 bg-surface-deep">
       <div className="w-full max-w-lg">
-        <p className="text-[15px] font-medium text-white/80 mb-5 leading-snug">
+        <p className="text-[15px] font-medium text-ink/80 mb-5 leading-snug">
           How would you structure the analysis?
         </p>
         <div className="flex flex-col gap-2">
@@ -46,12 +46,12 @@ function DecisionPreview() {
           ].map((o) => (
             <div
               key={o.id}
-              className="flex items-start gap-3 px-3 py-2.5 border border-white/6 rounded-lg bg-white/2"
+              className="flex items-start gap-3 px-3 py-2.5 border border-edge/6 rounded-lg bg-ink/2"
             >
-              <span className="w-[22px] h-[22px] rounded-[6px] bg-white/6 border border-white/10 text-[11px] font-bold flex items-center justify-center flex-none mt-px">
+              <span className="w-[22px] h-[22px] rounded-[6px] bg-ink/6 border border-edge/10 text-[11px] font-bold flex items-center justify-center flex-none mt-px">
                 {o.id}
               </span>
-              <span className="flex-1 text-[13px] text-white/80 leading-snug">{o.text}</span>
+              <span className="flex-1 text-[13px] text-ink/80 leading-snug">{o.text}</span>
               <span
                 className={`flex-none text-[11px] font-semibold border rounded-full px-2 py-0.5 ${o.color}`}
               >
@@ -67,21 +67,21 @@ function DecisionPreview() {
 
 function TransitionPreview() {
   return (
-    <div className="w-full h-full flex items-center justify-center p-10 bg-[#0d0d0d]">
-      <div className="w-full max-w-lg border border-white/10 rounded-[14px] bg-[#111] p-6">
+    <div className="w-full h-full flex items-center justify-center p-10 bg-surface-deep">
+      <div className="w-full max-w-lg border border-edge/10 rounded-[14px] bg-[#111] p-6">
         <div className="flex items-center gap-2 mb-4">
-          <span className="text-[13px] text-white/30">↩</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">
+          <span className="text-[13px] text-ink/30">↩</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-ink/25">
             Redirect / Transition
           </span>
         </div>
-        <p className="text-[14px] text-white/65 leading-relaxed italic mb-4">
+        <p className="text-[14px] text-ink/65 leading-relaxed italic mb-4">
           "Interesting angle — but the client's primary concern is the cost structure. Let's focus
           there before tackling revenue."
         </p>
-        <div className="flex items-center gap-1.5 text-[12px] text-white/30 font-medium">
+        <div className="flex items-center gap-1.5 text-[12px] text-ink/30 font-medium">
           <span>Continues to</span>
-          <span className="text-white/50 font-semibold">→ next decision</span>
+          <span className="text-ink/50 font-semibold">→ next decision</span>
         </div>
       </div>
     </div>
@@ -90,13 +90,13 @@ function TransitionPreview() {
 
 function EndingPreview() {
   return (
-    <div className="w-full h-full flex items-center justify-center p-10 bg-[#0d0d0d]">
+    <div className="w-full h-full flex items-center justify-center p-10 bg-surface-deep">
       <div className="w-full max-w-lg flex flex-col gap-3">
         <div className="border border-emerald-400/20 rounded-[14px] bg-emerald-400/4 p-5">
           <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-400/60 mb-2">
             🏁 Strong ending
           </div>
-          <p className="text-[13px] text-white/70 leading-relaxed">
+          <p className="text-[13px] text-ink/70 leading-relaxed">
             Clear, structured recommendation with supporting financials. The candidate identified
             the core driver and sized the opportunity correctly.
           </p>
@@ -105,7 +105,7 @@ function EndingPreview() {
           <div className="text-[10px] font-bold uppercase tracking-widest text-amber-400/50 mb-2">
             🏁 Developing ending
           </div>
-          <p className="text-[12px] text-white/50 leading-relaxed">
+          <p className="text-[12px] text-ink/50 leading-relaxed">
             Recommendation lacked specificity. Framework was sound but conclusions too conservative.
           </p>
         </div>
@@ -152,28 +152,28 @@ export function BlockPicker({ onPick, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-xs"
+        className="absolute inset-0 bg-ink/70 backdrop-blur-xs"
         role="presentation"
         onClick={onClose}
       />
       <div
-        className="relative z-10 w-[820px] max-h-[88vh] bg-[#111] border border-white/10 rounded-2xl overflow-hidden flex flex-col shadow-2xl"
+        className="relative z-10 w-[820px] max-h-[88vh] bg-[#111] border border-edge/10 rounded-2xl overflow-hidden flex flex-col shadow-2xl"
         role="dialog"
         aria-label="Insert a block"
       >
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-6 pt-5 pb-0 flex-none">
-          <h2 className="text-[15px] font-bold text-white tracking-tight">Insert a block</h2>
+          <h2 className="text-[15px] font-bold text-ink tracking-tight">Insert a block</h2>
           <button
             onClick={onClose}
-            className="text-white/35 hover:text-white/70 text-[20px] leading-none w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/6 transition-colors"
+            className="text-ink/35 hover:text-ink/70 text-[20px] leading-none w-7 h-7 flex items-center justify-center rounded-lg hover:bg-ink/6 transition-colors"
           >
             ×
           </button>
         </div>
 
         {/* ── Group tabs ─────────────────────────────────────────────────────── */}
-        <div className="flex gap-1 px-6 pt-3 border-b border-white/[0.07] flex-none">
+        <div className="flex gap-1 px-6 pt-3 border-b border-edge/[0.07] flex-none">
           {GROUP_TABS.map((tab) => (
             <button
               key={tab.id}
@@ -182,7 +182,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
                 'px-3 py-2.5 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors',
                 activeGroup === tab.id
                   ? 'border-emerald-400 text-emerald-300'
-                  : 'border-transparent text-white/60 hover:text-white/85',
+                  : 'border-transparent text-ink/60 hover:text-ink/85',
               ].join(' ')}
             >
               {tab.label}
@@ -191,7 +191,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
         </div>
 
         {/* ── Kind selector pills ────────────────────────────────────────────── */}
-        <div className="flex gap-2 px-6 py-3 overflow-x-auto flex-none border-b border-white/6">
+        <div className="flex gap-2 px-6 py-3 overflow-x-auto flex-none border-b border-edge/6">
           {groupKinds.map((desc) => (
             <button
               key={desc.kind}
@@ -200,7 +200,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold whitespace-nowrap transition-all flex-none',
                 selectedKind === desc.kind
                   ? 'bg-emerald-400/15 border border-emerald-400/50 text-emerald-300'
-                  : 'bg-white/4 border border-white/8 text-white/50 hover:text-white/75 hover:border-white/20',
+                  : 'bg-ink/4 border border-edge/8 text-ink/50 hover:text-ink/75 hover:border-edge/20',
               ].join(' ')}
             >
               <span className="text-[13px]">{desc.emoji}</span>
@@ -224,14 +224,14 @@ export function BlockPicker({ onPick, onClose }: Props) {
         </div>
 
         {/* ── Footer: info + insert ──────────────────────────────────────────── */}
-        <div className="flex items-center gap-4 px-6 py-4 border-t border-white/[0.07] bg-[#111] flex-none">
+        <div className="flex items-center gap-4 px-6 py-4 border-t border-edge/[0.07] bg-[#111] flex-none">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
               <span className="text-[16px]">{selected.emoji}</span>
-              <span className="text-[14px] font-bold text-white">{selected.label}</span>
+              <span className="text-[14px] font-bold text-ink">{selected.label}</span>
             </div>
-            <p className="text-[12px] text-white/50 truncate">{selected.blurb}</p>
-            <p className="text-[11px] text-white/28 italic mt-0.5 truncate">{selected.example}</p>
+            <p className="text-[12px] text-ink/50 truncate">{selected.blurb}</p>
+            <p className="text-[11px] text-ink/28 italic mt-0.5 truncate">{selected.example}</p>
           </div>
           <button
             onClick={() => onPick(selected.kind)}

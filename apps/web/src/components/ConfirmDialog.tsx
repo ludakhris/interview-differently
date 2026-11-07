@@ -67,7 +67,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       {children}
       {pending && (
         <div
-          className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-100 flex items-center justify-center bg-ink/70 p-4"
           role="presentation"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) close(false)
@@ -104,7 +104,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 className={`px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors ${
                   pending.danger
                     ? 'bg-red-500/20 text-red-300 border border-red-400/30 hover:bg-red-500/40 hover:text-ink'
-                    : 'bg-green hover:bg-green-light text-on-primary'
+                    : 'bg-primary hover:bg-accent text-on-primary'
                 }`}
               >
                 {pending.confirmLabel ?? (pending.notice ? 'OK' : 'Confirm')}

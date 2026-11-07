@@ -82,7 +82,7 @@ export function WorkSimulationCards({
           type="button"
           disabled={opening !== null}
           onClick={() => void open(s.bankSlug)}
-          className="text-left bg-[#111111] rounded-2xl border border-white/10 hover:border-white/20 transition-all hover:-translate-y-0.5 overflow-hidden group disabled:opacity-60"
+          className="text-left bg-surface-alt rounded-2xl border border-edge/10 hover:border-edge/20 transition-all hover:-translate-y-0.5 overflow-hidden group disabled:opacity-60"
         >
           <div className="h-1.5 w-full" style={{ backgroundColor: color }} />
           <div className="p-5">
@@ -97,7 +97,7 @@ export function WorkSimulationCards({
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color }}>
                   Chat with your team
                 </p>
-                <h4 className="mt-0.5 font-display font-bold text-[15px] text-cream-light leading-snug">
+                <h4 className="mt-0.5 font-display font-bold text-[15px] text-fg leading-snug">
                   {s.title}
                 </h4>
               </div>

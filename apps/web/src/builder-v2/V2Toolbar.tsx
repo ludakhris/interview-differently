@@ -41,11 +41,11 @@ export function V2Toolbar({
     saveStatus === 'saved'
       ? 'text-emerald-400/80 bg-emerald-400/10 border-emerald-400/25'
       : saveStatus === 'saving'
-        ? 'text-white/40 bg-white/5 border-white/10 animate-pulse'
+        ? 'text-ink/40 bg-ink/5 border-edge/10 animate-pulse'
         : 'text-amber-400/80 bg-amber-400/10 border-amber-400/25'
 
   return (
-    <div className="flex items-center gap-3 px-4 h-[52px] flex-none border-b border-white/10 bg-[#0d0d0d]">
+    <div className="flex items-center gap-3 px-4 h-[52px] flex-none border-b border-edge/10 bg-surface-deep">
       {/* Logo mark */}
       <span className="text-emerald-500 text-[15px] font-bold flex-none">◆</span>
 
@@ -60,7 +60,7 @@ export function V2Toolbar({
             if (e.key === 'Enter') commitTitle()
             if (e.key === 'Escape') setEditing(false)
           }}
-          className="text-[14px] font-semibold bg-transparent border-b border-emerald-400/60 outline-hidden text-white min-w-[200px] max-w-[360px] pb-px"
+          className="text-[14px] font-semibold bg-transparent border-b border-emerald-400/60 outline-hidden text-ink min-w-[200px] max-w-[360px] pb-px"
         />
       ) : (
         <button
@@ -68,7 +68,7 @@ export function V2Toolbar({
             setDraft(title)
             setEditing(true)
           }}
-          className="text-[14px] font-semibold text-white/90 hover:text-white truncate max-w-[360px] text-left"
+          className="text-[14px] font-semibold text-ink/90 hover:text-ink truncate max-w-[360px] text-left"
         >
           {title}
         </button>
@@ -81,7 +81,7 @@ export function V2Toolbar({
             : 'Visible to every user'
         }
         className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded flex-none ${
-          institutionName ? 'bg-green/20 text-green-light' : 'bg-white/10 text-white/50'
+          institutionName ? 'bg-primary/20 text-accent' : 'bg-ink/10 text-on-primary/50'
         }`}
       >
         {institutionName ?? 'Public'}
@@ -100,7 +100,7 @@ export function V2Toolbar({
       {/* Preview */}
       <button
         onClick={onPreview}
-        className="flex items-center gap-1.5 text-[12px] font-semibold text-white/65 hover:text-white border border-white/10 hover:border-white/20 rounded-lg px-3 py-1.5 transition-all"
+        className="flex items-center gap-1.5 text-[12px] font-semibold text-ink/65 hover:text-ink border border-edge/10 hover:border-edge/20 rounded-lg px-3 py-1.5 transition-all"
       >
         ▶ Preview as candidate
       </button>

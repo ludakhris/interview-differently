@@ -23,16 +23,16 @@ interface ToggleRowProps {
 
 function ToggleRow({ label, description, checked, saving, onChange }: ToggleRowProps) {
   return (
-    <div className="flex items-center justify-between py-5 border-b border-white/10 last:border-0">
+    <div className="flex items-center justify-between py-5 border-b border-edge/10 last:border-0">
       <div>
-        <p className="text-[14px] font-semibold text-cream-light">{label}</p>
+        <p className="text-[14px] font-semibold text-fg">{label}</p>
         <p className="text-[12px] text-slate-mid mt-0.5">{description}</p>
       </div>
       <button
         onClick={() => onChange(!checked)}
         disabled={saving}
         className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-hidden ${
-          checked ? 'bg-green' : 'bg-white/15'
+          checked ? 'bg-primary' : 'bg-ink/15'
         } ${saving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         aria-pressed={checked}
       >
@@ -80,14 +80,14 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav />
       <div className="max-w-2xl mx-auto px-6 py-12 animate-fade-in">
         <div className="mb-8">
           <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
             Settings
           </p>
-          <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
+          <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
             Your account
           </h1>
         </div>
@@ -95,7 +95,7 @@ export function SettingsPage() {
         {error && <p className="text-[13px] text-red-400 mb-4">{error}</p>}
 
         {/* Memberships — everyone */}
-        <div className="bg-[#111111] rounded-xl border border-white/10 p-6 mb-4">
+        <div className="bg-surface-alt rounded-xl border border-edge/10 p-6 mb-4">
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
             Your memberships
           </p>
@@ -105,7 +105,7 @@ export function SettingsPage() {
         {/* Admin-only sections */}
         {isAdmin && (
           <>
-            <div className="bg-[#111111] rounded-xl border border-white/10 px-6">
+            <div className="bg-surface-alt rounded-xl border border-edge/10 px-6">
               <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid pt-5 pb-3">
                 Evaluation
               </p>

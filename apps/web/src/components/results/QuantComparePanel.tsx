@@ -17,10 +17,10 @@ const bandTone: Record<QuantFieldResultRef['band'], { label: string; className: 
 
 export function QuantComparePanel({ result }: Props) {
   return (
-    <div className="bg-[#0d0d0d] border border-white/10 rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-white/8 bg-white/3">
+    <div className="bg-surface-deep border border-edge/10 rounded-xl overflow-hidden">
+      <div className="px-4 py-3 border-b border-edge/8 bg-ink/3">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">
             Quant submission
           </p>
           {result.hintUsed && (
@@ -32,11 +32,9 @@ export function QuantComparePanel({ result }: Props) {
             </span>
           )}
         </div>
-        <p className="mt-0.5 text-[13px] font-medium text-cream-light leading-snug">
-          {result.prompt}
-        </p>
+        <p className="mt-0.5 text-[13px] font-medium text-fg leading-snug">{result.prompt}</p>
       </div>
-      <div className="divide-y divide-white/8">
+      <div className="divide-y divide-edge/8">
         {result.results.map((field) => {
           const tone = bandTone[field.band]
           return (
@@ -45,21 +43,19 @@ export function QuantComparePanel({ result }: Props) {
               className="px-4 py-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center"
             >
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-white/50">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-ink/50">
                   {field.fieldId}
                 </p>
                 <div className="mt-1 grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-widest text-white/35">
-                      Your answer
-                    </p>
-                    <p className="text-[14px] font-display font-bold text-cream-light">
+                    <p className="text-[10px] uppercase tracking-widest text-ink/35">Your answer</p>
+                    <p className="text-[14px] font-display font-bold text-fg">
                       {format(field.userAnswer)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-widest text-white/35">Model</p>
-                    <p className="text-[14px] font-display font-bold text-cream-light">
+                    <p className="text-[10px] uppercase tracking-widest text-ink/35">Model</p>
+                    <p className="text-[14px] font-display font-bold text-fg">
                       {format(field.modelAnswer)}
                     </p>
                   </div>

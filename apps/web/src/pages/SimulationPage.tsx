@@ -315,7 +315,7 @@ function SimulationContent({
               </p>
               <button
                 onClick={() => void sendLtiScore()}
-                className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
               >
                 Retry
               </button>
@@ -370,7 +370,7 @@ function SimulationContent({
   return (
     <div className="min-h-screen bg-surface flex flex-col">
       {isPreview && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 bg-[#1a1a1a] border-t border-amber-500/30">
+        <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 bg-surface-alt border-t border-amber-500/30">
           <div className="flex items-center gap-2.5">
             <span className="text-amber-400 text-[13px]">◈</span>
             <span className="text-[12px] font-semibold text-amber-400 uppercase tracking-widest">
@@ -427,7 +427,7 @@ function SimulationContent({
                 <div className="flex justify-end">
                   <button
                     onClick={advanceTransition}
-                    className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                    className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
                   >
                     Continue
                   </button>
@@ -463,7 +463,7 @@ function SimulationContent({
                   <div className="mt-6 flex justify-end">
                     <button
                       onClick={advanceQuant}
-                      className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                      className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
                     >
                       Continue
                     </button>
@@ -495,7 +495,7 @@ function SimulationContent({
                   <div className="mt-6 flex justify-end">
                     <button
                       onClick={advanceSql}
-                      className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                      className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
                     >
                       Continue
                     </button>
@@ -615,7 +615,7 @@ function SimulationContent({
                       font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
                       ${
                         selectedChoice
-                          ? 'bg-green hover:bg-green-light text-on-primary cursor-pointer'
+                          ? 'bg-primary hover:bg-accent text-on-primary cursor-pointer'
                           : 'bg-ink/10 text-slate-light cursor-not-allowed'
                       }
                     `}

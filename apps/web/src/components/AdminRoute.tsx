@@ -11,7 +11,7 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <p className="text-slate-mid text-[14px]">Loading...</p>
       </div>
     )
@@ -25,17 +25,15 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (!isAnyAdmin) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="text-center">
-          <p className="font-display font-bold text-[18px] text-cream-light mb-2">
-            Access restricted
-          </p>
+          <p className="font-display font-bold text-[18px] text-fg mb-2">Access restricted</p>
           <p className="text-[14px] text-slate-mid mb-6">
             This page is only available to administrators.
           </p>
           <button
             onClick={() => navigate('/')}
-            className="text-[13px] font-semibold text-green-light hover:text-green transition-colors"
+            className="text-[13px] font-semibold text-accent hover:text-primary transition-colors"
           >
             ← Back to home
           </button>

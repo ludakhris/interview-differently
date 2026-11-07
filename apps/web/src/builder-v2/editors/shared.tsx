@@ -10,16 +10,14 @@ import type {
 // ── Base input styles ─────────────────────────────────────────────────────────
 
 export const inputCls =
-  'w-full bg-black border border-white/12 rounded-lg px-3 py-2 text-[13px] text-white/85 outline-hidden focus:border-emerald-400/50 transition-colors placeholder:text-white/20'
+  'w-full bg-surface border border-edge/12 rounded-lg px-3 py-2 text-[13px] text-ink/85 outline-hidden focus:border-emerald-400/50 transition-colors placeholder:text-ink/20'
 
 // ── Primitives ────────────────────────────────────────────────────────────────
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-[10px] font-bold uppercase tracking-widest text-white/30">
-        {label}
-      </label>
+      <label className="text-[10px] font-bold uppercase tracking-widest text-ink/30">{label}</label>
       {children}
     </div>
   )
@@ -63,8 +61,8 @@ export function SelectInput({
 export function SectionLabel({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">{label}</span>
-      <div className="flex-1 h-px bg-white/6" />
+      <span className="text-[10px] font-bold uppercase tracking-widest text-ink/25">{label}</span>
+      <div className="flex-1 h-px bg-ink/6" />
     </div>
   )
 }
@@ -93,7 +91,7 @@ export function RemoveButton({
       type="button"
       onClick={onClick}
       title={title}
-      className="text-[12px] text-white/20 hover:text-red-400/70 transition-colors px-1 flex-none leading-none"
+      className="text-[12px] text-ink/20 hover:text-red-400/70 transition-colors px-1 flex-none leading-none"
     >
       ✕
     </button>

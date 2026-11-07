@@ -19,8 +19,8 @@ const recommendationLabel: Record<string, string> = {
 }
 
 const recommendationColor: Record<string, string> = {
-  'strong yes': 'text-green border-green/30 bg-green/10',
-  yes: 'text-green border-green/20 bg-green/5',
+  'strong yes': 'text-primary border-primary/30 bg-primary/10',
+  yes: 'text-primary border-primary/20 bg-primary/5',
   maybe: 'text-amber-400 border-amber-400/30 bg-amber-400/10',
   no: 'text-red-400 border-red-500/30 bg-red-500/10',
 }
@@ -109,10 +109,10 @@ export function ImmersiveFeedbackPage() {
   // ── Loading ────────────────────────────────────────────────────────────────
   if (summaryStatus === 'loading') {
     return (
-      <div className="min-h-screen bg-black flex flex-col">
+      <div className="min-h-screen bg-surface flex flex-col">
         <Nav />
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-edge/20 border-t-edge rounded-full animate-spin" />
           <p className="text-[14px] text-slate-mid">Generating interview assessment…</p>
         </div>
       </div>
@@ -123,7 +123,7 @@ export function ImmersiveFeedbackPage() {
   const recClass = recommendationColor[rec] ?? recommendationColor.maybe
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
+    <div className="min-h-screen bg-surface flex flex-col">
       <Nav trackLabel={scenario?.title} />
 
       <div className="max-w-2xl mx-auto px-6 py-10 space-y-8 w-full">
@@ -132,14 +132,14 @@ export function ImmersiveFeedbackPage() {
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
             Interview Feedback
           </p>
-          <h1 className="font-display font-bold text-[24px] text-cream-light mb-1">
+          <h1 className="font-display font-bold text-[24px] text-fg mb-1">
             {scenario?.title ?? 'Interview Complete'}
           </h1>
         </div>
 
         {/* Summary card */}
         {summary && summaryStatus === 'ready' ? (
-          <div className="rounded-2xl border border-white/10 bg-[#111111] p-6 space-y-5 animate-fade-in">
+          <div className="rounded-2xl border border-edge/10 bg-surface-alt p-6 space-y-5 animate-fade-in">
             {/* Hiring recommendation */}
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
@@ -153,20 +153,18 @@ export function ImmersiveFeedbackPage() {
             </div>
 
             {/* Overall assessment */}
-            <p className="text-[14px] text-cream-light leading-relaxed">
-              {summary.overallAssessment}
-            </p>
+            <p className="text-[14px] text-fg leading-relaxed">{summary.overallAssessment}</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Strengths */}
-              <div className="rounded-xl bg-green/5 border border-green/20 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-green mb-3">
+              <div className="rounded-xl bg-primary/5 border border-primary/20 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-3">
                   Strengths
                 </p>
                 <ul className="space-y-1.5">
                   {summary.strengths.map((s, i) => (
-                    <li key={i} className="text-[13px] text-cream-light/80 flex gap-2">
-                      <span className="text-green mt-0.5 shrink-0">+</span>
+                    <li key={i} className="text-[13px] text-fg/80 flex gap-2">
+                      <span className="text-primary mt-0.5 shrink-0">+</span>
                       {s}
                     </li>
                   ))}
@@ -180,7 +178,7 @@ export function ImmersiveFeedbackPage() {
                 </p>
                 <ul className="space-y-1.5">
                   {summary.developmentAreas.map((d, i) => (
-                    <li key={i} className="text-[13px] text-cream-light/80 flex gap-2">
+                    <li key={i} className="text-[13px] text-fg/80 flex gap-2">
                       <span className="text-amber-400 mt-0.5 shrink-0">→</span>
                       {d}
                     </li>
@@ -190,7 +188,7 @@ export function ImmersiveFeedbackPage() {
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl border border-white/10 bg-[#111111] p-6 text-center text-slate-mid text-[14px]">
+          <div className="rounded-2xl border border-edge/10 bg-surface-alt p-6 text-center text-slate-mid text-[14px]">
             Summary unavailable — try refreshing the page.
           </div>
         )}
@@ -207,15 +205,13 @@ export function ImmersiveFeedbackPage() {
               return (
                 <div
                   key={resp.id}
-                  className="rounded-xl border border-white/10 bg-[#111111] overflow-hidden"
+                  className="rounded-xl border border-edge/10 bg-surface-alt overflow-hidden"
                 >
                   <button
                     onClick={() => toggleExpand(resp.id)}
-                    className="w-full flex items-start justify-between gap-4 px-5 py-4 text-left hover:bg-white/5 transition-colors"
+                    className="w-full flex items-start justify-between gap-4 px-5 py-4 text-left hover:bg-ink/5 transition-colors"
                   >
-                    <p className="text-[14px] text-cream-light leading-snug flex-1">
-                      {resp.questionText}
-                    </p>
+                    <p className="text-[14px] text-fg leading-snug flex-1">{resp.questionText}</p>
                     <span
                       className={`text-slate-mid text-[18px] mt-0.5 shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`}
                     >
@@ -224,14 +220,14 @@ export function ImmersiveFeedbackPage() {
                   </button>
 
                   {isOpen && (
-                    <div className="px-5 pb-5 space-y-3 border-t border-white/10 pt-4 animate-fade-in">
+                    <div className="px-5 pb-5 space-y-3 border-t border-edge/10 pt-4 animate-fade-in">
                       {/* Recording playback (private — signed URL fetched on expand) */}
                       {resp.mediaUrl &&
                         (() => {
                           const m = mediaByResponse[resp.id]
                           if (!m || m.status === 'loading') {
                             return (
-                              <div className="rounded-lg bg-white/5 border border-white/10 px-3 py-2.5">
+                              <div className="rounded-lg bg-ink/5 border border-edge/10 px-3 py-2.5">
                                 <p className="text-[11px] text-slate-mid">Loading recording…</p>
                               </div>
                             )
@@ -254,7 +250,7 @@ export function ImmersiveFeedbackPage() {
                                 src={m.url}
                                 controls
                                 playsInline
-                                className="w-full rounded-lg bg-black/50 max-h-72"
+                                className="w-full rounded-lg bg-ink/50 max-h-72"
                               />
                             </div>
                           )
@@ -275,21 +271,19 @@ export function ImmersiveFeedbackPage() {
                       {/* AI feedback */}
                       {fb ? (
                         <div className="space-y-2">
-                          <p className="text-[13px] text-cream-light leading-relaxed">
-                            {fb.feedback}
-                          </p>
+                          <p className="text-[13px] text-fg leading-relaxed">{fb.feedback}</p>
                           <div className="grid grid-cols-2 gap-3 pt-1">
-                            <div className="rounded-lg bg-green/5 border border-green/20 px-3 py-2">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-green mb-1">
+                            <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">
                                 What worked
                               </p>
-                              <p className="text-[12px] text-cream-light/80">{fb.strengths}</p>
+                              <p className="text-[12px] text-fg/80">{fb.strengths}</p>
                             </div>
                             <div className="rounded-lg bg-amber-400/5 border border-amber-400/20 px-3 py-2">
                               <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">
                                 To improve
                               </p>
-                              <p className="text-[12px] text-cream-light/80">{fb.development}</p>
+                              <p className="text-[12px] text-fg/80">{fb.development}</p>
                             </div>
                           </div>
                         </div>
@@ -308,13 +302,13 @@ export function ImmersiveFeedbackPage() {
         <div className="flex gap-3 pt-2">
           <button
             onClick={() => navigate(`/scenario/${scenarioId}/immersive`)}
-            className="px-5 py-2.5 rounded-lg border border-white/10 text-slate-light hover:text-white text-[13px] font-medium transition-colors"
+            className="px-5 py-2.5 rounded-lg border border-edge/10 text-slate-light hover:text-ink text-[13px] font-medium transition-colors"
           >
             Redo interview
           </button>
           <button
             onClick={() => navigate('/dashboard')}
-            className="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-cream-light text-[13px] font-medium transition-colors"
+            className="px-5 py-2.5 rounded-lg bg-ink/5 hover:bg-ink/10 text-fg text-[13px] font-medium transition-colors"
           >
             Back to dashboard
           </button>

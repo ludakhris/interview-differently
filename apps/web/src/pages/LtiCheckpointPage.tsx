@@ -122,7 +122,7 @@ function LtiCheckpoint({ token, framed }: { token: string | null; framed: boolea
         {courseUrl && (
           <>
             {' '}
-            <a href={courseUrl} className="text-green-light underline font-semibold">
+            <a href={courseUrl} className="text-accent underline font-semibold">
               Back to your course
             </a>
           </>
@@ -136,7 +136,7 @@ function LtiCheckpoint({ token, framed }: { token: string | null; framed: boolea
         <button
           type="button"
           onClick={() => setTries((n) => n + 1)}
-          className="px-4 py-2 rounded-full bg-green hover:bg-green-light text-[13px] font-semibold text-on-primary transition-colors"
+          className="px-4 py-2 rounded-full bg-primary hover:bg-accent text-[13px] font-semibold text-on-primary transition-colors"
         >
           Retry
         </button>

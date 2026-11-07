@@ -131,7 +131,7 @@ function HintControls({
         >
           <button
             type="button"
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-ink/60"
             aria-label="Cancel"
             onClick={() => setStage('idle')}
           />
@@ -182,7 +182,7 @@ function HintControls({
         >
           <button
             type="button"
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-ink/60"
             aria-label="Close"
             onClick={() => {
               /* dismiss only — already marked used */
@@ -219,7 +219,7 @@ function HintControls({
               <button
                 type="button"
                 onClick={() => setStage('idle')}
-                className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[13px] px-5 py-2 rounded-lg transition-colors"
+                className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[13px] px-5 py-2 rounded-lg transition-colors"
               >
                 Got it
               </button>
@@ -385,7 +385,7 @@ function NumericRangeView({
               font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
               ${
                 ready && !busy
-                  ? 'bg-green hover:bg-green-light text-on-primary cursor-pointer'
+                  ? 'bg-primary hover:bg-accent text-on-primary cursor-pointer'
                   : 'bg-ink/10 text-slate-light cursor-not-allowed'
               }
             `}
@@ -539,7 +539,7 @@ function StructuredView({
               font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
               ${
                 ready && !busy
-                  ? 'bg-green hover:bg-green-light text-on-primary cursor-pointer'
+                  ? 'bg-primary hover:bg-accent text-on-primary cursor-pointer'
                   : 'bg-ink/10 text-slate-light cursor-not-allowed'
               }
             `}

@@ -10,6 +10,7 @@ import { downloadCsv } from '@/lib/csv'
 import { AttemptReview } from '@/components/AttemptReview'
 import { ScoreSummary } from '@/components/ScoreSummary'
 import { listCohortOptions, type CohortOption } from '@/services/datasetsService'
+import { AdminCrumb } from '@/pages/AdminToolboxPage'
 import {
   createDelivery,
   getAttemptReview,
@@ -38,7 +39,7 @@ import {
 type GetToken = () => Promise<string | null>
 
 const inputCls =
-  'w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[13px] text-cream-light placeholder:text-white/25 focus:outline-hidden focus:border-white/30'
+  'w-full bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30'
 
 /** `draw` spec → "all" | "4" | "mc 3, sql 1" — mirrors formatDrawSpec in the API. */
 function formatDraw(spec: number | Record<string, number> | null): string {
@@ -106,14 +107,15 @@ export function AdminAssessmentsPage() {
   }, [selectedId, refreshDetail])
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav />
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="mb-8">
-          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+          <AdminCrumb />
+          <p className="font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
             Admin · Tools
           </p>
-          <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
+          <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
             Assessments
           </h1>
           <p className="text-[13px] text-slate-mid mt-1">
@@ -123,7 +125,7 @@ export function AdminAssessmentsPage() {
               href="https://github.com/ludakhris/interview-differently/blob/main/docs/assessment-format.md"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono underline hover:text-cream-light transition-colors"
+              className="font-mono underline hover:text-fg transition-colors"
             >
               docs/assessment-format.md
             </a>
@@ -132,7 +134,7 @@ export function AdminAssessmentsPage() {
               href="https://github.com/ludakhris/interview-differently/blob/main/docs/instructor-guide.md"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono underline hover:text-cream-light transition-colors"
+              className="font-mono underline hover:text-fg transition-colors"
             >
               docs/instructor-guide.md
             </a>
@@ -157,7 +159,7 @@ export function AdminAssessmentsPage() {
                   setImportSeed('')
                   setSelectedId('import')
                 }}
-                className="text-[12px] font-semibold text-green-light hover:text-green transition-colors"
+                className="text-[12px] font-semibold text-accent hover:text-primary transition-colors"
               >
                 + Import
               </button>
@@ -176,11 +178,11 @@ export function AdminAssessmentsPage() {
                       onClick={() => setSelectedId(a.id)}
                       className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${
                         selectedId === a.id
-                          ? 'bg-white/10 border border-white/15'
-                          : 'border border-transparent hover:bg-white/5'
+                          ? 'bg-ink/10 border border-edge/15'
+                          : 'border border-transparent hover:bg-ink/5'
                       }`}
                     >
-                      <p className="text-[13px] font-semibold text-cream-light flex items-center gap-2">
+                      <p className="text-[13px] font-semibold text-fg flex items-center gap-2">
                         {a.title}
                         <OwnerBadge institutionName={a.institutionName} />
                       </p>
@@ -208,7 +210,7 @@ export function AdminAssessmentsPage() {
                 }}
               />
             ) : !selectedId ? (
-              <div className="bg-[#111111] rounded-xl border border-white/10 px-6 py-12 text-center">
+              <div className="bg-surface-alt rounded-xl border border-edge/10 px-6 py-12 text-center">
                 <p className="text-[13px] text-slate-mid">
                   Select an assessment, or import a new one.
                 </p>
@@ -296,11 +298,11 @@ function ImportPanel({
   const canImport = !!preview && preview.sqlErrors.length === 0 && ownerId !== undefined
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-white/10 overflow-hidden">
+    <div className="bg-surface-alt rounded-xl border border-edge/10 overflow-hidden">
       <div className="p-6 space-y-4">
         {updating ? (
-          <p className="text-[12px] text-white/50 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-            Updating <span className="text-cream-light">{updating.title}</span> — owner stays{' '}
+          <p className="text-[12px] text-ink/50 rounded-lg border border-edge/10 bg-ink/5 px-3 py-2">
+            Updating <span className="text-fg">{updating.title}</span> — owner stays{' '}
             {updating.institutionName ?? 'platform-wide'}.
           </p>
         ) : (
@@ -315,7 +317,7 @@ function ImportPanel({
                 onChange={setOwnerChoice}
                 className={`${inputCls} mt-1`}
               />
-              <p className="text-[11px] text-white/40 mt-1">
+              <p className="text-[11px] text-ink/40 mt-1">
                 Only applies to a new slug — re-importing keeps the existing owner.
               </p>
             </label>
@@ -338,18 +340,18 @@ function ImportPanel({
             }
             className={`${inputCls} mt-1 font-mono text-[12px] leading-relaxed`}
           />
-          <p className="text-[11px] text-white/40 mt-1.5">
+          <p className="text-[11px] text-ink/40 mt-1.5">
             Re-importing a bank with the same <span className="font-mono">slug</span> replaces it;
             existing deliveries and attempts are kept.
           </p>
         </div>
 
         {preview && (
-          <div className="rounded-lg border border-white/10 bg-[#0d0d0d] p-4 space-y-3">
+          <div className="rounded-lg border border-edge/10 bg-surface-deep p-4 space-y-3">
             <div className="flex items-baseline justify-between">
-              <p className="text-[13px] font-semibold text-cream-light">
+              <p className="text-[13px] font-semibold text-fg">
                 {preview.parsed.title}{' '}
-                <span className="font-mono text-[11px] text-white/40 ml-2">
+                <span className="font-mono text-[11px] text-ink/40 ml-2">
                   {preview.parsed.slug}
                 </span>
               </p>
@@ -370,10 +372,10 @@ function ImportPanel({
                     key={s.id}
                     className="flex items-baseline justify-between font-mono text-[11px]"
                   >
-                    <span className="text-cream-light/85">
+                    <span className="text-fg/85">
                       {s.number}. {s.title}
                     </span>
-                    <span className="text-white/40">
+                    <span className="text-ink/40">
                       {mc} mc · {scen ? `${scen} scenario · ` : ''}
                       {sqlN} sql · draw {formatDraw(s.draw)}
                     </span>
@@ -386,7 +388,7 @@ function ImportPanel({
                 <p className="text-[11px] font-bold uppercase tracking-widest text-red-400 mb-1">
                   Reference queries failed
                 </p>
-                <ul className="font-mono text-[11px] text-cream-light/85 space-y-0.5">
+                <ul className="font-mono text-[11px] text-fg/85 space-y-0.5">
                   {preview.sqlErrors.map((e) => (
                     <li key={e.questionId}>
                       {e.questionId}: {e.error}
@@ -400,7 +402,7 @@ function ImportPanel({
                 <p className="text-[11px] font-bold uppercase tracking-widest text-amber-400 mb-1">
                   Warnings
                 </p>
-                <ul className="text-[11px] text-cream-light/75 space-y-0.5">
+                <ul className="text-[11px] text-fg/75 space-y-0.5">
                   {preview.parsed.warnings.map((w, i) => (
                     <li key={i}>{w}</li>
                   ))}
@@ -412,11 +414,11 @@ function ImportPanel({
 
         {err && <p className="text-[12px] text-red-400 font-mono whitespace-pre-wrap">{err}</p>}
       </div>
-      <div className="flex items-center justify-end gap-2 px-6 py-3 border-t border-white/8 bg-[#0d0d0d]">
+      <div className="flex items-center justify-end gap-2 px-6 py-3 border-t border-edge/8 bg-surface-deep">
         <button
           onClick={doPreview}
           disabled={busy !== null || !markdown.trim()}
-          className="px-3 py-1.5 rounded-md border border-white/15 hover:border-white/30 text-[12px] font-semibold text-cream-light disabled:opacity-50 transition-colors"
+          className="px-3 py-1.5 rounded-md border border-edge/15 hover:border-edge/30 text-[12px] font-semibold text-fg disabled:opacity-50 transition-colors"
         >
           {busy === 'preview' ? 'Checking…' : 'Preview'}
         </button>
@@ -430,7 +432,7 @@ function ImportPanel({
                 ? 'Choose an owner first'
                 : 'Preview first — every reference query must run cleanly'
           }
-          className="px-3 py-1.5 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white disabled:opacity-50 transition-colors"
+          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink disabled:opacity-50 transition-colors"
         >
           {busy === 'import' ? 'Importing…' : 'Import'}
         </button>
@@ -466,10 +468,10 @@ function DetailPanel({
 
   return (
     <div className="space-y-6">
-      <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
+      <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
-            <h2 className="font-display font-bold text-[18px] text-cream-light flex items-center gap-2">
+            <h2 className="font-display font-bold text-[18px] text-fg flex items-center gap-2">
               {detail.title}
               <OwnerBadge institutionName={detail.institutionName} />
             </h2>
@@ -484,7 +486,7 @@ function DetailPanel({
             <div className="flex items-center gap-3 shrink-0">
               <button
                 onClick={onReimport}
-                className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
+                className="text-[11px] text-slate-mid hover:text-fg transition-colors"
               >
                 Edit markdown →
               </button>
@@ -514,11 +516,11 @@ function DetailPanel({
             const mc = s.questions.filter((q) => q.type === 'mc').length
             const scen = s.questions.filter((q) => q.type === 'scenario').length
             return (
-              <li key={s.id} className="bg-black border border-white/10 rounded-lg px-3 py-2">
-                <p className="text-[12px] font-semibold text-cream-light">
+              <li key={s.id} className="bg-surface border border-edge/10 rounded-lg px-3 py-2">
+                <p className="text-[12px] font-semibold text-fg">
                   {s.number}. {s.title}
                 </p>
-                <p className="font-mono text-[10px] text-white/40">
+                <p className="font-mono text-[10px] text-ink/40">
                   {mc} mc · {scen ? `${scen} scenario · ` : ''}
                   {s.questions.length - mc - scen} sql · draw {formatDraw(s.draw)}
                 </p>
@@ -528,7 +530,7 @@ function DetailPanel({
         </ul>
       </div>
 
-      <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
+      <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
             Deliveries
@@ -556,7 +558,7 @@ function DetailPanel({
               })
               if (proceed) setShowNew(true)
             }}
-            className="text-[12px] font-semibold text-green-light hover:text-green transition-colors"
+            className="text-[12px] font-semibold text-accent hover:text-primary transition-colors"
           >
             {showNew ? 'Cancel' : '+ Schedule delivery'}
           </button>
@@ -584,22 +586,22 @@ function DetailPanel({
             {detail.deliveries.map((d) => (
               <li
                 key={d.id}
-                className="border border-white/10 rounded-lg px-4 py-3 flex items-center justify-between gap-4"
+                className="border border-edge/10 rounded-lg px-4 py-3 flex items-center justify-between gap-4"
               >
                 <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-cream-light">
-                    <span className="uppercase tracking-widest text-[10px] text-[#2d9e5f] mr-2">
+                  <p className="text-[13px] font-semibold text-fg">
+                    <span className="uppercase tracking-widest text-[10px] text-accent mr-2">
                       {d.label}
                     </span>
                     {d.cohort ? (
                       <>
                         {d.cohort.name}{' '}
-                        <span className="text-white/40 font-normal">
+                        <span className="text-ink/40 font-normal">
                           · {d.cohort.institutionName}
                         </span>
                       </>
                     ) : (
-                      <span className="text-white/40 font-normal italic">
+                      <span className="text-ink/40 font-normal italic">
                         cohort deleted — results kept
                       </span>
                     )}
@@ -622,7 +624,7 @@ function DetailPanel({
                 <div className="flex items-center gap-3 shrink-0">
                   <button
                     onClick={() => setResultsFor(resultsFor === d.id ? null : d.id)}
-                    className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
+                    className="text-[11px] text-slate-mid hover:text-fg transition-colors"
                   >
                     {resultsFor === d.id ? 'Hide results' : 'Results →'}
                   </button>
@@ -692,12 +694,12 @@ function InviteLink({
     <div className="mt-1.5 flex items-center gap-3 text-[11px]">
       {url ? (
         <>
-          <span className="font-mono text-white/50 truncate max-w-[260px]" title={url}>
+          <span className="font-mono text-ink/50 truncate max-w-[260px]" title={url}>
             {url}
           </span>
           <button
             onClick={copy}
-            className="font-semibold text-green-light hover:text-green transition-colors shrink-0"
+            className="font-semibold text-accent hover:text-primary transition-colors shrink-0"
           >
             {copied ? 'Copied ✓' : 'Copy link'}
           </button>
@@ -738,7 +740,7 @@ function InviteLink({
               setBusy(false)
             }
           }}
-          className="font-semibold text-green-light hover:text-green disabled:opacity-50 transition-colors"
+          className="font-semibold text-accent hover:text-primary disabled:opacity-50 transition-colors"
           title="Anyone with the link signs in, joins this cohort, and starts the paper"
         >
           {busy ? 'Creating…' : '+ Create invite link'}
@@ -792,10 +794,10 @@ function NewDeliveryForm({
           setSubmitting(false)
         }
       }}
-      className="bg-black rounded-lg border border-white/10 p-4 mb-3 grid grid-cols-1 sm:grid-cols-2 gap-3"
+      className="bg-surface rounded-lg border border-edge/10 p-4 mb-3 grid grid-cols-1 sm:grid-cols-2 gap-3"
     >
       <label className="block sm:col-span-2">
-        <span className="text-[11px] text-white/40">Cohort</span>
+        <span className="text-[11px] text-ink/40">Cohort</span>
         <select
           value={cohortId}
           onChange={(e) => setCohortId(e.target.value)}
@@ -813,7 +815,7 @@ function NewDeliveryForm({
         </select>
       </label>
       <label className="block">
-        <span className="text-[11px] text-white/40">Label</span>
+        <span className="text-[11px] text-ink/40">Label</span>
         <input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
@@ -823,7 +825,7 @@ function NewDeliveryForm({
         />
       </label>
       <label className="block">
-        <span className="text-[11px] text-white/40">Time limit (minutes, optional)</span>
+        <span className="text-[11px] text-ink/40">Time limit (minutes, optional)</span>
         <input
           value={timeLimit}
           onChange={(e) => setTimeLimit(e.target.value)}
@@ -834,7 +836,7 @@ function NewDeliveryForm({
         />
       </label>
       <label className="block">
-        <span className="text-[11px] text-white/40">Opens (optional)</span>
+        <span className="text-[11px] text-ink/40">Opens (optional)</span>
         <input
           value={opensAt}
           onChange={(e) => setOpensAt(e.target.value)}
@@ -843,7 +845,7 @@ function NewDeliveryForm({
         />
       </label>
       <label className="block">
-        <span className="text-[11px] text-white/40">Closes (optional)</span>
+        <span className="text-[11px] text-ink/40">Closes (optional)</span>
         <input
           value={closesAt}
           onChange={(e) => setClosesAt(e.target.value)}
@@ -860,7 +862,7 @@ function NewDeliveryForm({
         />
         <span className="text-[12px] text-slate-light">
           Let learners review their answers after submitting
-          <span className="block text-[11px] text-white/40">
+          <span className="block text-[11px] text-ink/40">
             Shows what they got wrong and the correct answer. On by default for post, off for pre
             (the same questions are reused).
           </span>
@@ -871,7 +873,7 @@ function NewDeliveryForm({
         <button
           type="submit"
           disabled={submitting || !cohortId}
-          className="px-3 py-1.5 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white disabled:opacity-50"
+          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink disabled:opacity-50"
         >
           {submitting ? 'Scheduling…' : 'Schedule'}
         </button>
@@ -940,14 +942,14 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
   }
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
+    <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
       <div className="flex items-center justify-between mb-3">
         <div>
           <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
             Results · {data.delivery.label} · {data.delivery.cohortName}
           </h3>
           {(data.delivery.expectedMinutes != null || data.delivery.medianMinutes != null) && (
-            <p className="text-[12px] text-white/40 mt-0.5">
+            <p className="text-[12px] text-ink/40 mt-0.5">
               {[
                 data.delivery.expectedMinutes != null &&
                   `expected ${data.delivery.expectedMinutes} min`,
@@ -960,28 +962,26 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
         </div>
         <div className="flex items-center gap-4">
           {loadedAt && (
-            <span className="text-[11px] text-white/30">
-              updated {loadedAt.toLocaleTimeString()}
-            </span>
+            <span className="text-[11px] text-ink/30">updated {loadedAt.toLocaleTimeString()}</span>
           )}
           <button
             onClick={load}
             disabled={refreshing}
-            className="text-[12px] font-semibold text-slate-mid hover:text-cream-light disabled:opacity-40 transition-colors"
+            className="text-[12px] font-semibold text-slate-mid hover:text-fg disabled:opacity-40 transition-colors"
           >
             {refreshing ? 'Refreshing…' : '↻ Refresh'}
           </button>
           <button
             onClick={exportCsv}
             disabled={data.attempts.length === 0}
-            className="text-[12px] font-semibold text-green-light hover:text-green disabled:opacity-40 transition-colors"
+            className="text-[12px] font-semibold text-accent hover:text-primary disabled:opacity-40 transition-colors"
           >
             Export CSV
           </button>
         </div>
       </div>
       <p className="text-[12px] text-slate-mid mb-3">
-        <span className="text-[#2d9e5f]">{submittedN} submitted</span> ·{' '}
+        <span className="text-accent">{submittedN} submitted</span> ·{' '}
         <span className="text-amber">{inProgressN} in progress</span> · {data.notStarted.length} not
         started
       </p>
@@ -1008,10 +1008,10 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
             </thead>
             <tbody>
               {data.attempts.map((a) => (
-                <tr key={a.attemptId} className="border-t border-white/5">
+                <tr key={a.attemptId} className="border-t border-edge/5">
                   <td className="py-2 pr-4">
-                    <p className="text-cream-light">{a.displayName ?? a.email ?? a.userId}</p>
-                    <p className="text-[11px] text-white/40">
+                    <p className="text-fg">{a.displayName ?? a.email ?? a.userId}</p>
+                    <p className="text-[11px] text-ink/40">
                       {a.submittedAt
                         ? `submitted ${fmt(a.submittedAt)}${a.submittedLate ? ' · late' : ''}`
                         : `in progress · ${a.answeredCount} of ${a.questionCount} answered · last saved ${time(a.lastActivityAt)}`}
@@ -1028,7 +1028,7 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
                       </td>
                     )
                   })}
-                  <td className="text-right py-2 pl-4 font-mono font-semibold text-cream-light">
+                  <td className="text-right py-2 pl-4 font-mono font-semibold text-fg">
                     {a.overall ? `${a.overall.percent}%` : '—'}
                     {a.submittedAt && (
                       <button
@@ -1038,7 +1038,7 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
                             who: a.displayName ?? a.email ?? a.userId,
                           })
                         }
-                        className="block ml-auto font-sans text-[11px] font-normal text-slate-mid hover:text-cream-light"
+                        className="block ml-auto font-sans text-[11px] font-normal text-slate-mid hover:text-fg"
                       >
                         Answers →
                       </button>
@@ -1047,10 +1047,10 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
                 </tr>
               ))}
               {data.notStarted.map((u) => (
-                <tr key={u.userId} className="border-t border-white/5">
+                <tr key={u.userId} className="border-t border-edge/5">
                   <td className="py-2 pr-4">
-                    <p className="text-white/50">{u.displayName ?? u.email ?? u.userId}</p>
-                    <p className="text-[11px] text-white/30">not started</p>
+                    <p className="text-ink/50">{u.displayName ?? u.email ?? u.userId}</p>
+                    <p className="text-[11px] text-ink/30">not started</p>
                   </td>
                   <td colSpan={data.sections.length + 2} />
                 </tr>
@@ -1104,7 +1104,7 @@ function AttemptAnswers({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/70 flex items-start justify-center p-4 sm:p-8 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-ink/70 flex items-start justify-center p-4 sm:p-8 overflow-y-auto"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()

@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react'
 import { TOOL_META, type ToolKey } from '@id/types'
 import { useMyTools } from '@/hooks/useMyTools'
 import { useRole } from '@/hooks/useRole'
+import { Wordmark } from '@/components/Wordmark'
 
 interface NavProps {
   trackLabel?: string
@@ -16,75 +17,70 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
   const { isSignedIn, isLoaded } = useAuth()
   const { isAnyAdmin } = useRole()
   const tools = useMyTools()
+  const link =
+    'text-[14px] font-semibold text-slate-light hover:text-fg transition-colors whitespace-nowrap'
 
   return (
-    <nav className="flex items-center justify-between px-8 py-4 bg-black sticky top-0 z-50">
-      <button
-        onClick={() => navigate('/')}
-        className="font-display font-extrabold text-[17px] text-cream-light tracking-tight hover:opacity-80 transition-opacity"
-      >
-        Interview<span className="text-green-light">Differently</span>
-      </button>
-
-      <div className="flex items-center gap-4">
-        {trackLabel && (
-          <span className="text-[11px] font-medium tracking-widest uppercase text-slate-light bg-white/8 px-3 py-1 rounded-full border border-white/10">
-            {trackLabel}
-            {stepLabel && <span className="text-white/40 ml-2">{stepLabel}</span>}
-          </span>
-        )}
+    <nav className="sticky top-0 z-50 bg-surface/95 backdrop-blur border-b border-edge/10">
+      <div className="max-w-[1200px] mx-auto flex flex-wrap items-center justify-between gap-x-8 gap-y-3 px-4 sm:px-8 py-4">
         <button
-          onClick={() => navigate('/request-scenario')}
-          className="text-[12px] font-medium text-slate-mid hover:text-cream-light transition-colors"
+          onClick={() => navigate('/')}
+          className="hover:opacity-80 transition-opacity"
+          aria-label="Interview Differently home"
         >
-          Request a scenario
+          <Wordmark />
         </button>
-        {isLoaded && isSignedIn && (
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="text-[12px] font-medium text-slate-mid hover:text-cream-light transition-colors"
-          >
-            Dashboard
+
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          {trackLabel && (
+            <span className="font-mono text-[11px] font-medium tracking-[0.14em] uppercase text-slate-mid bg-surface-alt px-3 py-1 rounded-full border border-edge/10">
+              {trackLabel}
+              {stepLabel && <span className="text-ink/50 ml-2">{stepLabel}</span>}
+            </span>
+          )}
+          <button onClick={() => navigate('/request-scenario')} className={link}>
+            Request a scenario
           </button>
-        )}
-        {isLoaded && isSignedIn && (tools.length > 0 || isAnyAdmin) && (
-          <ToolsMenu tools={tools} isAnyAdmin={isAnyAdmin} />
-        )}
-        {isLoaded && isSignedIn && isAnyAdmin && (
-          <button
-            onClick={() => navigate('/builder')}
-            className="text-[12px] font-medium text-slate-mid hover:text-cream-light transition-colors"
-          >
-            Builder
-          </button>
-        )}
-        {isLoaded && isSignedIn && (
-          <button
-            onClick={() => navigate('/settings')}
-            className="text-[12px] font-medium text-slate-mid hover:text-cream-light transition-colors"
-          >
-            Settings
-          </button>
-        )}
-        {isLoaded &&
-          (isSignedIn ? (
-            <UserButton />
-          ) : (
-            <button
-              onClick={() => navigate('/sign-in')}
-              className="text-[13px] font-semibold text-cream-light hover:text-white/70 transition-colors"
-            >
-              Sign in
+          {isLoaded && isSignedIn && (
+            <button onClick={() => navigate('/dashboard')} className={link}>
+              Dashboard
             </button>
-          ))}
+          )}
+          {isLoaded && isSignedIn && tools.length > 0 && <ToolsMenu tools={tools} />}
+          {isLoaded && isSignedIn && isAnyAdmin && (
+            <button onClick={() => navigate('/builder')} className={link}>
+              Builder
+            </button>
+          )}
+          {isLoaded && isSignedIn && isAnyAdmin && (
+            <button onClick={() => navigate('/admin')} className={link}>
+              Admin
+            </button>
+          )}
+          {isLoaded && isSignedIn && (
+            <button onClick={() => navigate('/settings')} className={link}>
+              Settings
+            </button>
+          )}
+          {isLoaded &&
+            (isSignedIn ? (
+              <UserButton />
+            ) : (
+              <button
+                onClick={() => navigate('/sign-in')}
+                className="text-[14px] font-semibold text-on-primary bg-primary hover:bg-accent px-4 py-2 rounded-[10px] transition-colors"
+              >
+                Sign in
+              </button>
+            ))}
+        </div>
       </div>
     </nav>
   )
 }
 
-function ToolsMenu({ tools, isAnyAdmin }: { tools: ToolKey[]; isAnyAdmin: boolean }) {
+function ToolsMenu({ tools }: { tools: ToolKey[] }) {
   const navigate = useNavigate()
-  const { isAdmin } = useRole()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -101,16 +97,16 @@ function ToolsMenu({ tools, isAnyAdmin }: { tools: ToolKey[]; isAnyAdmin: boolea
     <div ref={ref} className="relative flex items-center">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 text-[12px] font-medium text-slate-mid hover:text-cream-light transition-colors"
+        className="inline-flex items-center gap-1 text-[14px] font-semibold text-slate-light hover:text-fg transition-colors"
       >
         Tools
         <ChevronDown
           size={12}
-          className={`text-white/40 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`text-ink/40 transition-transform ${open ? 'rotate-180' : ''}`}
         />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-white/10 bg-[#111111] shadow-card-lg py-1 z-50">
+        <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-edge/10 bg-surface-alt shadow-card-lg py-1 z-50">
           {tools.map((key) => {
             const meta = TOOL_META[key]
             const live = meta.live
@@ -122,51 +118,20 @@ function ToolsMenu({ tools, isAnyAdmin }: { tools: ToolKey[]; isAnyAdmin: boolea
                   setOpen(false)
                   navigate(meta.path)
                 }}
-                className="w-full text-left px-3 py-2 hover:bg-white/5 disabled:hover:bg-transparent disabled:opacity-50 transition-colors"
+                className="w-full text-left px-3 py-2 hover:bg-ink/5 disabled:hover:bg-transparent disabled:opacity-50 transition-colors"
               >
-                <p className="text-[13px] font-semibold text-cream-light">
+                <p className="text-[13px] font-semibold text-fg">
                   {meta.label}
                   {!live && (
-                    <span className="ml-2 text-[9px] uppercase tracking-widest text-white/40">
+                    <span className="ml-2 text-[9px] uppercase tracking-widest text-slate-mid">
                       soon
                     </span>
                   )}
                 </p>
-                <p className="text-[11px] text-slate-mid leading-snug">{meta.description}</p>
+                <p className="text-[12px] text-slate-mid leading-snug">{meta.description}</p>
               </button>
             )
           })}
-          {isAnyAdmin && (
-            <>
-              {tools.length > 0 && <div className="my-1 border-t border-white/8" />}
-              <p className="px-3 pt-1.5 pb-0.5 text-[9px] font-bold uppercase tracking-widest text-white/30">
-                Admin
-              </p>
-              {[
-                { label: 'Datasets', path: '/admin/datasets' },
-                { label: 'Assessments', path: '/admin/assessments' },
-                { label: 'Institutions & Cohorts', path: '/admin/institutions' },
-                // Platform-wide, so full admins only (the API enforces it too).
-                ...(isAdmin
-                  ? [
-                      { label: 'Usage', path: '/admin/usage' },
-                      { label: 'Platforms', path: '/admin/platforms' },
-                    ]
-                  : []),
-              ].map((item) => (
-                <button
-                  key={item.path}
-                  onClick={() => {
-                    setOpen(false)
-                    navigate(item.path)
-                  }}
-                  className="w-full text-left px-3 py-1.5 text-[12px] text-slate-mid hover:text-cream-light hover:bg-white/5 transition-colors"
-                >
-                  {item.label}
-                </button>
-              ))}
-            </>
-          )}
         </div>
       )}
     </div>

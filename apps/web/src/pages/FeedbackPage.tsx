@@ -15,13 +15,13 @@ const qualityLabel = {
 }
 
 const qualityColor = {
-  strong: '#2d9e5f',
-  proficient: '#d4830a',
-  developing: '#c0392b',
+  strong: 'rgb(var(--ld-emerald-400, 31 138 85))',
+  proficient: 'rgb(var(--ld-amber-400, 180 83 9))',
+  developing: 'rgb(var(--ld-red-400, 198 40 40))',
 }
 
 const qualityBg = {
-  strong: 'bg-green/10 border-green/30',
+  strong: 'bg-primary/10 border-primary/30',
   proficient: 'bg-amber/10 border-amber/20',
   developing: 'bg-red-500/10 border-red-500/20',
 }
@@ -85,7 +85,7 @@ export function FeedbackPage() {
     result.overallScore >= 80 ? 'strong' : result.overallScore >= 60 ? 'proficient' : 'developing'
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav trackLabel={meta?.label} />
 
       <div className="max-w-3xl mx-auto px-6 py-12 animate-fade-in">
@@ -93,7 +93,7 @@ export function FeedbackPage() {
           <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-2">
             Simulation Complete
           </p>
-          <h1 className="font-display font-extrabold text-[26px] text-cream-light tracking-tight mb-8">
+          <h1 className="font-display font-extrabold text-[26px] text-fg tracking-tight mb-8">
             Your Performance Report
           </h1>
 
@@ -111,7 +111,7 @@ export function FeedbackPage() {
             />
             Overall: {qualityLabel[overallQuality]}
           </div>
-          <p className="mt-3 text-[12px] text-white/40">
+          <p className="mt-3 text-[12px] text-ink/40">
             Average of your {result.dimensionScores.length} competency scores below.
           </p>
         </div>
@@ -126,14 +126,14 @@ export function FeedbackPage() {
             {result.dimensionScores.map((dim) => (
               <div
                 key={dim.dimension}
-                className="bg-[#111111] rounded-xl border border-white/10 p-5"
+                className="bg-surface-alt rounded-xl border border-edge/10 p-5"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-display font-bold text-[15px] text-cream-light">
+                  <span className="font-display font-bold text-[15px] text-fg">
                     {dim.dimension}
                   </span>
                   <div className="flex items-center gap-3">
-                    <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="w-24 h-2 bg-ink/10 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-700"
                         style={{
@@ -152,9 +152,9 @@ export function FeedbackPage() {
                 </div>
                 {aiFeedbackStatus === 'loading' ? (
                   <div className="mt-1 space-y-2 animate-pulse">
-                    <div className="h-3 bg-white/20 rounded-full w-full" />
-                    <div className="h-3 bg-white/20 rounded-full w-11/12" />
-                    <div className="h-3 bg-white/20 rounded-full w-4/5" />
+                    <div className="h-3 bg-ink/20 rounded-full w-full" />
+                    <div className="h-3 bg-ink/20 rounded-full w-11/12" />
+                    <div className="h-3 bg-ink/20 rounded-full w-4/5" />
                     <div className="mt-3 flex items-center gap-1.5">
                       <span className="text-slate-mid/40 text-[10px]">✦</span>
                       <span className="text-[10px] font-medium text-slate-mid/40 uppercase tracking-widest">
@@ -169,8 +169,8 @@ export function FeedbackPage() {
                     </p>
                     {aiFeedbackStatus === 'ready' && aiFeedback?.get(dim.dimension) && (
                       <div className="mt-3 flex items-center gap-1.5">
-                        <span className="text-green-light text-[10px]">✦</span>
-                        <span className="text-[10px] font-medium text-green-light/70 uppercase tracking-widest">
+                        <span className="text-accent text-[10px]">✦</span>
+                        <span className="text-[10px] font-medium text-accent/70 uppercase tracking-widest">
                           AI feedback
                         </span>
                       </div>
@@ -198,7 +198,7 @@ export function FeedbackPage() {
           </div>
         )}
 
-        <div className="bg-[#111111] border border-white/10 rounded-2xl p-6 mb-8">
+        <div className="bg-surface-alt border border-edge/10 rounded-2xl p-6 mb-8">
           <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-3">
             What to work on
           </h3>
@@ -207,11 +207,11 @@ export function FeedbackPage() {
             .map((dim) => (
               <div key={dim.dimension} className="flex items-start gap-3 mb-3 last:mb-0">
                 <span className="text-red-400 mt-0.5">→</span>
-                <span className="text-[14px] text-cream-light font-light">{dim.dimension}</span>
+                <span className="text-[14px] text-fg font-light">{dim.dimension}</span>
               </div>
             ))}
           {result.dimensionScores.every((d) => d.quality !== 'developing') && (
-            <p className="text-[14px] text-cream-light font-light">
+            <p className="text-[14px] text-fg font-light">
               No critical gaps identified. Try a harder track to push your ceiling.
             </p>
           )}
@@ -220,13 +220,13 @@ export function FeedbackPage() {
         <div className="flex items-center justify-between">
           <button
             onClick={() => navigate(`/scenario/${scenarioId}/briefing`)}
-            className="text-[13px] text-slate-mid hover:text-cream-light transition-colors"
+            className="text-[13px] text-slate-mid hover:text-fg transition-colors"
           >
             Retry this scenario
           </button>
           <button
             onClick={() => navigate('/dashboard', { state: { refreshedAt: Date.now() } })}
-            className="bg-green hover:bg-green-light text-white font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+            className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
           >
             Back to Dashboard
           </button>

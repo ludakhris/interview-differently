@@ -34,12 +34,12 @@ export function AdminStudentDetailPage() {
   }, [institutionId, userId, getToken])
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav />
       <div className="max-w-4xl mx-auto px-6 py-12">
         <button
           onClick={() => navigate(`/admin/institutions/${institutionId}/analytics`)}
-          className="text-[12px] text-slate-mid hover:text-cream-light transition-colors mb-3"
+          className="text-[12px] text-slate-mid hover:text-fg transition-colors mb-3"
         >
           ← Back to analytics
         </button>
@@ -79,11 +79,11 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
   return (
     <div className="space-y-6">
       {/* Header card */}
-      <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
-        <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+      <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
+        <p className="font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
           {data.institution.name}
         </p>
-        <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight mb-2">
+        <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight mb-2">
           {displayName}
         </h1>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-slate-mid">
@@ -91,7 +91,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
           {cohortNames.length > 0 && (
             <span>
               Cohort{cohortNames.length > 1 ? 's' : ''}:{' '}
-              <span className="text-cream-light">{cohortNames.join(', ')}</span>
+              <span className="text-fg">{cohortNames.join(', ')}</span>
             </span>
           )}
           {data.user.createdAt && (
@@ -112,7 +112,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
       </div>
 
       {/* Per-dimension trend chart */}
-      <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
+      <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
         <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
           Per-dimension trend
         </h2>
@@ -120,21 +120,21 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
       </div>
 
       {/* Completion history */}
-      <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
+      <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
         <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
           Completion history
         </h2>
         {data.completions.length === 0 ? (
           <p className="text-[13px] text-slate-mid">No completions yet.</p>
         ) : (
-          <ul className="divide-y divide-white/5">
+          <ul className="divide-y divide-edge/5">
             {[...data.completions]
               .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
               .map((c) => (
                 <li key={c.id} className="py-3 flex items-center justify-between">
                   <div className="min-w-0">
                     <p
-                      className="text-[13px] font-semibold text-cream-light truncate"
+                      className="text-[13px] font-semibold text-fg truncate"
                       title={c.scenarioTitle}
                     >
                       {c.scenarioTitle}
@@ -154,7 +154,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
                       href={`/scenario/${c.scenarioId}/feedback/${c.id}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
+                      className="text-[11px] text-slate-mid hover:text-fg transition-colors"
                     >
                       View feedback ↗
                     </a>
@@ -167,17 +167,17 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
 
       {/* Immersive sessions */}
       {data.immersiveSessions.length > 0 && (
-        <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
+        <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
             Immersive sessions
           </h2>
-          <ul className="divide-y divide-white/5">
+          <ul className="divide-y divide-edge/5">
             {[...data.immersiveSessions]
               .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
               .map((s) => (
                 <li key={s.id} className="py-3 flex items-center justify-between">
                   <div className="min-w-0">
-                    <p className="text-[13px] text-cream-light truncate" title={s.scenarioId}>
+                    <p className="text-[13px] text-fg truncate" title={s.scenarioId}>
                       {s.scenarioId}
                     </p>
                     <p className="text-[11px] text-slate-mid">
@@ -187,7 +187,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
                   </div>
                   <span
                     className="text-[11px] font-semibold capitalize"
-                    style={{ color: s.status === 'completed' ? '#2d9e5f' : '#888' }}
+                    style={{ color: s.status === 'completed' ? '#1f8a55' : '#5b6273' }}
                   >
                     {s.status}
                   </span>
@@ -199,19 +199,19 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
 
       {/* Assessments */}
       {data.assessments.length > 0 && (
-        <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
+        <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
             Assessments
           </h2>
-          <ul className="divide-y divide-white/5">
+          <ul className="divide-y divide-edge/5">
             {[...data.assessments]
               .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
               .map((a) => (
                 <li key={a.attemptId} className="py-3">
                   <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0">
-                      <p className="text-[13px] text-cream-light truncate">
-                        <span className="uppercase tracking-widest text-[10px] text-[#2d9e5f] mr-2">
+                      <p className="text-[13px] text-fg truncate">
+                        <span className="uppercase tracking-widest text-[10px] text-accent mr-2">
                           {a.label}
                         </span>
                         {a.title}
@@ -260,9 +260,9 @@ function MiniStat({
   accent?: string
 }) {
   return (
-    <div className="bg-[#111111] rounded-lg border border-white/10 p-3">
+    <div className="bg-surface-alt rounded-lg border border-edge/10 p-3">
       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-mid mb-1">{label}</p>
-      <p className="font-display font-bold text-[20px]" style={{ color: accent ?? '#f5f3ee' }}>
+      <p className="font-display font-bold text-[20px]" style={{ color: accent ?? '#14213a' }}>
         {value}
       </p>
     </div>
@@ -270,8 +270,8 @@ function MiniStat({
 }
 
 function scoreColor(score: number | null): string {
-  if (score === null) return '#888'
-  if (score >= 80) return '#2d9e5f'
-  if (score >= 60) return '#d4830a'
+  if (score === null) return '#5b6273'
+  if (score >= 80) return '#1f8a55'
+  if (score >= 60) return '#b45309'
   return '#c0392b'
 }

@@ -64,7 +64,7 @@ function FieldEditor({
   }
 
   return (
-    <div className="flex flex-col gap-3 p-3 border border-white/6 rounded-xl bg-white/1">
+    <div className="flex flex-col gap-3 p-3 border border-edge/6 rounded-xl bg-ink/1">
       <div className="flex items-center gap-2">
         <Field label="Field label">
           <TextInput
@@ -178,7 +178,7 @@ function FormulaSection({
           onChange={(e) => toggleEnabled(e.target.checked)}
           className="accent-emerald-400"
         />
-        <span className="text-[12px] text-white/60 font-medium">Enable formula</span>
+        <span className="text-[12px] text-ink/60 font-medium">Enable formula</span>
       </label>
 
       {enabled && (

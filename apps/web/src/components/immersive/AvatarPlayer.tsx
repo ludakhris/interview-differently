@@ -129,28 +129,28 @@ export function AvatarPlayer({ onReady, onDone, onError, className }: AvatarPlay
   }, [isPaused, videoRef])
 
   return (
-    <div className={`relative rounded-2xl overflow-hidden bg-[#0d0d0d] ${className ?? ''}`}>
+    <div className={`relative rounded-2xl overflow-hidden bg-surface-deep ${className ?? ''}`}>
       {/* Video stream (live; no caption track) */}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <video ref={videoRef} autoPlay playsInline className="w-full h-full object-contain" />
 
       {/* Status overlays */}
       {status === 'loading' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0d0d0d]">
-          <div className="w-10 h-10 rounded-full border-2 border-white/10 border-t-white/60 animate-spin" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-deep">
+          <div className="w-10 h-10 rounded-full border-2 border-edge/10 border-t-edge/60 animate-spin" />
           <p className="text-[12px] text-slate-mid">Loading interviewer…</p>
         </div>
       )}
 
       {status === 'connecting' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0d0d0d]">
-          <div className="w-10 h-10 rounded-full border-2 border-white/10 border-t-green/60 animate-spin" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-deep">
+          <div className="w-10 h-10 rounded-full border-2 border-edge/10 border-t-primary/60 animate-spin" />
           <p className="text-[12px] text-slate-mid">Connecting…</p>
         </div>
       )}
 
       {status === 'error' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0d0d0d] p-4">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-deep p-4">
           <p className="text-[12px] text-red-400 text-center">{error ?? 'Avatar unavailable'}</p>
           <p className="text-[11px] text-slate-mid text-center">Audio narration will continue</p>
         </div>
@@ -166,7 +166,7 @@ export function AvatarPlayer({ onReady, onDone, onError, className }: AvatarPlay
               [0, 1, 2].map((i) => (
                 <span
                   key={i}
-                  className="w-1 bg-green rounded-full animate-pulse"
+                  className="w-1 bg-primary rounded-full animate-pulse"
                   style={{ height: '12px', animationDelay: `${i * 150}ms` }}
                 />
               ))}
@@ -175,7 +175,7 @@ export function AvatarPlayer({ onReady, onDone, onError, className }: AvatarPlay
           {/* Pause / Resume button */}
           <button
             onClick={togglePause}
-            className="flex items-center gap-1.5 text-[12px] text-white/70 hover:text-white transition-colors bg-black/40 rounded-full px-3 py-1"
+            className="flex items-center gap-1.5 text-[12px] text-ink/70 hover:text-ink transition-colors bg-ink/40 rounded-full px-3 py-1"
           >
             {isPaused ? (
               <>

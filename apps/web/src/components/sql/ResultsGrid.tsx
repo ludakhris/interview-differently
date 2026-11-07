@@ -59,7 +59,7 @@ export function ResultsGrid({
                 ? marks[ri]
                   ? 'bg-emerald-400/10'
                   : 'bg-red-400/6'
-                : 'odd:bg-ink/2 hover:bg-green-light/10'
+                : 'odd:bg-ink/2 hover:bg-accent/10'
             }
           >
             {marks && (

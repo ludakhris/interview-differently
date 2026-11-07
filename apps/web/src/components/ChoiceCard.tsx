@@ -15,7 +15,7 @@ export function ChoiceCard({ id, text, selected, onSelect }: Props) {
         transition-all duration-150
         ${
           selected
-            ? 'border-green bg-green/10'
+            ? 'border-primary bg-primary/10'
             : 'border-edge/10 bg-surface-alt hover:border-edge/25'
         }
       `}
@@ -24,7 +24,7 @@ export function ChoiceCard({ id, text, selected, onSelect }: Props) {
         className={`
           shrink-0 w-8 h-8 rounded-lg flex items-center justify-center
           font-display font-bold text-[13px] transition-colors
-          ${selected ? 'bg-green text-on-primary' : 'bg-ink/10 text-slate-light'}
+          ${selected ? 'bg-primary text-on-primary' : 'bg-ink/10 text-slate-light'}
         `}
       >
         {id}

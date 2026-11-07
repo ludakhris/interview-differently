@@ -14,7 +14,7 @@ import { acceptInvite, fetchInviteInfo, type InviteInfo } from '@/services/asses
  * dropped into their paper — or their result if they already submitted.
  */
 
-const ACCENT = '#2d9e5f'
+const ACCENT = '#2563eb'
 
 function fmt(iso: string | null): string {
   return iso
@@ -55,10 +55,10 @@ export function InvitePage() {
   const returnTo = encodeURIComponent(`/a/${code}`)
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
+    <div className="min-h-screen bg-surface flex flex-col">
       <Nav />
       <div className="flex-1 flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md bg-[#111111] rounded-2xl border border-white/10 overflow-hidden">
+        <div className="w-full max-w-md bg-surface-alt rounded-2xl border border-edge/10 overflow-hidden">
           <div className="h-1.5 w-full" style={{ backgroundColor: ACCENT }} />
           <div className="p-7">
             {error ? (
@@ -66,7 +66,7 @@ export function InvitePage() {
                 <p className="text-[12px] font-bold uppercase tracking-widest text-red-400 mb-1">
                   Invite
                 </p>
-                <p className="text-[14px] text-cream-light">{error}</p>
+                <p className="text-[14px] text-fg">{error}</p>
               </>
             ) : !info ? (
               <p className="text-[13px] text-slate-mid">Loading…</p>
@@ -86,7 +86,7 @@ export function InvitePage() {
                     >
                       {info.label} · {info.institutionName}
                     </p>
-                    <h1 className="mt-0.5 font-display font-bold text-[18px] text-cream-light leading-snug">
+                    <h1 className="mt-0.5 font-display font-bold text-[18px] text-fg leading-snug">
                       {info.title}
                     </h1>
                   </div>
@@ -118,17 +118,17 @@ export function InvitePage() {
                   <>
                     <button
                       onClick={() => navigate(`/sign-in?redirect_url=${returnTo}`)}
-                      className="w-full px-4 py-2.5 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[13px] font-semibold text-white transition-colors"
+                      className="w-full px-4 py-2.5 rounded-md bg-primary hover:bg-accent text-[13px] font-semibold text-ink transition-colors"
                     >
                       Sign in to begin
                     </button>
                     <button
                       onClick={() => navigate(`/sign-up?redirect_url=${returnTo}`)}
-                      className="w-full mt-2 px-4 py-2.5 rounded-md border border-white/15 hover:border-white/30 text-[13px] font-semibold text-cream-light transition-colors"
+                      className="w-full mt-2 px-4 py-2.5 rounded-md border border-edge/15 hover:border-edge/30 text-[13px] font-semibold text-fg transition-colors"
                     >
                       Create an account
                     </button>
-                    <p className="text-[11px] text-white/40 mt-3 leading-relaxed">
+                    <p className="text-[11px] text-ink/40 mt-3 leading-relaxed">
                       You'll be added to the {info.cohortName} cohort and the assessment will start
                       right away
                       {info.timeLimitMinutes ? ' — the timer begins when your paper opens.' : '.'}
@@ -147,8 +147,8 @@ export function InvitePage() {
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between gap-4">
-      <dt className="text-white/40">{k}</dt>
-      <dd className="text-cream-light/85 text-right">{v}</dd>
+      <dt className="text-ink/40">{k}</dt>
+      <dd className="text-fg/85 text-right">{v}</dd>
     </div>
   )
 }

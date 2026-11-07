@@ -11,7 +11,7 @@ import { fetchMyAssessments, startAttempt, type MyDelivery } from '@/services/as
  * View result.
  */
 
-const ACCENT = '#2d9e5f'
+const ACCENT = '#2563eb'
 
 function fmt(iso: string | null): string {
   return iso
@@ -45,14 +45,14 @@ export function AssessmentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav trackLabel="Assessments" />
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-8">
           <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
             Tools
           </p>
-          <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
+          <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
             Assessments
           </h1>
           <p className="text-[13px] text-slate-mid mt-1">
@@ -70,7 +70,7 @@ export function AssessmentsPage() {
         {!items ? (
           <p className="text-[13px] text-slate-mid">Loading…</p>
         ) : items.length === 0 ? (
-          <div className="bg-[#111111] rounded-xl border border-white/10 px-6 py-12 text-center">
+          <div className="bg-surface-alt rounded-xl border border-edge/10 px-6 py-12 text-center">
             <p className="text-[13px] text-slate-mid">Nothing scheduled for your cohort yet.</p>
           </div>
         ) : (
@@ -83,7 +83,7 @@ export function AssessmentsPage() {
               return (
                 <li
                   key={d.id}
-                  className="bg-[#111111] rounded-2xl border border-white/10 overflow-hidden"
+                  className="bg-surface-alt rounded-2xl border border-edge/10 overflow-hidden"
                 >
                   <div className="h-1.5 w-full" style={{ backgroundColor: ACCENT }} />
                   <div className="p-5 flex items-start gap-4">
@@ -100,7 +100,7 @@ export function AssessmentsPage() {
                       >
                         {d.label} · {d.cohortName ?? 'cohort removed'}
                       </p>
-                      <h3 className="mt-0.5 font-display font-bold text-[16px] text-cream-light leading-snug">
+                      <h3 className="mt-0.5 font-display font-bold text-[16px] text-fg leading-snug">
                         {d.title}
                       </h3>
                       <p className="text-[12px] text-slate-mid mt-1">
@@ -110,7 +110,7 @@ export function AssessmentsPage() {
                         {d.closesAt && <> · closes {fmt(d.closesAt)}</>}
                       </p>
                       {submitted && (
-                        <p className="text-[12px] text-white/40 mt-1">
+                        <p className="text-[12px] text-ink/40 mt-1">
                           Submitted {fmt(d.attempt!.submittedAt)}
                         </p>
                       )}
@@ -121,14 +121,14 @@ export function AssessmentsPage() {
                           onClick={() =>
                             navigate(`/tools/assessments/attempt/${d.attempt!.id}/result`)
                           }
-                          className="px-3 py-1.5 rounded-md border border-white/15 hover:border-white/30 text-[12px] font-semibold text-cream-light transition-colors"
+                          className="px-3 py-1.5 rounded-md border border-edge/15 hover:border-edge/30 text-[12px] font-semibold text-fg transition-colors"
                         >
                           View result
                         </button>
                       ) : inProgress ? (
                         <button
                           onClick={() => navigate(`/tools/assessments/attempt/${d.attempt!.id}`)}
-                          className="px-3 py-1.5 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white transition-colors"
+                          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink transition-colors"
                         >
                           Continue →
                         </button>
@@ -136,12 +136,12 @@ export function AssessmentsPage() {
                         <button
                           onClick={() => start(d)}
                           disabled={starting === d.id}
-                          className="px-3 py-1.5 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[12px] font-semibold text-white disabled:opacity-50 transition-colors"
+                          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink disabled:opacity-50 transition-colors"
                         >
                           {starting === d.id ? 'Starting…' : 'Start'}
                         </button>
                       ) : (
-                        <span className="text-[11px] uppercase tracking-widest text-white/30">
+                        <span className="text-[11px] uppercase tracking-widest text-ink/30">
                           {notYet ? 'Not open yet' : 'Closed'}
                         </span>
                       )}

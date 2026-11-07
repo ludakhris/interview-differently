@@ -41,7 +41,7 @@ const toResult = (p: CheckpointPreview): SandboxResult => ({
 })
 
 const BTN_PRIMARY =
-  'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-green hover:bg-green-light text-[12px] font-semibold text-on-primary disabled:opacity-40 transition-colors'
+  'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary hover:bg-accent text-[12px] font-semibold text-on-primary disabled:opacity-40 transition-colors'
 const BTN_SECONDARY =
   'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-edge/15 text-[12px] font-semibold text-fg hover:bg-ink/5 disabled:opacity-40 transition-colors'
 const BTN_QUIET =
@@ -198,10 +198,10 @@ export function CheckpointWorkbench({
 
       {want && (
         <div
-          className="grid gap-1.5 p-3 rounded-lg border border-dashed border-green-light/50 bg-green-light/5"
+          className="grid gap-1.5 p-3 rounded-lg border border-dashed border-accent/50 bg-accent/5"
           aria-label={`${wants}: ${shapeLabel(want)}`}
         >
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-green-light">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-accent">
             {task.from ? `${first} wants` : 'Wanted'}
           </span>
           <div className="flex flex-wrap gap-1.5">

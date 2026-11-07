@@ -41,7 +41,7 @@ const Cross = () => (
 )
 
 const ACTOR: Record<Actor, string> = {
-  You: 'bg-green/20 text-green-light',
+  You: 'bg-primary/20 text-accent',
   'The platform': 'bg-amber-400/15 text-amber-300',
   'Interview Differently': 'bg-ink/10 text-ink/70',
 }
@@ -73,7 +73,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
         clearTimeout(timer.current)
         timer.current = setTimeout(() => setState('idle'), 2000)
       }}
-      className="shrink-0 px-2.5 py-1 rounded-md border border-edge/15 text-[11px] font-semibold text-ink/70 hover:text-ink hover:border-edge/30 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-light"
+      className="shrink-0 px-2.5 py-1 rounded-md border border-edge/15 text-[11px] font-semibold text-ink/70 hover:text-ink hover:border-edge/30 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
     >
       {state === 'copied' ? 'Copied' : state === 'failed' ? 'Select it' : 'Copy'}
     </button>
@@ -138,7 +138,7 @@ export function LtiPlatformsInfoDialog({
 
   return (
     <div
-      className="fixed inset-0 z-90 flex items-center justify-center bg-black/70 p-3 sm:p-6"
+      className="fixed inset-0 z-90 flex items-center justify-center bg-ink/70 p-3 sm:p-6"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()
@@ -152,7 +152,7 @@ export function LtiPlatformsInfoDialog({
         className="flex flex-col w-full max-w-2xl max-h-full rounded-2xl border border-edge/10 bg-surface-alt shadow-2xl"
       >
         <header className="flex items-start gap-3 px-5 sm:px-6 py-4 border-b border-edge/10">
-          <span className="mt-0.5 text-green-light">
+          <span className="mt-0.5 text-accent">
             <InfoIcon size={22} />
           </span>
           <div className="min-w-0 flex-1">
@@ -168,7 +168,7 @@ export function LtiPlatformsInfoDialog({
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="shrink-0 p-1.5 rounded-lg text-ink/60 hover:text-ink hover:bg-ink/10 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-light"
+            className="shrink-0 p-1.5 rounded-lg text-ink/60 hover:text-ink hover:bg-ink/10 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             <svg {...svg(20, 2.2)}>
               <path d="M6 6l12 12M18 6L6 18" />
@@ -191,7 +191,7 @@ export function LtiPlatformsInfoDialog({
                 </div>
               ))}
             </div>
-            <p className="mt-3 font-semibold text-green-light">{c.relation}</p>
+            <p className="mt-3 font-semibold text-accent">{c.relation}</p>
           </Section>
 
           <Section id="registering" title="A platform registers itself">
@@ -248,11 +248,11 @@ export function LtiPlatformsInfoDialog({
           <Section id="accepts" title="What is accepted, and what is refused">
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <h4 className="font-bold text-green-light mb-2">Accepted</h4>
+                <h4 className="font-bold text-accent mb-2">Accepted</h4>
                 <ul className="space-y-2">
                   {c.accepts.map((t) => (
                     <li key={t} className="flex gap-2">
-                      <span className="mt-0.5 shrink-0 text-green-light">
+                      <span className="mt-0.5 shrink-0 text-accent">
                         <Check />
                       </span>
                       {t}
@@ -277,7 +277,7 @@ export function LtiPlatformsInfoDialog({
           </Section>
 
           <Section id="safety" title="Why this is safe">
-            <ul className="space-y-2 rounded-xl border border-green/30 bg-green/10 p-4 list-disc pl-9">
+            <ul className="space-y-2 rounded-xl border border-primary/30 bg-primary/10 p-4 list-disc pl-9">
               {c.safety.map((t) => (
                 <li key={t}>{t}</li>
               ))}

@@ -57,7 +57,7 @@ export function WorkSimulationPage() {
     body = (
       <Notice>
         You are signed out. Sign in and open it again from your dashboard.{' '}
-        <Link to="/dashboard" className="text-green-light underline font-semibold">
+        <Link to="/dashboard" className="text-accent underline font-semibold">
           Back to your dashboard
         </Link>
       </Notice>
@@ -69,7 +69,7 @@ export function WorkSimulationPage() {
         <button
           type="button"
           onClick={() => setTries((n) => n + 1)}
-          className="px-4 py-2 rounded-full bg-green hover:bg-green-light text-[13px] font-semibold text-on-primary transition-colors"
+          className="px-4 py-2 rounded-full bg-primary hover:bg-accent text-[13px] font-semibold text-on-primary transition-colors"
         >
           Retry
         </button>

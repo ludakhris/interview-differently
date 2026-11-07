@@ -77,10 +77,10 @@ function PhaseChip({ view, accentColor }: { view: PhaseView; accentColor: string
   if (status === 'complete') {
     return (
       <span
-        className={`${baseClasses} bg-green/10 text-fg border border-green/40`}
+        className={`${baseClasses} bg-primary/10 text-fg border border-primary/40`}
         title={phase.description}
       >
-        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green text-on-primary text-[10px] font-bold">
+        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-on-primary text-[10px] font-bold">
           ✓
         </span>
         <span className="whitespace-nowrap">{phase.label}</span>
