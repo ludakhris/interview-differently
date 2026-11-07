@@ -1,11 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
-import {
-  GRAPHICS,
-  GraphicsSwitch,
-  graphicsFromUrl,
-  type ScenarioGraphics,
-} from './LandingGraphicsExperiment'
+import { IncidentPanel, InterviewPanel, SqlPanel } from './ScenePanels'
 
 const STATS = [
   { num: '80%', label: 'of job seekers feel unprepared', footnote: 1 },
@@ -101,15 +96,15 @@ const SCENARIOS = [
     kicker: 'Incident response',
     title: 'Triage a live outage',
     body: 'Monitors are firing and the SLA clock is running. Decide what to fix first and who to tell.',
-    panel: 'incident' as const,
+    panel: <IncidentPanel />,
     label:
-      'Example incident response console: payment API errors climbing, database connections at 94%, auth degraded.',
+      'Example incident chart: payment API error rate climbing to 14.2% after the incident start, database connections at 94%, auth latency up 340 ms.',
   },
   {
     kicker: 'Data analytics',
     title: 'Answer with real SQL',
     body: 'A colleague needs numbers today. Write the query against a real dataset and defend the result.',
-    panel: 'sql' as const,
+    panel: <SqlPanel />,
     label:
       'Example data analytics question: the AI interviewer asks which customers the outage hit, answered with a SQL query.',
   },
@@ -126,7 +121,7 @@ const COMPETENCIES = [
 ] as const
 
 /** The featured scenario: a live interview with an AI interviewer on video. */
-function InterviewFeature({ graphics }: { graphics: ScenarioGraphics }) {
+function InterviewFeature() {
   return (
     <article
       className={`${card} grid grid-cols-1 lg:grid-cols-[1fr_1.25fr] gap-6 lg:gap-10 items-center`}
@@ -149,7 +144,7 @@ function InterviewFeature({ graphics }: { graphics: ScenarioGraphics }) {
         role="img"
         aria-label="Example live AI interview: the interviewer on video asks how you would handle the first five minutes of a payments outage, while your answer is recorded."
       >
-        {graphics.interview}
+        <InterviewPanel />
       </div>
     </article>
   )
@@ -204,7 +199,7 @@ function Evaluation() {
 }
 
 /** The scenarios: the live interview featured, two more beside each other, then how scoring works. */
-function Scenarios({ graphics }: { graphics: ScenarioGraphics }) {
+function Scenarios() {
   return (
     <section
       aria-labelledby="scenarios-heading"
@@ -214,7 +209,7 @@ function Scenarios({ graphics }: { graphics: ScenarioGraphics }) {
         <h2 id="scenarios-heading" className={`${kicker} text-center mb-8`}>
           Inside a simulation
         </h2>
-        <InterviewFeature graphics={graphics} />
+        <InterviewFeature />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           {SCENARIOS.map((s) => (
             <article key={s.kicker} className={`${card} flex flex-col`}>
@@ -222,7 +217,7 @@ function Scenarios({ graphics }: { graphics: ScenarioGraphics }) {
               <h3 className={cardTitle}>{s.title}</h3>
               <p className="text-[15px] text-slate-light leading-relaxed mt-1 mb-5">{s.body}</p>
               <div role="img" aria-label={s.label} className="flex-1 flex flex-col [&>*]:flex-1">
-                {graphics[s.panel]}
+                {s.panel}
               </div>
             </article>
           ))}
@@ -234,7 +229,7 @@ function Scenarios({ graphics }: { graphics: ScenarioGraphics }) {
 }
 
 /** The landing page: centred statement, the stats, then the scenarios and how they are scored. */
-export function Landing({ graphics }: { graphics: ScenarioGraphics }) {
+export function Landing() {
   return (
     <main className="w-full">
       <section className="max-w-[1000px] mx-auto px-4 sm:px-8 pt-14 sm:pt-20 pb-12 text-center animate-fade-in">
@@ -269,18 +264,16 @@ export function Landing({ graphics }: { graphics: ScenarioGraphics }) {
         </div>
       </section>
 
-      <Scenarios graphics={graphics} />
+      <Scenarios />
     </main>
   )
 }
 
 export function LandingShell() {
-  const key = graphicsFromUrl()
   return (
     <div className="min-h-screen bg-surface flex flex-col">
       <Nav />
-      <Landing graphics={GRAPHICS[key]} />
-      <GraphicsSwitch current={key} />
+      <Landing />
     </div>
   )
 }
