@@ -175,7 +175,7 @@ export function AvatarPlayer({ onReady, onDone, onError, className }: AvatarPlay
           {/* Pause / Resume button */}
           <button
             onClick={togglePause}
-            className="flex items-center gap-1.5 text-[12px] text-slate-light hover:text-ink transition-colors bg-ink/40 rounded-full px-3 py-1"
+            className="flex items-center gap-1.5 text-[12px] text-white/80 hover:text-white transition-colors bg-black/50 rounded-full px-3 py-1"
           >
             {isPaused ? (
               <>

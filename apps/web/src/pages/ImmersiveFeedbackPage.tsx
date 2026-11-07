@@ -19,8 +19,8 @@ const recommendationLabel: Record<string, string> = {
 }
 
 const recommendationColor: Record<string, string> = {
-  'strong yes': 'text-primary border-primary/30 bg-primary/10',
-  yes: 'text-primary border-primary/20 bg-primary/5',
+  'strong yes': 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10',
+  yes: 'text-emerald-400 border-emerald-400/20 bg-emerald-400/5',
   maybe: 'text-amber-400 border-amber-400/30 bg-amber-400/10',
   no: 'text-red-400 border-red-500/30 bg-red-500/10',
 }

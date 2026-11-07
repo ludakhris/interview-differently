@@ -33,16 +33,16 @@
   --color-blue-soft: rgb(var(--ld-blue-soft, 159 194 255));
 
   --color-amber-200: rgb(var(--ld-amber-200, 146 64 14));
-  --color-amber-300: rgb(var(--ld-amber-300, 180 83 9));
-  --color-amber-400: rgb(var(--ld-amber-400, 180 83 9));
-  --color-amber: #b45309;
+  --color-amber-300: rgb(var(--ld-amber-300, 146 64 14));
+  --color-amber-400: rgb(var(--ld-amber-400, 146 64 14));
+  --color-amber: rgb(var(--ld-amber-400, 146 64 14));
   --color-amber-pale: #fef3e0;
 
-  --color-red-300: rgb(var(--ld-red-300, 185 28 28));
-  --color-red-400: rgb(var(--ld-red-400, 220 38 38));
+  --color-red-300: rgb(var(--ld-red-300, 153 27 27));
+  --color-red-400: rgb(var(--ld-red-400, 185 28 28));
 
-  --color-emerald-300: rgb(var(--ld-emerald-300, 4 120 87));
-  --color-emerald-400: rgb(var(--ld-emerald-400, 5 150 105));
+  --color-emerald-300: rgb(var(--ld-emerald-300, 6 95 70));
+  --color-emerald-400: rgb(var(--ld-emerald-400, 4 120 87));
 
   --color-violet-400: rgb(var(--ld-violet-400, 124 58 237));
 

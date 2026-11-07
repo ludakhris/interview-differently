@@ -41,7 +41,7 @@ const toResult = (p: CheckpointPreview): SandboxResult => ({
 })
 
 const BTN_PRIMARY =
-  'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary hover:bg-accent text-[12px] font-semibold text-on-primary disabled:opacity-40 transition-colors'
+  'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary hover:bg-primary/90 text-[12px] font-semibold text-on-primary disabled:opacity-40 transition-colors'
 const BTN_SECONDARY =
   'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-edge/15 text-[12px] font-semibold text-fg hover:bg-ink/5 disabled:opacity-40 transition-colors'
 const BTN_QUIET =
@@ -186,7 +186,7 @@ export function CheckpointWorkbench({
             <details key={t.table} className="text-[12px] px-2.5 py-1 rounded-lg bg-ink/5">
               <summary className="cursor-pointer font-mono font-semibold text-fg">
                 {t.table}{' '}
-                <span className="font-sans font-normal text-slate-mid">({t.rowCount})</span>
+                <span className="font-body font-normal text-slate-mid">({t.rowCount})</span>
               </summary>
               <span className="block max-w-[280px] mt-1 text-slate-mid font-mono">
                 {t.columns.map((c) => c.name).join(', ')}

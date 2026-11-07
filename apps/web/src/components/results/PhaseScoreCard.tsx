@@ -12,9 +12,9 @@ const qualityLabel = {
   developing: 'Developing',
 } as const
 const qualityColor = {
-  strong: 'rgb(var(--ld-emerald-400, 5 150 105))',
-  proficient: 'rgb(var(--ld-amber-400, 180 83 9))',
-  developing: 'rgb(var(--ld-red-400, 220 38 38))',
+  strong: 'rgb(var(--ld-emerald-400, 4 120 87))',
+  proficient: 'rgb(var(--ld-amber-400, 146 64 14))',
+  developing: 'rgb(var(--ld-red-400, 185 28 28))',
 } as const
 
 interface Props {

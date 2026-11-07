@@ -22,13 +22,13 @@ const components: Components = {
   strong: ({ children }) => <strong className="font-semibold text-fg">{children}</strong>,
   ul: ({ children }) => <ul className="list-disc pl-5 space-y-1">{children}</ul>,
   ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1">{children}</ol>,
-  // A data exhibit: framed, green header, zebra rows, right-aligned columns in mono.
+  // A data exhibit: framed, tinted header, zebra rows, right-aligned columns in mono.
   table: ({ children }) => (
-    <div className="overflow-x-auto [scrollbar-color:rgb(255_255_255/0.15)_transparent] rounded-xl border border-edge/15 bg-[#141414] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.8)]">
+    <div className="overflow-x-auto rounded-xl border border-edge/15 bg-surface-alt">
       <table className="w-full text-[13.5px] tabular-nums">{children}</table>
     </div>
   ),
-  thead: ({ children }) => <thead className="bg-primary/25">{children}</thead>,
+  thead: ({ children }) => <thead className="bg-primary/10">{children}</thead>,
   tr: ({ children }) => (
     <tr className="border-b border-edge/[0.07] last:border-0 even:bg-ink/3 hover:bg-ink/5 transition-colors">
       {children}
@@ -37,7 +37,7 @@ const components: Components = {
   th: ({ children, style }) => (
     <th
       style={style}
-      className="text-left px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#8fd6ad] border-b border-accent/40 whitespace-nowrap"
+      className="text-left px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-fg border-b border-primary/30 whitespace-nowrap"
     >
       {children}
     </th>
@@ -45,13 +45,13 @@ const components: Components = {
   td: ({ children, style }) => (
     <td
       style={style}
-      className={`px-4 py-1.5 whitespace-nowrap first:font-medium first:text-cream-light text-white/80 ${style?.textAlign === 'right' ? 'font-mono text-[13px] text-fg' : ''}`}
+      className={`px-4 py-1.5 whitespace-nowrap first:font-medium first:text-fg text-slate-light ${style?.textAlign === 'right' ? 'font-mono text-[13px] text-fg' : ''}`}
     >
       {children}
     </td>
   ),
   pre: ({ children }) => (
-    <pre className="font-mono text-[13px] text-fg bg-surface-deep border border-edge/10 rounded-lg px-4 py-3 overflow-x-auto [scrollbar-color:rgb(255_255_255/0.15)_transparent]">
+    <pre className="sim-dark font-mono text-[13px] text-fg bg-surface-deep border border-edge/10 rounded-lg px-4 py-3 overflow-x-auto [scrollbar-color:rgb(255_255_255/0.15)_transparent]">
       {children}
     </pre>
   ),

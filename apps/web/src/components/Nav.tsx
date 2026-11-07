@@ -21,7 +21,7 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
     'text-[14px] font-semibold text-slate-light hover:text-fg transition-colors whitespace-nowrap'
 
   return (
-    <nav className="sticky top-0 z-50 bg-surface/95 backdrop-blur border-b border-edge/10">
+    <nav className="sm:sticky top-0 z-50 bg-surface/95 backdrop-blur border-b border-edge/10">
       <div className="max-w-[1200px] mx-auto flex flex-wrap items-center justify-between gap-x-8 gap-y-3 px-4 sm:px-8 py-4">
         <button
           onClick={() => navigate('/')}

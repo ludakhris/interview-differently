@@ -2,11 +2,11 @@ import type { ChartConfig } from '@id/types'
 
 const palette = {
   red: {
-    line: '#c62828',
+    line: 'rgb(var(--ld-red-400, 248 113 113))',
     gradientStart: 'rgba(239,68,68,0.22)',
     gradientEnd: 'rgba(239,68,68,0)',
-    dot: '#c62828',
-    value: 'rgb(var(--ld-red-400, 220 38 38))',
+    dot: 'rgb(var(--ld-red-400, 248 113 113))',
+    value: 'rgb(var(--ld-red-400, 185 28 28))',
     annotation: 'rgba(239,68,68,0.6)',
   },
   amber: {
@@ -14,7 +14,7 @@ const palette = {
     gradientStart: 'rgba(245,158,11,0.22)',
     gradientEnd: 'rgba(245,158,11,0)',
     dot: '#f59e0b',
-    value: 'rgb(var(--ld-amber-400, 180 83 9))',
+    value: 'rgb(var(--ld-amber-400, 146 64 14))',
     annotation: 'rgba(245,158,11,0.6)',
   },
   green: {
@@ -22,7 +22,7 @@ const palette = {
     gradientStart: 'rgba(16,185,129,0.22)',
     gradientEnd: 'rgba(16,185,129,0)',
     dot: '#10b981',
-    value: 'rgb(var(--ld-emerald-400, 5 150 105))',
+    value: 'rgb(var(--ld-emerald-400, 4 120 87))',
     annotation: 'rgba(16,185,129,0.6)',
   },
 }

@@ -33,7 +33,7 @@ export function IssuesPanel({ issues, status, publishing, onJump, onPublish, onC
       }}
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-edge/10 bg-[#111] shadow-2xl"
+        className="w-full max-w-lg rounded-2xl border border-edge/10 bg-surface-alt shadow-2xl"
         role="dialog"
         aria-labelledby="issues-title"
       >

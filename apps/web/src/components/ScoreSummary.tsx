@@ -44,10 +44,10 @@ export function ScoreSummary({
                       width: `${pct}%`,
                       backgroundColor:
                         pct >= 70
-                          ? 'rgb(var(--ld-emerald-400, 5 150 105))'
+                          ? 'rgb(var(--ld-emerald-400, 4 120 87))'
                           : pct >= 40
-                            ? 'rgb(var(--ld-amber-400, 180 83 9))'
-                            : 'rgb(var(--ld-red-400, 220 38 38))',
+                            ? 'rgb(var(--ld-amber-400, 146 64 14))'
+                            : 'rgb(var(--ld-red-400, 185 28 28))',
                     }}
                   />
                 </div>

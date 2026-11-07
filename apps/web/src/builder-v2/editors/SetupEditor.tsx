@@ -294,7 +294,7 @@ export function SetupEditor({ scenario, onDone }: Props) {
         {sidebar.map((section, si) => (
           <div
             key={si}
-            className="border border-edge/10 rounded-lg p-3 bg-ink/60 flex flex-col gap-2"
+            className="border border-edge/10 rounded-lg p-3 bg-surface flex flex-col gap-2"
           >
             <div className="grid grid-cols-[1fr_130px_auto] gap-2 items-center">
               <TextInput

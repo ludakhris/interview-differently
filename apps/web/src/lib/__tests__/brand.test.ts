@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { applyBrand, NO_BRAND } from '../brand'
+import { applyBrand, NO_BRAND, textOn } from '../brand'
 
 const ok = { name: 'Acme University' }
 
@@ -232,5 +232,17 @@ describe('applyBrand', () => {
     expect(b.name).toBe('Acme University')
     expect(b.logoUrl).toBeNull()
     expect(b.cssVars['--ld-primary']).toBe('17 34 51')
+  })
+
+  it('a light brand without colours never falls back to the standalone blue', () => {
+    const b = applyBrand({ name: 'Acme University', scheme: 'light', surface: '#ffffff' })
+    expect(Object.keys(b.cssVars).length).toBeGreaterThan(0)
+    expect(Object.values(b.cssVars)).not.toContain('37 99 235')
+  })
+
+  it('textOn picks readable text for a colour', () => {
+    expect(textOn('#ffffff')).toBe('rgb(17 17 17)')
+    expect(textOn('#05405c')).toBe('rgb(255 255 255)')
+    expect(textOn('not a colour')).toBe('#ffffff')
   })
 })

@@ -83,7 +83,7 @@ export function SqlWorkbench({
         <button
           onClick={run}
           disabled={!db || running || !value.trim()}
-          className="inline-flex items-center gap-2 pl-3 pr-3.5 py-1 rounded-full bg-primary hover:bg-accent text-[12px] font-semibold text-on-primary disabled:opacity-40 transition-colors"
+          className="inline-flex items-center gap-2 pl-3 pr-3.5 py-1 rounded-full bg-primary hover:bg-primary/90 text-[12px] font-semibold text-on-primary disabled:opacity-40 transition-colors"
         >
           <Play size={11} fill="currentColor" />
           {running ? 'Running…' : 'Run'}

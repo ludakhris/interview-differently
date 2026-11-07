@@ -68,7 +68,7 @@ function DecisionPreview() {
 function TransitionPreview() {
   return (
     <div className="w-full h-full flex items-center justify-center p-10 bg-surface-deep">
-      <div className="w-full max-w-lg border border-edge/10 rounded-[14px] bg-[#111] p-6">
+      <div className="w-full max-w-lg border border-edge/10 rounded-[14px] bg-surface-alt p-6">
         <div className="flex items-center gap-2 mb-4">
           <span className="text-[13px] text-slate-mid">↩</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
@@ -157,7 +157,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
         onClick={onClose}
       />
       <div
-        className="relative z-10 w-[820px] max-h-[88vh] bg-[#111] border border-edge/10 rounded-2xl overflow-hidden flex flex-col shadow-2xl"
+        className="relative z-10 w-[820px] max-h-[88vh] bg-surface-alt border border-edge/10 rounded-2xl overflow-hidden flex flex-col shadow-2xl"
         role="dialog"
         aria-label="Insert a block"
       >
@@ -224,7 +224,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
         </div>
 
         {/* ── Footer: info + insert ──────────────────────────────────────────── */}
-        <div className="flex items-center gap-4 px-6 py-4 border-t border-edge/[0.07] bg-[#111] flex-none">
+        <div className="flex items-center gap-4 px-6 py-4 border-t border-edge/[0.07] bg-surface-alt flex-none">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
               <span className="text-[16px]">{selected.emoji}</span>

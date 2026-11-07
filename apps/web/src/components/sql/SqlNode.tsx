@@ -213,7 +213,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
           <button
             onClick={submit}
             disabled={!db || submitting || !sql.trim()}
-            className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-6 py-2.5 rounded-lg disabled:opacity-40 transition-colors"
+            className="bg-primary hover:bg-primary/90 text-on-primary font-display font-semibold text-[14px] px-6 py-2.5 rounded-lg disabled:opacity-40 transition-colors"
           >
             {submitting ? 'Checking…' : 'Submit answer'}
           </button>

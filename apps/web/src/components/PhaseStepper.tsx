@@ -4,6 +4,7 @@
 // scenarios are unaffected.
 
 import type { PhaseView } from '@/lib/phases'
+import { textOn } from '@/lib/brand'
 
 interface PhaseStepperProps {
   phases: PhaseView[]
@@ -60,7 +61,7 @@ function PhaseChip({ view, accentColor }: { view: PhaseView; accentColor: string
       >
         <span
           className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold"
-          style={{ backgroundColor: accentColor, color: 'rgb(var(--ld-on-accent, 255 255 255))' }}
+          style={{ backgroundColor: accentColor, color: textOn(accentColor) }}
         >
           {index + 1}
         </span>

@@ -493,7 +493,7 @@ function BlockGutter({
   onRemove: () => void
 }) {
   const btn =
-    'w-6 h-6 flex items-center justify-center rounded-md text-[11px] border border-edge/10 bg-[#111] text-slate-mid hover:text-ink/85 hover:border-edge/25 disabled:opacity-25 disabled:hover:text-slate-mid transition-colors'
+    'w-6 h-6 flex items-center justify-center rounded-md text-[11px] border border-edge/10 bg-surface-alt text-slate-mid hover:text-ink/85 hover:border-edge/25 disabled:opacity-25 disabled:hover:text-slate-mid transition-colors'
   return (
     <div className="absolute -left-9 top-2 flex flex-col gap-1 opacity-0 group-hover/blk:opacity-100 focus-within:opacity-100 transition-opacity">
       <button type="button" onClick={onUp} disabled={!canUp} title="Move up" className={btn}>
@@ -534,7 +534,7 @@ function InsertAffordance({ onClick }: { onClick: () => void }) {
       <div className="absolute inset-x-0 top-1/2 h-px bg-linear-to-r from-transparent via-ink/6 to-transparent" />
       <button
         onClick={onClick}
-        className="relative opacity-0 group-hover:opacity-100 transition-opacity bg-[#111] border border-edge/15 text-[11px] font-semibold text-slate-mid hover:text-slate-light hover:border-edge/25 rounded-full px-3 py-0.5"
+        className="relative opacity-0 group-hover:opacity-100 transition-opacity bg-surface-alt border border-edge/15 text-[11px] font-semibold text-slate-mid hover:text-slate-light hover:border-edge/25 rounded-full px-3 py-0.5"
       >
         ＋ insert block
       </button>

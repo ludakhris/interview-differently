@@ -132,13 +132,19 @@ function readableOn(bg: Rgb): Rgb {
 
 const hex = (s: string): Rgb => cleanHex(s) as Rgb
 
+/** Readable text (white or near-black) on a hex colour; white when the colour is not a hex. */
+export function textOn(colour: string): string {
+  const rgb = cleanHex(colour)
+  return rgb ? `rgb(${readableOn(rgb).join(' ')})` : '#ffffff'
+}
+
 // Defaults the light scheme needs, since the built-in look assumes a dark page.
 const LIGHT = {
   surface: hex('#ffffff'),
   surfaceAlt: hex('#f4f5f7'),
   text: hex('#16181d'),
   textSoft: hex('#4b5563'),
-  mint: hex('#2563eb'),
+  mint: hex('#374151'),
 }
 // The dark look from before the Nov 2026 rebrand: the baseline a dark brand starts from, so a
 // dark tenant that sets only some colours keeps the rest as they were.
@@ -174,12 +180,12 @@ const WHITE: Rgb = [255, 255, 255]
 // Status text colours are tuned for a dark page; on a light page these darker shades take over.
 const LIGHT_STATUS: Record<string, string> = {
   'amber-200': '#92400e',
-  'amber-300': '#b45309',
-  'amber-400': '#b45309',
-  'red-300': '#b91c1c',
-  'red-400': '#dc2626',
-  'emerald-300': '#047857',
-  'emerald-400': '#059669',
+  'amber-300': '#92400e',
+  'amber-400': '#92400e',
+  'red-300': '#991b1b',
+  'red-400': '#b91c1c',
+  'emerald-300': '#065f46',
+  'emerald-400': '#047857',
   'violet-400': '#7c3aed',
   'sky-400': '#0369a1',
 }

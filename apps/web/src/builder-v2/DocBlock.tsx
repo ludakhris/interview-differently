@@ -557,7 +557,7 @@ function BlockShell({
   children: React.ReactNode
 }) {
   return (
-    <div className="group border border-edge/10 rounded-[14px] bg-[#111] p-4 hover:border-edge/20 transition-colors">
+    <div className="group border border-edge/10 rounded-[14px] bg-surface-alt p-4 hover:border-edge/20 transition-colors">
       <div className="flex items-center gap-2 mb-3">
         <span className="text-[14px]">{emoji}</span>
         <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-mid">

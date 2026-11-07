@@ -159,9 +159,9 @@ export function ResponseRecorder({ onSubmit, onSkip, disabled }: Props) {
         {state === 'recording' && mode === 'video' && (
           <div className="relative rounded-lg overflow-hidden bg-surface aspect-video">
             <video ref={videoPreviewRef} className="w-full h-full object-cover" playsInline muted />
-            <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-ink/60 rounded-full px-2.5 py-1">
+            <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/60 rounded-full px-2.5 py-1">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-[12px] text-ink font-mono">{formatTime(elapsed)}</span>
+              <span className="text-[12px] text-white font-mono">{formatTime(elapsed)}</span>
             </div>
           </div>
         )}

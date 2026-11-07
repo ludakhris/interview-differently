@@ -36,22 +36,21 @@ const headline =
 
 function Stats({ align = 'left' }: { align?: 'left' | 'center' }) {
   return (
-    <dl
+    <div
       className={`grid grid-cols-1 sm:grid-cols-3 gap-6 ${align === 'center' ? 'text-center' : ''}`}
     >
       {STATS.map(({ num, label, footnote }) => (
-        <div key={num}>
-          <dt className="sr-only">{label}</dt>
-          <dd className="font-display font-extrabold text-[36px] leading-none tracking-[-0.03em] text-primary">
+        <p key={num}>
+          <span className="block font-display font-extrabold text-[36px] leading-none tracking-[-0.03em] text-primary">
             {num}
-          </dd>
-          <dd className="text-[14px] text-slate-light mt-2 leading-snug">
+          </span>{' '}
+          <span className="block text-[14px] text-slate-light mt-2 leading-snug">
             {label}
             <sup className="text-[10px] text-slate-mid ml-0.5">{footnote}</sup>
-          </dd>
-        </div>
+          </span>
+        </p>
       ))}
-    </dl>
+    </div>
   )
 }
 
