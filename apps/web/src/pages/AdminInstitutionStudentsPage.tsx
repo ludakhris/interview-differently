@@ -322,12 +322,12 @@ export function AdminInstitutionStudentsPage() {
                         {s.avgScore ?? '—'}
                       </td>
                       <td
-                        className={`py-3 px-2 text-right font-mono ${s.prePercent == null ? 'text-slate-mid' : 'text-amber'}`}
+                        className={`py-3 px-2 text-right font-mono ${s.prePercent == null ? 'text-slate-mid' : 'text-[#6b7280]'}`}
                       >
                         {s.prePercent == null ? '—' : `${s.prePercent}%`}
                       </td>
                       <td
-                        className={`py-3 px-2 text-right font-mono ${s.postPercent == null ? 'text-slate-mid' : 'text-accent'}`}
+                        className={`py-3 px-2 text-right font-mono ${s.postPercent == null ? 'text-slate-mid' : 'text-primary'}`}
                       >
                         {s.postPercent == null ? '—' : `${s.postPercent}%`}
                       </td>
@@ -363,13 +363,13 @@ function gain(s: RosterStudent): number | null {
 }
 
 function gainColor(v: number | null): string {
-  if (v == null) return 'rgba(255,255,255,0.3)'
-  return v > 0 ? '#1f8a55' : v < 0 ? '#c62828' : '#5b6273'
+  if (v == null) return '#5b6273'
+  return v > 0 ? '#047857' : v < 0 ? '#c62828' : '#5b6273'
 }
 
 function scoreColor(score: number | null): string {
-  if (score == null) return 'rgba(255,255,255,0.3)'
-  if (score >= 80) return '#1f8a55'
-  if (score >= 60) return '#b45309'
+  if (score == null) return '#5b6273'
+  if (score >= 80) return '#047857'
+  if (score >= 60) return '#14213a'
   return '#c62828'
 }
