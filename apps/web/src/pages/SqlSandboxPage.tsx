@@ -432,7 +432,7 @@ export function SqlSandboxPage() {
             />
 
             {/* Results */}
-            <div className="flex-1 min-h-0 flex flex-col bg-surface">
+            <div className="flex-1 min-h-0 flex flex-col bg-surface-alt">
               {queryError && (
                 <div className="m-4 mb-0 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 flex gap-3">
                   <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
