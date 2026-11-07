@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { applyBrand, NO_BRAND, textOn } from '../brand'
+import { applyBrand, ltiAccent, NO_BRAND, STANDALONE_ACCENT, textOn } from '../brand'
 
 const ok = { name: 'Acme University' }
 
@@ -244,5 +244,12 @@ describe('applyBrand', () => {
     expect(textOn('#ffffff')).toBe('rgb(17 17 17)')
     expect(textOn('#05405c')).toBe('rgb(255 255 255)')
     expect(textOn('not a colour')).toBe('#ffffff')
+  })
+
+  it('ltiAccent is the brand blue standalone and with no brand, the tenant accent in a launch', () => {
+    expect(ltiAccent(null, '#1a6b3c')).toBe(STANDALONE_ACCENT)
+    expect(ltiAccent(NO_BRAND, '#1a6b3c')).toBe(STANDALONE_ACCENT)
+    const b = applyBrand({ name: 'Acme', scheme: 'light', accent: '#d76f0f' })
+    expect(ltiAccent(b, '#1a6b3c')).toBe('#d76f0f')
   })
 })

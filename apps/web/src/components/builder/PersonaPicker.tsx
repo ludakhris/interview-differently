@@ -115,7 +115,7 @@ export function PersonaPicker({ value, onChange }: PersonaPickerProps) {
         <div>
           <label
             htmlFor={voiceSelectId}
-            className="block text-[10px] font-bold uppercase tracking-widest text-slate-mid mb-1.5"
+            className="block text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1.5"
           >
             Voice
           </label>

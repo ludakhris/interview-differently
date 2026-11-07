@@ -48,7 +48,7 @@ export function WelcomePage() {
     <div className="min-h-screen bg-surface">
       <Nav />
       <div className="max-w-xl mx-auto px-6 py-12 animate-fade-in">
-        <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+        <p className="text-[12px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
           Welcome
         </p>
         <h1 className="font-display font-extrabold text-[28px] text-fg tracking-tight mb-3">

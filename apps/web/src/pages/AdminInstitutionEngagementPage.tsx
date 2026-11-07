@@ -142,7 +142,7 @@ function EngagementTable({ data }: { data: ScenarioEngagementResponse }) {
     <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+          <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             By scenario
           </h2>
           {data.cohort && (

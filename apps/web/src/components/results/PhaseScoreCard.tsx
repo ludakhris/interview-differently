@@ -31,7 +31,7 @@ export function PhaseScoreCard({ phase, index }: Props) {
     <section className="bg-surface-alt border border-edge/10 rounded-2xl overflow-hidden">
       <header className="px-5 py-4 border-b border-edge/8 flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
+          <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             Phase {index + 1}
           </p>
           <h3 className="mt-0.5 text-[16px] font-display font-bold text-fg leading-tight">

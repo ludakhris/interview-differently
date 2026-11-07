@@ -68,7 +68,9 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
   return (
     <div className="flex flex-col h-full bg-surface-deep border-r border-edge/10 w-[220px] flex-none">
       <div className="px-4 pt-5 pb-2">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-mid">Phases</p>
+        <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
+          Phases
+        </p>
       </div>
 
       <div className="flex-1 overflow-auto px-2 pb-2 flex flex-col gap-1">

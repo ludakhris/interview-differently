@@ -284,3 +284,15 @@ export function applyBrand(input: unknown): AppliedBrand {
 
   return { cssVars: vars, name, logoUrl, scheme, accent: accent ? toHex(accent) : null, font }
 }
+
+/** The brand blue: the accent for simulation chrome in standalone Interview Differently. */
+export const STANDALONE_ACCENT = '#2563eb'
+
+/**
+ * The accent for simulation chrome (sidebar, phase steps, headings). In a branded launch it is the
+ * tenant's accent, or the track colour when the tenant sets none; otherwise the brand blue.
+ */
+export function ltiAccent(brand: AppliedBrand | null, trackColour?: string): string | undefined {
+  if (!brand || Object.keys(brand.cssVars).length === 0) return STANDALONE_ACCENT
+  return brand.accent ?? trackColour
+}

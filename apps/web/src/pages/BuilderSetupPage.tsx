@@ -214,7 +214,7 @@ export function BuilderSetupPage() {
         <div className="mb-8">
           <p
             id="setup-start-from"
-            className="block text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3"
+            className="block text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-3"
           >
             Start from
           </p>
@@ -249,7 +249,7 @@ export function BuilderSetupPage() {
           <div className="mb-8">
             <label
               htmlFor="setup-clone"
-              className="block text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3"
+              className="block text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-3"
             >
               Scenario to clone
             </label>
@@ -278,7 +278,7 @@ export function BuilderSetupPage() {
 
         {startFrom === 'import' && (
           <div className="mb-8">
-            <p className="block text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3">
+            <p className="block text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-3">
               File
             </p>
             <input
@@ -308,7 +308,7 @@ export function BuilderSetupPage() {
         <div className="mb-8">
           <label
             htmlFor="setup-title"
-            className="block text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3"
+            className="block text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-3"
           >
             Scenario Title
             {startFrom !== 'blank' && (
@@ -336,7 +336,7 @@ export function BuilderSetupPage() {
           <div className="mb-8">
             <label
               htmlFor="setup-owner"
-              className="block text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3"
+              className="block text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-3"
             >
               Visible to
             </label>
@@ -357,7 +357,7 @@ export function BuilderSetupPage() {
             <div className="mb-8">
               <p
                 id="setup-track"
-                className="block text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3"
+                className="block text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-3"
               >
                 Track
               </p>
@@ -398,7 +398,7 @@ export function BuilderSetupPage() {
               <div className="mb-8">
                 <p
                   id="setup-subtrack"
-                  className="block text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3"
+                  className="block text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-3"
                 >
                   Sub-track
                 </p>
@@ -434,7 +434,7 @@ export function BuilderSetupPage() {
             {/* Rubric preview */}
             {track && previewDimensions.length > 0 && (
               <div className="mb-8 bg-surface-alt border border-edge/10 rounded-xl p-5">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-mid mb-3">
+                <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-3">
                   Pre-filled Rubric — {TRACK_LABELS[track]}
                 </p>
                 <div className="space-y-2">

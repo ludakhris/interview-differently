@@ -63,7 +63,7 @@ export function InvitePage() {
           <div className="p-7">
             {error ? (
               <>
-                <p className="text-[12px] font-bold uppercase tracking-widest text-red-400 mb-1">
+                <p className="text-[12px] font-mono font-medium uppercase tracking-[0.14em] text-red-400 mb-1">
                   Invite
                 </p>
                 <p className="text-[14px] text-fg">{error}</p>
@@ -81,7 +81,7 @@ export function InvitePage() {
                   </div>
                   <div className="min-w-0">
                     <p
-                      className="text-[10px] font-bold uppercase tracking-[0.18em]"
+                      className="text-[10px] font-mono font-medium uppercase tracking-[0.14em]"
                       style={{ color: ACCENT }}
                     >
                       {info.label} · {info.institutionName}

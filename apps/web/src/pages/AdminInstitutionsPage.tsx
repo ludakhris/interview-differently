@@ -113,7 +113,7 @@ export function AdminInstitutionsPage() {
           {/* ── Institution list ── */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+              <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Institutions
               </h2>
               {isAdmin && (
@@ -348,7 +348,9 @@ function InstitutionDetailView({
       </div>
 
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Cohorts</h3>
+        <h3 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
+          Cohorts
+        </h3>
         <button
           onClick={() => setShowNewCohort((v) => !v)}
           className="text-[12px] font-semibold text-accent hover:text-primary transition-colors"
@@ -556,12 +558,12 @@ function CohortRow({
                     <p className="text-[13px] text-fg flex items-center gap-2">
                       {m.displayName ?? m.email ?? m.userId}
                       {m.role === 'institution-admin' && (
-                        <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-primary/20 text-accent">
+                        <span className="text-[9px] font-mono font-medium uppercase tracking-[0.14em] px-1.5 py-0.5 rounded-sm bg-primary/20 text-accent">
                           Cohort admin
                         </span>
                       )}
                       {m.role === 'admin' && (
-                        <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-ink/10 text-slate-light">
+                        <span className="text-[9px] font-mono font-medium uppercase tracking-[0.14em] px-1.5 py-0.5 rounded-sm bg-ink/10 text-slate-light">
                           Platform admin
                         </span>
                       )}
@@ -696,7 +698,9 @@ function CohortToolsToggles({
 
   return (
     <div className="mb-4 pb-4 border-b border-edge/5">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">Tools</p>
+      <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
+        Tools
+      </p>
       {err && <p className="text-[11px] text-red-400">{err}</p>}
       {!tools ? (
         <p className="text-[12px] text-slate-mid">Loading…</p>

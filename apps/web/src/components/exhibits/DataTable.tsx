@@ -47,7 +47,7 @@ export function DataTable({ exhibit }: Props) {
             {exhibit.columns.map((col) => (
               <th
                 key={col.key}
-                className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-mid ${alignClass(col)} ${col.sortable ? 'cursor-pointer hover:text-ink/80 select-none' : ''}`}
+                className={`px-3 py-2 text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid ${alignClass(col)} ${col.sortable ? 'cursor-pointer hover:text-ink/80 select-none' : ''}`}
                 onClick={() => col.sortable && toggleSort(col.key, sort, setSort)}
                 aria-sort={sortAriaLabel(col.key, sort)}
               >

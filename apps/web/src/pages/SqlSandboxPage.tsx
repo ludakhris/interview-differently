@@ -304,7 +304,7 @@ export function SqlSandboxPage() {
           >
             <div className="h-[3px] w-full shrink-0 bg-accent" />
             <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-accent">
+              <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-accent">
                 Workspace
               </p>
               <button
@@ -340,7 +340,7 @@ export function SqlSandboxPage() {
 
             <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-6">
               <section>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+                <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
                   Schema
                 </p>
                 {dataset ? (
@@ -356,7 +356,7 @@ export function SqlSandboxPage() {
 
               {history.length > 0 && (
                 <section>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+                  <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
                     History
                   </p>
                   <ul className="space-y-0.5">
@@ -437,7 +437,7 @@ export function SqlSandboxPage() {
                 <div className="m-4 mb-0 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 flex gap-3">
                   <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-red-400 mb-0.5">
+                    <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-red-400 mb-0.5">
                       Query error
                     </p>
                     <p className="text-[13px] text-fg/85 font-mono whitespace-pre-wrap">

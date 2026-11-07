@@ -638,7 +638,7 @@ export function BuilderListPage() {
                     <th key={key} className={`px-3 py-2.5 ${cls}`}>
                       <button
                         onClick={() => setSortKey(key)}
-                        className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                        className={`inline-flex items-center gap-1 text-[10px] font-mono font-medium uppercase tracking-[0.14em] transition-colors ${
                           sort.key === key ? 'text-fg' : 'text-slate-mid hover:text-slate-light'
                         }`}
                       >
@@ -744,7 +744,7 @@ export function BuilderListPage() {
                           </td>
                           <td className="px-3 py-2.5 whitespace-nowrap">
                             <span
-                              className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                              className={`text-[9px] font-mono font-medium uppercase tracking-[0.14em] px-1.5 py-0.5 rounded ${
                                 scenario.institutionName
                                   ? 'bg-primary/20 text-accent'
                                   : 'bg-ink/[0.07] text-slate-mid'

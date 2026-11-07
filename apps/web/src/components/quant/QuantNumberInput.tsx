@@ -41,7 +41,7 @@ export function QuantNumberInput({
       {label && (
         <label
           htmlFor={id}
-          className="block text-[11px] font-semibold uppercase tracking-widest text-slate-mid mb-1"
+          className="block text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1"
         >
           {label}
         </label>

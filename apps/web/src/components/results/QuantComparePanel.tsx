@@ -20,12 +20,12 @@ export function QuantComparePanel({ result }: Props) {
     <div className="bg-surface-deep border border-edge/10 rounded-xl overflow-hidden">
       <div className="px-4 py-3 border-b border-edge/8 bg-ink/3">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
+          <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             Quant submission
           </p>
           {result.hintUsed && (
             <span
-              className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border border-amber-500/35 bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded-full"
+              className="inline-flex items-center gap-1.5 text-[10px] font-mono font-medium uppercase tracking-[0.14em] border border-amber-500/35 bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded-full"
               title="Candidate revealed the hint; signal capped at Proficient."
             >
               💡 Hint used
@@ -43,7 +43,7 @@ export function QuantComparePanel({ result }: Props) {
               className="px-4 py-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center"
             >
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-mid">
+                <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                   {field.fieldId}
                 </p>
                 <div className="mt-1 grid grid-cols-2 gap-3">
@@ -64,7 +64,7 @@ export function QuantComparePanel({ result }: Props) {
                 </div>
               </div>
               <span
-                className={`inline-flex items-center text-[10px] font-bold uppercase tracking-widest border rounded-full px-2.5 py-1 ${tone.className}`}
+                className={`inline-flex items-center text-[10px] font-mono font-medium uppercase tracking-[0.14em] border rounded-full px-2.5 py-1 ${tone.className}`}
               >
                 {tone.label}
               </span>

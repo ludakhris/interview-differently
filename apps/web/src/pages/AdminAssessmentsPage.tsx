@@ -151,7 +151,7 @@ export function AdminAssessmentsPage() {
         <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+              <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Assessments
               </h2>
               <button
@@ -308,7 +308,7 @@ function ImportPanel({
         ) : (
           owners.length > 1 && (
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+              <span className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Owner
               </span>
               <OwnerSelect
@@ -324,7 +324,7 @@ function ImportPanel({
           )
         )}
         <div>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+          <span className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             Markdown
           </span>
           <textarea
@@ -385,7 +385,7 @@ function ImportPanel({
             </ul>
             {preview.sqlErrors.length > 0 && (
               <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-red-400 mb-1">
+                <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-red-400 mb-1">
                   Reference queries failed
                 </p>
                 <ul className="font-mono text-[11px] text-fg/85 space-y-0.5">
@@ -399,7 +399,7 @@ function ImportPanel({
             )}
             {preview.parsed.warnings.length > 0 && (
               <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-amber-400 mb-1">
+                <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-amber-400 mb-1">
                   Warnings
                 </p>
                 <ul className="text-[11px] text-fg/75 space-y-0.5">
@@ -532,7 +532,7 @@ function DetailPanel({
 
       <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+          <h3 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             Deliveries
           </h3>
           <button
@@ -945,7 +945,7 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
     <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+          <h3 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             Results · {data.delivery.label} · {data.delivery.cohortName}
           </h3>
           {(data.delivery.expectedMinutes != null || data.delivery.medianMinutes != null) && (

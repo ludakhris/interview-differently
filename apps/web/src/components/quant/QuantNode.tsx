@@ -136,7 +136,7 @@ function HintControls({
             onClick={() => setStage('idle')}
           />
           <div className="relative bg-surface-alt border border-edge/15 rounded-2xl p-6 max-w-md w-[88%] mx-4 shadow-2xl animate-fade-in">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">
+            <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-amber-400">
               Confirm
             </p>
             <h3 className="mt-1 text-[16px] font-display font-bold text-fg">
@@ -190,7 +190,7 @@ function HintControls({
           />
           <div className="relative bg-surface-alt border border-edge/15 rounded-2xl p-6 max-w-md w-[88%] mx-4 shadow-2xl animate-fade-in">
             <div className="flex items-start justify-between gap-3 mb-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">
+              <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-amber-400">
                 Formula
               </p>
               <button
@@ -207,7 +207,7 @@ function HintControls({
             </p>
             {revealed?.footnote && (
               <div className="mt-4 pt-3 border-t border-edge/10">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-mid mb-1.5">
+                <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1.5">
                   Glossary
                 </p>
                 <p className="text-[12px] text-slate-light leading-relaxed whitespace-pre-wrap">
@@ -568,7 +568,9 @@ function QuestionHeader({
   return (
     <div className="bg-surface-alt border border-edge/10 rounded-2xl p-5">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">Quant</p>
+        <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
+          Quant
+        </p>
         {hint}
       </div>
       <p className="mt-1 text-[16px] font-display font-semibold text-fg leading-snug">{prompt}</p>
@@ -595,7 +597,7 @@ function BandFeedback({
   const { tone, headline } = bandPresentation(band)
   return (
     <div className={`rounded-xl border p-4 ${tone}`}>
-      <p className="text-[10px] font-bold uppercase tracking-widest">{headline}</p>
+      <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em]">{headline}</p>
       <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <p className="text-[10px] uppercase tracking-widest text-slate-mid">Your answer</p>

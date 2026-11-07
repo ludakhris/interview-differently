@@ -100,7 +100,7 @@ export function AdminDatasetsPage() {
         <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+              <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Datasets
               </h2>
               <button
@@ -192,7 +192,7 @@ export function AdminDatasetsPage() {
 export function OwnerBadge({ institutionName }: { institutionName: string | null }) {
   return (
     <span
-      className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded shrink-0 ${
+      className={`text-[9px] font-mono font-medium uppercase tracking-[0.14em] px-1.5 py-0.5 rounded shrink-0 ${
         institutionName ? 'bg-primary/20 text-accent' : 'bg-ink/10 text-slate-mid'
       }`}
     >
@@ -306,7 +306,7 @@ function DatasetEditor({
           )}
           {!initial && owners.length > 1 && (
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+              <span className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Owner
               </span>
               <OwnerSelect
@@ -319,7 +319,7 @@ function DatasetEditor({
           )}
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-3">
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+              <span className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Name
               </span>
               <input
@@ -331,7 +331,7 @@ function DatasetEditor({
               />
             </label>
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+              <span className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Slug
               </span>
               <input
@@ -344,7 +344,7 @@ function DatasetEditor({
             </label>
           </div>
           <label className="block">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+            <span className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
               Description
             </span>
             <input
@@ -358,7 +358,7 @@ function DatasetEditor({
 
           <div>
             <div className="flex items-baseline justify-between mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+              <span className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Setup SQL
               </span>
               <span className="font-mono text-[10px] text-slate-mid">
@@ -391,7 +391,7 @@ function DatasetEditor({
         <aside className="border-t lg:border-t-0 lg:border-l border-edge/8 bg-surface-deep p-5 space-y-6">
           <section>
             <div className="flex items-baseline justify-between mb-2">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+              <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Schema
               </p>
               {schema && (
@@ -426,7 +426,7 @@ function DatasetEditor({
           </section>
 
           <section>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+            <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
               Cohorts with access
             </p>
             <p className="text-[11px] text-slate-mid mb-2 leading-relaxed">

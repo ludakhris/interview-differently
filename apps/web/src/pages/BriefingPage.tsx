@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/react'
 import { Nav } from '@/components/Nav'
 import { LtiNav } from '@/components/LtiNav'
 import { useLtiBrand } from '@/components/LtiBrandProvider'
+import { ltiAccent } from '@/lib/brand'
 import { TrackIcon } from '@/components/TrackIcon'
 import { useScenario, useScenarios } from '@/hooks/useScenarios'
 import { isVoiceInterview } from '@/lib/immersiveLti'
@@ -49,8 +50,8 @@ export function BriefingPage({
   }
 
   const meta = trackMeta[scenario.track]
-  // tenant accent (LTI only) stands in for the track colour
-  const accent = brand?.accent ?? meta?.color
+  // the tenant's accent in a launch; the brand blue standalone
+  const accent = ltiAccent(brand, meta?.color)
   const { briefing } = scenario
   const immersiveUrl = `/scenario/${scenarioId}/immersive?mode=${narrationMode}`
 
@@ -72,7 +73,7 @@ export function BriefingPage({
 
       <div className="max-w-2xl mx-auto px-6 py-14 animate-fade-in">
         <div
-          className="text-[11px] font-bold uppercase tracking-widest mb-3 flex items-center gap-1.5"
+          className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] mb-3 flex items-center gap-1.5"
           style={{ color: accent }}
         >
           {meta && (

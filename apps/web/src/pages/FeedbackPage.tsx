@@ -90,7 +90,7 @@ export function FeedbackPage() {
 
       <div className="max-w-3xl mx-auto px-6 py-12 animate-fade-in">
         <div className="text-center mb-10">
-          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+          <p className="text-[12px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
             Simulation Complete
           </p>
           <h1 className="font-display font-extrabold text-[26px] text-fg tracking-tight mb-8">

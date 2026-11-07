@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/react'
 import { Nav } from '@/components/Nav'
 import { LtiNav } from '@/components/LtiNav'
 import { useLtiBrand } from '@/components/LtiBrandProvider'
+import { ltiAccent } from '@/lib/brand'
 import { ChoiceCard } from '@/components/ChoiceCard'
 import { ContextPanel } from '@/components/ContextPanel'
 import { MetricChart } from '@/components/MetricChart'
@@ -145,8 +146,8 @@ function SimulationContent({
   const navigate = useNavigate()
   const builderPath = `/builder/${scenarioId}`
   const meta = trackMeta[scenario.track]
-  // tenant accent (LTI only) stands in for the track colour
-  const accent = useLtiBrand()?.accent ?? meta?.color
+  // the tenant's accent in a launch; the brand blue standalone
+  const accent = ltiAccent(useLtiBrand(), meta?.color)
 
   const auth = useAuth()
   // LTI learners have no Clerk session; the API stamps the real user id from
@@ -389,7 +390,7 @@ function SimulationContent({
       {ltiMode ? (
         <LtiNav trackLabel={meta?.label} stepLabel={stepLabel} />
       ) : (
-        <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
+        <Nav trackLabel={meta?.label} stepLabel={stepLabel} wide />
       )}
 
       {hasPhases && <PhaseStepper phases={phaseViews} accentColor={accent} />}
@@ -415,7 +416,7 @@ function SimulationContent({
               <div className="max-w-2xl mx-auto px-6 py-16 animate-fade-in">
                 <div className="bg-surface-alt border border-edge/10 rounded-2xl p-8 mb-8">
                   <div
-                    className="text-[11px] font-bold uppercase tracking-widest mb-4"
+                    className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] mb-4"
                     style={{ color: accent }}
                   >
                     What happened next
@@ -528,7 +529,7 @@ function SimulationContent({
                       {display.alertBanner.icon}
                     </span>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">
+                      <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-amber-400 mb-1">
                         {display.alertBanner.title}
                       </p>
                       <p className="text-[13px] text-fg/80 leading-relaxed">
@@ -590,7 +591,7 @@ function SimulationContent({
                 </div>
 
                 <div>
-                  <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-3">
+                  <p className="text-[12px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-3">
                     What do you do?
                   </p>
                   <div className="space-y-3">

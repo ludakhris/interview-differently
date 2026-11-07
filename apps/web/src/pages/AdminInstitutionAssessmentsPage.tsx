@@ -210,7 +210,7 @@ function PairCard({
       <div className="p-6">
         <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">
+            <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-accent">
               {pair.cohort.name}
             </p>
             <h2 className="font-display font-bold text-[18px] text-fg mt-0.5">
@@ -283,7 +283,9 @@ function PairCard({
 
         {/* Students */}
         <div className="flex items-center justify-between mb-2">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Students</p>
+          <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
+            Students
+          </p>
           <button
             onClick={exportCsv}
             className="text-[11px] font-semibold text-slate-mid hover:text-fg transition-colors"

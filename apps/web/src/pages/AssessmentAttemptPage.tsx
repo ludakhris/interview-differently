@@ -243,7 +243,7 @@ export function AssessmentAttemptPage({
         >
           <div className="h-[3px] w-full shrink-0 bg-accent" />
           <div className="px-5 pt-5 pb-3">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-accent">
+            <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-accent">
               {paper.title}
             </p>
             {remainingMs !== null && (
@@ -312,7 +312,7 @@ export function AssessmentAttemptPage({
         <main className="flex-1 min-w-0 max-w-4xl px-8 py-8">
           {sectionIx === 0 && (
             <div className="mb-6 rounded-xl border border-edge/10 bg-surface-deep px-5 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-mid mb-2">
+              <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
                 How this works
               </p>
               <ul className="text-[13px] text-fg/80 leading-relaxed space-y-1 list-disc pl-5">
@@ -342,7 +342,7 @@ export function AssessmentAttemptPage({
               </ul>
             </div>
           )}
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+          <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
             Section {sectionIx + 1} of {paper.sections.length}
           </p>
           <h2 className="font-display font-extrabold text-[22px] text-fg tracking-tight mb-6">
@@ -357,7 +357,7 @@ export function AssessmentAttemptPage({
                     {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-mid mb-1">
+                    <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
                       {q.type === 'mc'
                         ? 'Multiple choice'
                         : q.type === 'scenario'

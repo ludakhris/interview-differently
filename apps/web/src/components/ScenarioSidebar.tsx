@@ -12,16 +12,6 @@ const emphasisColor = {
   success: 'text-emerald-400',
 }
 
-const accentLine: Record<ContextDisplayStyle, string> = {
-  monitor: 'bg-amber-500',
-  table: 'bg-blue-500',
-  finding: 'bg-red-500',
-  'tile-grid': 'bg-azure',
-  'hero-list': 'bg-azure',
-  'context-cards': 'bg-azure',
-  'briefing-sections': 'bg-azure',
-}
-
 // ── Section renderers ─────────────────────────────────────────────────────────
 
 function TextSection({ items }: { items: SidebarItem[] }) {
@@ -94,7 +84,7 @@ function HighlightSection({ items }: { items: SidebarItem[] }) {
 function SidebarSectionBlock({ section }: { section: SidebarSection }) {
   return (
     <div>
-      <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-mid mb-2">
+      <div className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
         {section.title}
       </div>
       {section.style === 'list' && <ListSection items={section.items} />}
@@ -106,19 +96,22 @@ function SidebarSectionBlock({ section }: { section: SidebarSection }) {
 
 // ── Main export ────────────────────────────────────────────────────────────────
 
-export function ScenarioSidebar({ sections, contextStyle, accentColor }: Props) {
+export function ScenarioSidebar({ sections, accentColor }: Props) {
   return (
     <aside
       className="hidden lg:flex flex-col w-[260px] shrink-0 bg-surface-deep border-r border-edge/8"
       style={{ minHeight: 'calc(100vh - 57px)' }}
     >
       {/* Accent bar */}
-      <div className={`h-[3px] w-full shrink-0 ${accentLine[contextStyle]}`} />
+      <div
+        className="h-[3px] w-full shrink-0 bg-primary"
+        style={accentColor ? { backgroundColor: accentColor } : undefined}
+      />
 
       <div className="px-5 py-5 space-y-5 overflow-y-auto flex-1">
         <p
-          className="text-[11px] font-bold uppercase tracking-[0.18em] mb-1"
-          style={{ color: accentColor ?? 'rgb(var(--ld-soft-light, 61 69 86))' }}
+          className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] mb-1"
+          style={{ color: accentColor ?? 'rgb(var(--ld-primary, 37 99 235))' }}
         >
           Your Context
         </p>

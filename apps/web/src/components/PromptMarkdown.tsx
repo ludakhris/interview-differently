@@ -37,7 +37,7 @@ const components: Components = {
   th: ({ children, style }) => (
     <th
       style={style}
-      className="text-left px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-fg border-b border-primary/30 whitespace-nowrap"
+      className="text-left px-4 py-2 text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-fg border-b border-primary/30 whitespace-nowrap"
     >
       {children}
     </th>

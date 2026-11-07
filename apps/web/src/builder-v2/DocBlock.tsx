@@ -180,7 +180,7 @@ function DecisionBlock({
       {/* Immersive: what the interviewer says + render state (#24 Phase H) */}
       {immersive && (
         <div className="mb-3 pb-3 border-b border-edge/6">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
+          <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             🎙 Interviewer says
           </span>
           {node.audioScript?.trim() ? (
@@ -216,7 +216,7 @@ function DecisionBlock({
                   : 'border-edge/8 bg-ink/3',
               ].join(' ')}
             >
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
+              <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 {panel.label}
               </span>
               <span
@@ -354,7 +354,7 @@ function QuantBlock({ node, onEditRequest }: { node: ScenarioNode; onEditRequest
       </p>
       {spec.formula?.display && (
         <div className="mb-3 px-3 py-2 rounded-lg bg-[#1a5a8a]/10 border border-[#1a5a8a]/30">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-[#1a5a8a]/80 mb-1">
+          <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-[#1a5a8a]/80 mb-1">
             Formula
           </p>
           <p className="text-[13px] text-sky-300 font-mono">{spec.formula.display}</p>
@@ -471,7 +471,7 @@ export function SetupBlock({
         {facts.map(({ label, value }) =>
           value ? (
             <div key={label}>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
+              <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 {label}
               </span>
               <p className="text-[13px] text-ink/75 mt-0.5">{value}</p>
@@ -490,7 +490,7 @@ export function SetupBlock({
         </p>
       )}
       <div className="border-t border-edge/6 pt-3 mt-3">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
+        <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
           Scored on
         </span>
         {dims.length === 0 ? (
@@ -521,7 +521,7 @@ export function SidebarBlock({ sidebar }: { sidebar: SidebarSection[] }) {
       <div className="flex flex-wrap gap-6">
         {sidebar.map((section, si) => (
           <div key={si} className="min-w-[160px]">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+            <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
               {section.title}
             </p>
             <div className="flex flex-col gap-1.5">

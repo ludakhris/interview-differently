@@ -17,7 +17,7 @@ export const inputCls =
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
+      <label className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
         {label}
       </label>
       {children}
@@ -63,7 +63,7 @@ export function SelectInput({
 export function SectionLabel({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
+      <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
         {label}
       </span>
       <div className="flex-1 h-px bg-ink/6" />

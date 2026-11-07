@@ -38,7 +38,7 @@ export function AssessmentResultPage() {
         ) : (
           <>
             <div className="mb-8">
-              <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+              <p className="text-[12px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
                 {result.label} · submitted{' '}
                 {result.submittedAt &&
                   new Date(result.submittedAt).toLocaleString(undefined, {

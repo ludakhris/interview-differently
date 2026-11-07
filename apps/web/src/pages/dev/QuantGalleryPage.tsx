@@ -162,7 +162,9 @@ function Section({ id, kind, blurb, children }: SectionProps) {
   return (
     <section id={id} className="space-y-3">
       <header>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-mid">{kind}</p>
+        <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
+          {kind}
+        </p>
         <p className="mt-1 text-[13px] text-slate-light leading-relaxed max-w-2xl">{blurb}</p>
       </header>
       <div data-screenshot-target={id}>{children}</div>
@@ -175,7 +177,7 @@ export function QuantGalleryPage() {
     <div className="min-h-screen bg-surface text-fg">
       <div className="max-w-3xl mx-auto px-6 py-12 space-y-12">
         <header>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-mid">
+          <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             Quant library
           </p>
           <h1 className="mt-1 text-[28px] font-display font-extrabold leading-tight">

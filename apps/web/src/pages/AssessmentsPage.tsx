@@ -49,7 +49,7 @@ export function AssessmentsPage() {
       <Nav trackLabel="Assessments" />
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="mb-8">
-          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+          <p className="text-[12px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
             Tools
           </p>
           <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
@@ -95,7 +95,7 @@ export function AssessmentsPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p
-                        className="text-[10px] font-bold uppercase tracking-[0.18em]"
+                        className="text-[10px] font-mono font-medium uppercase tracking-[0.14em]"
                         style={{ color: ACCENT }}
                       >
                         {d.label} · {d.cohortName ?? 'cohort removed'}

@@ -185,7 +185,7 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
         {panels.map((panel, i) => (
           <div key={i} className="flex flex-col gap-2 p-3 border border-edge/6 rounded-xl bg-ink/1">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
+              <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Tile {i + 1}
               </span>
               <RemoveButton onClick={() => removePanel(i)} />

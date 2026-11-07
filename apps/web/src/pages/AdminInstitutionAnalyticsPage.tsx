@@ -152,7 +152,7 @@ function AnalyticsSections({ analytics }: { analytics: InstitutionAnalytics }) {
       {/* Stat cards */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+          <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             Overview
           </h2>
           <CsvButton
@@ -294,7 +294,9 @@ function StatCard({
 }) {
   return (
     <div className="bg-surface-alt rounded-xl border border-edge/10 p-4">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">{label}</p>
+      <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
+        {label}
+      </p>
       <p className="font-display font-extrabold text-[28px]" style={{ color: accent ?? '#14213a' }}>
         {value}
       </p>
@@ -319,7 +321,9 @@ function BreakdownTable({
   return (
     <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">{title}</h2>
+        <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
+          {title}
+        </h2>
         {onExport && rows.length > 0 && <CsvButton onClick={onExport} />}
       </div>
       {rows.length === 0 ? (
@@ -382,7 +386,7 @@ function CohortBreakdownTable({
   return (
     <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+        <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
           By cohort
         </h2>
         {onExport && sorted.length > 0 && <CsvButton onClick={onExport} />}

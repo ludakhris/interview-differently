@@ -84,7 +84,7 @@ export function SettingsPage() {
       <Nav />
       <div className="max-w-2xl mx-auto px-6 py-12 animate-fade-in">
         <div className="mb-8">
-          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+          <p className="text-[12px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
             Settings
           </p>
           <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
@@ -96,7 +96,7 @@ export function SettingsPage() {
 
         {/* Memberships — everyone */}
         <div className="bg-surface-alt rounded-xl border border-edge/10 p-6 mb-4">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
+          <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-4">
             Your memberships
           </p>
           <MembershipsCard variant="settings" />
@@ -106,7 +106,7 @@ export function SettingsPage() {
         {isAdmin && (
           <>
             <div className="bg-surface-alt rounded-xl border border-edge/10 px-6">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid pt-5 pb-3">
+              <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid pt-5 pb-3">
                 Evaluation
               </p>
               {!adminConfigLoaded ? (

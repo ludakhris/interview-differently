@@ -169,13 +169,16 @@ export function AdminUsagePage() {
 // ── Shared bits ────────────────────────────────────────────────────────────
 
 const card = 'bg-surface-alt rounded-xl border border-edge/10'
-const th = 'text-left text-[11px] font-bold uppercase tracking-widest text-slate-mid px-4 py-2.5'
+const th =
+  'text-left text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid px-4 py-2.5'
 const td = 'px-4 py-2.5 text-[13px] text-fg align-top'
 
 function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
   return (
     <div className={`${card} px-5 py-4`}>
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">{label}</p>
+      <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
+        {label}
+      </p>
       <p className="font-display font-extrabold text-[28px] text-fg leading-tight mt-1">{value}</p>
       {sub && <p className="text-[12px] text-slate-mid mt-0.5">{sub}</p>}
     </div>
@@ -194,7 +197,9 @@ function Section({
   return (
     <div className={`${card} p-6`}>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">{title}</h2>
+        <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
+          {title}
+        </h2>
         {action}
       </div>
       {children}
@@ -565,7 +570,7 @@ function ToolCard({ tool, tracking }: { tool: UsageTool; tracking: boolean }) {
 
       {tool.datasets.length > 0 && (
         <div className="mt-5">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+          <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
             By dataset
           </p>
           <ul className="text-[13px] space-y-1">
@@ -807,7 +812,9 @@ function UserRow({
 function TopList({ title, items }: { title: string; items: { label: string; count: number }[] }) {
   return (
     <div>
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-1">{title}</p>
+      <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
+        {title}
+      </p>
       {items.length === 0 ? (
         <p className="text-[12px] text-slate-mid">—</p>
       ) : (

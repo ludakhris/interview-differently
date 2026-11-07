@@ -40,12 +40,12 @@ function MonitorGrid({ panels }: { panels: ContextPanelType[] }) {
             <div className="flex items-center gap-1.5 mb-2">
               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`} />
               <span
-                className={`text-[9px] font-bold uppercase tracking-widest ${s.val} opacity-80`}
+                className={`text-[9px] font-mono font-medium uppercase tracking-[0.14em] ${s.val} opacity-80`}
               >
                 {s.label}
               </span>
             </div>
-            <div className="text-[10px] font-medium uppercase tracking-wider text-slate-mid mb-1">
+            <div className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
               {panel.label}
             </div>
             <div className={`font-display font-black text-[20px] leading-tight ${s.val}`}>
@@ -128,7 +128,7 @@ function FindingDisplay({
             </span>
             <div className="flex items-center gap-1.5 bg-red-500/15 border border-red-500/30 px-2 py-1 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
-              <span className="text-[9px] font-bold uppercase tracking-widest text-red-400">
+              <span className="text-[9px] font-mono font-medium uppercase tracking-[0.14em] text-red-400">
                 {incidentMeta.status}
               </span>
             </div>
@@ -137,14 +137,14 @@ function FindingDisplay({
           {/* Incident fields grid */}
           <div className="grid grid-cols-2 gap-x-6 gap-y-3">
             <div>
-              <div className="text-[9px] font-medium uppercase tracking-widest text-slate-mid mb-0.5">
+              <div className="text-[9px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-0.5">
                 Discovered
               </div>
               <div className="text-[12px] text-fg/80">{incidentMeta.discoveredAt}</div>
             </div>
 
             <div>
-              <div className="text-[9px] font-medium uppercase tracking-widest text-slate-mid mb-0.5">
+              <div className="text-[9px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-0.5">
                 Time Since Finding
               </div>
               <div className="text-[13px] font-mono font-bold text-amber-400 tabular-nums">
@@ -153,14 +153,14 @@ function FindingDisplay({
             </div>
 
             <div>
-              <div className="text-[9px] font-medium uppercase tracking-widest text-slate-mid mb-0.5">
+              <div className="text-[9px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-0.5">
                 Severity
               </div>
               <div className="text-[12px] font-semibold text-red-400">{incidentMeta.severity}</div>
             </div>
 
             <div>
-              <div className="text-[9px] font-medium uppercase tracking-widest text-slate-mid mb-0.5">
+              <div className="text-[9px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-0.5">
                 Assigned To
               </div>
               <div className="text-[12px] text-slate-mid italic">
@@ -183,7 +183,7 @@ function FindingDisplay({
       <div className="flex">
         <div className="w-1 bg-red-500 shrink-0" />
         <div className="flex-1 px-5 py-4">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-red-400 mb-3">
+          <div className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-red-400 mb-3">
             Finding Details
           </div>
           {panels.map((panel, i) => (

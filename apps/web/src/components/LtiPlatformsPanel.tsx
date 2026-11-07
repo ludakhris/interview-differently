@@ -206,7 +206,7 @@ function PlatformCard({
             {p.name}
           </h2>
           <span
-            className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm ${CHIP[status.tone]}`}
+            className={`text-[10px] font-mono font-medium uppercase tracking-[0.14em] px-2 py-0.5 rounded-sm ${CHIP[status.tone]}`}
           >
             {status.label}
           </span>

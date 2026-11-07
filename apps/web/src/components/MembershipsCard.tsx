@@ -165,7 +165,7 @@ function JoinForm({
     <div className="space-y-4">
       {suggestedInstitution && !alreadyInSuggested && (
         <div className="bg-surface border border-primary/30 rounded-lg p-4">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-accent mb-1">
+          <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-accent mb-1">
             Suggested for you
           </p>
           <p className="text-[14px] text-fg mb-3">
@@ -216,7 +216,7 @@ function JoinForm({
           }
         }}
       >
-        <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+        <p className="text-[12px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
           {suggestedInstitution ? 'Or join with a cohort key' : 'Have a cohort join key?'}
         </p>
         <div className="flex items-center gap-2">

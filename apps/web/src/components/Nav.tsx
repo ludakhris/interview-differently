@@ -10,9 +10,11 @@ import { Wordmark } from '@/components/Wordmark'
 interface NavProps {
   trackLabel?: string
   stepLabel?: string
+  /** Full width, for screens with a side panel (the simulation), so the logo lines up with it. */
+  wide?: boolean
 }
 
-export function Nav({ trackLabel, stepLabel }: NavProps) {
+export function Nav({ trackLabel, stepLabel, wide = false }: NavProps) {
   const navigate = useNavigate()
   const { isSignedIn, isLoaded } = useAuth()
   const { isAnyAdmin } = useRole()
@@ -22,7 +24,9 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
 
   return (
     <nav className="sm:sticky top-0 z-50 bg-surface/95 backdrop-blur border-b border-edge/10">
-      <div className="max-w-[1200px] mx-auto flex flex-wrap items-center justify-between gap-x-8 gap-y-3 px-4 sm:px-8 py-4">
+      <div
+        className={`${wide ? '' : 'max-w-[1200px] mx-auto '}flex flex-wrap items-center justify-between gap-x-8 gap-y-3 px-4 ${wide ? 'sm:px-5' : 'sm:px-8'} py-4`}
+      >
         <button
           onClick={() => navigate('/')}
           className="hover:opacity-80 transition-opacity"

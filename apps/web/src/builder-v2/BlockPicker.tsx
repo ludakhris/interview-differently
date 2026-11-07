@@ -71,7 +71,7 @@ function TransitionPreview() {
       <div className="w-full max-w-lg border border-edge/10 rounded-[14px] bg-surface-alt p-6">
         <div className="flex items-center gap-2 mb-4">
           <span className="text-[13px] text-slate-mid">↩</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
+          <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             Redirect / Transition
           </span>
         </div>
@@ -93,7 +93,7 @@ function EndingPreview() {
     <div className="w-full h-full flex items-center justify-center p-10 bg-surface-deep">
       <div className="w-full max-w-lg flex flex-col gap-3">
         <div className="border border-emerald-400/20 rounded-[14px] bg-emerald-400/4 p-5">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-400/60 mb-2">
+          <div className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-emerald-400/60 mb-2">
             🏁 Strong ending
           </div>
           <p className="text-[13px] text-slate-light leading-relaxed">
@@ -102,7 +102,7 @@ function EndingPreview() {
           </p>
         </div>
         <div className="border border-amber-400/15 rounded-[14px] bg-amber-400/3 p-4">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-amber-400/50 mb-2">
+          <div className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-amber-400/50 mb-2">
             🏁 Developing ending
           </div>
           <p className="text-[12px] text-slate-mid leading-relaxed">

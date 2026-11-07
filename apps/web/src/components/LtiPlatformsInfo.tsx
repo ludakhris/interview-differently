@@ -208,7 +208,7 @@ export function LtiPlatformsInfoDialog({
                     <div className="flex flex-wrap items-center gap-2">
                       <strong className="text-fg">{s.lead}</strong>
                       <span
-                        className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm ${ACTOR[s.actor]}`}
+                        className={`text-[10px] font-mono font-medium uppercase tracking-[0.14em] px-2 py-0.5 rounded-sm ${ACTOR[s.actor]}`}
                       >
                         {s.actor}
                       </span>

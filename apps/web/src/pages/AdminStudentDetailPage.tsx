@@ -113,7 +113,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
 
       {/* Per-dimension trend chart */}
       <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
-        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
+        <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-4">
           Per-dimension trend
         </h2>
         <DimensionTrendChart series={data.dimensionSeries} />
@@ -121,7 +121,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
 
       {/* Completion history */}
       <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
-        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
+        <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-4">
           Completion history
         </h2>
         {data.completions.length === 0 ? (
@@ -168,7 +168,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
       {/* Immersive sessions */}
       {data.immersiveSessions.length > 0 && (
         <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
+          <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-4">
             Immersive sessions
           </h2>
           <ul className="divide-y divide-edge/5">
@@ -200,7 +200,7 @@ function StudentSections({ data }: { data: StudentDetailResponse }) {
       {/* Assessments */}
       {data.assessments.length > 0 && (
         <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
+          <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-4">
             Assessments
           </h2>
           <ul className="divide-y divide-edge/5">
@@ -261,7 +261,9 @@ function MiniStat({
 }) {
   return (
     <div className="bg-surface-alt rounded-lg border border-edge/10 p-3">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-mid mb-1">{label}</p>
+      <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
+        {label}
+      </p>
       <p className="font-display font-bold text-[20px]" style={{ color: accent ?? '#14213a' }}>
         {value}
       </p>

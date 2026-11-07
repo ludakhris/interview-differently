@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/react'
 import { Nav } from '@/components/Nav'
 import { LtiNav } from '@/components/LtiNav'
 import { useLtiBrand } from '@/components/LtiBrandProvider'
+import { ltiAccent } from '@/lib/brand'
 import { ContextPanel } from '@/components/ContextPanel'
 import { MetricChart } from '@/components/MetricChart'
 import { ScenarioSidebar } from '@/components/ScenarioSidebar'
@@ -387,7 +388,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
       {ltiMode ? (
         <LtiNav trackLabel={meta?.label} stepLabel={stepLabel} />
       ) : (
-        <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
+        <Nav trackLabel={meta?.label} stepLabel={stepLabel} wide />
       )}
 
       <div className="flex flex-1">
@@ -395,7 +396,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
           <ScenarioSidebar
             sections={display.sidebar}
             contextStyle={ctxStyle}
-            accentColor={brand?.accent ?? meta?.color}
+            accentColor={ltiAccent(brand, meta?.color)}
           />
         )}
 
@@ -408,7 +409,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
                   {display.alertBanner.icon}
                 </span>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">
+                  <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-amber-400 mb-1">
                     {display.alertBanner.title}
                   </p>
                   <p className="text-[13px] text-fg/80 leading-relaxed">
@@ -500,7 +501,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
             {pageState === 'responding' || pageState === 'submitting' ? (
               <div className="space-y-3">
                 <div className="px-4 py-3 rounded-xl bg-ink/5 border border-edge/10">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+                  <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
                     Your turn
                   </p>
                   <p className="text-[14px] text-fg leading-relaxed">

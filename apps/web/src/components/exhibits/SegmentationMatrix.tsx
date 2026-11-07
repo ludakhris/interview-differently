@@ -20,7 +20,7 @@ export function SegmentationMatrix({ exhibit }: { exhibit: SegmentationMatrixExh
             <span className="text-[10px] text-slate-mid -rotate-90 whitespace-nowrap origin-center mb-3">
               {exhibit.yAxis.highLabel}
             </span>
-            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-mid -rotate-90 whitespace-nowrap">
+            <span className="text-[9px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid -rotate-90 whitespace-nowrap">
               {exhibit.yAxis.label}
             </span>
             <span className="text-[10px] text-slate-mid -rotate-90 whitespace-nowrap origin-center mt-3">
@@ -50,7 +50,7 @@ export function SegmentationMatrix({ exhibit }: { exhibit: SegmentationMatrixExh
         {/* x-axis labels */}
         <div className="flex items-center mt-2 pl-12">
           <span className="text-[10px] text-slate-mid flex-1">{exhibit.xAxis.lowLabel}</span>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-mid">
+          <span className="text-[9px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             {exhibit.xAxis.label}
           </span>
           <span className="text-[10px] text-slate-mid flex-1 text-right">
@@ -79,7 +79,7 @@ function Quadrant({
     >
       {label && (
         <p
-          className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${
+          className={`text-[10px] font-mono font-medium uppercase tracking-[0.14em] mb-2 ${
             accent ? 'text-mint' : 'text-slate-mid'
           }`}
         >

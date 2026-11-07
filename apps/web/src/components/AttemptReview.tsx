@@ -13,7 +13,7 @@ export function AttemptReview({ review }: { review: ReviewSection[] }) {
           key={s.sectionId}
           className="bg-surface-deep rounded-2xl border border-edge/10 p-6"
         >
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
+          <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-4">
             {s.title}
           </p>
           <ol className="space-y-5">
@@ -21,7 +21,7 @@ export function AttemptReview({ review }: { review: ReviewSection[] }) {
               <li key={q.id} className="border-t border-edge/10 pt-4 first:border-t-0 first:pt-0">
                 <div className="flex items-start gap-3">
                   <span
-                    className={`mt-0.5 text-[11px] font-bold uppercase tracking-widest shrink-0 ${q.correct ? 'text-emerald-400' : 'text-red-400'}`}
+                    className={`mt-0.5 text-[11px] font-mono font-medium uppercase tracking-[0.14em] shrink-0 ${q.correct ? 'text-emerald-400' : 'text-red-400'}`}
                   >
                     {q.correct ? 'Correct' : 'Wrong'}
                   </span>

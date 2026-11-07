@@ -80,7 +80,7 @@ export function MetricChart({ config }: Props) {
     <div className="sim-dark bg-surface-deep border border-edge/10 rounded-xl overflow-hidden mb-3">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-3 pb-1">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
+        <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
           {config.title}
         </span>
         <div className="flex items-center gap-2">

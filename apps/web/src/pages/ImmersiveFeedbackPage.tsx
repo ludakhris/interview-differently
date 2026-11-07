@@ -129,7 +129,7 @@ export function ImmersiveFeedbackPage() {
       <div className="max-w-2xl mx-auto px-6 py-10 space-y-8 w-full">
         {/* Header */}
         <div className="animate-fade-in">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+          <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
             Interview Feedback
           </p>
           <h1 className="font-display font-bold text-[24px] text-fg mb-1">
@@ -142,7 +142,7 @@ export function ImmersiveFeedbackPage() {
           <div className="rounded-2xl border border-edge/10 bg-surface-alt p-6 space-y-5 animate-fade-in">
             {/* Hiring recommendation */}
             <div className="flex items-center justify-between">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+              <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Hiring Recommendation
               </p>
               <span
@@ -158,7 +158,7 @@ export function ImmersiveFeedbackPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Strengths */}
               <div className="rounded-xl bg-primary/5 border border-primary/20 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-3">
+                <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-primary mb-3">
                   Strengths
                 </p>
                 <ul className="space-y-1.5">
@@ -173,7 +173,7 @@ export function ImmersiveFeedbackPage() {
 
               {/* Development areas */}
               <div className="rounded-xl bg-amber-400/5 border border-amber-400/20 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-3">
+                <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-amber-400 mb-3">
                   Development Areas
                 </p>
                 <ul className="space-y-1.5">
@@ -196,7 +196,7 @@ export function ImmersiveFeedbackPage() {
         {/* Per-response accordion — populated only if we have response IDs */}
         {responses.length > 0 && (
           <div className="space-y-3">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+            <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
               Question-by-Question Feedback
             </p>
             {responses.map((resp) => {
@@ -241,7 +241,7 @@ export function ImmersiveFeedbackPage() {
                           }
                           return (
                             <div>
-                              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+                              <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
                                 Your Recording
                               </p>
                               {/* The learner's own recorded answer; its transcript shows with the feedback. */}
@@ -259,7 +259,7 @@ export function ImmersiveFeedbackPage() {
                       {/* Transcript */}
                       {resp.transcript && (
                         <details className="group">
-                          <summary className="text-[11px] font-bold uppercase tracking-widest text-slate-mid cursor-pointer select-none group-open:mb-2">
+                          <summary className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid cursor-pointer select-none group-open:mb-2">
                             Transcript ›
                           </summary>
                           <p className="text-[13px] text-slate-light leading-relaxed italic">
@@ -274,13 +274,13 @@ export function ImmersiveFeedbackPage() {
                           <p className="text-[13px] text-fg leading-relaxed">{fb.feedback}</p>
                           <div className="grid grid-cols-2 gap-3 pt-1">
                             <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">
+                              <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-primary mb-1">
                                 What worked
                               </p>
                               <p className="text-[12px] text-fg/80">{fb.strengths}</p>
                             </div>
                             <div className="rounded-lg bg-amber-400/5 border border-amber-400/20 px-3 py-2">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">
+                              <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-amber-400 mb-1">
                                 To improve
                               </p>
                               <p className="text-[12px] text-fg/80">{fb.development}</p>

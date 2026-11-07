@@ -236,7 +236,7 @@ export function AdminInstitutionSandboxPage() {
             </div>
             {data.unassigned.length > 0 && (
               <div className="mt-8">
-                <h2 className="text-[11px] font-bold uppercase tracking-widest text-amber-400 mb-1">
+                <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-amber-400 mb-1">
                   Not in a cohort
                 </h2>
                 <p className="text-[12px] text-slate-mid mb-3">

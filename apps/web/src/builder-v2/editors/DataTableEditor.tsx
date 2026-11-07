@@ -124,13 +124,13 @@ export function DataTableEditor({ exhibit, onDone }: Props) {
         <SectionLabel label="Columns" />
         {columns.length > 0 && (
           <div className="flex gap-2 items-center mb-0.5">
-            <span className="flex-1 text-[10px] font-semibold uppercase tracking-wider text-slate-mid">
+            <span className="flex-1 text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
               Header label
             </span>
-            <span className="w-28 flex-none text-[10px] font-semibold uppercase tracking-wider text-slate-mid">
+            <span className="w-28 flex-none text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
               Align
             </span>
-            <span className="w-28 flex-none text-[10px] font-semibold uppercase tracking-wider text-slate-mid">
+            <span className="w-28 flex-none text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
               Format
             </span>
             <span className="w-6 flex-none" />

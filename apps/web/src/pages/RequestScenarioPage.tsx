@@ -18,7 +18,8 @@ const TRACKS: Array<{ value: string; label: string }> = [
 
 const inputCls =
   'w-full bg-surface-alt border border-edge/10 rounded-xl px-4 py-3 text-[14px] text-fg placeholder:text-slate-mid focus:outline-hidden focus:border-edge/30 transition-colors'
-const labelCls = 'block text-[12px] font-bold uppercase tracking-widest text-slate-light mb-1.5'
+const labelCls =
+  'block text-[12px] font-mono font-medium uppercase tracking-[0.14em] text-slate-light mb-1.5'
 const helpCls = 'text-[12px] text-slate-mid mb-2 leading-relaxed'
 const requiredMark = (
   <span className="text-amber-400 ml-1" aria-label="required">

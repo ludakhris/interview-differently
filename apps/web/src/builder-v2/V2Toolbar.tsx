@@ -80,7 +80,7 @@ export function V2Toolbar({
             ? `Only ${institutionName} members can see this scenario`
             : 'Visible to every user'
         }
-        className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded flex-none ${
+        className={`text-[9px] font-mono font-medium uppercase tracking-[0.14em] px-1.5 py-0.5 rounded flex-none ${
           institutionName ? 'bg-primary/20 text-accent' : 'bg-ink/10 text-slate-mid'
         }`}
       >
@@ -112,7 +112,7 @@ export function V2Toolbar({
             ? 'Candidates see the last published version. Re-publish to push your edits.'
             : 'Not visible to candidates yet'
         }
-        className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded flex-none ${
+        className={`text-[9px] font-mono font-medium uppercase tracking-[0.14em] px-1.5 py-0.5 rounded flex-none ${
           status === 'published'
             ? 'bg-emerald-400/15 text-emerald-300'
             : 'bg-amber-400/15 text-amber-300'

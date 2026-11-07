@@ -23,7 +23,7 @@ export function ScoreSummary({
       </div>
 
       <div className="bg-surface-deep rounded-2xl border border-edge/10 p-6 mb-6">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
+        <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-4">
           By section
         </p>
         <ul className="space-y-4">
