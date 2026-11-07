@@ -110,8 +110,8 @@ function LandingA() {
             <strong className="font-semibold text-fg">
               Get interview ready. For real this time.
             </strong>{' '}
-            Simulations built to get you interview ready. Step inside real workplace decisions and
-            let AI show you exactly how you think under pressure.
+            Step inside real workplace decisions and let AI show you exactly how you think under
+            pressure.
           </p>
           <Ctas />
         </div>
