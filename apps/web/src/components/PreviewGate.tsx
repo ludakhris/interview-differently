@@ -10,11 +10,11 @@ export function PreviewGate({ scenarioId }: PreviewGateProps) {
 
   return (
     <div className="absolute inset-0 flex items-center justify-center z-10">
-      {/* Fade — starts transparent, darkens only near the card */}
-      <div className="absolute inset-0 bg-linear-to-b from-transparent from-40% via-black/40 via-60% to-black/80" />
+      {/* Fade — starts transparent, dims to paper near the card */}
+      <div className="absolute inset-0 bg-linear-to-b from-transparent from-40% via-surface/70 via-60% to-surface/95" />
 
       {/* Sign-up card */}
-      <div className="relative z-10 bg-surface-alt border border-edge/10 rounded-2xl p-8 max-w-sm w-full mx-6 text-center shadow-2xl">
+      <div className="relative z-10 bg-surface-alt border border-edge/10 rounded-2xl p-8 max-w-sm w-full mx-6 text-center shadow-card-lg">
         <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-5">
           <span className="text-primary text-[18px]">◈</span>
         </div>
