@@ -120,10 +120,7 @@ export function BuilderV2Page() {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center flex-col gap-4">
         <p className="text-[14px] text-ink">Scenario not found.</p>
-        <button
-          onClick={() => navigate('/builder')}
-          className="text-[13px] text-emerald-400 underline"
-        >
+        <button onClick={() => navigate('/builder')} className="text-[13px] text-primary underline">
           Back to scenarios
         </button>
       </div>

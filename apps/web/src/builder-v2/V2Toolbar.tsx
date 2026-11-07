@@ -39,7 +39,7 @@ export function V2Toolbar({
     saveStatus === 'saving' ? 'Saving…' : saveStatus === 'unsaved' ? 'Unsaved' : 'Saved'
   const statusClass =
     saveStatus === 'saved'
-      ? 'text-emerald-400/80 bg-emerald-400/10 border-emerald-400/25'
+      ? 'text-primary/80 bg-primary/10 border-primary/25'
       : saveStatus === 'saving'
         ? 'text-slate-mid bg-ink/5 border-edge/10 animate-pulse'
         : 'text-amber-400/80 bg-amber-400/10 border-amber-400/25'
@@ -47,7 +47,7 @@ export function V2Toolbar({
   return (
     <div className="flex items-center gap-3 px-4 h-[52px] flex-none border-b border-edge/10 bg-surface-deep">
       {/* Logo mark */}
-      <span className="text-emerald-500 text-[15px] font-bold flex-none">◆</span>
+      <span className="text-primary text-[15px] font-bold flex-none">◆</span>
 
       {/* Title */}
       {editing ? (
@@ -60,7 +60,7 @@ export function V2Toolbar({
             if (e.key === 'Enter') commitTitle()
             if (e.key === 'Escape') setEditing(false)
           }}
-          className="text-[14px] font-semibold bg-transparent border-b border-emerald-400/60 outline-hidden text-ink min-w-[200px] max-w-[360px] pb-px"
+          className="text-[14px] font-semibold bg-transparent border-b border-primary/60 outline-hidden text-ink min-w-[200px] max-w-[360px] pb-px"
         />
       ) : (
         <button
@@ -113,16 +113,14 @@ export function V2Toolbar({
             : 'Not visible to candidates yet'
         }
         className={`text-[9px] font-mono font-medium uppercase tracking-[0.14em] px-1.5 py-0.5 rounded flex-none ${
-          status === 'published'
-            ? 'bg-emerald-400/15 text-emerald-300'
-            : 'bg-amber-400/15 text-amber-300'
+          status === 'published' ? 'bg-primary/15 text-primary' : 'bg-amber-400/15 text-amber-300'
         }`}
       >
         {status}
       </span>
       <button
         onClick={onPublish}
-        className="text-[13px] font-bold bg-emerald-600 hover:bg-emerald-500 text-black rounded-lg px-4 py-1.5 whitespace-nowrap transition-colors"
+        className="text-[13px] font-bold bg-primary hover:bg-accent text-on-primary rounded-lg px-4 py-1.5 whitespace-nowrap transition-colors"
       >
         {status === 'published' ? 'Re-publish' : 'Publish'}
       </button>

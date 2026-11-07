@@ -196,7 +196,7 @@ export function SetupEditor({ scenario, onDone }: Props) {
                 onClick={() => setMode(opt.value)}
                 className={`p-3 rounded-lg border text-left transition-all ${
                   mode === opt.value
-                    ? 'border-emerald-400/50 bg-emerald-400/10'
+                    ? 'border-primary/50 bg-primary/10'
                     : 'border-edge/10 bg-surface hover:border-edge/20'
                 }`}
               >

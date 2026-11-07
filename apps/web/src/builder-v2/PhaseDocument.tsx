@@ -331,7 +331,7 @@ function PhaseSection({
     <div data-phase-id={phase.id}>
       {/* Phase header */}
       <div ref={headerRef} className="flex items-start gap-3 mb-4">
-        <div className="w-1 self-stretch bg-emerald-500/70 rounded-full flex-none mt-1" />
+        <div className="w-1 self-stretch bg-primary/70 rounded-full flex-none mt-1" />
         <div className="flex-1">
           <h2
             className="text-[22px] font-bold tracking-tight text-ink"
@@ -352,7 +352,7 @@ function PhaseSection({
                 if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                 if (e.key === 'Escape') setEditingDescription(false)
               }}
-              className="mt-1 w-full bg-surface border border-edge/12 rounded-md px-2 py-1 text-[13px] text-ink/75 outline-hidden focus:border-emerald-400/50"
+              className="mt-1 w-full bg-surface border border-edge/12 rounded-md px-2 py-1 text-[13px] text-ink/75 outline-hidden focus:border-primary/50"
             />
           ) : onPhaseUpdate ? (
             <button
@@ -382,7 +382,7 @@ function PhaseSection({
                     className={[
                       'text-[11px] font-semibold px-2.5 py-0.5 rounded-full border transition-all',
                       active
-                        ? 'bg-emerald-400/10 border-emerald-400/30 text-emerald-300 hover:bg-emerald-400/5'
+                        ? 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/5'
                         : 'bg-transparent border-edge/8 text-slate-mid hover:border-edge/20 hover:text-slate-mid',
                     ].join(' ')}
                   >
@@ -520,7 +520,7 @@ function EmptyPhase({ onClick }: { onClick: () => void }) {
       <p className="text-[13px] text-slate-mid font-medium">No blocks yet</p>
       <button
         onClick={onClick}
-        className="text-[12px] font-semibold text-emerald-400/80 hover:text-emerald-300 border border-emerald-400/30 hover:border-emerald-400/60 rounded-lg px-4 py-2 transition-all"
+        className="text-[12px] font-semibold text-primary/80 hover:text-accent border border-primary/30 hover:border-primary/60 rounded-lg px-4 py-2 transition-all"
       >
         ＋ Insert first block
       </button>
