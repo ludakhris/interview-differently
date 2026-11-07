@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
-import { BarChart3 } from 'lucide-react'
-import { IncidentPanel, SqlPanel } from './ScenePanels'
+import { IncidentPanel, InterviewPanel, SqlPanel } from './ScenePanels'
 
 const STATS = [
   { num: '80%', label: 'of job seekers feel unprepared', footnote: 1 },
@@ -111,7 +110,93 @@ const SCENARIOS = [
   },
 ]
 
-/** Two example scenarios, each a card with its live screen, on a pale blue band. */
+const card =
+  'bg-surface-alt rounded-[20px] border border-edge/10 p-5 sm:p-6 shadow-[0_24px_48px_-28px_rgba(20,33,58,0.35)]'
+const cardTitle = 'font-display font-bold text-[22px] text-fg tracking-[-0.02em] mt-1'
+
+const COMPETENCIES = [
+  ['Prioritization', 88],
+  ['Stakeholder communication', 72],
+  ['Root cause reasoning', 58],
+] as const
+
+/** The featured scenario: a live interview with an AI interviewer on video. */
+function InterviewFeature() {
+  return (
+    <article className={`${card} grid lg:grid-cols-[1fr_1.25fr] gap-6 lg:gap-10 items-center`}>
+      <div>
+        <p className={`${kicker} flex items-center gap-2`}>
+          <span className="w-2 h-2 rounded-full bg-primary" aria-hidden="true" />
+          Live AI interview
+        </p>
+        <h3 className={`${cardTitle} text-[clamp(24px,3vw,32px)]`}>
+          Sit the interview before the interview.
+        </h3>
+        <p className="text-[16px] text-slate-light leading-relaxed mt-3">
+          An AI interviewer talks you through a real scenario on video. You answer out loud, it
+          follows up on what you actually said, and you hear yourself under pressure before it
+          counts.
+        </p>
+      </div>
+      <div
+        role="img"
+        aria-label="Example live AI interview: the interviewer on video asks how you would handle the first five minutes of a payments outage, while your answer is recorded."
+      >
+        <InterviewPanel />
+      </div>
+    </article>
+  )
+}
+
+/** How every scenario is scored. Not a scenario of its own, so it reads as a different block. */
+function Evaluation() {
+  return (
+    <section
+      aria-labelledby="evaluation-heading"
+      className="mt-6 rounded-[20px] bg-ink text-surface p-6 sm:p-8 grid lg:grid-cols-[1fr_1.1fr] gap-8 items-center"
+    >
+      <div>
+        <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-surface/70">
+          How you are evaluated
+        </p>
+        <h3
+          id="evaluation-heading"
+          className="font-display font-bold text-[clamp(24px,3vw,32px)] tracking-[-0.02em] mt-1"
+        >
+          Every answer is scored, in every scenario.
+        </h3>
+        <p className="text-[16px] text-surface/80 leading-relaxed mt-3">
+          An AI evaluator reads each decision against the rubric for the role, the same competencies
+          hiring managers look for. You get a score, the reasoning behind it and what to do
+          differently, then a competency profile at the end.
+        </p>
+      </div>
+      <div className="rounded-[16px] bg-surface-alt text-fg p-5">
+        <div className="flex flex-col gap-3">
+          {COMPETENCIES.map(([label, pct]) => (
+            <div key={label} className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1.5">
+              <span className="font-semibold text-[14px]">{label}</span>
+              <span className="font-mono text-[13px] text-slate-mid">{pct}</span>
+              <span className="col-span-2 h-2 rounded-full bg-ink/10 overflow-hidden">
+                <span
+                  className="block h-full rounded-full bg-primary"
+                  style={{ width: `${pct}%` }}
+                />
+              </span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 pt-4 border-t border-edge/10 text-[14px] leading-relaxed text-slate-light">
+          <span className="font-semibold text-fg">Feedback:</span> You found the database spike
+          first, which was right. Next time, post a status update before you dig in, so support
+          isn&apos;t guessing.
+        </p>
+      </div>
+    </section>
+  )
+}
+
+/** The scenarios: the live interview featured, two more beside each other, then how scoring works. */
 function Scenarios() {
   return (
     <section
@@ -122,16 +207,12 @@ function Scenarios() {
         <h2 id="scenarios-heading" className={`${kicker} text-center mb-8`}>
           Inside a simulation
         </h2>
-        <div className="grid md:grid-cols-2 gap-6">
+        <InterviewFeature />
+        <div className="grid md:grid-cols-2 gap-6 mt-6">
           {SCENARIOS.map((s) => (
-            <article
-              key={s.kicker}
-              className="bg-surface-alt rounded-[20px] border border-edge/10 p-5 sm:p-6 shadow-[0_24px_48px_-28px_rgba(20,33,58,0.35)] flex flex-col"
-            >
+            <article key={s.kicker} className={`${card} flex flex-col`}>
               <p className={kicker}>{s.kicker}</p>
-              <h3 className="font-display font-bold text-[22px] text-fg tracking-[-0.02em] mt-1">
-                {s.title}
-              </h3>
+              <h3 className={cardTitle}>{s.title}</h3>
               <p className="text-[15px] text-slate-light leading-relaxed mt-1 mb-5">{s.body}</p>
               <div role="img" aria-label={s.label} className="flex-1 flex flex-col [&>*]:flex-1">
                 {s.panel}
@@ -139,19 +220,13 @@ function Scenarios() {
             </article>
           ))}
         </div>
-        <p className="mt-8 flex items-center justify-center gap-2 text-[15px] text-slate-light text-center">
-          <BarChart3 size={18} className="text-primary shrink-0" aria-hidden="true" />
-          <span>
-            <span className="font-semibold text-fg">Every scenario ends with feedback:</span> a
-            competency profile that shows how you think, not just what you chose.
-          </span>
-        </p>
+        <Evaluation />
       </div>
     </section>
   )
 }
 
-/** The landing page: centred statement, two example scenarios, then the stats. */
+/** The landing page: centred statement, the stats, then the scenarios and how they are scored. */
 export function Landing() {
   return (
     <main className="w-full">
@@ -166,25 +241,28 @@ export function Landing() {
           <strong className="font-semibold text-fg">
             Practice the real job before the interview.
           </strong>{' '}
-          Step inside real workplace decisions and let AI show you exactly how you think under
-          pressure.
+          Step inside real workplace decisions, get scored on every answer, and see exactly how you
+          think under pressure.
         </p>
         <Ctas center />
       </section>
 
-      <Scenarios />
-
-      <section className="max-w-[1000px] mx-auto px-4 sm:px-8 py-14 text-center">
-        <p className="text-[17px] text-slate-light leading-relaxed max-w-[560px] mx-auto mb-10">
+      <section
+        aria-label="Why practice"
+        className="max-w-[1000px] mx-auto px-4 sm:px-8 pb-14 text-center"
+      >
+        <p className="text-[17px] text-slate-light leading-relaxed max-w-[560px] mx-auto mb-8">
           The job market has never been harder to break into.{' '}
           <span className="font-semibold text-fg">Interview Differently</span> gives you the reps —
           run a simulation and find out where you really stand.
         </p>
         <Stats align="center" />
-        <div className="mt-8">
+        <div className="mt-6">
           <Sources align="center" />
         </div>
       </section>
+
+      <Scenarios />
     </main>
   )
 }

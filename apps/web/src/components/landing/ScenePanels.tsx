@@ -124,3 +124,65 @@ export function SqlPanel({ className = '' }: { className?: string }) {
     </div>
   )
 }
+
+/** A live AI interview: the interviewer on video asks, the learner answers out loud. */
+export function InterviewPanel({ className = '' }: { className?: string }) {
+  return (
+    <div
+      className={`flex flex-col rounded-[16px] bg-[#0f1a30] text-[#e8eaee] shadow-[0_30px_60px_-24px_rgba(20,33,58,0.6)] ${className}`}
+    >
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#26365a]">
+        <span className={`${mono} text-[11px] text-[#9aa6bd]`}>Live AI interview</span>
+        <span className={`${mono} text-[11px] text-[#ff8d90] flex items-center gap-1.5`}>
+          <span className="w-2 h-2 rounded-full bg-[#ff5b60]" />
+          Rec 02:14
+        </span>
+      </div>
+      <div className="grid grid-cols-[1.6fr_1fr] gap-3 p-3.5">
+        <div className="relative rounded-[12px] bg-gradient-to-b from-[#26365a] to-[#1b2742] aspect-[4/3] overflow-hidden">
+          <svg viewBox="0 0 120 90" className="absolute inset-0 w-full h-full" aria-hidden="true">
+            <circle cx="60" cy="36" r="15" fill="#9fc2ff" fillOpacity="0.55" />
+            <path
+              d="M28 90 C30 66 44 56 60 56 C76 56 90 66 92 90 Z"
+              fill="#9fc2ff"
+              fillOpacity="0.4"
+            />
+          </svg>
+          <div className="absolute left-3 bottom-3 right-3 flex items-end justify-between">
+            <span className="text-[12px] font-semibold bg-[#0f1a30]/80 px-2 py-1 rounded-md">
+              Interviewer
+            </span>
+            <span className="flex items-end gap-[3px] h-5" aria-hidden="true">
+              {[8, 14, 20, 12, 17, 9, 15].map((h, i) => (
+                <span key={i} className="w-[3px] rounded-full bg-[#8fe0b0]" style={{ height: h }} />
+              ))}
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-col gap-3">
+          <div className="relative flex-1 rounded-[12px] bg-[#1b2742] overflow-hidden min-h-[70px]">
+            <svg viewBox="0 0 80 60" className="absolute inset-0 w-full h-full" aria-hidden="true">
+              <circle cx="40" cy="24" r="10" fill="#ffc56b" fillOpacity="0.45" />
+              <path
+                d="M18 60 C20 44 29 38 40 38 C51 38 60 44 62 60 Z"
+                fill="#ffc56b"
+                fillOpacity="0.35"
+              />
+            </svg>
+            <span className="absolute left-2 bottom-2 text-[11px] font-semibold bg-[#0f1a30]/80 px-1.5 py-0.5 rounded">
+              You
+            </span>
+          </div>
+          <div className="hidden sm:block rounded-[12px] bg-[#1b2742] p-3">
+            <p className={`${mono} text-[10px] text-[#9aa6bd]`}>Follow-up</p>
+            <p className="text-[12px] leading-snug mt-1">Why page the database team first?</p>
+          </div>
+        </div>
+      </div>
+      <p className="mx-3.5 mb-3.5 rounded-[12px] bg-[#1b2742] px-3.5 py-2.5 text-[13px] leading-snug">
+        <b className="font-semibold text-white">Interviewer:</b> Payments are failing and your
+        manager is in a meeting. Walk me through your first five minutes.
+      </p>
+    </div>
+  )
+}
