@@ -193,7 +193,7 @@ export function OwnerBadge({ institutionName }: { institutionName: string | null
   return (
     <span
       className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded shrink-0 ${
-        institutionName ? 'bg-primary/20 text-accent' : 'bg-ink/10 text-on-primary/50'
+        institutionName ? 'bg-primary/20 text-accent' : 'bg-ink/10 text-ink/50'
       }`}
     >
       {institutionName ?? 'Platform'}

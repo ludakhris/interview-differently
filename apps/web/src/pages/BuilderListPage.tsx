@@ -747,7 +747,7 @@ export function BuilderListPage() {
                               className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${
                                 scenario.institutionName
                                   ? 'bg-primary/20 text-accent'
-                                  : 'bg-ink/[0.07] text-on-primary/40'
+                                  : 'bg-ink/[0.07] text-ink/40'
                               }`}
                               title={
                                 scenario.institutionName
@@ -804,7 +804,7 @@ export function BuilderListPage() {
                                     </button>
                                     <button
                                       onClick={() => handleDelete(scenario.scenarioId)}
-                                      className="text-[11px] font-semibold text-red-300 hover:text-on-primary bg-red-500/20 hover:bg-red-500/40 border border-red-400/30 rounded-md px-2.5 py-1 transition-colors"
+                                      className="text-[11px] font-semibold text-red-400 hover:text-fg bg-red-500/20 hover:bg-red-500/40 border border-red-400/30 rounded-md px-2.5 py-1 transition-colors"
                                     >
                                       Delete
                                     </button>

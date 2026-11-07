@@ -81,7 +81,7 @@ export function V2Toolbar({
             : 'Visible to every user'
         }
         className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded flex-none ${
-          institutionName ? 'bg-primary/20 text-accent' : 'bg-ink/10 text-on-primary/50'
+          institutionName ? 'bg-primary/20 text-accent' : 'bg-ink/10 text-ink/50'
         }`}
       >
         {institutionName ?? 'Public'}
