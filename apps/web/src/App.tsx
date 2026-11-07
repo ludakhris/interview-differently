@@ -85,6 +85,7 @@ const NO_FOOTER = [
   /^\/builder\/(?!new$)[^/]+/,
   /^\/simulations\//,
   /^\/tools\/assessments\/attempt\/[^/]+$/,
+  /^\/tools\/sql$/,
   /^\/(sign-in|sign-up)/,
 ]
 

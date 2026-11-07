@@ -267,7 +267,7 @@ export function CheckpointWorkbench({
         >
           <Play size={11} fill="currentColor" aria-hidden="true" />
           {busy === 'run' ? 'Running…' : 'Run'}
-          <span className="font-mono text-[10px] text-ink/40" aria-hidden="true">
+          <span className="font-mono text-[10px] text-slate-mid" aria-hidden="true">
             ⌘↵
           </span>
         </button>

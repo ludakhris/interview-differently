@@ -94,7 +94,7 @@ export function WorkSimulationCards({
                 <MessagesSquare size={20} aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color }}>
+                <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-slate-mid">
                   Chat with your team
                 </p>
                 <h4 className="mt-0.5 font-display font-bold text-[15px] text-fg leading-snug">
@@ -104,10 +104,7 @@ export function WorkSimulationCards({
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-slate-light">{simulationStatus(s)}</span>
-              <span
-                className="text-[11px] font-semibold group-hover:translate-x-1 transition-transform inline-block"
-                style={{ color }}
-              >
+              <span className="text-[12px] font-semibold text-primary group-hover:translate-x-1 transition-transform inline-block">
                 {opening === s.bankSlug
                   ? 'Opening…'
                   : s.done

@@ -70,7 +70,7 @@ export function PersonaPicker({ value, onChange }: PersonaPickerProps) {
   }
 
   if (loading) {
-    return <p className="text-[11px] text-ink/30 py-3">Loading presenters…</p>
+    return <p className="text-[11px] text-slate-mid py-3">Loading presenters…</p>
   }
 
   if (error) {
@@ -115,7 +115,7 @@ export function PersonaPicker({ value, onChange }: PersonaPickerProps) {
         <div>
           <label
             htmlFor={voiceSelectId}
-            className="block text-[10px] font-bold uppercase tracking-widest text-ink/30 mb-1.5"
+            className="block text-[10px] font-bold uppercase tracking-widest text-slate-mid mb-1.5"
           >
             Voice
           </label>

@@ -71,7 +71,7 @@ export function NodeRenderStatus({
         <button
           onClick={handleRender}
           disabled={rendering || !audioScript.trim()}
-          className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md border border-edge/10 bg-ink/5 text-ink/70 hover:text-ink hover:bg-ink/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md border border-edge/10 bg-ink/5 text-slate-light hover:text-ink hover:bg-ink/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {buttonLabel}
         </button>
@@ -99,7 +99,7 @@ export function NodeRenderStatus({
       )}
 
       {status === 'rendering' && (
-        <p className="text-[10px] text-ink/40 leading-relaxed">
+        <p className="text-[10px] text-slate-mid leading-relaxed">
           D-ID is rendering — typically 30–60 seconds. Don't navigate away.
         </p>
       )}
@@ -119,7 +119,7 @@ function StatusBadge({ status }: { status: Status }) {
   return (
     <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-edge/10 bg-surface-alt">
       <span className="w-1.5 h-1.5 rounded-full" style={{ background: config.dot }} />
-      <span className="text-[10px] font-bold uppercase tracking-wider text-ink/70">
+      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-light">
         {config.label}
       </span>
     </span>

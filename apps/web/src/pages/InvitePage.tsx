@@ -128,7 +128,7 @@ export function InvitePage() {
                     >
                       Create an account
                     </button>
-                    <p className="text-[11px] text-ink/40 mt-3 leading-relaxed">
+                    <p className="text-[11px] text-slate-mid mt-3 leading-relaxed">
                       You'll be added to the {info.cohortName} cohort and the assessment will start
                       right away
                       {info.timeLimitMinutes ? ' — the timer begins when your paper opens.' : '.'}
@@ -147,7 +147,7 @@ export function InvitePage() {
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between gap-4">
-      <dt className="text-ink/40">{k}</dt>
+      <dt className="text-slate-mid">{k}</dt>
       <dd className="text-fg/85 text-right">{v}</dd>
     </div>
   )

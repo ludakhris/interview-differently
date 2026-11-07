@@ -29,7 +29,7 @@ export function AdminLtiPlatformsPage() {
             <button
               type="button"
               onClick={() => setInfoOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge/15 text-[13px] font-semibold text-ink/70 hover:text-ink hover:border-edge/30 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge/15 text-[13px] font-semibold text-slate-light hover:text-ink hover:border-edge/30 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               <InfoIcon size={16} />
               How this works

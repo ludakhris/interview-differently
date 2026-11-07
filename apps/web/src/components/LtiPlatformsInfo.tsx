@@ -43,7 +43,7 @@ const Cross = () => (
 const ACTOR: Record<Actor, string> = {
   You: 'bg-primary/20 text-accent',
   'The platform': 'bg-amber-400/15 text-amber-300',
-  'Interview Differently': 'bg-ink/10 text-ink/70',
+  'Interview Differently': 'bg-ink/10 text-slate-light',
 }
 
 const FOCUSABLE =
@@ -73,7 +73,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
         clearTimeout(timer.current)
         timer.current = setTimeout(() => setState('idle'), 2000)
       }}
-      className="shrink-0 px-2.5 py-1 rounded-md border border-edge/15 text-[11px] font-semibold text-ink/70 hover:text-ink hover:border-edge/30 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      className="shrink-0 px-2.5 py-1 rounded-md border border-edge/15 text-[11px] font-semibold text-slate-light hover:text-ink hover:border-edge/30 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
     >
       {state === 'copied' ? 'Copied' : state === 'failed' ? 'Select it' : 'Copy'}
     </button>
@@ -168,7 +168,7 @@ export function LtiPlatformsInfoDialog({
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="shrink-0 p-1.5 rounded-lg text-ink/60 hover:text-ink hover:bg-ink/10 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="shrink-0 p-1.5 rounded-lg text-slate-light hover:text-ink hover:bg-ink/10 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             <svg {...svg(20, 2.2)}>
               <path d="M6 6l12 12M18 6L6 18" />
@@ -183,7 +183,7 @@ export function LtiPlatformsInfoDialog({
                 <div key={g.title} className="rounded-xl border border-edge/10 bg-surface p-4">
                   <h4 className="font-bold text-[13px] text-fg">{g.title}</h4>
                   <p className="mt-1">{g.text}</p>
-                  <ul className="mt-2 space-y-0.5 text-ink/60">
+                  <ul className="mt-2 space-y-0.5 text-slate-light">
                     {g.facts.map((f) => (
                       <li key={f}>· {f}</li>
                     ))}
@@ -200,7 +200,7 @@ export function LtiPlatformsInfoDialog({
                 <li key={s.lead} className="flex gap-3">
                   <span
                     aria-hidden
-                    className="shrink-0 w-6 h-6 rounded-full bg-ink/10 text-[12px] font-bold text-ink/70 flex items-center justify-center"
+                    className="shrink-0 w-6 h-6 rounded-full bg-ink/10 text-[12px] font-bold text-slate-light flex items-center justify-center"
                   >
                     {i + 1}
                   </span>
@@ -213,7 +213,7 @@ export function LtiPlatformsInfoDialog({
                         {s.actor}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-ink/70">{s.text}</p>
+                    <p className="mt-0.5 text-slate-light">{s.text}</p>
                   </div>
                 </li>
               ))}
@@ -285,7 +285,7 @@ export function LtiPlatformsInfoDialog({
           </Section>
 
           <Section id="notes" title="Good to know">
-            <ul className="space-y-2 list-disc pl-5 text-ink/70">
+            <ul className="space-y-2 list-disc pl-5 text-slate-light">
               {c.notes.map((t) => (
                 <li key={t}>{t}</li>
               ))}

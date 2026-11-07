@@ -125,7 +125,7 @@ export function PhaseDocument({
               />
             )}
           </div>
-          <p className="text-[12px] text-ink/30 italic mb-2">
+          <p className="text-[12px] text-slate-mid italic mb-2">
             No phases declared — the candidate walks these steps in order. Add a phase in the left
             rail to group them.
           </p>
@@ -220,7 +220,7 @@ export function PhaseDocument({
                   >
                     Wrap-up
                   </h2>
-                  <p className="text-[13px] text-ink/45 mt-0.5">
+                  <p className="text-[13px] text-slate-mid mt-0.5">
                     Endings — referenced by decision option targets above
                   </p>
                 </div>
@@ -357,16 +357,16 @@ function PhaseSection({
           ) : onPhaseUpdate ? (
             <button
               type="button"
-              className="block w-full text-left text-[13px] text-ink/45 mt-0.5 cursor-text hover:text-ink/70 transition-colors"
+              className="block w-full text-left text-[13px] text-slate-mid mt-0.5 cursor-text hover:text-slate-light transition-colors"
               title="Click to edit the phase description"
               onClick={() => setEditingDescription(true)}
             >
               {phase.description || (
-                <span className="italic text-ink/25">Add a phase description…</span>
+                <span className="italic text-slate-mid">Add a phase description…</span>
               )}
             </button>
           ) : (
-            <p className="text-[13px] text-ink/45 mt-0.5">{phase.description}</p>
+            <p className="text-[13px] text-slate-mid mt-0.5">{phase.description}</p>
           )}
           {/* Rubric dimension chips — clickable toggles */}
           {allDimensions.length > 0 && (
@@ -383,7 +383,7 @@ function PhaseSection({
                       'text-[11px] font-semibold px-2.5 py-0.5 rounded-full border transition-all',
                       active
                         ? 'bg-emerald-400/10 border-emerald-400/30 text-emerald-300 hover:bg-emerald-400/5'
-                        : 'bg-transparent border-edge/8 text-ink/25 hover:border-edge/20 hover:text-ink/40',
+                        : 'bg-transparent border-edge/8 text-slate-mid hover:border-edge/20 hover:text-slate-mid',
                     ].join(' ')}
                   >
                     {dim}
@@ -408,7 +408,7 @@ function PhaseSection({
               onRemovePhase()
           }}
           title="Delete this phase"
-          className="text-[11px] text-ink/25 hover:text-red-400/80 transition-colors mt-1"
+          className="text-[11px] text-slate-mid hover:text-red-400/80 transition-colors mt-1"
         >
           Delete phase
         </button>
@@ -493,7 +493,7 @@ function BlockGutter({
   onRemove: () => void
 }) {
   const btn =
-    'w-6 h-6 flex items-center justify-center rounded-md text-[11px] border border-edge/10 bg-[#111] text-ink/40 hover:text-ink/85 hover:border-edge/25 disabled:opacity-25 disabled:hover:text-ink/40 transition-colors'
+    'w-6 h-6 flex items-center justify-center rounded-md text-[11px] border border-edge/10 bg-[#111] text-slate-mid hover:text-ink/85 hover:border-edge/25 disabled:opacity-25 disabled:hover:text-slate-mid transition-colors'
   return (
     <div className="absolute -left-9 top-2 flex flex-col gap-1 opacity-0 group-hover/blk:opacity-100 focus-within:opacity-100 transition-opacity">
       <button type="button" onClick={onUp} disabled={!canUp} title="Move up" className={btn}>
@@ -517,7 +517,7 @@ function BlockGutter({
 function EmptyPhase({ onClick }: { onClick: () => void }) {
   return (
     <div className="border border-dashed border-edge/10 rounded-[14px] py-12 flex flex-col items-center gap-3">
-      <p className="text-[13px] text-ink/30 font-medium">No blocks yet</p>
+      <p className="text-[13px] text-slate-mid font-medium">No blocks yet</p>
       <button
         onClick={onClick}
         className="text-[12px] font-semibold text-emerald-400/80 hover:text-emerald-300 border border-emerald-400/30 hover:border-emerald-400/60 rounded-lg px-4 py-2 transition-all"
@@ -534,7 +534,7 @@ function InsertAffordance({ onClick }: { onClick: () => void }) {
       <div className="absolute inset-x-0 top-1/2 h-px bg-linear-to-r from-transparent via-ink/6 to-transparent" />
       <button
         onClick={onClick}
-        className="relative opacity-0 group-hover:opacity-100 transition-opacity bg-[#111] border border-edge/15 text-[11px] font-semibold text-ink/40 hover:text-ink/70 hover:border-edge/25 rounded-full px-3 py-0.5"
+        className="relative opacity-0 group-hover:opacity-100 transition-opacity bg-[#111] border border-edge/15 text-[11px] font-semibold text-slate-mid hover:text-slate-light hover:border-edge/25 rounded-full px-3 py-0.5"
       >
         ＋ insert block
       </button>

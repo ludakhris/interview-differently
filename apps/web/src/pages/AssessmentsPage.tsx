@@ -110,7 +110,7 @@ export function AssessmentsPage() {
                         {d.closesAt && <> · closes {fmt(d.closesAt)}</>}
                       </p>
                       {submitted && (
-                        <p className="text-[12px] text-ink/40 mt-1">
+                        <p className="text-[12px] text-slate-mid mt-1">
                           Submitted {fmt(d.attempt!.submittedAt)}
                         </p>
                       )}
@@ -141,7 +141,7 @@ export function AssessmentsPage() {
                           {starting === d.id ? 'Starting…' : 'Start'}
                         </button>
                       ) : (
-                        <span className="text-[11px] uppercase tracking-widest text-ink/30">
+                        <span className="text-[11px] uppercase tracking-widest text-slate-mid">
                           {notYet ? 'Not open yet' : 'Closed'}
                         </span>
                       )}

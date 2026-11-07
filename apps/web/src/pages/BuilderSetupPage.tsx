@@ -202,7 +202,7 @@ export function BuilderSetupPage() {
       <Nav />
       <div className="max-w-lg mx-auto px-6 py-16">
         <div className="mb-10">
-          <p className="text-[12px] font-medium tracking-widest uppercase text-ink/30 mb-1">
+          <p className="text-[12px] font-medium tracking-widest uppercase text-slate-mid mb-1">
             New Scenario
           </p>
           <h2 className="font-display font-extrabold text-[28px] text-fg tracking-tight">
@@ -214,7 +214,7 @@ export function BuilderSetupPage() {
         <div className="mb-8">
           <p
             id="setup-start-from"
-            className="block text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3"
+            className="block text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3"
           >
             Start from
           </p>
@@ -239,7 +239,7 @@ export function BuilderSetupPage() {
                 }}
               >
                 <div className="text-[13px] font-bold text-fg">{opt.label}</div>
-                <div className="text-[11px] text-ink/30">{opt.hint}</div>
+                <div className="text-[11px] text-slate-mid">{opt.hint}</div>
               </button>
             ))}
           </div>
@@ -249,7 +249,7 @@ export function BuilderSetupPage() {
           <div className="mb-8">
             <label
               htmlFor="setup-clone"
-              className="block text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3"
+              className="block text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3"
             >
               Scenario to clone
             </label>
@@ -270,7 +270,7 @@ export function BuilderSetupPage() {
                 </option>
               ))}
             </select>
-            <p className="text-[11px] text-ink/30 mt-2">
+            <p className="text-[11px] text-slate-mid mt-2">
               Track, rubric, phases, exhibits and questions are copied. The copy starts as a draft.
             </p>
           </div>
@@ -278,7 +278,7 @@ export function BuilderSetupPage() {
 
         {startFrom === 'import' && (
           <div className="mb-8">
-            <p className="block text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3">
+            <p className="block text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3">
               File
             </p>
             <input
@@ -290,13 +290,13 @@ export function BuilderSetupPage() {
             />
             <button
               onClick={() => fileRef.current?.click()}
-              className="w-full text-left bg-surface-alt border border-dashed border-edge/15 hover:border-edge/30 rounded-xl px-4 py-3 text-[13px] text-ink/60 transition-colors"
+              className="w-full text-left bg-surface-alt border border-dashed border-edge/15 hover:border-edge/30 rounded-xl px-4 py-3 text-[13px] text-slate-light transition-colors"
             >
               {importDoc
                 ? `✓ ${importDoc.name} — ${importDoc.scenario.nodes.length} blocks, ${importDoc.scenario.phases?.length ?? 0} phases`
                 : 'Choose a .yaml or .json scenario file…'}
             </button>
-            <p className="text-[11px] text-ink/30 mt-2">
+            <p className="text-[11px] text-slate-mid mt-2">
               Write the YAML offline (AI-assisted works well — see{' '}
               <span className="font-mono">apps/api/prisma/scenarios/</span> for the format). Imports
               start as drafts.
@@ -308,11 +308,11 @@ export function BuilderSetupPage() {
         <div className="mb-8">
           <label
             htmlFor="setup-title"
-            className="block text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3"
+            className="block text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3"
           >
             Scenario Title
             {startFrom !== 'blank' && (
-              <span className="normal-case tracking-normal font-normal text-ink/25">
+              <span className="normal-case tracking-normal font-normal text-slate-mid">
                 {' '}
                 — optional, keeps the source title if blank
               </span>
@@ -327,7 +327,7 @@ export function BuilderSetupPage() {
               setError(null)
             }}
             placeholder="e.g. Payment System Outage"
-            className="w-full bg-surface-alt border border-edge/10 rounded-xl px-4 py-3 text-[15px] text-fg placeholder:text-ink/20 focus:outline-hidden focus:border-edge/30 transition-colors"
+            className="w-full bg-surface-alt border border-edge/10 rounded-xl px-4 py-3 text-[15px] text-fg placeholder:text-slate-mid focus:outline-hidden focus:border-edge/30 transition-colors"
           />
         </div>
 
@@ -336,7 +336,7 @@ export function BuilderSetupPage() {
           <div className="mb-8">
             <label
               htmlFor="setup-owner"
-              className="block text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3"
+              className="block text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3"
             >
               Visible to
             </label>
@@ -357,7 +357,7 @@ export function BuilderSetupPage() {
             <div className="mb-8">
               <p
                 id="setup-track"
-                className="block text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3"
+                className="block text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3"
               >
                 Track
               </p>
@@ -386,7 +386,7 @@ export function BuilderSetupPage() {
                       >
                         {option.label}
                       </div>
-                      <div className="text-[11px] text-ink/30">{option.subtitle}</div>
+                      <div className="text-[11px] text-slate-mid">{option.subtitle}</div>
                     </button>
                   )
                 })}
@@ -398,7 +398,7 @@ export function BuilderSetupPage() {
               <div className="mb-8">
                 <p
                   id="setup-subtrack"
-                  className="block text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3"
+                  className="block text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3"
                 >
                   Sub-track
                 </p>
@@ -434,7 +434,7 @@ export function BuilderSetupPage() {
             {/* Rubric preview */}
             {track && previewDimensions.length > 0 && (
               <div className="mb-8 bg-surface-alt border border-edge/10 rounded-xl p-5">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-ink/30 mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-mid mb-3">
                   Pre-filled Rubric — {TRACK_LABELS[track]}
                 </p>
                 <div className="space-y-2">
@@ -446,12 +446,14 @@ export function BuilderSetupPage() {
                       />
                       <div>
                         <p className="text-[12px] font-semibold text-fg">{dim.name}</p>
-                        <p className="text-[11px] text-ink/30 leading-relaxed">{dim.description}</p>
+                        <p className="text-[11px] text-slate-mid leading-relaxed">
+                          {dim.description}
+                        </p>
                       </div>
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-ink/20 mt-4">
+                <p className="text-[11px] text-slate-mid mt-4">
                   You can edit or add dimensions in the canvas rubric editor.
                 </p>
               </div>
@@ -459,7 +461,7 @@ export function BuilderSetupPage() {
 
             {track === 'custom' && (
               <div className="mb-8 bg-surface-alt border border-edge/10 rounded-xl p-5">
-                <p className="text-[11px] text-ink/30 leading-relaxed">
+                <p className="text-[11px] text-slate-mid leading-relaxed">
                   A blank rubric will be created. Add your dimensions in the canvas rubric editor.
                 </p>
               </div>
@@ -479,7 +481,7 @@ export function BuilderSetupPage() {
         <div className="flex gap-3">
           <button
             onClick={() => navigate('/builder')}
-            className="py-3 px-6 rounded-xl border border-edge/10 text-[13px] text-ink/40 hover:text-ink/60 hover:border-edge/20 transition-all"
+            className="py-3 px-6 rounded-xl border border-edge/10 text-[13px] text-slate-mid hover:text-slate-light hover:border-edge/20 transition-all"
           >
             Cancel
           </button>

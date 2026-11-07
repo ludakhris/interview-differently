@@ -16,7 +16,7 @@ export function ScoreSummary({
         <div>
           <p className="font-display font-extrabold text-[28px] text-fg leading-none">
             {overall.correct}
-            <span className="text-ink/30 text-[18px]"> / {overall.total}</span>
+            <span className="text-slate-mid text-[18px]"> / {overall.total}</span>
           </p>
           <p className="text-[13px] text-slate-mid mt-1">questions correct overall</p>
         </div>

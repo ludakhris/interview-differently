@@ -80,7 +80,7 @@ export function MetricChart({ config }: Props) {
     <div className="sim-dark bg-surface-deep border border-edge/10 rounded-xl overflow-hidden mb-3">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-3 pb-1">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-ink/35">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
           {config.title}
         </span>
         <div className="flex items-center gap-2">
@@ -89,7 +89,7 @@ export function MetricChart({ config }: Props) {
             {lastVal}
             {config.unit}
           </span>
-          <span className="text-[10px] text-ink/30">now</span>
+          <span className="text-[10px] text-slate-mid">now</span>
         </div>
       </div>
 

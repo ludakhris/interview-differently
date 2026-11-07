@@ -68,7 +68,7 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
   return (
     <div className="flex flex-col h-full bg-surface-deep border-r border-edge/10 w-[220px] flex-none">
       <div className="px-4 pt-5 pb-2">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink/25">Phases</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-mid">Phases</p>
       </div>
 
       <div className="flex-1 overflow-auto px-2 pb-2 flex flex-col gap-1">
@@ -101,7 +101,9 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
               ].join(' ')}
             >
               {/* drag grip */}
-              <span className="text-[11px] text-ink/20 cursor-grab active:cursor-grabbing">⋮⋮</span>
+              <span className="text-[11px] text-slate-mid cursor-grab active:cursor-grabbing">
+                ⋮⋮
+              </span>
               {/* status dot */}
               <span
                 className={[
@@ -127,7 +129,7 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
                   aria-current={isActive ? 'step' : undefined}
                   className={[
                     'flex-1 text-left text-[13px] font-semibold truncate',
-                    isActive ? 'text-ink' : 'text-ink/65',
+                    isActive ? 'text-ink' : 'text-slate-light',
                   ].join(' ')}
                 >
                   {phase.label}
@@ -137,14 +139,14 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
               {editingId !== phase.id && (
                 <button
                   onClick={(e) => startEdit(phase, e)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-ink/35 hover:text-ink/70 px-0.5 flex-none"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-slate-mid hover:text-slate-light px-0.5 flex-none"
                   title="Rename phase"
                 >
                   ✎
                 </button>
               )}
               {/* block count */}
-              <span className="text-[11px] text-ink/25 font-medium tabular-nums flex-none">
+              <span className="text-[11px] text-slate-mid font-medium tabular-nums flex-none">
                 {(phase.nodeIds?.length ?? 0) + (phase.exhibitIds?.length ?? 0)}
               </span>
             </div>
@@ -157,7 +159,7 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
             justAdded.current = true
             onAdd()
           }}
-          className="flex items-center gap-2 px-2.5 py-2 mt-1 rounded-lg border border-dashed border-edge/10 text-[12px] font-semibold text-ink/30 hover:text-ink/55 hover:border-edge/20 transition-all"
+          className="flex items-center gap-2 px-2.5 py-2 mt-1 rounded-lg border border-dashed border-edge/10 text-[12px] font-semibold text-slate-mid hover:text-slate-mid hover:border-edge/20 transition-all"
         >
           <span>＋</span>
           <span>Add phase</span>
@@ -165,8 +167,8 @@ export function PhasesRail({ phases, activePhaseId, onSelect, onReorder, onRenam
       </div>
 
       <div className="px-4 py-4 border-t border-edge/6">
-        <p className="text-[11px] text-ink/25 leading-relaxed">
-          Drag <span className="text-ink/40">⋮⋮</span> to reorder. Phase order = the order the
+        <p className="text-[11px] text-slate-mid leading-relaxed">
+          Drag <span className="text-slate-mid">⋮⋮</span> to reorder. Phase order = the order the
           candidate walks the case.
         </p>
       </div>

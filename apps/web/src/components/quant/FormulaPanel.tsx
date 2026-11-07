@@ -46,7 +46,7 @@ export function FormulaPanel({
   return (
     <div className="bg-surface-deep border border-edge/10 rounded-2xl p-5">
       <header className="mb-4">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">Formula</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">Formula</p>
         <p className="mt-1 text-[14px] text-fg font-medium leading-snug">
           {formula.display ?? formula.expression}
         </p>
@@ -66,12 +66,12 @@ export function FormulaPanel({
       </div>
 
       <div className="mt-5 flex items-baseline justify-between border-t border-edge/10 pt-4">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-ink/50">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-mid">
           {resultLabel}
         </p>
         <p
           className={`text-[24px] font-display font-extrabold ${
-            computed === null ? 'text-ink/30' : 'text-mint'
+            computed === null ? 'text-slate-mid' : 'text-mint'
           }`}
         >
           {computed === null

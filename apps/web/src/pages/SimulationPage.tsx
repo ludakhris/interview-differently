@@ -376,11 +376,11 @@ function SimulationContent({
             <span className="text-[12px] font-semibold text-amber-400 uppercase tracking-widest">
               Preview Mode
             </span>
-            <span className="text-[12px] text-ink/30">— responses are not saved</span>
+            <span className="text-[12px] text-slate-mid">— responses are not saved</span>
           </div>
           <button
             onClick={() => navigate(builderPath)}
-            className="text-[12px] font-medium text-ink/40 hover:text-ink/70 transition-colors"
+            className="text-[12px] font-medium text-slate-mid hover:text-slate-light transition-colors"
           >
             ← Back to builder
           </button>
@@ -541,7 +541,7 @@ function SimulationContent({
                 {/* Context display — full width above narrative */}
                 {currentNode.contextPanels && currentNode.contextPanels.length > 0 && (
                   <div className="mb-6">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3">
                       {ctxLabel}
                     </p>
                     {currentNode.chart && <MetricChart config={currentNode.chart} />}

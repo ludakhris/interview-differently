@@ -277,7 +277,7 @@ export function AssessmentAttemptPage({
                         className={`h-1.5 flex-1 rounded-full ${answers[q.id]?.trim() ? 'bg-accent' : 'bg-ink/10'}`}
                       />
                     ))}
-                    <span className="font-mono text-[10px] text-ink/30 ml-1">
+                    <span className="font-mono text-[10px] text-slate-mid ml-1">
                       {done}/{s.questions.length}
                     </span>
                   </div>
@@ -286,7 +286,7 @@ export function AssessmentAttemptPage({
             })}
           </nav>
           <div className="px-5 py-4 border-t border-edge/8">
-            <p className="font-mono text-[11px] text-ink/40 mb-2">
+            <p className="font-mono text-[11px] text-slate-mid mb-2">
               {answeredCount}/{totalCount} answered ·{' '}
               <span className={saveState === 'error' ? 'text-red-400' : undefined}>
                 {saveState === 'saving'
@@ -312,7 +312,7 @@ export function AssessmentAttemptPage({
         <main className="flex-1 min-w-0 max-w-4xl px-8 py-8">
           {sectionIx === 0 && (
             <div className="mb-6 rounded-xl border border-edge/10 bg-surface-deep px-5 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40 mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-mid mb-2">
                 How this works
               </p>
               <ul className="text-[13px] text-fg/80 leading-relaxed space-y-1 list-disc pl-5">
@@ -357,7 +357,7 @@ export function AssessmentAttemptPage({
                     {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40 mb-1">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-mid mb-1">
                       {q.type === 'mc'
                         ? 'Multiple choice'
                         : q.type === 'scenario'
@@ -479,7 +479,7 @@ function QuestionBody({
         </p>
       )}
       {(q.ordered || q.strictColumns) && (
-        <p className="text-[11px] text-ink/40 mt-2">
+        <p className="text-[11px] text-slate-mid mt-2">
           {q.ordered && 'Row order matters for this question. '}
           {q.strictColumns && 'Column names must match the ones asked for.'}
         </p>

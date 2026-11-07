@@ -193,7 +193,7 @@ export function OwnerBadge({ institutionName }: { institutionName: string | null
   return (
     <span
       className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded shrink-0 ${
-        institutionName ? 'bg-primary/20 text-accent' : 'bg-ink/10 text-ink/50'
+        institutionName ? 'bg-primary/20 text-accent' : 'bg-ink/10 text-slate-mid'
       }`}
     >
       {institutionName ?? 'Platform'}
@@ -204,7 +204,7 @@ export function OwnerBadge({ institutionName }: { institutionName: string | null
 // ── Editor ─────────────────────────────────────────────────────────────────
 
 const inputCls =
-  'w-full bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30 disabled:opacity-60'
+  'w-full bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-slate-mid focus:outline-hidden focus:border-edge/30 disabled:opacity-60'
 
 function DatasetEditor({
   getToken,
@@ -299,7 +299,7 @@ function DatasetEditor({
         {/* ── Script ── */}
         <div className="p-6 space-y-4 min-w-0">
           {readOnly && (
-            <p className="text-[12px] text-ink/50 rounded-lg border border-edge/10 bg-ink/5 px-3 py-2">
+            <p className="text-[12px] text-slate-mid rounded-lg border border-edge/10 bg-ink/5 px-3 py-2">
               Platform dataset — shared with every institution and maintained by the platform team.
               You can give your cohorts access below.
             </p>
@@ -361,7 +361,7 @@ function DatasetEditor({
               <span className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
                 Setup SQL
               </span>
-              <span className="font-mono text-[10px] text-ink/30">
+              <span className="font-mono text-[10px] text-slate-mid">
                 {setupSql.split('\n').length} lines
               </span>
             </div>
@@ -378,7 +378,7 @@ function DatasetEditor({
                 style={{ fontSize: 12 }}
               />
             </div>
-            <p className="text-[11px] text-ink/40 mt-1.5 leading-relaxed">
+            <p className="text-[11px] text-slate-mid mt-1.5 leading-relaxed">
               Plain Postgres. Keep it deterministic — no <span className="font-mono">RANDOM()</span>{' '}
               or <span className="font-mono">NOW()</span>; use{' '}
               <span className="font-mono">CURRENT_DATE - n</span> for relative dates so every
@@ -395,13 +395,15 @@ function DatasetEditor({
                 Schema
               </p>
               {schema && (
-                <span className="font-mono text-[10px] text-ink/30">
+                <span className="font-mono text-[10px] text-slate-mid">
                   {schema.length} tables · {totalRows} rows
                 </span>
               )}
             </div>
             {!schema || schema.length === 0 ? (
-              <p className="text-[12px] text-ink/40">Validate the script to see its tables here.</p>
+              <p className="text-[12px] text-slate-mid">
+                Validate the script to see its tables here.
+              </p>
             ) : (
               <ul className="space-y-1.5">
                 {schema.map((t) => (
@@ -410,11 +412,11 @@ function DatasetEditor({
                       <span className="font-mono text-[12px] font-semibold text-fg truncate">
                         {t.table}
                       </span>
-                      <span className="font-mono text-[10px] text-ink/30 shrink-0">
+                      <span className="font-mono text-[10px] text-slate-mid shrink-0">
                         {t.rowCount} rows
                       </span>
                     </div>
-                    <p className="font-mono text-[10px] text-ink/40 truncate mt-0.5">
+                    <p className="font-mono text-[10px] text-slate-mid truncate mt-0.5">
                       {t.columns.map((c) => c.name).join(', ')}
                     </p>
                   </li>
@@ -427,17 +429,19 @@ function DatasetEditor({
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-1">
               Cohorts with access
             </p>
-            <p className="text-[11px] text-ink/40 mb-2 leading-relaxed">
+            <p className="text-[11px] text-slate-mid mb-2 leading-relaxed">
               The cohort also needs the SQL Sandbox tool switched on under Institutions &amp;
               Cohorts.
             </p>
             {cohorts.length === 0 ? (
-              <p className="text-[12px] text-ink/40">No cohorts exist yet.</p>
+              <p className="text-[12px] text-slate-mid">No cohorts exist yet.</p>
             ) : (
               <div className="space-y-3">
                 {Object.entries(byInstitution).map(([inst, list]) => (
                   <div key={inst}>
-                    <p className="text-[10px] uppercase tracking-widest text-ink/30 mb-1">{inst}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-slate-mid mb-1">
+                      {inst}
+                    </p>
                     <div className="flex flex-wrap gap-1.5">
                       {list.map((c) => {
                         const on = cohortIds.includes(c.id)
@@ -468,7 +472,7 @@ function DatasetEditor({
           </section>
 
           {initial && (
-            <section className="font-mono text-[10px] text-ink/30 space-y-1">
+            <section className="font-mono text-[10px] text-slate-mid space-y-1">
               <p>hash {initial.setupHash.slice(0, 12)}</p>
               <p>dialect {initial.dialect}</p>
             </section>

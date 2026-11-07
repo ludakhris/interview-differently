@@ -39,7 +39,7 @@ import {
 type GetToken = () => Promise<string | null>
 
 const inputCls =
-  'w-full bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30'
+  'w-full bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-slate-mid focus:outline-hidden focus:border-edge/30'
 
 /** `draw` spec → "all" | "4" | "mc 3, sql 1" — mirrors formatDrawSpec in the API. */
 function formatDraw(spec: number | Record<string, number> | null): string {
@@ -301,7 +301,7 @@ function ImportPanel({
     <div className="bg-surface-alt rounded-xl border border-edge/10 overflow-hidden">
       <div className="p-6 space-y-4">
         {updating ? (
-          <p className="text-[12px] text-ink/50 rounded-lg border border-edge/10 bg-ink/5 px-3 py-2">
+          <p className="text-[12px] text-slate-mid rounded-lg border border-edge/10 bg-ink/5 px-3 py-2">
             Updating <span className="text-fg">{updating.title}</span> — owner stays{' '}
             {updating.institutionName ?? 'platform-wide'}.
           </p>
@@ -317,7 +317,7 @@ function ImportPanel({
                 onChange={setOwnerChoice}
                 className={`${inputCls} mt-1`}
               />
-              <p className="text-[11px] text-ink/40 mt-1">
+              <p className="text-[11px] text-slate-mid mt-1">
                 Only applies to a new slug — re-importing keeps the existing owner.
               </p>
             </label>
@@ -340,7 +340,7 @@ function ImportPanel({
             }
             className={`${inputCls} mt-1 font-mono text-[12px] leading-relaxed`}
           />
-          <p className="text-[11px] text-ink/40 mt-1.5">
+          <p className="text-[11px] text-slate-mid mt-1.5">
             Re-importing a bank with the same <span className="font-mono">slug</span> replaces it;
             existing deliveries and attempts are kept.
           </p>
@@ -351,7 +351,7 @@ function ImportPanel({
             <div className="flex items-baseline justify-between">
               <p className="text-[13px] font-semibold text-fg">
                 {preview.parsed.title}{' '}
-                <span className="font-mono text-[11px] text-ink/40 ml-2">
+                <span className="font-mono text-[11px] text-slate-mid ml-2">
                   {preview.parsed.slug}
                 </span>
               </p>
@@ -375,7 +375,7 @@ function ImportPanel({
                     <span className="text-fg/85">
                       {s.number}. {s.title}
                     </span>
-                    <span className="text-ink/40">
+                    <span className="text-slate-mid">
                       {mc} mc · {scen ? `${scen} scenario · ` : ''}
                       {sqlN} sql · draw {formatDraw(s.draw)}
                     </span>
@@ -520,7 +520,7 @@ function DetailPanel({
                 <p className="text-[12px] font-semibold text-fg">
                   {s.number}. {s.title}
                 </p>
-                <p className="font-mono text-[10px] text-ink/40">
+                <p className="font-mono text-[10px] text-slate-mid">
                   {mc} mc · {scen ? `${scen} scenario · ` : ''}
                   {s.questions.length - mc - scen} sql · draw {formatDraw(s.draw)}
                 </p>
@@ -596,12 +596,12 @@ function DetailPanel({
                     {d.cohort ? (
                       <>
                         {d.cohort.name}{' '}
-                        <span className="text-ink/40 font-normal">
+                        <span className="text-slate-mid font-normal">
                           · {d.cohort.institutionName}
                         </span>
                       </>
                     ) : (
-                      <span className="text-ink/40 font-normal italic">
+                      <span className="text-slate-mid font-normal italic">
                         cohort deleted — results kept
                       </span>
                     )}
@@ -694,7 +694,7 @@ function InviteLink({
     <div className="mt-1.5 flex items-center gap-3 text-[11px]">
       {url ? (
         <>
-          <span className="font-mono text-ink/50 truncate max-w-[260px]" title={url}>
+          <span className="font-mono text-slate-mid truncate max-w-[260px]" title={url}>
             {url}
           </span>
           <button
@@ -797,7 +797,7 @@ function NewDeliveryForm({
       className="bg-surface rounded-lg border border-edge/10 p-4 mb-3 grid grid-cols-1 sm:grid-cols-2 gap-3"
     >
       <label className="block sm:col-span-2">
-        <span className="text-[11px] text-ink/40">Cohort</span>
+        <span className="text-[11px] text-slate-mid">Cohort</span>
         <select
           value={cohortId}
           onChange={(e) => setCohortId(e.target.value)}
@@ -815,7 +815,7 @@ function NewDeliveryForm({
         </select>
       </label>
       <label className="block">
-        <span className="text-[11px] text-ink/40">Label</span>
+        <span className="text-[11px] text-slate-mid">Label</span>
         <input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
@@ -825,7 +825,7 @@ function NewDeliveryForm({
         />
       </label>
       <label className="block">
-        <span className="text-[11px] text-ink/40">Time limit (minutes, optional)</span>
+        <span className="text-[11px] text-slate-mid">Time limit (minutes, optional)</span>
         <input
           value={timeLimit}
           onChange={(e) => setTimeLimit(e.target.value)}
@@ -836,7 +836,7 @@ function NewDeliveryForm({
         />
       </label>
       <label className="block">
-        <span className="text-[11px] text-ink/40">Opens (optional)</span>
+        <span className="text-[11px] text-slate-mid">Opens (optional)</span>
         <input
           value={opensAt}
           onChange={(e) => setOpensAt(e.target.value)}
@@ -845,7 +845,7 @@ function NewDeliveryForm({
         />
       </label>
       <label className="block">
-        <span className="text-[11px] text-ink/40">Closes (optional)</span>
+        <span className="text-[11px] text-slate-mid">Closes (optional)</span>
         <input
           value={closesAt}
           onChange={(e) => setClosesAt(e.target.value)}
@@ -862,7 +862,7 @@ function NewDeliveryForm({
         />
         <span className="text-[12px] text-slate-light">
           Let learners review their answers after submitting
-          <span className="block text-[11px] text-ink/40">
+          <span className="block text-[11px] text-slate-mid">
             Shows what they got wrong and the correct answer. On by default for post, off for pre
             (the same questions are reused).
           </span>
@@ -949,7 +949,7 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
             Results · {data.delivery.label} · {data.delivery.cohortName}
           </h3>
           {(data.delivery.expectedMinutes != null || data.delivery.medianMinutes != null) && (
-            <p className="text-[12px] text-ink/40 mt-0.5">
+            <p className="text-[12px] text-slate-mid mt-0.5">
               {[
                 data.delivery.expectedMinutes != null &&
                   `expected ${data.delivery.expectedMinutes} min`,
@@ -962,7 +962,9 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
         </div>
         <div className="flex items-center gap-4">
           {loadedAt && (
-            <span className="text-[11px] text-ink/30">updated {loadedAt.toLocaleTimeString()}</span>
+            <span className="text-[11px] text-slate-mid">
+              updated {loadedAt.toLocaleTimeString()}
+            </span>
           )}
           <button
             onClick={load}
@@ -1011,7 +1013,7 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
                 <tr key={a.attemptId} className="border-t border-edge/5">
                   <td className="py-2 pr-4">
                     <p className="text-fg">{a.displayName ?? a.email ?? a.userId}</p>
-                    <p className="text-[11px] text-ink/40">
+                    <p className="text-[11px] text-slate-mid">
                       {a.submittedAt
                         ? `submitted ${fmt(a.submittedAt)}${a.submittedLate ? ' · late' : ''}`
                         : `in progress · ${a.answeredCount} of ${a.questionCount} answered · last saved ${time(a.lastActivityAt)}`}
@@ -1049,8 +1051,8 @@ function ResultsPanel({ getToken, deliveryId }: { getToken: GetToken; deliveryId
               {data.notStarted.map((u) => (
                 <tr key={u.userId} className="border-t border-edge/5">
                   <td className="py-2 pr-4">
-                    <p className="text-ink/50">{u.displayName ?? u.email ?? u.userId}</p>
-                    <p className="text-[11px] text-ink/30">not started</p>
+                    <p className="text-slate-mid">{u.displayName ?? u.email ?? u.userId}</p>
+                    <p className="text-[11px] text-slate-mid">not started</p>
                   </td>
                   <td colSpan={data.sections.length + 2} />
                 </tr>

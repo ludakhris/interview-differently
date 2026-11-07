@@ -37,7 +37,7 @@ export function ResultsGrid({
               <span className="sr-only">Matches</span>
             </th>
           )}
-          <th className="px-3 py-2 text-right text-[10px] text-ink/25 font-normal w-10">#</th>
+          <th className="px-3 py-2 text-right text-[10px] text-slate-mid font-normal w-10">#</th>
           {result.columns.map((c, i) => (
             <th
               key={i}
@@ -70,7 +70,7 @@ export function ResultsGrid({
                 <span className="sr-only">{marks[ri] ? 'right row' : 'wrong row'}</span>
               </td>
             )}
-            <td className="px-3 py-1.5 text-right text-ink/25">{ri + 1}</td>
+            <td className="px-3 py-1.5 text-right text-slate-mid">{ri + 1}</td>
             {row.map((v, ci) => (
               <td
                 key={ci}
@@ -87,12 +87,12 @@ export function ResultsGrid({
 }
 
 function formatCell(v: unknown): React.ReactNode {
-  if (v === null || v === undefined) return <span className="text-ink/25 italic">null</span>
+  if (v === null || v === undefined) return <span className="text-slate-mid italic">null</span>
   if (typeof v === 'boolean')
     return v ? (
       <span className="text-emerald-400">true</span>
     ) : (
-      <span className="text-ink/40">false</span>
+      <span className="text-slate-mid">false</span>
     )
   if (typeof v === 'object') return JSON.stringify(v)
   return String(v)

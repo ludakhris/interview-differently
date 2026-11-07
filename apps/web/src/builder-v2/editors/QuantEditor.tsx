@@ -178,7 +178,7 @@ function FormulaSection({
           onChange={(e) => toggleEnabled(e.target.checked)}
           className="accent-emerald-400"
         />
-        <span className="text-[12px] text-ink/60 font-medium">Enable formula</span>
+        <span className="text-[12px] text-slate-light font-medium">Enable formula</span>
       </label>
 
       {enabled && (

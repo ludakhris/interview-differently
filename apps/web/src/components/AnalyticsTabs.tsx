@@ -59,7 +59,7 @@ export function AnalyticsTabs({ institutionId, active, available }: AnalyticsTab
             isActive
               ? 'text-fg border-primary'
               : isDisabled
-                ? 'text-ink/20 border-transparent cursor-not-allowed'
+                ? 'text-slate-mid border-transparent cursor-not-allowed'
                 : 'text-slate-mid hover:text-fg border-transparent'
           }`
           if (isDisabled) {

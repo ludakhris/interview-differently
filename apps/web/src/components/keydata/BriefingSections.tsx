@@ -35,11 +35,13 @@ export function BriefingSections({ panels }: { panels: ContextPanel[] }) {
                   const tone = panelTone(p)
                   return (
                     <div key={i} className="flex items-baseline justify-between">
-                      <dt className="text-[15px] text-ink/65">{p.label}</dt>
+                      <dt className="text-[15px] text-slate-light">{p.label}</dt>
                       <dd className={`text-[15px] font-semibold ${toneText[tone]}`}>
                         {p.value}
                         {p.unit && (
-                          <span className="ml-1 text-[13px] font-normal text-ink/55">{p.unit}</span>
+                          <span className="ml-1 text-[13px] font-normal text-slate-mid">
+                            {p.unit}
+                          </span>
                         )}
                       </dd>
                     </div>

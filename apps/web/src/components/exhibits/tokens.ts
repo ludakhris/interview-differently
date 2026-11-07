@@ -11,10 +11,10 @@ export const exhibitHeader = 'px-5 py-4 border-b border-edge/8'
 
 export const exhibitTitle = 'text-[15px] font-semibold text-fg leading-tight'
 
-export const exhibitCaption = 'mt-1 text-[13px] text-ink/60 leading-snug'
+export const exhibitCaption = 'mt-1 text-[13px] text-slate-light leading-snug'
 
 export const exhibitFootnote =
-  'px-5 py-3 border-t border-edge/8 text-[12px] text-ink/40 leading-snug'
+  'px-5 py-3 border-t border-edge/8 text-[12px] text-slate-mid leading-snug'
 
 export const exhibitBody = 'px-5 py-4'
 

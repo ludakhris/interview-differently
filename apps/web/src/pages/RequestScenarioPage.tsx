@@ -17,9 +17,9 @@ const TRACKS: Array<{ value: string; label: string }> = [
 ]
 
 const inputCls =
-  'w-full bg-surface-alt border border-edge/10 rounded-xl px-4 py-3 text-[14px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30 transition-colors'
-const labelCls = 'block text-[12px] font-bold uppercase tracking-widest text-ink/60 mb-1.5'
-const helpCls = 'text-[12px] text-ink/35 mb-2 leading-relaxed'
+  'w-full bg-surface-alt border border-edge/10 rounded-xl px-4 py-3 text-[14px] text-fg placeholder:text-slate-mid focus:outline-hidden focus:border-edge/30 transition-colors'
+const labelCls = 'block text-[12px] font-bold uppercase tracking-widest text-slate-light mb-1.5'
+const helpCls = 'text-[12px] text-slate-mid mb-2 leading-relaxed'
 const requiredMark = (
   <span className="text-amber-400 ml-1" aria-label="required">
     *
@@ -103,7 +103,7 @@ export function RequestScenarioPage() {
           The more specific you are, the better the scenario. Only the first two questions are
           required — fill what you can, we'll come back with follow-up questions if we need more.
         </p>
-        <p className="text-[12px] text-ink/30 mb-10">
+        <p className="text-[12px] text-slate-mid mb-10">
           Takes about 5 minutes. Fields marked {requiredMark} are required.
         </p>
 
@@ -324,7 +324,7 @@ export function RequestScenarioPage() {
             <button
               type="button"
               onClick={() => navigate('/dashboard')}
-              className="text-[13px] text-ink/50 hover:text-ink/70 transition-colors"
+              className="text-[13px] text-slate-mid hover:text-slate-light transition-colors"
             >
               Cancel
             </button>
@@ -367,10 +367,10 @@ function Field({
       {children}
       {example && (
         <details className="mt-2 group">
-          <summary className="text-[11px] text-ink/30 hover:text-ink/60 cursor-pointer select-none transition-colors">
+          <summary className="text-[11px] text-slate-mid hover:text-slate-light cursor-pointer select-none transition-colors">
             Show example
           </summary>
-          <pre className="mt-2 text-[12px] text-ink/40 leading-relaxed whitespace-pre-wrap font-mono bg-ink/30 rounded-lg px-3 py-2 border border-edge/5">
+          <pre className="mt-2 text-[12px] text-slate-mid leading-relaxed whitespace-pre-wrap font-mono bg-ink/30 rounded-lg px-3 py-2 border border-edge/5">
             {example}
           </pre>
         </details>

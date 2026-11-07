@@ -340,7 +340,7 @@ export function SqlSandboxPage() {
 
             <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-6">
               <section>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-2">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
                   Schema
                 </p>
                 {dataset ? (
@@ -356,7 +356,7 @@ export function SqlSandboxPage() {
 
               {history.length > 0 && (
                 <section>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-2">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
                     History
                   </p>
                   <ul className="space-y-0.5">
@@ -365,7 +365,7 @@ export function SqlSandboxPage() {
                         <button
                           onClick={() => setAndFocus(h)}
                           title={h}
-                          className="w-full text-left font-mono text-[11px] text-ink/50 hover:text-fg truncate py-0.5 transition-colors"
+                          className="w-full text-left font-mono text-[11px] text-slate-mid hover:text-fg truncate py-0.5 transition-colors"
                         >
                           {h.replace(/\s+/g, ' ')}
                         </button>
@@ -398,13 +398,13 @@ export function SqlSandboxPage() {
                 >
                   <Play size={12} fill="currentColor" />
                   {running ? 'Running…' : 'Run'}
-                  <span className="font-mono text-[10px] text-ink/60 ml-0.5">⌘↵</span>
+                  <span className="font-mono text-[10px] text-slate-light ml-0.5">⌘↵</span>
                 </button>
                 {dbState.status === 'loading' && (
                   <span className="text-[11px] text-amber-400">Building your private copy…</span>
                 )}
               </div>
-              <p className="text-[11px] text-ink/30">
+              <p className="text-[11px] text-slate-mid">
                 Your own copy of the data. Break it freely —{' '}
                 <RotateCcw size={10} className="inline -mt-0.5" /> rebuilds it.
               </p>
@@ -456,7 +456,7 @@ export function SqlSandboxPage() {
                 {result ? (
                   <ResultsGrid result={result} limit={rowLimit} />
                 ) : ready ? (
-                  <p className="px-5 py-8 text-[12px] text-ink/30">
+                  <p className="px-5 py-8 text-[12px] text-slate-mid">
                     Write a query above and press <span className="font-mono">⌘↵</span>. Click a
                     table or column in the rail to drop its name into the editor.
                   </p>
@@ -464,7 +464,7 @@ export function SqlSandboxPage() {
               </div>
 
               {/* Status strip */}
-              <div className="flex items-center justify-between px-5 py-1.5 border-t border-edge/8 bg-surface-deep font-mono text-[11px] text-ink/40">
+              <div className="flex items-center justify-between px-5 py-1.5 border-t border-edge/8 bg-surface-deep font-mono text-[11px] text-slate-mid">
                 <span className={queryError ? 'text-red-400' : undefined}>
                   {queryError
                     ? 'error'
@@ -499,7 +499,7 @@ export function SqlSandboxPage() {
                           /* ignore */
                         }
                       }}
-                      className="bg-surface-alt border border-edge/10 rounded-sm px-1 py-0.5 text-ink/70 focus:outline-hidden focus:border-edge/30"
+                      className="bg-surface-alt border border-edge/10 rounded-sm px-1 py-0.5 text-slate-light focus:outline-hidden focus:border-edge/30"
                     >
                       {ROW_LIMITS.map((n) => (
                         <option key={n} value={n}>

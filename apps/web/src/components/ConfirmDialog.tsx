@@ -84,7 +84,9 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 {pending.title}
               </h2>
               {pending.body && (
-                <div className="mt-2 text-[13px] text-ink/60 leading-relaxed">{pending.body}</div>
+                <div className="mt-2 text-[13px] text-slate-light leading-relaxed">
+                  {pending.body}
+                </div>
               )}
             </div>
             <div className="px-6 pb-5 flex gap-2 justify-end">
@@ -92,7 +94,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={() => close(false)}
-                  className="px-3 py-2 rounded-lg border border-edge/10 text-[13px] text-ink/60 hover:text-ink/85 hover:border-edge/25 transition-colors"
+                  className="px-3 py-2 rounded-lg border border-edge/10 text-[13px] text-slate-light hover:text-ink/85 hover:border-edge/25 transition-colors"
                 >
                   {pending.cancelLabel ?? 'Cancel'}
                 </button>

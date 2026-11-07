@@ -95,7 +95,7 @@ export function TextExhibitEditor({ exhibit, onDone }: Props) {
         />
       </Field>
 
-      <p className="text-[11px] text-ink/25 leading-relaxed">
+      <p className="text-[11px] text-slate-mid leading-relaxed">
         Blank line = new paragraph · <code className="font-mono">- </code> = bullet list ·{' '}
         <code className="font-mono">&gt; </code> = quote, last line{' '}
         <code className="font-mono">&gt; — </code> = attribution

@@ -140,7 +140,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
 
   return (
     <div className="sim-dark bg-surface rounded-2xl border border-edge/10 p-6">
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40 mb-1">
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-mid mb-1">
         Hands-on SQL
       </p>
       {spec.context && (
@@ -164,7 +164,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
       )}
 
       {(spec.ordered || spec.strictColumns) && !outcome && (
-        <p className="text-[11px] text-ink/40 mt-2">
+        <p className="text-[11px] text-slate-mid mt-2">
           {spec.ordered && 'Row order matters for this question. '}
           {spec.strictColumns && 'Column names must match the ones asked for.'}
         </p>
@@ -204,7 +204,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
                     setHintShown(true)
                     onHintUsed?.(node.nodeId)
                   }}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-edge/15 bg-ink/5 text-ink/65 hover:border-edge/25 hover:text-fg transition-colors"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-edge/15 bg-ink/5 text-slate-light hover:border-edge/25 hover:text-fg transition-colors"
                 >
                   <span aria-hidden>💡</span> Need a hint?
                 </button>
@@ -228,7 +228,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
       {/* Outcome */}
       {outcome && (
         <div className="mt-5 space-y-4">
-          <p className="text-[11px] text-ink/40">
+          <p className="text-[11px] text-slate-mid">
             Submitted — this verdict is final. You can keep running queries above to explore, but
             they won't be re-graded.
           </p>
@@ -257,7 +257,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
                 Expected output
               </p>
               <div className="flex items-center gap-3">
-                <span className="font-mono text-[11px] text-ink/40">
+                <span className="font-mono text-[11px] text-slate-mid">
                   {outcome.expected.rowCount} rows
                 </span>
                 <button

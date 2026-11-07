@@ -35,7 +35,7 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
           {trackLabel && (
             <span className="font-mono text-[11px] font-medium tracking-[0.14em] uppercase text-slate-mid bg-surface-alt px-3 py-1 rounded-full border border-edge/10">
               {trackLabel}
-              {stepLabel && <span className="text-ink/50 ml-2">{stepLabel}</span>}
+              {stepLabel && <span className="text-slate-mid ml-2">{stepLabel}</span>}
             </span>
           )}
           <button onClick={() => navigate('/request-scenario')} className={link}>
@@ -102,7 +102,7 @@ function ToolsMenu({ tools }: { tools: ToolKey[] }) {
         Tools
         <ChevronDown
           size={12}
-          className={`text-ink/40 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`text-slate-mid transition-transform ${open ? 'rotate-180' : ''}`}
         />
       </button>
       {open && (

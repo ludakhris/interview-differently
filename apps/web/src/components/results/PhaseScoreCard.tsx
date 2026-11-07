@@ -31,21 +31,21 @@ export function PhaseScoreCard({ phase, index }: Props) {
     <section className="bg-surface-alt border border-edge/10 rounded-2xl overflow-hidden">
       <header className="px-5 py-4 border-b border-edge/8 flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
             Phase {index + 1}
           </p>
           <h3 className="mt-0.5 text-[16px] font-display font-bold text-fg leading-tight">
             {phase.label}
           </h3>
           {phase.description && (
-            <p className="mt-1 text-[12px] text-ink/55 leading-snug max-w-md">
+            <p className="mt-1 text-[12px] text-slate-mid leading-snug max-w-md">
               {phase.description}
             </p>
           )}
         </div>
         {showOverall && (
           <div className="shrink-0 text-right">
-            <p className="text-[10px] uppercase tracking-widest text-ink/40">Phase score</p>
+            <p className="text-[10px] uppercase tracking-widest text-slate-mid">Phase score</p>
             <p
               className="text-[24px] font-display font-extrabold tabular-nums"
               style={{ color: qualityColor[overallTone] }}
@@ -100,7 +100,9 @@ export function PhaseScoreCard({ phase, index }: Props) {
         {phase.dimensionScores.length === 0 &&
           phase.quantResults.length === 0 &&
           !phase.sqlResults?.length && (
-            <p className="text-[12px] text-ink/35 italic">No scored interaction in this phase.</p>
+            <p className="text-[12px] text-slate-mid italic">
+              No scored interaction in this phase.
+            </p>
           )}
       </div>
     </section>

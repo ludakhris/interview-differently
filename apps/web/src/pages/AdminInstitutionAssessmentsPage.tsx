@@ -232,7 +232,7 @@ function PairCard({
           </div>
         </div>
 
-        <p className="text-[11px] text-ink/40 mb-4">
+        <p className="text-[11px] text-slate-mid mb-4">
           % Improvement = post score − pre score, in percentage points, averaged over the{' '}
           {pair.averages.pairedCount} student
           {pair.averages.pairedCount === 1 ? '' : 's'} who completed both.
@@ -318,16 +318,16 @@ function PairCard({
                     <td className="py-2 pr-4">
                       <p className="text-fg">{label(s)}</p>
                       {showNames && s.displayName && s.email && (
-                        <p className="text-[11px] text-ink/40">{s.email}</p>
+                        <p className="text-[11px] text-slate-mid">{s.email}</p>
                       )}
                     </td>
                     {keys.map((k) => (
                       <td key={k.id} className="text-right py-2 px-2 font-mono whitespace-nowrap">
-                        <span className={s.pre?.[k.id] == null ? 'text-ink/25' : 'text-amber'}>
+                        <span className={s.pre?.[k.id] == null ? 'text-slate-mid' : 'text-amber'}>
                           {pct(s.pre?.[k.id] ?? null)}
                         </span>
-                        <span className="text-ink/25"> → </span>
-                        <span className={s.post?.[k.id] == null ? 'text-ink/25' : 'text-accent'}>
+                        <span className="text-slate-mid"> → </span>
+                        <span className={s.post?.[k.id] == null ? 'text-slate-mid' : 'text-accent'}>
                           {pct(s.post?.[k.id] ?? null)}
                         </span>
                       </td>
@@ -338,14 +338,14 @@ function PairCard({
                       {signed(s.delta)}
                     </td>
                     <td className="text-right py-2 pl-3 font-mono whitespace-nowrap">
-                      <span className={s.preMinutes == null ? 'text-ink/25' : 'text-amber'}>
+                      <span className={s.preMinutes == null ? 'text-slate-mid' : 'text-amber'}>
                         {s.preMinutes ?? '—'}
                       </span>
-                      <span className="text-ink/25"> → </span>
-                      <span className={s.postMinutes == null ? 'text-ink/25' : 'text-accent'}>
+                      <span className="text-slate-mid"> → </span>
+                      <span className={s.postMinutes == null ? 'text-slate-mid' : 'text-accent'}>
                         {s.postMinutes ?? '—'}
                       </span>
-                      <span className="text-ink/40"> min</span>
+                      <span className="text-slate-mid"> min</span>
                     </td>
                   </tr>
                 ))}
@@ -371,7 +371,7 @@ function Stat({
 }) {
   return (
     <div className="text-right">
-      <p className="text-[10px] uppercase tracking-widest text-ink/40">{label}</p>
+      <p className="text-[10px] uppercase tracking-widest text-slate-mid">{label}</p>
       <p
         className={`font-display font-extrabold text-[22px] leading-none mt-0.5 ${delta ? deltaCls(value) : (tone ?? 'text-fg')}`}
       >
@@ -404,7 +404,7 @@ function signed(v: number | null | undefined): string {
 }
 
 function deltaCls(v: number | null | undefined): string {
-  if (v == null) return 'text-ink/30'
+  if (v == null) return 'text-slate-mid'
   if (v > 0) return 'text-emerald-400'
   if (v < 0) return 'text-red-400'
   return 'text-slate-light'

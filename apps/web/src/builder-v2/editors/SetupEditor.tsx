@@ -201,7 +201,7 @@ export function SetupEditor({ scenario, onDone }: Props) {
                 }`}
               >
                 <p className="text-[13px] font-semibold text-ink/85">{opt.label}</p>
-                <p className="text-[11px] text-ink/35 mt-0.5 leading-snug">{opt.hint}</p>
+                <p className="text-[11px] text-slate-mid mt-0.5 leading-snug">{opt.hint}</p>
               </button>
             ))}
           </div>
@@ -283,7 +283,7 @@ export function SetupEditor({ scenario, onDone }: Props) {
             onClick={() => setDimensions((prev) => [...prev, { name: '', description: '' }])}
           />
         )}
-        <p className="text-[11px] text-ink/30">
+        <p className="text-[11px] text-slate-mid">
           Renaming a dimension doesn't rename it on phases or options — re-tick those chips after a
           rename.
         </p>
@@ -352,7 +352,7 @@ export function SetupEditor({ scenario, onDone }: Props) {
       <button
         type="button"
         onClick={() => setShowAdvanced((v) => !v)}
-        className="text-[11px] font-semibold text-ink/40 hover:text-ink/70 text-left transition-colors"
+        className="text-[11px] font-semibold text-slate-mid hover:text-slate-light text-left transition-colors"
       >
         {showAdvanced ? '▾' : '▸'} Advanced display — context style, alert banner, incident header
         (ops / risk tracks)

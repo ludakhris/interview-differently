@@ -30,7 +30,7 @@ function TextSection({ items }: { items: SidebarItem[] }) {
       {items.map((item, i) => (
         <div key={i} className="flex justify-between gap-3">
           {item.label && (
-            <span className="text-[12px] text-ink/40 shrink-0 pt-0.5">{item.label}</span>
+            <span className="text-[12px] text-slate-mid shrink-0 pt-0.5">{item.label}</span>
           )}
           <span
             className={`text-[13px] leading-snug ${
@@ -53,7 +53,7 @@ function ListSection({ items }: { items: SidebarItem[] }) {
           key={i}
           className="flex justify-between items-center py-2 border-b border-edge/5 last:border-0"
         >
-          <span className="text-[12px] text-ink/45 pr-2">{item.label}</span>
+          <span className="text-[12px] text-slate-mid pr-2">{item.label}</span>
           <span
             className={`text-[13px] font-semibold text-right ${
               item.emphasis ? emphasisColor[item.emphasis] : 'text-fg/80'
@@ -76,10 +76,10 @@ function HighlightSection({ items }: { items: SidebarItem[] }) {
             key={i}
             className="flex justify-between items-center py-1.5 border-b border-red-500/10 last:border-0"
           >
-            {item.label && <span className="text-[11px] text-ink/40 pr-2">{item.label}</span>}
+            {item.label && <span className="text-[11px] text-slate-mid pr-2">{item.label}</span>}
             <span
               className={`text-[11px] font-semibold ${
-                item.emphasis ? emphasisColor[item.emphasis] : 'text-fg/70'
+                item.emphasis ? emphasisColor[item.emphasis] : 'text-slate-light'
               } ${item.label ? 'text-right' : 'text-left leading-snug'}`}
             >
               {item.value}
@@ -94,7 +94,7 @@ function HighlightSection({ items }: { items: SidebarItem[] }) {
 function SidebarSectionBlock({ section }: { section: SidebarSection }) {
   return (
     <div>
-      <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-ink/40 mb-2">
+      <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-mid mb-2">
         {section.title}
       </div>
       {section.style === 'list' && <ListSection items={section.items} />}

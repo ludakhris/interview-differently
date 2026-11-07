@@ -185,7 +185,7 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
         {panels.map((panel, i) => (
           <div key={i} className="flex flex-col gap-2 p-3 border border-edge/6 rounded-xl bg-ink/1">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-ink/30">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
                 Tile {i + 1}
               </span>
               <RemoveButton onClick={() => removePanel(i)} />
@@ -219,7 +219,7 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
                 onChange={(e) => updatePanel(i, { hero: e.target.checked || undefined })}
                 className="accent-emerald-400"
               />
-              <span className="text-[11px] text-ink/40">Hero tile — displays large</span>
+              <span className="text-[11px] text-slate-mid">Hero tile — displays large</span>
             </label>
           </div>
         ))}

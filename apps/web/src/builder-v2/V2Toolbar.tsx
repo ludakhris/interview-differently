@@ -41,7 +41,7 @@ export function V2Toolbar({
     saveStatus === 'saved'
       ? 'text-emerald-400/80 bg-emerald-400/10 border-emerald-400/25'
       : saveStatus === 'saving'
-        ? 'text-ink/40 bg-ink/5 border-edge/10 animate-pulse'
+        ? 'text-slate-mid bg-ink/5 border-edge/10 animate-pulse'
         : 'text-amber-400/80 bg-amber-400/10 border-amber-400/25'
 
   return (
@@ -81,7 +81,7 @@ export function V2Toolbar({
             : 'Visible to every user'
         }
         className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded flex-none ${
-          institutionName ? 'bg-primary/20 text-accent' : 'bg-ink/10 text-ink/50'
+          institutionName ? 'bg-primary/20 text-accent' : 'bg-ink/10 text-slate-mid'
         }`}
       >
         {institutionName ?? 'Public'}
@@ -100,7 +100,7 @@ export function V2Toolbar({
       {/* Preview */}
       <button
         onClick={onPreview}
-        className="flex items-center gap-1.5 text-[12px] font-semibold text-ink/65 hover:text-ink border border-edge/10 hover:border-edge/20 rounded-lg px-3 py-1.5 transition-all"
+        className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-light hover:text-ink border border-edge/10 hover:border-edge/20 rounded-lg px-3 py-1.5 transition-all"
       >
         ▶ Preview as candidate
       </button>

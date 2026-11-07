@@ -113,7 +113,7 @@ export function SegMatrixEditor({ exhibit, onDone }: Props) {
               className="flex flex-col gap-1.5 p-3 border border-edge/6 rounded-xl bg-ink/1"
             >
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-ink/30">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-mid">
                   {label}
                 </span>
                 <div className="flex-1" />

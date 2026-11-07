@@ -194,10 +194,7 @@ export function DashboardPage() {
                     <TrackIcon name={meta.icon} size={22} color={meta.color} />
                   </div>
                   <div className="flex-1">
-                    <h4
-                      className="font-display font-extrabold text-[20px] text-fg leading-tight"
-                      style={{ color: meta.color }}
-                    >
+                    <h4 className="font-display font-extrabold text-[20px] text-fg tracking-[-0.02em] leading-tight">
                       {meta.label}
                     </h4>
                     <p className="text-[13px] text-slate-mid leading-relaxed mt-1 max-w-3xl">
@@ -229,10 +226,7 @@ export function DashboardPage() {
                             </div>
                             <div className="min-w-0 flex-1">
                               {scenario.subcategory && (
-                                <p
-                                  className="text-[10px] font-bold uppercase tracking-[0.18em]"
-                                  style={{ color: meta.color }}
-                                >
+                                <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-slate-mid">
                                   {subcategoryLabel(scenario.subcategory)}
                                 </p>
                               )}
@@ -245,10 +239,7 @@ export function DashboardPage() {
                             <span className="text-[11px] text-slate-light">
                               ~{scenario.estimatedMinutes} min
                             </span>
-                            <span
-                              className="text-[11px] font-semibold group-hover:translate-x-1 transition-transform inline-block"
-                              style={{ color: meta.color }}
-                            >
+                            <span className="text-[12px] font-semibold text-primary group-hover:translate-x-1 transition-transform inline-block">
                               Start →
                             </span>
                           </div>

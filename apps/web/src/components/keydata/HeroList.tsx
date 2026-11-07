@@ -41,7 +41,7 @@ export function HeroList({ panels, accentColor = '#0f5b89' }: Props) {
         >
           {hero.value}
           {hero.unit && (
-            <span className="ml-2 text-[16px] font-normal text-ink/65 align-baseline">
+            <span className="ml-2 text-[16px] font-normal text-slate-light align-baseline">
               {hero.unit}
             </span>
           )}
@@ -61,11 +61,11 @@ export function HeroList({ panels, accentColor = '#0f5b89' }: Props) {
                 key={i}
                 className="flex items-baseline justify-between border-b border-edge/8 pb-2.5 last:border-0 last:pb-0"
               >
-                <dt className="text-[14px] text-ink/65">{p.label}</dt>
+                <dt className="text-[14px] text-slate-light">{p.label}</dt>
                 <dd className={`text-[15px] font-semibold ${toneText[tone]}`}>
                   {p.value}
                   {p.unit && (
-                    <span className="ml-1 text-[13px] font-normal text-ink/55">{p.unit}</span>
+                    <span className="ml-1 text-[13px] font-normal text-slate-mid">{p.unit}</span>
                   )}
                 </dd>
               </div>

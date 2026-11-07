@@ -15,7 +15,7 @@ export function SqlResultPanel({ result }: Props) {
     <div className="bg-surface-deep border border-edge/10 rounded-xl overflow-hidden">
       <div className="px-4 py-3 border-b border-edge/8 bg-ink/3">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
             SQL submission
           </p>
           <div className="flex items-center gap-2">

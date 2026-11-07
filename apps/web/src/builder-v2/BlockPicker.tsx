@@ -70,18 +70,18 @@ function TransitionPreview() {
     <div className="w-full h-full flex items-center justify-center p-10 bg-surface-deep">
       <div className="w-full max-w-lg border border-edge/10 rounded-[14px] bg-[#111] p-6">
         <div className="flex items-center gap-2 mb-4">
-          <span className="text-[13px] text-ink/30">↩</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink/25">
+          <span className="text-[13px] text-slate-mid">↩</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
             Redirect / Transition
           </span>
         </div>
-        <p className="text-[14px] text-ink/65 leading-relaxed italic mb-4">
+        <p className="text-[14px] text-slate-light leading-relaxed italic mb-4">
           "Interesting angle — but the client's primary concern is the cost structure. Let's focus
           there before tackling revenue."
         </p>
-        <div className="flex items-center gap-1.5 text-[12px] text-ink/30 font-medium">
+        <div className="flex items-center gap-1.5 text-[12px] text-slate-mid font-medium">
           <span>Continues to</span>
-          <span className="text-ink/50 font-semibold">→ next decision</span>
+          <span className="text-slate-mid font-semibold">→ next decision</span>
         </div>
       </div>
     </div>
@@ -96,7 +96,7 @@ function EndingPreview() {
           <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-400/60 mb-2">
             🏁 Strong ending
           </div>
-          <p className="text-[13px] text-ink/70 leading-relaxed">
+          <p className="text-[13px] text-slate-light leading-relaxed">
             Clear, structured recommendation with supporting financials. The candidate identified
             the core driver and sized the opportunity correctly.
           </p>
@@ -105,7 +105,7 @@ function EndingPreview() {
           <div className="text-[10px] font-bold uppercase tracking-widest text-amber-400/50 mb-2">
             🏁 Developing ending
           </div>
-          <p className="text-[12px] text-ink/50 leading-relaxed">
+          <p className="text-[12px] text-slate-mid leading-relaxed">
             Recommendation lacked specificity. Framework was sound but conclusions too conservative.
           </p>
         </div>
@@ -166,7 +166,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
           <h2 className="text-[15px] font-bold text-ink tracking-tight">Insert a block</h2>
           <button
             onClick={onClose}
-            className="text-ink/35 hover:text-ink/70 text-[20px] leading-none w-7 h-7 flex items-center justify-center rounded-lg hover:bg-ink/6 transition-colors"
+            className="text-slate-mid hover:text-slate-light text-[20px] leading-none w-7 h-7 flex items-center justify-center rounded-lg hover:bg-ink/6 transition-colors"
           >
             ×
           </button>
@@ -182,7 +182,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
                 'px-3 py-2.5 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors',
                 activeGroup === tab.id
                   ? 'border-emerald-400 text-emerald-300'
-                  : 'border-transparent text-ink/60 hover:text-ink/85',
+                  : 'border-transparent text-slate-light hover:text-ink/85',
               ].join(' ')}
             >
               {tab.label}
@@ -200,7 +200,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold whitespace-nowrap transition-all flex-none',
                 selectedKind === desc.kind
                   ? 'bg-emerald-400/15 border border-emerald-400/50 text-emerald-300'
-                  : 'bg-ink/4 border border-edge/8 text-ink/50 hover:text-ink/75 hover:border-edge/20',
+                  : 'bg-ink/4 border border-edge/8 text-slate-mid hover:text-ink/75 hover:border-edge/20',
               ].join(' ')}
             >
               <span className="text-[13px]">{desc.emoji}</span>
@@ -230,8 +230,8 @@ export function BlockPicker({ onPick, onClose }: Props) {
               <span className="text-[16px]">{selected.emoji}</span>
               <span className="text-[14px] font-bold text-ink">{selected.label}</span>
             </div>
-            <p className="text-[12px] text-ink/50 truncate">{selected.blurb}</p>
-            <p className="text-[11px] text-ink/28 italic mt-0.5 truncate">{selected.example}</p>
+            <p className="text-[12px] text-slate-mid truncate">{selected.blurb}</p>
+            <p className="text-[11px] text-slate-mid italic mt-0.5 truncate">{selected.example}</p>
           </div>
           <button
             onClick={() => onPick(selected.kind)}

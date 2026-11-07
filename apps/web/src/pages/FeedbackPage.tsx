@@ -111,7 +111,7 @@ export function FeedbackPage() {
             />
             Overall: {qualityLabel[overallQuality]}
           </div>
-          <p className="mt-3 text-[12px] text-ink/40">
+          <p className="mt-3 text-[12px] text-slate-mid">
             Average of your {result.dimensionScores.length} competency scores below.
           </p>
         </div>

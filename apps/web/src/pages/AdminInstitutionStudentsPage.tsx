@@ -303,7 +303,7 @@ export function AdminInstitutionStudentsPage() {
                       <td className="py-3 pl-5 pr-4">
                         <p className="text-fg">{label(s)}</p>
                         {showNames && s.displayName && s.email && (
-                          <p className="text-[11px] text-ink/40">{s.email}</p>
+                          <p className="text-[11px] text-slate-mid">{s.email}</p>
                         )}
                       </td>
                       {!cohortId && (
@@ -312,7 +312,7 @@ export function AdminInstitutionStudentsPage() {
                       <td className="py-3 px-2 text-right font-mono text-slate-light">
                         {s.completedSimulations}
                         {s.immersiveCompleted > 0 && (
-                          <span className="text-ink/30"> +{s.immersiveCompleted}</span>
+                          <span className="text-slate-mid"> +{s.immersiveCompleted}</span>
                         )}
                       </td>
                       <td
@@ -322,12 +322,12 @@ export function AdminInstitutionStudentsPage() {
                         {s.avgScore ?? '—'}
                       </td>
                       <td
-                        className={`py-3 px-2 text-right font-mono ${s.prePercent == null ? 'text-ink/25' : 'text-amber'}`}
+                        className={`py-3 px-2 text-right font-mono ${s.prePercent == null ? 'text-slate-mid' : 'text-amber'}`}
                       >
                         {s.prePercent == null ? '—' : `${s.prePercent}%`}
                       </td>
                       <td
-                        className={`py-3 px-2 text-right font-mono ${s.postPercent == null ? 'text-ink/25' : 'text-accent'}`}
+                        className={`py-3 px-2 text-right font-mono ${s.postPercent == null ? 'text-slate-mid' : 'text-accent'}`}
                       >
                         {s.postPercent == null ? '—' : `${s.postPercent}%`}
                       </td>
@@ -337,7 +337,7 @@ export function AdminInstitutionStudentsPage() {
                       >
                         {gain(s) == null ? '—' : `${gain(s)! > 0 ? '+' : ''}${gain(s)}%`}
                       </td>
-                      <td className="py-3 px-2 text-right font-mono text-ink/40 whitespace-nowrap">
+                      <td className="py-3 px-2 text-right font-mono text-slate-mid whitespace-nowrap">
                         {s.lastActiveAt
                           ? new Date(s.lastActiveAt).toLocaleDateString(undefined, {
                               dateStyle: 'medium',

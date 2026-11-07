@@ -20,7 +20,7 @@ export function QuantComparePanel({ result }: Props) {
     <div className="bg-surface-deep border border-edge/10 rounded-xl overflow-hidden">
       <div className="px-4 py-3 border-b border-edge/8 bg-ink/3">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
             Quant submission
           </p>
           {result.hintUsed && (
@@ -43,18 +43,20 @@ export function QuantComparePanel({ result }: Props) {
               className="px-4 py-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center"
             >
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-ink/50">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-mid">
                   {field.fieldId}
                 </p>
                 <div className="mt-1 grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-widest text-ink/35">Your answer</p>
+                    <p className="text-[10px] uppercase tracking-widest text-slate-mid">
+                      Your answer
+                    </p>
                     <p className="text-[14px] font-display font-bold text-fg">
                       {format(field.userAnswer)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-widest text-ink/35">Model</p>
+                    <p className="text-[10px] uppercase tracking-widest text-slate-mid">Model</p>
                     <p className="text-[14px] font-display font-bold text-fg">
                       {format(field.modelAnswer)}
                     </p>

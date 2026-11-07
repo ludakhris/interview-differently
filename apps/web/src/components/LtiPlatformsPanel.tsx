@@ -24,9 +24,9 @@ import {
 
 const CHIP: Record<StatusTone, string> = {
   on: 'bg-primary/20 text-accent',
-  off: 'bg-ink/10 text-ink/60',
+  off: 'bg-ink/10 text-slate-light',
   waiting: 'bg-amber-400/15 text-amber-300',
-  builtin: 'bg-ink/10 text-ink/60',
+  builtin: 'bg-ink/10 text-slate-light',
 }
 
 const FORBIDDEN = 'Only full administrators can manage platforms.'
@@ -211,7 +211,7 @@ function PlatformCard({
             {status.label}
           </span>
           {p.source === 'built-in' && (
-            <span className="text-[13px] text-ink/70">Always on, cannot be changed</span>
+            <span className="text-[13px] text-slate-light">Always on, cannot be changed</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -236,7 +236,7 @@ function PlatformCard({
               onClick={() => void toggle()}
               className={`px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors disabled:opacity-50 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
                 p.enabled
-                  ? 'border border-edge/15 text-ink/70 hover:text-ink hover:border-edge/30'
+                  ? 'border border-edge/15 text-slate-light hover:text-ink hover:border-edge/30'
                   : 'bg-primary hover:bg-accent text-on-primary'
               }`}
             >
@@ -325,7 +325,7 @@ function History({ platform }: { platform: LtiPlatform }) {
           ) : (
             <ul className="space-y-1">
               {changes.map((c) => (
-                <li key={c.id} className="text-[12px] text-ink/70">
+                <li key={c.id} className="text-[12px] text-slate-light">
                   {describeChange(c)}
                   <span className="text-slate-mid"> · {formatDate(c.createdAt)}</span>
                 </li>

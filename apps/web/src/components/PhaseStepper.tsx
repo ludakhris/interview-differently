@@ -66,7 +66,7 @@ function PhaseChip({ view, accentColor }: { view: PhaseView; accentColor: string
         </span>
         <span className="whitespace-nowrap">{phase.label}</span>
         {view.totalCount > 1 && (
-          <span className="font-mono text-[10px] text-ink/50">
+          <span className="font-mono text-[10px] text-slate-mid">
             {view.answeredCount}/{view.totalCount}
           </span>
         )}
@@ -92,10 +92,10 @@ function PhaseChip({ view, accentColor }: { view: PhaseView; accentColor: string
   // not a faint placeholder.
   return (
     <span
-      className={`${baseClasses} bg-ink/3 text-ink/55 border border-edge/12`}
+      className={`${baseClasses} bg-ink/3 text-slate-mid border border-edge/12`}
       title={phase.description}
     >
-      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-ink/8 text-ink/50 text-[10px] font-bold">
+      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-ink/8 text-slate-mid text-[10px] font-bold">
         {index + 1}
       </span>
       <span className="whitespace-nowrap">{phase.label}</span>

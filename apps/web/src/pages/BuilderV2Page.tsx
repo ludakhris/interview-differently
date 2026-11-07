@@ -110,7 +110,7 @@ export function BuilderV2Page() {
   if (loading) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
-        <p className="text-[13px] text-ink/30">Loading scenario…</p>
+        <p className="text-[13px] text-slate-mid">Loading scenario…</p>
       </div>
     )
   }

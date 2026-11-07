@@ -145,7 +145,7 @@ export function ProfitTreeEditor({ exhibit, onDone }: Props) {
         {roots.map((root, i) => (
           <div key={root.id} className="p-3 border border-edge/6 rounded-xl bg-ink/1">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-ink/30">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-mid">
                 {roots.length > 1 ? `Node ${i + 1}` : 'Root'}
               </span>
               {roots.length > 1 && <RemoveButton onClick={() => removeRoot(i)} />}

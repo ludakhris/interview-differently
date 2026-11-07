@@ -247,15 +247,15 @@ function NewInstitutionForm({
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Institution name"
-        className="w-full bg-surface border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30"
+        className="w-full bg-surface border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-slate-mid focus:outline-hidden focus:border-edge/30"
       />
       <input
         value={domain}
         onChange={(e) => setDomain(e.target.value)}
         placeholder="Email domain (optional, e.g. harvard.edu)"
-        className="w-full bg-surface border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30"
+        className="w-full bg-surface border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-slate-mid focus:outline-hidden focus:border-edge/30"
       />
-      <p className="text-[11px] text-ink/40 leading-relaxed px-1">
+      <p className="text-[11px] text-slate-mid leading-relaxed px-1">
         Leave blank if students don't share an email domain — they'll join via the cohort key
         instead.
       </p>
@@ -432,15 +432,15 @@ function NewCohortForm({
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Cohort name (e.g. Fall 2026)"
-        className="w-full bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30"
+        className="w-full bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-slate-mid focus:outline-hidden focus:border-edge/30"
       />
       <input
         value={joinKey}
         onChange={(e) => setJoinKey(e.target.value)}
         placeholder="Join key (optional, for student self-join)"
-        className="w-full bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30"
+        className="w-full bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-slate-mid focus:outline-hidden focus:border-edge/30"
       />
-      <p className="text-[11px] text-ink/40 leading-relaxed px-1">
+      <p className="text-[11px] text-slate-mid leading-relaxed px-1">
         Per-institution — other institutions can use the same key without colliding.
       </p>
       {err && <p className="text-[12px] text-red-400">{err}</p>}
@@ -561,7 +561,7 @@ function CohortRow({
                         </span>
                       )}
                       {m.role === 'admin' && (
-                        <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-ink/10 text-ink/60">
+                        <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-ink/10 text-slate-light">
                           Platform admin
                         </span>
                       )}
@@ -733,7 +733,7 @@ function CohortToolsToggles({
                 className={`w-1.5 h-1.5 rounded-full ${t.enabled ? 'bg-accent' : 'bg-ink/20'}`}
               />
               {TOOL_META[t.toolKey].label}
-              <span className="text-[10px] text-ink/40">{t.enabled ? 'on' : 'off'}</span>
+              <span className="text-[10px] text-slate-mid">{t.enabled ? 'on' : 'off'}</span>
             </button>
           ))}
         </div>
@@ -780,7 +780,7 @@ function AddMemberForm({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Add by email (user must have signed in once)"
-          className="flex-1 bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30"
+          className="flex-1 bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-slate-mid focus:outline-hidden focus:border-edge/30"
         />
         <button
           type="submit"

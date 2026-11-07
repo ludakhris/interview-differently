@@ -52,12 +52,12 @@ export function IssuesPanel({ issues, status, publishing, onJump, onPublish, onC
             <div className="flex-1" />
             <button
               onClick={onClose}
-              className="text-ink/30 hover:text-ink/60 text-[18px] leading-none"
+              className="text-slate-mid hover:text-slate-light text-[18px] leading-none"
             >
               ×
             </button>
           </div>
-          <p className="text-[12px] text-ink/40 mt-1 ml-9">
+          <p className="text-[12px] text-slate-mid mt-1 ml-9">
             {canPublish
               ? warnings.length
                 ? 'A few warnings below — publishing is still allowed.'
@@ -81,7 +81,7 @@ export function IssuesPanel({ issues, status, publishing, onJump, onPublish, onC
                   />
                   <span className="text-[13px] text-ink/80 leading-snug">{issue.message}</span>
                   {issue.where && (
-                    <span className="ml-auto text-[11px] text-ink/25 flex-none">→</span>
+                    <span className="ml-auto text-[11px] text-slate-mid flex-none">→</span>
                   )}
                 </button>
               </li>
@@ -92,7 +92,7 @@ export function IssuesPanel({ issues, status, publishing, onJump, onPublish, onC
         <div className="px-6 py-4 border-t border-edge/10 flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-lg border border-edge/10 text-[13px] text-ink/50 hover:text-ink/70 hover:border-edge/20 transition-all"
+            className="flex-1 py-2.5 rounded-lg border border-edge/10 text-[13px] text-slate-mid hover:text-slate-light hover:border-edge/20 transition-all"
           >
             {canPublish ? 'Not yet' : 'Fix issues'}
           </button>

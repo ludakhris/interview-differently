@@ -225,7 +225,7 @@ function JoinForm({
             value={joinKey}
             onChange={(e) => setJoinKey(e.target.value)}
             placeholder="e.g. fall2026-mba"
-            className="flex-1 bg-surface border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-ink/25 focus:outline-hidden focus:border-edge/30 font-mono"
+            className="flex-1 bg-surface border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-slate-mid focus:outline-hidden focus:border-edge/30 font-mono"
           />
           <button
             type="submit"

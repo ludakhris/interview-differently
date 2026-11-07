@@ -87,10 +87,10 @@ export function SqlWorkbench({
         >
           <Play size={11} fill="currentColor" />
           {running ? 'Running…' : 'Run'}
-          <span className="font-mono text-[10px] text-ink/60">⌘↵</span>
+          <span className="font-mono text-[10px] text-slate-light">⌘↵</span>
         </button>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-[11px] text-ink/40">
+          <span className="font-mono text-[11px] text-slate-mid">
             {!db
               ? 'loading dataset…'
               : result
@@ -117,7 +117,7 @@ export function SqlWorkbench({
             className="w-[220px] shrink-0 border-r border-edge/8 bg-surface px-3 py-3 overflow-y-auto"
             style={{ maxHeight: editorHeight + resultsHeight + 1 }}
           >
-            <p className="text-[10px] uppercase tracking-widest text-ink/30 mb-2">
+            <p className="text-[10px] uppercase tracking-widest text-slate-mid mb-2">
               Tables — click to insert
             </p>
             <SchemaTree tables={tables} onPick={insertAtCursor} />
@@ -146,7 +146,7 @@ export function SqlWorkbench({
             {result ? (
               <ResultsGrid result={result} />
             ) : !error ? (
-              <p className="px-4 py-4 text-[12px] text-ink/30">
+              <p className="px-4 py-4 text-[12px] text-slate-mid">
                 Run your query to check the output before moving on.
               </p>
             ) : null}

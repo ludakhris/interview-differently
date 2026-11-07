@@ -162,8 +162,8 @@ function Section({ id, kind, blurb, children }: SectionProps) {
   return (
     <section id={id} className="space-y-3">
       <header>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40">{kind}</p>
-        <p className="mt-1 text-[13px] text-ink/70 leading-relaxed max-w-2xl">{blurb}</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-mid">{kind}</p>
+        <p className="mt-1 text-[13px] text-slate-light leading-relaxed max-w-2xl">{blurb}</p>
       </header>
       <div data-screenshot-target={id}>{children}</div>
     </section>
@@ -175,13 +175,13 @@ export function QuantGalleryPage() {
     <div className="min-h-screen bg-surface text-fg">
       <div className="max-w-3xl mx-auto px-6 py-12 space-y-12">
         <header>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-mid">
             Quant library
           </p>
           <h1 className="mt-1 text-[28px] font-display font-extrabold leading-tight">
             Visual reference — quantitative question variants
           </h1>
-          <p className="mt-3 text-[14px] text-ink/65 leading-relaxed max-w-2xl">
+          <p className="mt-3 text-[14px] text-slate-light leading-relaxed max-w-2xl">
             Quant nodes ask the candidate to compute a specific number with an accepted band. Two
             variants below, plus a formula form with carry-forward variables. Submit any of them to
             see the inline band feedback (in-band / accepted / off).
@@ -220,7 +220,7 @@ export function QuantGalleryPage() {
           <Demo node={STRUCTURED} />
         </Section>
 
-        <footer className="pt-6 border-t border-edge/10 text-[11px] text-ink/35 leading-relaxed">
+        <footer className="pt-6 border-t border-edge/10 text-[11px] text-slate-mid leading-relaxed">
           Reference page for the scenario-author userguide. Renders the live components from{' '}
           <code className="font-mono">apps/web/src/components/quant/</code> — any regression in a
           variant or in the formula evaluator surfaces here immediately.

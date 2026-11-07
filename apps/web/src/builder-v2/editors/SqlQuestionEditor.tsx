@@ -160,7 +160,7 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
       )}
 
       <SectionLabel label="Grading" />
-      <div className="flex flex-wrap gap-4 text-[12px] text-ink/70">
+      <div className="flex flex-wrap gap-4 text-[12px] text-slate-light">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
@@ -180,7 +180,7 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
           Column names must match
         </label>
       </div>
-      <p className="text-[11px] text-ink/35 -mt-2">
+      <p className="text-[11px] text-slate-mid -mt-2">
         Without flags, any query returning the same rows (in any order, any column names) counts as
         correct. Numbers compare to 6 decimals.
       </p>
