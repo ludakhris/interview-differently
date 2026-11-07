@@ -1,8 +1,8 @@
 /**
- * The two example simulation screens on the landing page (an incident console and a live SQL
- * question from the AI interviewer), rebuilt as HTML from the brand kit so they stay sharp and
- * readable. The scenario content is illustrative. Standalone only, so the brand values are written
- * directly.
+ * The example simulation screens on the landing page (a live AI interview, an incident console and
+ * a live SQL question), rebuilt as HTML from the brand kit so they stay sharp and readable. The
+ * scenario content is illustrative. The two portraits are Unsplash photos (Unsplash License, free
+ * for commercial use). Standalone only, so the brand values are written directly.
  */
 
 const mono = 'font-mono uppercase tracking-[0.14em]'
@@ -140,14 +140,11 @@ export function InterviewPanel({ className = '' }: { className?: string }) {
       </div>
       <div className="grid grid-cols-[1.6fr_1fr] gap-3 p-3.5">
         <div className="relative rounded-[12px] bg-gradient-to-b from-[#26365a] to-[#1b2742] aspect-[4/3] overflow-hidden">
-          <svg viewBox="0 0 120 90" className="absolute inset-0 w-full h-full" aria-hidden="true">
-            <circle cx="60" cy="36" r="15" fill="#9fc2ff" fillOpacity="0.55" />
-            <path
-              d="M28 90 C30 66 44 56 60 56 C76 56 90 66 92 90 Z"
-              fill="#9fc2ff"
-              fillOpacity="0.4"
-            />
-          </svg>
+          <img
+            src="/landing/interviewer.webp"
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
           <div className="absolute left-3 bottom-3 right-3 flex items-end justify-between">
             <span className="text-[12px] font-semibold bg-[#0f1a30]/80 px-2 py-1 rounded-md">
               Interviewer
@@ -161,14 +158,11 @@ export function InterviewPanel({ className = '' }: { className?: string }) {
         </div>
         <div className="flex flex-col gap-3">
           <div className="relative flex-1 rounded-[12px] bg-[#1b2742] overflow-hidden min-h-[70px]">
-            <svg viewBox="0 0 80 60" className="absolute inset-0 w-full h-full" aria-hidden="true">
-              <circle cx="40" cy="24" r="10" fill="#ffc56b" fillOpacity="0.45" />
-              <path
-                d="M18 60 C20 44 29 38 40 38 C51 38 60 44 62 60 Z"
-                fill="#ffc56b"
-                fillOpacity="0.35"
-              />
-            </svg>
+            <img
+              src="/landing/candidate.webp"
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
             <span className="absolute left-2 bottom-2 text-[11px] font-semibold bg-[#0f1a30]/80 px-1.5 py-0.5 rounded">
               You
             </span>

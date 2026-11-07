@@ -1,0 +1,77 @@
+/* Review-only switch for comparing design options. Fixed bottom left; opens on hover or focus. */
+.rsw {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100vw - 32px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #15181d;
+  color: #ffffff;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  font:
+    600 13px/1 system-ui,
+    sans-serif;
+}
+.rsw-label {
+  opacity: 0.7;
+  font-weight: 500;
+}
+.rsw-options {
+  display: flex;
+  gap: 4px;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  white-space: nowrap;
+  transition:
+    max-width 0.2s ease,
+    opacity 0.2s ease;
+}
+.rsw:hover .rsw-options,
+.rsw:focus-within .rsw-options {
+  max-width: 40em;
+  margin-left: 6px;
+  opacity: 1;
+}
+.rsw:hover .rsw-current,
+.rsw:focus-within .rsw-current {
+  display: none;
+}
+.rsw a {
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: #ffffff;
+  text-decoration: none;
+}
+.rsw a:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.rsw a.rsw-on {
+  background: #ffffff;
+  color: #15181d;
+}
+.rsw a:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+/* No hover on touch screens: keep the options open. */
+@media (hover: none) {
+  .rsw-options {
+    max-width: 40em;
+    margin-left: 6px;
+    opacity: 1;
+  }
+  .rsw-current {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rsw-options {
+    transition: none;
+  }
+}

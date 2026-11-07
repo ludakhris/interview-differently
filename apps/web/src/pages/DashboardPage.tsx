@@ -189,9 +189,12 @@ export function DashboardPage() {
             return (
               <section key={track}>
                 {/* Track header */}
-                <div className="flex items-start gap-3 mb-5">
-                  <div className="mt-0.5">
-                    <TrackIcon name={meta.icon} size={22} color={meta.color} />
+                <div className="flex items-start gap-4 mb-5">
+                  <div
+                    className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center"
+                    style={{ backgroundColor: meta.color }}
+                  >
+                    <TrackIcon name={meta.icon} size={22} color="#ffffff" />
                   </div>
                   <div className="flex-1">
                     <h4 className="font-display font-extrabold text-[20px] text-fg tracking-[-0.02em] leading-tight">
@@ -215,7 +218,7 @@ export function DashboardPage() {
                         to={`/scenario/${scenario.scenarioId}/briefing`}
                         className="block bg-surface-alt rounded-2xl border border-edge/10 hover:border-edge/20 transition-all hover:-translate-y-0.5 overflow-hidden cursor-pointer group"
                       >
-                        <div className="h-1.5 w-full" style={{ backgroundColor: meta.color }} />
+                        <div className="h-2 w-full" style={{ backgroundColor: meta.color }} />
                         <div className="p-5">
                           <div className="flex items-start gap-3 mb-2">
                             <div

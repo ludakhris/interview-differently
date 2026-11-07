@@ -84,7 +84,7 @@ export function WorkSimulationCards({
           onClick={() => void open(s.bankSlug)}
           className="text-left bg-surface-alt rounded-2xl border border-edge/10 hover:border-edge/20 transition-all hover:-translate-y-0.5 overflow-hidden group disabled:opacity-60"
         >
-          <div className="h-1.5 w-full" style={{ backgroundColor: color }} />
+          <div className="h-2 w-full" style={{ backgroundColor: color }} />
           <div className="p-5">
             <div className="flex items-start gap-3 mb-2">
               <div
