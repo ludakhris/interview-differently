@@ -540,8 +540,14 @@ function SimulationContent({
 
                 {/* Context display — full width above narrative */}
                 {currentNode.contextPanels && currentNode.contextPanels.length > 0 && (
-                  <div className="mb-6">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-3">
+                  <div
+                    className={
+                      ctxStyle === 'monitor'
+                        ? 'sim-dark bg-surface rounded-2xl p-4 sm:p-5 mb-6'
+                        : 'mb-6'
+                    }
+                  >
+                    <p className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-3">
                       {ctxLabel}
                     </p>
                     {currentNode.chart && <MetricChart config={currentNode.chart} />}

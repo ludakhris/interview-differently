@@ -92,7 +92,7 @@ export function BriefingPage({
 
         {briefing.situation && (
           <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6 mb-6">
-            <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-4">
+            <h3 className="font-mono font-medium text-[12px] uppercase tracking-[0.14em] text-slate-mid mb-4">
               The Situation
             </h3>
             <p className="text-[15px] text-fg leading-relaxed font-light">{briefing.situation}</p>
@@ -100,7 +100,7 @@ export function BriefingPage({
         )}
 
         <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6 mb-6">
-          <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-4">
+          <h3 className="font-mono font-medium text-[12px] uppercase tracking-[0.14em] text-slate-mid mb-4">
             Your Role
           </h3>
           <div className="space-y-3">
@@ -120,20 +120,17 @@ export function BriefingPage({
           </div>
         </div>
 
-        <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6 mb-6">
-          <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-4">
+        <div className="bg-blue-soft rounded-2xl p-6 mb-6">
+          <h3 className="font-mono font-medium text-[12px] uppercase tracking-[0.14em] text-fg mb-4">
             What You Will Be Evaluated On
           </h3>
           <div className="space-y-3">
             {scenario.rubric.dimensions.map((dim) => (
               <div key={dim.name} className="flex items-start gap-3">
-                <span
-                  className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
-                  style={{ backgroundColor: accent }}
-                />
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 bg-ink" />
                 <div>
                   <div className="text-[14px] font-semibold text-fg">{dim.name}</div>
-                  <div className="text-[12px] text-slate-mid leading-relaxed">
+                  <div className="text-[13px] text-slate-light leading-relaxed">
                     {dim.description}
                   </div>
                 </div>
@@ -144,7 +141,7 @@ export function BriefingPage({
 
         {scenario.mode === 'immersive' && (
           <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6 mb-6">
-            <h3 className="font-display font-bold text-[12px] uppercase tracking-widest text-slate-mid mb-4">
+            <h3 className="font-mono font-medium text-[12px] uppercase tracking-[0.14em] text-slate-mid mb-4">
               Presentation Style
             </h3>
             <div className="flex gap-3">

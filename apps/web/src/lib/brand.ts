@@ -270,8 +270,9 @@ export function applyBrand(input: unknown): AppliedBrand {
   set('mint', light ? (primary ?? accent ?? LIGHT.mint) : (accent ?? primary ?? DARK.mint))
   set('jade', accent ?? (light ? (primary ?? LIGHT.mint) : (primary ?? DARK.jade)))
   set('azure', accent ?? primary ?? (light ? LIGHT.mint : DARK.azure))
-  // Soft fills (score cards, selected options): the primary washed toward the page.
-  set('blue-soft', mix(p, light ? WHITE : surface, 0.65))
+  // Soft fills (the standalone look's light-blue score and rubric cards): a tenant keeps its
+  // raised surface there, so its screens look as they did before the rebrand.
+  set('blue-soft', alt)
 
   for (const [k, v] of Object.entries(light ? LIGHT_STATUS : DARK_STATUS)) set(k, hex(v))
 

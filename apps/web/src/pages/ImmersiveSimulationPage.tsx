@@ -420,8 +420,12 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
 
             {/* Data context */}
             {currentNode.contextPanels && currentNode.contextPanels.length > 0 && (
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-mid mb-3">
+              <div
+                className={
+                  ctxStyle === 'monitor' ? 'sim-dark bg-surface rounded-2xl p-4' : undefined
+                }
+              >
+                <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-3">
                   {ctxLabel}
                 </p>
                 {currentNode.chart && <MetricChart config={currentNode.chart} />}
