@@ -76,7 +76,7 @@ export function RequestScenarioPage() {
             </p>
             <button
               onClick={() => navigate('/dashboard')}
-              className="px-6 py-2.5 rounded-lg bg-primary hover:bg-accent text-[14px] font-semibold text-ink transition-colors"
+              className="px-6 py-2.5 rounded-lg bg-primary hover:bg-accent text-[14px] font-semibold text-on-primary transition-colors"
             >
               Back to scenarios
             </button>
@@ -331,7 +331,7 @@ export function RequestScenarioPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2.5 rounded-lg bg-primary hover:bg-accent text-[14px] font-semibold text-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2.5 rounded-lg bg-primary hover:bg-accent text-[14px] font-semibold text-on-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? 'Submitting…' : 'Submit request'}
             </button>

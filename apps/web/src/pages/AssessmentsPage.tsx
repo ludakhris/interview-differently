@@ -128,7 +128,7 @@ export function AssessmentsPage() {
                       ) : inProgress ? (
                         <button
                           onClick={() => navigate(`/tools/assessments/attempt/${d.attempt!.id}`)}
-                          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink transition-colors"
+                          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-on-primary transition-colors"
                         >
                           Continue →
                         </button>
@@ -136,7 +136,7 @@ export function AssessmentsPage() {
                         <button
                           onClick={() => start(d)}
                           disabled={starting === d.id}
-                          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink disabled:opacity-50 transition-colors"
+                          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-on-primary disabled:opacity-50 transition-colors"
                         >
                           {starting === d.id ? 'Starting…' : 'Start'}
                         </button>

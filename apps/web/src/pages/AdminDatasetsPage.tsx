@@ -543,7 +543,7 @@ function DatasetEditor({
               !setupSql.trim() ||
               (!initial && ownerId === undefined)
             }
-            className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink disabled:opacity-50 transition-colors"
+            className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-on-primary disabled:opacity-50 transition-colors"
           >
             {saving ? 'Saving…' : readOnly ? 'Save cohort access' : initial ? 'Save' : 'Create'}
           </button>

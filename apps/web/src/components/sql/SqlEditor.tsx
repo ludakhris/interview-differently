@@ -2,7 +2,7 @@ import { forwardRef, useMemo, useRef } from 'react'
 import CodeMirror, { Prec, keymap, type ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { PostgreSQL, sql } from '@codemirror/lang-sql'
 import { useLtiBrand } from '@/components/LtiBrandProvider'
-import { sandboxEditorTheme } from '@/lib/sql/editorTheme'
+import { brandSqlHighlight, sandboxEditorTheme } from '@/lib/sql/editorTheme'
 import type { SchemaTable } from '@/services/datasetsService'
 
 interface Props {
@@ -24,16 +24,20 @@ export const SqlEditor = forwardRef<ReactCodeMirrorRef, Props>(function SqlEdito
   // rebuilding the editor extensions on every keystroke. Prec.highest so it
   // beats the default keymap's Mod-Enter (insertBlankLine).
   // a light tenant gets CodeMirror's light syntax colours; everyone else keeps the dark theme
-  const lightScheme = useLtiBrand()?.scheme === 'light'
+  const brand = useLtiBrand()
+  const lightScheme = brand?.scheme === 'light'
+  // without a tenant's colours, the editor wears the standalone brand's SQL colours
+  const standalone = !brand || Object.keys(brand.cssVars).length === 0
   const runRef = useRef(onRun)
   runRef.current = onRun
   const extensions = useMemo(
     () => [
       Prec.highest(keymap.of([{ key: 'Mod-Enter', run: () => (runRef.current?.(), true) }])),
       sandboxEditorTheme,
+      ...(standalone ? [Prec.high(brandSqlHighlight)] : []),
       sql({ dialect: PostgreSQL, upperCaseKeywords: true, ...schemaForCompletion(tables) }),
     ],
-    [tables]
+    [tables, standalone]
   )
   const h = typeof height === 'number' ? `${height}px` : height
   return (

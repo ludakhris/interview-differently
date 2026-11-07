@@ -1,4 +1,6 @@
 import { EditorView } from '@uiw/react-codemirror'
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
+import { tags } from '@lezer/highlight'
 
 /**
  * Overrides the stock CodeMirror dark theme's blue-grey chrome so the editor
@@ -56,4 +58,25 @@ export const sandboxEditorTheme = EditorView.theme(
     },
   },
   { dark: true }
+)
+
+/**
+ * SQL colours of the standalone look (blue interview/differently brand): keywords soft blue, strings
+ * amber, numbers soft blue, comments muted. Only used without a tenant brand, so a branded launch keeps
+ * CodeMirror's own syntax colours as before.
+ */
+export const brandSqlHighlight = syntaxHighlighting(
+  HighlightStyle.define([
+    { tag: [tags.keyword, tags.operatorKeyword, tags.typeName], color: '#9fc2ff' },
+    { tag: [tags.string, tags.special(tags.string)], color: '#ffc56b' },
+    { tag: [tags.number, tags.bool, tags.null], color: '#9fc2ff' },
+    { tag: [tags.function(tags.variableName), tags.standard(tags.name)], color: '#e8eaee' },
+    {
+      tag: [tags.comment, tags.lineComment, tags.blockComment],
+      color: '#9aa6bd',
+      fontStyle: 'italic',
+    },
+    { tag: [tags.name, tags.propertyName, tags.variableName], color: '#e8eaee' },
+    { tag: [tags.operator, tags.punctuation], color: '#c4ccda' },
+  ])
 )

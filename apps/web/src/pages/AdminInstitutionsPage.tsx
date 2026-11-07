@@ -271,7 +271,7 @@ function NewInstitutionForm({
         <button
           type="submit"
           disabled={submitting}
-          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink disabled:opacity-50"
+          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-on-primary disabled:opacity-50"
         >
           {submitting ? 'Creating…' : 'Create'}
         </button>
@@ -455,7 +455,7 @@ function NewCohortForm({
         <button
           type="submit"
           disabled={submitting}
-          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink disabled:opacity-50"
+          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-on-primary disabled:opacity-50"
         >
           {submitting ? 'Creating…' : 'Create'}
         </button>
@@ -785,7 +785,7 @@ function AddMemberForm({
         <button
           type="submit"
           disabled={submitting}
-          className="px-3 py-2 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink disabled:opacity-50 whitespace-nowrap"
+          className="px-3 py-2 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-on-primary disabled:opacity-50 whitespace-nowrap"
         >
           {submitting ? 'Adding…' : 'Add'}
         </button>

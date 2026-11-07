@@ -445,7 +445,7 @@ export function BuilderListPage() {
             </button>
             <button
               onClick={() => navigate('/builder/new')}
-              className="bg-primary hover:bg-accent text-ink font-display font-semibold text-[13px] px-5 py-2.5 rounded-xl transition-colors"
+              className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[13px] px-5 py-2.5 rounded-xl transition-colors"
             >
               + New Scenario
             </button>
@@ -594,7 +594,7 @@ export function BuilderListPage() {
             </p>
             <button
               onClick={() => navigate('/builder/new')}
-              className="bg-primary hover:bg-accent text-ink font-semibold text-[13px] px-6 py-3 rounded-xl transition-colors"
+              className="bg-primary hover:bg-accent text-on-primary font-semibold text-[13px] px-6 py-3 rounded-xl transition-colors"
             >
               Create First Scenario
             </button>

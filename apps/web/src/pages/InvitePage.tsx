@@ -118,7 +118,7 @@ export function InvitePage() {
                   <>
                     <button
                       onClick={() => navigate(`/sign-in?redirect_url=${returnTo}`)}
-                      className="w-full px-4 py-2.5 rounded-md bg-primary hover:bg-accent text-[13px] font-semibold text-ink transition-colors"
+                      className="w-full px-4 py-2.5 rounded-md bg-primary hover:bg-accent text-[13px] font-semibold text-on-primary transition-colors"
                     >
                       Sign in to begin
                     </button>

@@ -432,7 +432,7 @@ function ImportPanel({
                 ? 'Choose an owner first'
                 : 'Preview first — every reference query must run cleanly'
           }
-          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink disabled:opacity-50 transition-colors"
+          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-on-primary disabled:opacity-50 transition-colors"
         >
           {busy === 'import' ? 'Importing…' : 'Import'}
         </button>
@@ -873,7 +873,7 @@ function NewDeliveryForm({
         <button
           type="submit"
           disabled={submitting || !cohortId}
-          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-ink disabled:opacity-50"
+          className="px-3 py-1.5 rounded-md bg-primary hover:bg-accent text-[12px] font-semibold text-on-primary disabled:opacity-50"
         >
           {submitting ? 'Scheduling…' : 'Schedule'}
         </button>
