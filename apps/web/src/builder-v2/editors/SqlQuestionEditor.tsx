@@ -118,7 +118,7 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
         />
       </Field>
       <Field label="Reference query — its result set is the answer key">
-        <div className="rounded-lg border border-edge/12 overflow-hidden">
+        <div className="sim-dark rounded-lg border border-edge/12 overflow-hidden">
           <SqlEditor
             value={referenceSql}
             onChange={setReferenceSql}

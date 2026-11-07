@@ -139,7 +139,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
   }, [db, sql, submitting, spec, onSubmit, grader, node.nodeId])
 
   return (
-    <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6">
+    <div className="sim-dark bg-surface rounded-2xl border border-edge/10 p-6">
       <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40 mb-1">
         Hands-on SQL
       </p>

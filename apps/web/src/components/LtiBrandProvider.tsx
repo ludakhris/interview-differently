@@ -7,7 +7,8 @@ const BrandContext = createContext<AppliedBrand | null>(null)
 /**
  * Applies a validated brand to the LTI play screens: the `--ld-*` variables are set on this one
  * wrapper (`display: contents`, so layout is untouched) and never on :root, so nothing outside
- * the LTI route can see them.
+ * the LTI route can see them. `data-lti-brand` names the scheme when the brand sets colours
+ * ("default" otherwise); index.css uses it to keep `.sim-dark` panels in the tenant's colours.
  */
 export function LtiBrandProvider({
   brand,
@@ -20,7 +21,7 @@ export function LtiBrandProvider({
     <BrandContext.Provider value={brand}>
       <div
         className="contents"
-        data-lti-brand={brand.name ? brand.scheme : 'default'}
+        data-lti-brand={Object.keys(brand.cssVars).length > 0 ? brand.scheme : 'default'}
         style={brand.cssVars}
       >
         {/* its own confirm dialog, inside the brand scope, so it wears the tenant's look */}

@@ -4,7 +4,7 @@
 // family — useful for the future author userguide where each subtype gets
 // its own example screenshot.
 
-export const exhibitCard = 'bg-surface-deep border border-edge/10 rounded-2xl overflow-hidden'
+export const exhibitCard = 'sim-dark bg-surface-deep border border-edge/10 rounded-2xl overflow-hidden'
 
 export const exhibitHeader = 'px-5 py-4 border-b border-edge/8'
 

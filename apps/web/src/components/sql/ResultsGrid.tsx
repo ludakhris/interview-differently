@@ -30,7 +30,7 @@ export function ResultsGrid({
   )
   return (
     <table className="min-w-full text-[12px] font-mono border-collapse">
-      <thead className="sticky top-0 z-10 bg-surface-alt shadow-[0_1px_0_rgb(var(--ld-edge,255_255_255)/0.08)]">
+      <thead className="sticky top-0 z-10 bg-surface-alt shadow-[0_1px_0_rgb(var(--ld-edge,20_33_58)/0.08)]">
         <tr>
           {marks && (
             <th className="px-2 py-2 w-6">

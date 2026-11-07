@@ -118,7 +118,7 @@ export function ScenarioSidebar({ sections, contextStyle, accentColor }: Props) 
       <div className="px-5 py-5 space-y-5 overflow-y-auto flex-1">
         <p
           className="text-[11px] font-bold uppercase tracking-[0.18em] mb-1"
-          style={{ color: accentColor ?? 'rgb(var(--ld-soft-light, 176 190 197))' }}
+          style={{ color: accentColor ?? 'rgb(var(--ld-soft-light, 61 69 86))' }}
         >
           Your Context
         </p>

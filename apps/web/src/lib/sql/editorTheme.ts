@@ -6,9 +6,9 @@ import { EditorView } from '@uiw/react-codemirror'
  */
 // Colours read the same --ld-* variables as the Tailwind tokens (set only on the LTI root), with
 // today's values as fallbacks.
-const ink = (a: number) => `rgb(var(--ld-ink, 255 255 255) / ${a})`
-const deep = 'rgb(var(--ld-surface-deep, 13 13 13))'
-const raised = 'rgb(var(--ld-surface-alt, 22 22 22))'
+const ink = (a: number) => `rgb(var(--ld-ink, 20 33 58) / ${a})`
+const deep = 'rgb(var(--ld-surface-deep, 251 251 250))'
+const raised = 'rgb(var(--ld-surface-alt, 255 255 255))'
 
 export const sandboxEditorTheme = EditorView.theme(
   {
@@ -22,9 +22,9 @@ export const sandboxEditorTheme = EditorView.theme(
     '.cm-activeLine': { backgroundColor: `${ink(0.03)} !important` },
     '.cm-activeLineGutter': { backgroundColor: `${ink(0.03)} !important` },
     '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
-      backgroundColor: `rgb(var(--ld-accent, 45 158 95) / 0.25) !important`,
+      backgroundColor: `rgb(var(--ld-accent, 29 79 216) / 0.25) !important`,
     },
-    '.cm-cursor': { borderLeftColor: 'rgb(var(--ld-text, 245 243 238))' },
+    '.cm-cursor': { borderLeftColor: 'rgb(var(--ld-text, 20 33 58))' },
     '.cm-placeholder': { color: `${ink(0.2)}` },
     // Autocomplete popup
     '.cm-tooltip': {
@@ -37,12 +37,12 @@ export const sandboxEditorTheme = EditorView.theme(
       fontSize: '12px',
     },
     '.cm-tooltip.cm-tooltip-autocomplete > ul > li': {
-      color: `rgb(var(--ld-text, 245 243 238) / 0.85)`,
+      color: `rgb(var(--ld-text, 20 33 58) / 0.85)`,
       padding: '3px 8px',
     },
     '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': {
-      backgroundColor: `rgb(var(--ld-accent, 45 158 95) / 0.25) !important`,
-      color: 'rgb(var(--ld-text, 245 243 238)) !important',
+      backgroundColor: `rgb(var(--ld-accent, 29 79 216) / 0.25) !important`,
+      color: 'rgb(var(--ld-text, 20 33 58)) !important',
     },
     '.cm-completionDetail': {
       color: `${ink(0.35)}`,
@@ -50,7 +50,7 @@ export const sandboxEditorTheme = EditorView.theme(
       marginLeft: '8px',
     },
     '.cm-completionMatchedText': {
-      color: 'rgb(var(--ld-accent, 45 158 95))',
+      color: 'rgb(var(--ld-accent, 29 79 216))',
       textDecoration: 'none',
       fontWeight: '600',
     },

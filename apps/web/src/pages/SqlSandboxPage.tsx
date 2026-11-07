@@ -411,7 +411,7 @@ export function SqlSandboxPage() {
             </div>
 
             {/* Editor */}
-            <div style={{ height: editorHeight }} className="shrink-0 bg-surface-deep">
+            <div style={{ height: editorHeight }} className="sim-dark shrink-0 bg-surface-deep">
               <SqlEditor
                 ref={editorRef}
                 value={query}

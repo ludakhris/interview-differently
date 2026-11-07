@@ -15,9 +15,9 @@ const qualityLabel = {
 }
 
 const qualityColor = {
-  strong: 'rgb(var(--ld-emerald-400, 31 138 85))',
+  strong: 'rgb(var(--ld-emerald-400, 5 150 105))',
   proficient: 'rgb(var(--ld-amber-400, 180 83 9))',
-  developing: 'rgb(var(--ld-red-400, 198 40 40))',
+  developing: 'rgb(var(--ld-red-400, 220 38 38))',
 }
 
 const qualityBg = {

@@ -172,7 +172,7 @@ export function CheckpointWorkbench({
 
   return (
     <section
-      className="grid gap-3 p-4 rounded-xl border border-edge/10 bg-surface-alt"
+      className="sim-dark grid gap-3 p-4 rounded-xl border border-edge/10 bg-surface"
       aria-label={`Workbench: replying to ${sender}`}
     >
       <header className="flex items-baseline justify-between gap-2 pb-2 border-b border-edge/10">

@@ -103,7 +103,7 @@ export function CheckpointChat({
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-start">
       <section
-        className={`grid gap-3 p-4 rounded-xl border border-edge/10 bg-surface-alt ${
+        className={`sim-dark grid gap-3 p-4 rounded-xl border border-edge/10 bg-surface ${
           framed ? '' : 'lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-auto'
         }`}
         aria-label="Requests from colleagues"

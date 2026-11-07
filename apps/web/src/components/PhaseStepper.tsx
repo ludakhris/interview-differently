@@ -51,7 +51,7 @@ function PhaseChip({ view, accentColor }: { view: PhaseView; accentColor: string
           // Brighter pill — solid tinted fill + accent ring instead of a
           // washed-out 13% alpha that disappears on dark backgrounds.
           backgroundColor: `${accentColor}33`,
-          color: 'rgb(var(--ld-text, 245 243 238))',
+          color: 'rgb(var(--ld-text, 20 33 58))',
           border: `1px solid ${accentColor}`,
           boxShadow: `0 0 0 3px ${accentColor}22`,
         }}

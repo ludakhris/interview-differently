@@ -78,7 +78,7 @@ export function SqlWorkbench({
   }, [autoRun, db, value, run])
 
   return (
-    <div className="rounded-xl border border-edge/10 overflow-hidden bg-surface-deep">
+    <div className="sim-dark rounded-xl border border-edge/10 overflow-hidden bg-surface-deep">
       <div className="flex items-center justify-between px-3 py-2 border-b border-edge/8">
         <button
           onClick={run}

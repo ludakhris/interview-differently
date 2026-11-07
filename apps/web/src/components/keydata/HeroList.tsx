@@ -32,7 +32,7 @@ export function HeroList({ panels, accentColor = '#0f5b89' }: Props) {
       <div
         className={`${panelBase} border-edge/10 flex flex-col justify-center min-h-[160px]`}
         style={{
-          backgroundImage: `linear-gradient(135deg, ${accentColor}22 0%, rgb(var(--ld-surface-deep, 13 13 13)) 70%)`,
+          backgroundImage: `linear-gradient(135deg, ${accentColor}22 0%, rgb(var(--ld-surface-deep, 251 251 250)) 70%)`,
         }}
       >
         <p className={eyebrow}>{hero.label}</p>

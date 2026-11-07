@@ -92,6 +92,77 @@
   animation: slideUp 0.4s ease forwards;
 }
 
+/*
+  Simulation panels (incident consoles, SQL editors, interviewer chat, exhibits) are dark navy
+  panels floating on the paper page. `.sim-dark` re-points the theme variables inside a panel, so
+  the components in it keep using the same token classes. A branded LTI launch keeps the tenant's
+  colours: there every variable inherits from the brand wrapper instead.
+*/
+.sim-dark {
+  --ld-surface: 20 33 58;
+  --ld-surface-alt: 27 39 66;
+  --ld-surface-deep: 15 26 48;
+  --ld-surface-bar: 27 39 66;
+  --ld-text: 232 234 238;
+  --ld-ink: 232 234 238;
+  --ld-edge: 232 234 238;
+  --ld-edge-k: 1;
+  --ld-border: 38 54 90;
+  --ld-soft: 154 166 189;
+  --ld-soft-light: 196 204 218;
+  --ld-primary: 37 99 235;
+  --ld-on-primary: 255 255 255;
+  --ld-accent: 159 194 255;
+  --ld-on-accent: 20 33 58;
+  --ld-mint: 159 194 255;
+  --ld-jade: 159 194 255;
+  --ld-azure: 159 194 255;
+  --ld-blue-soft: 159 194 255;
+  --ld-amber-200: 255 220 160;
+  --ld-amber-300: 255 197 107;
+  --ld-amber-400: 255 197 107;
+  --ld-red-300: 255 170 172;
+  --ld-red-400: 255 141 144;
+  --ld-emerald-300: 170 235 196;
+  --ld-emerald-400: 143 224 176;
+  --ld-violet-400: 196 181 253;
+  --ld-sky-400: 125 211 252;
+  color-scheme: dark;
+  color: rgb(var(--ld-text));
+}
+[data-lti-brand='light'] .sim-dark,
+[data-lti-brand='dark'] .sim-dark {
+  --ld-surface: inherit;
+  --ld-surface-alt: inherit;
+  --ld-surface-deep: inherit;
+  --ld-surface-bar: inherit;
+  --ld-text: inherit;
+  --ld-ink: inherit;
+  --ld-edge: inherit;
+  --ld-edge-k: inherit;
+  --ld-border: inherit;
+  --ld-soft: inherit;
+  --ld-soft-light: inherit;
+  --ld-primary: inherit;
+  --ld-on-primary: inherit;
+  --ld-accent: inherit;
+  --ld-on-accent: inherit;
+  --ld-mint: inherit;
+  --ld-jade: inherit;
+  --ld-azure: inherit;
+  --ld-blue-soft: inherit;
+  --ld-amber-200: inherit;
+  --ld-amber-300: inherit;
+  --ld-amber-400: inherit;
+  --ld-red-300: inherit;
+  --ld-red-400: inherit;
+  --ld-emerald-300: inherit;
+  --ld-emerald-400: inherit;
+  --ld-violet-400: inherit;
+  --ld-sky-400: inherit;
+  color-scheme: inherit;
+}
+
 @layer base {
   * {
     box-sizing: border-box;
