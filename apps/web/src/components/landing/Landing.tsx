@@ -1,10 +1,7 @@
-// DESIGN EXPERIMENT (issue #104): two landing layouts behind ?design=a|b, switched with the
-// review pill (ReviewSwitch). Once the owner picks one, delete the other, the switch and the
-// parameter handling, so only the chosen layout ships. See "Design experiments" in CLAUDE.md.
 import { useNavigate } from 'react-router-dom'
 import { Nav } from '@/components/Nav'
-import { ReviewSwitch } from '@/components/ReviewSwitch'
-import { HeroScene, IncidentPanel, SqlPanel, CompetencyCard } from './HeroScene'
+import { BarChart3 } from 'lucide-react'
+import { IncidentPanel, SqlPanel } from './ScenePanels'
 
 const STATS = [
   { num: '80%', label: 'of job seekers feel unprepared', footnote: 1 },
@@ -95,47 +92,67 @@ function Ctas({ center = false }: { center?: boolean }) {
   )
 }
 
-/** A: the brand hero. Headline left, the panel scene right, stats under the copy. */
-function LandingA() {
-  return (
-    <main className="max-w-[1200px] mx-auto w-full px-4 sm:px-8 pt-12 sm:pt-16 pb-16">
-      <div className="grid lg:grid-cols-[1fr_1.05fr] gap-12 lg:gap-10 items-center">
-        <div className="animate-fade-in">
-          <p className={`${kicker} mb-6`}>AI Powered Interview Simulations</p>
-          <h1 className={`${headline} text-[clamp(44px,6.4vw,76px)] mb-6`}>
-            Practice the <span className="text-primary">real</span> job before the interview.
-          </h1>
-          <p className="text-[19px] text-slate-light leading-relaxed max-w-[520px] mb-8">
-            <strong className="font-semibold text-fg">
-              Get interview ready. For real this time.
-            </strong>{' '}
-            Step inside real workplace decisions and let AI show you exactly how you think under
-            pressure.
-          </p>
-          <Ctas />
-        </div>
-        <HeroScene className="max-w-[620px] w-full mx-auto lg:mx-0" />
-      </div>
+const SCENARIOS = [
+  {
+    kicker: 'Incident response',
+    title: 'Triage a live outage',
+    body: 'Monitors are firing and the SLA clock is running. Decide what to fix first and who to tell.',
+    panel: <IncidentPanel />,
+    label:
+      'Example incident response console: payment API errors climbing, database connections at 94%, auth degraded.',
+  },
+  {
+    kicker: 'Data analytics',
+    title: 'Answer with real SQL',
+    body: 'A colleague needs numbers today. Write the query against a real dataset and defend the result.',
+    panel: <SqlPanel />,
+    label:
+      'Example data analytics question: the AI interviewer asks which customers the outage hit, answered with a SQL query.',
+  },
+]
 
-      <section aria-label="Why practice" className="mt-20 pt-10 border-t border-edge/10">
-        <div className="grid lg:grid-cols-[1fr_2fr] gap-8 items-start">
-          <p className="text-[17px] text-slate-light leading-relaxed">
-            The job market has never been harder to break into.{' '}
-            <span className="font-semibold text-fg">Interview Differently</span> gives you the reps
-            — run a simulation and find out where you really stand.
-          </p>
-          <Stats />
+/** Two example scenarios, each a card with its live screen, on a pale blue band. */
+function Scenarios() {
+  return (
+    <section
+      aria-labelledby="scenarios-heading"
+      className="bg-primary-pale border-y border-edge/10"
+    >
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-14">
+        <h2 id="scenarios-heading" className={`${kicker} text-center mb-8`}>
+          Inside a simulation
+        </h2>
+        <div className="grid md:grid-cols-2 gap-6">
+          {SCENARIOS.map((s) => (
+            <article
+              key={s.kicker}
+              className="bg-surface-alt rounded-[20px] border border-edge/10 p-5 sm:p-6 shadow-[0_24px_48px_-28px_rgba(20,33,58,0.35)] flex flex-col"
+            >
+              <p className={kicker}>{s.kicker}</p>
+              <h3 className="font-display font-bold text-[22px] text-fg tracking-[-0.02em] mt-1">
+                {s.title}
+              </h3>
+              <p className="text-[15px] text-slate-light leading-relaxed mt-1 mb-5">{s.body}</p>
+              <div role="img" aria-label={s.label} className="flex-1 flex flex-col [&>*]:flex-1">
+                {s.panel}
+              </div>
+            </article>
+          ))}
         </div>
-        <div className="mt-8">
-          <Sources />
-        </div>
-      </section>
-    </main>
+        <p className="mt-8 flex items-center justify-center gap-2 text-[15px] text-slate-light text-center">
+          <BarChart3 size={18} className="text-primary shrink-0" aria-hidden="true" />
+          <span>
+            <span className="font-semibold text-fg">Every scenario ends with feedback:</span> a
+            competency profile that shows how you think, not just what you chose.
+          </span>
+        </p>
+      </div>
+    </section>
   )
 }
 
-/** B: centred statement, then the panels laid out side by side on an ink stage, stats on paper. */
-function LandingB() {
+/** The landing page: centred statement, two example scenarios, then the stats. */
+export function Landing() {
   return (
     <main className="w-full">
       <section className="max-w-[1000px] mx-auto px-4 sm:px-8 pt-14 sm:pt-20 pb-12 text-center animate-fade-in">
@@ -155,31 +172,7 @@ function LandingB() {
         <Ctas center />
       </section>
 
-      <section
-        aria-label="Example simulation screens"
-        className="bg-[#14213a] border-y border-[#26365a]"
-      >
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-12 grid md:grid-cols-3 gap-5 items-start">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#9aa6bd] mb-3">
-              01 · Live dashboards
-            </p>
-            <IncidentPanel className="ring-1 ring-[#26365a]" />
-          </div>
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#9aa6bd] mb-3">
-              02 · Real SQL
-            </p>
-            <SqlPanel className="ring-1 ring-[#26365a]" />
-          </div>
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#9aa6bd] mb-3">
-              03 · Scored feedback
-            </p>
-            <CompetencyCard />
-          </div>
-        </div>
-      </section>
+      <Scenarios />
 
       <section className="max-w-[1000px] mx-auto px-4 sm:px-8 py-14 text-center">
         <p className="text-[17px] text-slate-light leading-relaxed max-w-[560px] mx-auto mb-10">
@@ -196,21 +189,11 @@ function LandingB() {
   )
 }
 
-export function LandingExperiment() {
-  const design = new URLSearchParams(window.location.search).get('design') === 'b' ? 'b' : 'a'
+export function LandingShell() {
   return (
     <div className="min-h-screen bg-surface flex flex-col">
       <Nav />
-      {design === 'b' ? <LandingB /> : <LandingA />}
-      <ReviewSwitch
-        param="design"
-        label="Landing layout"
-        current={design}
-        options={[
-          { key: 'a', label: 'A · Split hero' },
-          { key: 'b', label: 'B · Centred + stage' },
-        ]}
-      />
+      <Landing />
     </div>
   )
 }

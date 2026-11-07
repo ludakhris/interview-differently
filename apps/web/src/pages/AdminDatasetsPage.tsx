@@ -126,7 +126,7 @@ export function AdminDatasetsPage() {
                           : 'border border-transparent hover:bg-ink/5'
                       }`}
                     >
-                      <p className="text-[13px] font-semibold text-fg flex items-center gap-2">
+                      <p className="text-[13px] font-semibold text-fg flex flex-wrap items-center gap-x-2 gap-y-1">
                         {d.name}
                         <OwnerBadge institutionName={d.institutionName} />
                       </p>

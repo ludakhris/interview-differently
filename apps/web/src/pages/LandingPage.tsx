@@ -1,5 +1,5 @@
-import { LandingExperiment } from '@/components/landing/LandingExperiment'
+import { LandingShell } from '@/components/landing/Landing'
 
 export function LandingPage() {
-  return <LandingExperiment />
+  return <LandingShell />
 }

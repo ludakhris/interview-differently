@@ -1,8 +1,8 @@
 /**
- * The landing hero scene: three simulation panels floating on paper (an incident console, a live
- * SQL question from the AI interviewer and a competency profile), rebuilt as HTML from the brand
- * kit so it stays sharp and readable. The scenario content is illustrative. Decorative for screen
- * readers apart from one summary label. Standalone only, so the brand values are written directly.
+ * The two example simulation screens on the landing page (an incident console and a live SQL
+ * question from the AI interviewer), rebuilt as HTML from the brand kit so they stay sharp and
+ * readable. The scenario content is illustrative. Standalone only, so the brand values are written
+ * directly.
  */
 
 const mono = 'font-mono uppercase tracking-[0.14em]'
@@ -10,7 +10,7 @@ const mono = 'font-mono uppercase tracking-[0.14em]'
 export function IncidentPanel({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`rounded-[16px] bg-[#14213a] text-[#e8eaee] shadow-[0_30px_60px_-24px_rgba(20,33,58,0.55)] ${className}`}
+      className={`flex flex-col rounded-[16px] bg-[#14213a] text-[#e8eaee] shadow-[0_30px_60px_-24px_rgba(20,33,58,0.55)] ${className}`}
     >
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#26365a]">
         <span className={`${mono} text-[11px] text-[#9aa6bd]`}>Incident response · On-call</span>
@@ -25,6 +25,11 @@ export function IncidentPanel({ className = '' }: { className?: string }) {
             {[20, 40, 60].map((y) => (
               <line key={y} x1="0" x2="220" y1={y} y2={y} stroke="#26365a" strokeWidth="1" />
             ))}
+            <polygon
+              points="0,80 0,68 18,66 36,69 54,65 72,67 90,64 108,63 126,56 144,45 162,36 180,24 198,19 214,12 214,80"
+              fill="#9fc2ff"
+              fillOpacity="0.14"
+            />
             <polyline
               points="0,68 18,66 36,69 54,65 72,67 90,64 108,63 126,56 144,45 162,36 180,24 198,19 214,12"
               fill="none"
@@ -50,6 +55,19 @@ export function IncidentPanel({ className = '' }: { className?: string }) {
           </div>
         </div>
       </div>
+      <ul className="flex-1 mx-3.5 mb-3.5 rounded-[12px] bg-[#1b2742] px-3.5 py-2 font-mono text-[12px] divide-y divide-[#26365a]">
+        {[
+          ['14:44', 'payments-api', '5xx rate above 10%', 'text-[#ff8d90]'],
+          ['14:43', 'auth', 'p95 latency +340ms', 'text-[#ff8d90]'],
+          ['14:41', 'postgres', 'connection pool at 94%', 'text-[#ffc56b]'],
+        ].map(([t, svc, msg, tone]) => (
+          <li key={t} className="flex gap-3 py-1.5">
+            <span className="text-[#9aa6bd]">{t}</span>
+            <span className={tone}>{svc}</span>
+            <span className="text-[#c9d1df] truncate">{msg}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
@@ -79,53 +97,30 @@ export function SqlPanel({ className = '' }: { className?: string }) {
           {'\n'}
           <span className={kw}>GROUP BY</span> customer_id
         </pre>
+        <table className="w-full mt-3 font-mono text-[12px] text-[#c9d1df] border-t border-[#26365a]">
+          <thead>
+            <tr className="text-[#9aa6bd] text-left">
+              <th className="font-normal py-1.5">customer_id</th>
+              <th className="font-normal py-1.5 text-right">failed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ['C-10482', 7],
+              ['C-20917', 5],
+              ['C-31205', 4],
+            ].map(([id, n]) => (
+              <tr key={id} className="border-t border-[#1b2742]">
+                <td className="py-1">{id}</td>
+                <td className="py-1 text-right text-[#ffc56b]">{n}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
         <p className="font-mono text-[12px] text-[#8fe0b0] mt-2">
           ✓ 1,284 customers · retries excluded
         </p>
       </div>
-    </div>
-  )
-}
-
-export function CompetencyCard({ className = '' }: { className?: string }) {
-  const rows = [
-    ['Prioritization', 88],
-    ['Stakeholder comms', 72],
-    ['Data judgment', 58],
-  ] as const
-  return (
-    <div
-      className={`rounded-[16px] bg-[#9fc2ff] text-[#14213a] p-5 shadow-[0_30px_60px_-24px_rgba(20,33,58,0.45)] ${className}`}
-    >
-      <p className={`${mono} text-[11px] text-[#14213a]/75 mb-3`}>Competency profile</p>
-      <div className="flex flex-col gap-2.5">
-        {rows.map(([label, pct]) => (
-          <div key={label} className="flex items-center justify-between gap-4">
-            <span className="font-semibold text-[14px]">{label}</span>
-            <span className="w-[42%] h-2 rounded-full bg-[#14213a]/15 overflow-hidden">
-              <span
-                className="block h-full rounded-full bg-[#14213a]"
-                style={{ width: `${pct}%` }}
-              />
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/** The three panels overlapped, as in the brand hero. */
-export function HeroScene({ className = '' }: { className?: string }) {
-  return (
-    <div
-      role="img"
-      aria-label="Example simulation screens: an incident response console, a live SQL question from the AI interviewer and a competency profile."
-      className={`relative ${className}`}
-    >
-      <IncidentPanel className="relative w-full sm:w-[88%] ml-auto" />
-      <SqlPanel className="relative w-full sm:w-[64%] mt-4 sm:-mt-[12%] sm:-rotate-[1.5deg] z-10" />
-      <CompetencyCard className="relative w-full sm:w-[48%] ml-auto mt-4 sm:-mt-[12%] sm:rotate-[1deg] z-20" />
     </div>
   )
 }
