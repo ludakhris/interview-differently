@@ -78,10 +78,10 @@ export function MembershipsCard({ variant = 'settings', onJoined, onSkip }: Memb
           {memberships.map((m) => (
             <li
               key={m.membershipId}
-              className="flex items-center justify-between bg-black border border-white/10 rounded-lg px-4 py-3"
+              className="flex items-center justify-between bg-surface border border-edge/10 rounded-lg px-4 py-3"
             >
               <div>
-                <p className="text-[13px] font-semibold text-cream-light">{m.institution.name}</p>
+                <p className="text-[13px] font-semibold text-fg">{m.institution.name}</p>
                 <p className="text-[11px] text-slate-mid">
                   {m.cohort ? (
                     <>Cohort: {m.cohort.name}</>
@@ -130,7 +130,7 @@ export function MembershipsCard({ variant = 'settings', onJoined, onSkip }: Memb
         <div className="mt-6 text-center">
           <button
             onClick={onSkip}
-            className="text-[12px] text-slate-mid hover:text-cream-light transition-colors"
+            className="text-[12px] text-slate-mid hover:text-fg transition-colors"
           >
             Skip for now →
           </button>
@@ -164,11 +164,11 @@ function JoinForm({
   return (
     <div className="space-y-4">
       {suggestedInstitution && !alreadyInSuggested && (
-        <div className="bg-black border border-green/30 rounded-lg p-4">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-green-light mb-1">
+        <div className="bg-surface border border-primary/30 rounded-lg p-4">
+          <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-accent mb-1">
             Suggested for you
           </p>
-          <p className="text-[14px] text-cream-light mb-3">
+          <p className="text-[14px] text-fg mb-3">
             We noticed your email is at{' '}
             <span className="font-mono text-slate-light">@{suggestedInstitution.emailDomain}</span>{' '}
             — looks like you're with <strong>{suggestedInstitution.name}</strong>.
@@ -187,7 +187,7 @@ function JoinForm({
               }
             }}
             disabled={submitting}
-            className="px-4 py-2 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[13px] font-semibold text-white disabled:opacity-50 transition-colors"
+            className="px-4 py-2 rounded-md bg-primary hover:bg-accent text-[13px] font-semibold text-on-primary disabled:opacity-50 transition-colors"
           >
             {submitting ? 'Joining…' : `Join ${suggestedInstitution.name}`}
           </button>
@@ -216,7 +216,7 @@ function JoinForm({
           }
         }}
       >
-        <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+        <p className="text-[12px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
           {suggestedInstitution ? 'Or join with a cohort key' : 'Have a cohort join key?'}
         </p>
         <div className="flex items-center gap-2">
@@ -225,12 +225,12 @@ function JoinForm({
             value={joinKey}
             onChange={(e) => setJoinKey(e.target.value)}
             placeholder="e.g. fall2026-mba"
-            className="flex-1 bg-black border border-white/10 rounded-lg px-3 py-2 text-[13px] text-cream-light placeholder:text-white/25 focus:outline-hidden focus:border-white/30 font-mono"
+            className="flex-1 bg-surface border border-edge/10 rounded-lg px-3 py-2 text-[13px] text-fg placeholder:text-slate-mid focus:outline-hidden focus:border-edge/30 font-mono"
           />
           <button
             type="submit"
             disabled={submitting}
-            className="px-4 py-2 rounded-md bg-[#1a6b3c] hover:bg-[#2d9e5f] text-[13px] font-semibold text-white disabled:opacity-50 transition-colors whitespace-nowrap"
+            className="px-4 py-2 rounded-md bg-primary hover:bg-accent text-[13px] font-semibold text-on-primary disabled:opacity-50 transition-colors whitespace-nowrap"
           >
             {submitting ? 'Joining…' : 'Join'}
           </button>

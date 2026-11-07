@@ -28,7 +28,7 @@ function Block({ block }: { block: TextExhibitBlock }) {
   }
   if (block.kind === 'bullets') {
     return (
-      <ul className="space-y-2 pl-4 list-disc marker:text-ink/30">
+      <ul className="space-y-2 pl-4 list-disc marker:text-slate-mid">
         {(block.items ?? []).map((it, i) => (
           <li key={i} className="text-[15px] text-fg/90 leading-relaxed">
             {it}
@@ -41,7 +41,9 @@ function Block({ block }: { block: TextExhibitBlock }) {
   return (
     <blockquote className="border-l-2 border-jade pl-3 py-1">
       <p className="text-[15px] italic text-fg/90 leading-relaxed">“{block.text}”</p>
-      {block.attribution && <p className="mt-1.5 text-[12px] text-ink/50">— {block.attribution}</p>}
+      {block.attribution && (
+        <p className="mt-1.5 text-[12px] text-slate-mid">— {block.attribution}</p>
+      )}
     </blockquote>
   )
 }

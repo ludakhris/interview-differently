@@ -91,28 +91,28 @@ export function AdminInstitutionHeatmapPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav />
       <div className="max-w-(--breakpoint-2xl) mx-auto px-6 py-12 print:py-4">
         <button
           onClick={() => navigate('/admin/institutions')}
-          className="text-[12px] text-slate-mid hover:text-cream-light transition-colors mb-3 print:hidden"
+          className="text-[12px] text-slate-mid hover:text-fg transition-colors mb-3 print:hidden"
         >
           ← Back to institutions
         </button>
 
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+            <p className="font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
               <span className="print:hidden">Analytics</span>
               <span className="hidden print:inline">Competency heatmap</span>
             </p>
-            <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
+            <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
               {detail?.name ?? 'Institution analytics'}
             </h1>
             {data?.cohort && (
               <p className="text-[12px] text-slate-mid mt-1">
-                Cohort: <span className="text-cream-light">{data.cohort.name}</span>
+                Cohort: <span className="text-fg">{data.cohort.name}</span>
               </p>
             )}
             {/* Print-only provenance line — hidden on screen, visible in PDF */}
@@ -131,7 +131,7 @@ export function AdminInstitutionHeatmapPage() {
                 id="cohort-filter"
                 value={cohortId}
                 onChange={(e) => patchParams({ cohortId: e.target.value || null })}
-                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
+                className="bg-surface-alt border border-edge/10 rounded-lg px-3 py-1.5 text-[13px] text-fg focus:outline-hidden focus:border-edge/30"
               >
                 <option value="">All cohorts</option>
                 {detail.cohorts.map((c) => (
@@ -168,14 +168,14 @@ export function AdminInstitutionHeatmapPage() {
                 type="checkbox"
                 checked={showNames}
                 onChange={(e) => patchParams({ names: e.target.checked ? '1' : null })}
-                className="accent-green"
+                className="accent-primary"
               />
               Show names &amp; emails
             </label>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => window.print()}
-                className="text-[11px] font-semibold text-slate-mid hover:text-cream-light transition-colors"
+                className="text-[11px] font-semibold text-slate-mid hover:text-fg transition-colors"
                 title="Print or save as PDF"
               >
                 ↗ Print / PDF
@@ -204,7 +204,7 @@ export function AdminInstitutionHeatmapPage() {
                     ]),
                   })
                 }
-                className="text-[11px] font-semibold text-slate-mid hover:text-cream-light transition-colors"
+                className="text-[11px] font-semibold text-slate-mid hover:text-fg transition-colors"
               >
                 ↓ CSV
               </button>
@@ -254,7 +254,7 @@ export function AdminInstitutionHeatmapPage() {
               Developing (&lt;60)
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-xs bg-white/5 border border-white/10" />
+              <span className="w-3 h-3 rounded-xs bg-ink/5 border border-edge/10" />
               No data
             </span>
           </div>
@@ -286,19 +286,19 @@ function HeatmapTable({
   const arrow = (key: SortKey) => (sort === key ? (dir === 'asc' ? ' ↑' : ' ↓') : '')
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-white/10 overflow-x-auto print:overflow-visible print:border-0">
+    <div className="bg-surface-alt rounded-xl border border-edge/10 overflow-x-auto print:overflow-visible print:border-0">
       <table className="w-full text-[12px] border-separate" style={{ borderSpacing: 0 }}>
         <thead>
           <tr>
             <th
-              className="sticky top-0 left-0 z-20 bg-[#111111] text-left px-3 py-2.5 text-[10px] uppercase tracking-widest text-slate-mid font-semibold cursor-pointer hover:text-cream-light border-b border-r border-white/10"
+              className="sticky top-0 left-0 z-20 bg-surface-alt text-left px-3 py-2.5 text-[10px] uppercase tracking-widest text-slate-mid font-semibold cursor-pointer hover:text-fg border-b border-r border-edge/10"
               onClick={() => onSort('label')}
             >
               {showNames ? 'Student' : 'Anonymous ID'}
               {arrow('label')}
             </th>
             <th
-              className="sticky top-0 z-10 bg-[#111111] text-right px-3 py-2.5 text-[10px] uppercase tracking-widest text-slate-mid font-semibold cursor-pointer hover:text-cream-light border-b border-white/10"
+              className="sticky top-0 z-10 bg-surface-alt text-right px-3 py-2.5 text-[10px] uppercase tracking-widest text-slate-mid font-semibold cursor-pointer hover:text-fg border-b border-edge/10"
               onClick={() => onSort('avg')}
             >
               Avg{arrow('avg')}
@@ -306,7 +306,7 @@ function HeatmapTable({
             {data.dimensions.map((dim) => (
               <th
                 key={dim}
-                className="sticky top-0 z-10 bg-[#111111] text-center px-2 py-2.5 text-[10px] uppercase tracking-wider text-slate-mid font-semibold cursor-pointer hover:text-cream-light border-b border-white/10 whitespace-nowrap"
+                className="sticky top-0 z-10 bg-surface-alt text-center px-2 py-2.5 text-[10px] uppercase tracking-wider text-slate-mid font-semibold cursor-pointer hover:text-fg border-b border-edge/10 whitespace-nowrap"
                 onClick={() => onSort(dim)}
                 title={`Sort by ${dim}`}
               >
@@ -318,13 +318,13 @@ function HeatmapTable({
         </thead>
         <tbody>
           {students.map((s) => (
-            <tr key={s.userId} className="hover:bg-white/2 transition-colors">
+            <tr key={s.userId} className="hover:bg-ink/2 transition-colors">
               <td
-                className="sticky left-0 bg-[#111111] z-10 px-3 py-2 border-b border-r border-white/5 cursor-pointer"
+                className="sticky left-0 bg-surface-alt z-10 px-3 py-2 border-b border-r border-edge/5 cursor-pointer"
                 onClick={() => onRowClick(s.userId)}
                 title="View student detail"
               >
-                <p className="text-cream-light font-semibold">
+                <p className="text-fg font-semibold">
                   {showNames ? (s.displayName ?? s.anonymousLabel) : s.anonymousLabel}
                 </p>
                 <p className="text-[10px] text-slate-mid">
@@ -336,7 +336,7 @@ function HeatmapTable({
                 </p>
               </td>
               <td
-                className="px-3 py-2 text-right border-b border-white/5 font-bold"
+                className="px-3 py-2 text-right border-b border-edge/5 font-bold"
                 style={{ color: textColor(s.avgScore) }}
               >
                 {s.avgScore ?? '—'}
@@ -346,7 +346,7 @@ function HeatmapTable({
                 return (
                   <td
                     key={dim}
-                    className="px-2 py-2 text-center border-b border-white/5 font-semibold"
+                    className="px-2 py-2 text-center border-b border-edge/5 font-semibold"
                     style={{
                       backgroundColor: cellBg(v),
                       color: cellText(v),
@@ -398,12 +398,12 @@ function cellBg(score: number | null): string {
 
 function cellText(score: number | null): string {
   if (score === null) return '#555'
-  return '#f5f3ee'
+  return '#14213a'
 }
 
 function textColor(score: number | null): string {
-  if (score === null) return '#888'
-  if (score >= 80) return '#2d9e5f'
-  if (score >= 60) return '#d4830a'
+  if (score === null) return '#5b6273'
+  if (score >= 80) return '#1f8a55'
+  if (score >= 60) return '#b45309'
   return '#c0392b'
 }

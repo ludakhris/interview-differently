@@ -125,7 +125,7 @@ export function AdminInstitutionStudentsPage() {
     >
       <button
         onClick={() => clickSort(k)}
-        className={`hover:text-cream-light transition-colors ${sort === k ? 'text-cream-light' : ''}`}
+        className={`hover:text-fg transition-colors ${sort === k ? 'text-fg' : ''}`}
       >
         {children}
         {sort === k && <span className="ml-1 text-[9px]">{dir === 'asc' ? '▲' : '▼'}</span>}
@@ -134,27 +134,27 @@ export function AdminInstitutionStudentsPage() {
   )
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav />
       <div className="max-w-(--breakpoint-2xl) mx-auto px-6 py-12">
         <button
           onClick={() => navigate('/admin/institutions')}
-          className="text-[12px] text-slate-mid hover:text-cream-light transition-colors mb-3"
+          className="text-[12px] text-slate-mid hover:text-fg transition-colors mb-3"
         >
           ← Back to institutions
         </button>
 
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+            <p className="font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
               Analytics
             </p>
-            <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
+            <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
               {detail?.name ?? 'Institution analytics'}
             </h1>
             {data?.cohort && (
               <p className="text-[12px] text-slate-mid mt-1">
-                Cohort: <span className="text-cream-light">{data.cohort.name}</span>
+                Cohort: <span className="text-fg">{data.cohort.name}</span>
               </p>
             )}
           </div>
@@ -167,7 +167,7 @@ export function AdminInstitutionStudentsPage() {
                 id="cohort-filter"
                 value={cohortId}
                 onChange={(e) => patchParams({ cohortId: e.target.value || null })}
-                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
+                className="bg-surface-alt border border-edge/10 rounded-lg px-3 py-1.5 text-[13px] text-fg focus:outline-hidden focus:border-edge/30"
               >
                 <option value="">All cohorts</option>
                 {detail.cohorts.map((c) => (
@@ -203,7 +203,7 @@ export function AdminInstitutionStudentsPage() {
         {loading ? (
           <p className="text-[13px] text-slate-mid">Loading…</p>
         ) : !data || data.students.length === 0 ? (
-          <div className="bg-[#111111] rounded-xl border border-white/10 px-6 py-12 text-center">
+          <div className="bg-surface-alt rounded-xl border border-edge/10 px-6 py-12 text-center">
             <p className="text-[13px] text-slate-mid">No students in scope yet.</p>
           </div>
         ) : (
@@ -214,7 +214,7 @@ export function AdminInstitutionStudentsPage() {
                   type="checkbox"
                   checked={showNames}
                   onChange={(e) => patchParams({ names: e.target.checked ? '1' : null })}
-                  className="accent-green"
+                  className="accent-primary"
                 />
                 Show names &amp; emails
               </label>
@@ -254,16 +254,16 @@ export function AdminInstitutionStudentsPage() {
                     ]),
                   })
                 }
-                className="text-[11px] font-semibold text-slate-mid hover:text-cream-light transition-colors"
+                className="text-[11px] font-semibold text-slate-mid hover:text-fg transition-colors"
               >
                 ↓ CSV
               </button>
             </div>
 
-            <div className="bg-[#111111] rounded-xl border border-white/10 overflow-x-auto">
+            <div className="bg-surface-alt rounded-xl border border-edge/10 overflow-x-auto">
               <table className="min-w-full text-[12px]">
                 <thead>
-                  <tr className="text-[10px] uppercase tracking-widest text-slate-mid border-b border-white/10">
+                  <tr className="text-[10px] uppercase tracking-widest text-slate-mid border-b border-edge/10">
                     <Th k="label" first>
                       Student
                     </Th>
@@ -298,12 +298,12 @@ export function AdminInstitutionStudentsPage() {
                           `/admin/institutions/${institutionId}/students/${encodeURIComponent(s.userId)}`
                         )
                       }
-                      className="border-b border-white/5 last:border-0 hover:bg-white/3 cursor-pointer"
+                      className="border-b border-edge/5 last:border-0 hover:bg-ink/3 cursor-pointer"
                     >
                       <td className="py-3 pl-5 pr-4">
-                        <p className="text-cream-light">{label(s)}</p>
+                        <p className="text-fg">{label(s)}</p>
                         {showNames && s.displayName && s.email && (
-                          <p className="text-[11px] text-white/40">{s.email}</p>
+                          <p className="text-[11px] text-slate-mid">{s.email}</p>
                         )}
                       </td>
                       {!cohortId && (
@@ -312,7 +312,7 @@ export function AdminInstitutionStudentsPage() {
                       <td className="py-3 px-2 text-right font-mono text-slate-light">
                         {s.completedSimulations}
                         {s.immersiveCompleted > 0 && (
-                          <span className="text-white/30"> +{s.immersiveCompleted}</span>
+                          <span className="text-slate-mid"> +{s.immersiveCompleted}</span>
                         )}
                       </td>
                       <td
@@ -322,12 +322,12 @@ export function AdminInstitutionStudentsPage() {
                         {s.avgScore ?? '—'}
                       </td>
                       <td
-                        className={`py-3 px-2 text-right font-mono ${s.prePercent == null ? 'text-white/25' : 'text-amber'}`}
+                        className={`py-3 px-2 text-right font-mono ${s.prePercent == null ? 'text-slate-mid' : 'text-amber'}`}
                       >
                         {s.prePercent == null ? '—' : `${s.prePercent}%`}
                       </td>
                       <td
-                        className={`py-3 px-2 text-right font-mono ${s.postPercent == null ? 'text-white/25' : 'text-[#2d9e5f]'}`}
+                        className={`py-3 px-2 text-right font-mono ${s.postPercent == null ? 'text-slate-mid' : 'text-accent'}`}
                       >
                         {s.postPercent == null ? '—' : `${s.postPercent}%`}
                       </td>
@@ -337,7 +337,7 @@ export function AdminInstitutionStudentsPage() {
                       >
                         {gain(s) == null ? '—' : `${gain(s)! > 0 ? '+' : ''}${gain(s)}%`}
                       </td>
-                      <td className="py-3 px-2 text-right font-mono text-white/40 whitespace-nowrap">
+                      <td className="py-3 px-2 text-right font-mono text-slate-mid whitespace-nowrap">
                         {s.lastActiveAt
                           ? new Date(s.lastActiveAt).toLocaleDateString(undefined, {
                               dateStyle: 'medium',
@@ -364,12 +364,12 @@ function gain(s: RosterStudent): number | null {
 
 function gainColor(v: number | null): string {
   if (v == null) return 'rgba(255,255,255,0.3)'
-  return v > 0 ? '#2d9e5f' : v < 0 ? '#ef4444' : '#b0bec5'
+  return v > 0 ? '#1f8a55' : v < 0 ? '#c62828' : '#5b6273'
 }
 
 function scoreColor(score: number | null): string {
   if (score == null) return 'rgba(255,255,255,0.3)'
-  if (score >= 80) return '#2d9e5f'
-  if (score >= 60) return '#d4830a'
-  return '#ef4444'
+  if (score >= 80) return '#1f8a55'
+  if (score >= 60) return '#b45309'
+  return '#c62828'
 }

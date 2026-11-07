@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/react'
 import { Nav } from '@/components/Nav'
 import { LtiNav } from '@/components/LtiNav'
 import { useLtiBrand } from '@/components/LtiBrandProvider'
+import { ltiAccent } from '@/lib/brand'
 import { ContextPanel } from '@/components/ContextPanel'
 import { MetricChart } from '@/components/MetricChart'
 import { ScenarioSidebar } from '@/components/ScenarioSidebar'
@@ -282,7 +283,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
               setPageState('loading')
               startSession()
             }}
-            className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+            className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
           >
             Retry
           </button>
@@ -335,7 +336,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
               <p className="text-[14px] text-slate-mid mb-6">{ltiError}</p>
               <button
                 onClick={() => void finishLti()}
-                className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
               >
                 Retry
               </button>
@@ -387,7 +388,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
       {ltiMode ? (
         <LtiNav trackLabel={meta?.label} stepLabel={stepLabel} />
       ) : (
-        <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
+        <Nav trackLabel={meta?.label} stepLabel={stepLabel} wide />
       )}
 
       <div className="flex flex-1">
@@ -395,7 +396,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
           <ScenarioSidebar
             sections={display.sidebar}
             contextStyle={ctxStyle}
-            accentColor={brand?.accent ?? meta?.color}
+            accentColor={ltiAccent(brand, meta?.color)}
           />
         )}
 
@@ -408,7 +409,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
                   {display.alertBanner.icon}
                 </span>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">
+                  <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-amber-400 mb-1">
                     {display.alertBanner.title}
                   </p>
                   <p className="text-[13px] text-fg/80 leading-relaxed">
@@ -420,8 +421,12 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
 
             {/* Data context */}
             {currentNode.contextPanels && currentNode.contextPanels.length > 0 && (
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-ink/30 mb-3">
+              <div
+                className={
+                  ctxStyle === 'monitor' ? 'sim-dark bg-surface rounded-2xl p-4' : undefined
+                }
+              >
+                <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-3">
                   {ctxLabel}
                 </p>
                 {currentNode.chart && <MetricChart config={currentNode.chart} />}
@@ -496,7 +501,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
             {pageState === 'responding' || pageState === 'submitting' ? (
               <div className="space-y-3">
                 <div className="px-4 py-3 rounded-xl bg-ink/5 border border-edge/10">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+                  <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
                     Your turn
                   </p>
                   <p className="text-[14px] text-fg leading-relaxed">
@@ -520,7 +525,7 @@ export function ImmersiveSimulationPage({ ltiMode = false }: { ltiMode?: boolean
                 <div className="flex justify-end">
                   <button
                     onClick={() => setPageState('responding')}
-                    className="px-6 py-2.5 rounded-lg bg-green hover:bg-green/90 text-on-primary text-[14px] font-medium transition-colors"
+                    className="px-6 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-on-primary text-[14px] font-medium transition-colors"
                   >
                     Ready to respond
                   </button>

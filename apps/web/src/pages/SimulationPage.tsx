@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/react'
 import { Nav } from '@/components/Nav'
 import { LtiNav } from '@/components/LtiNav'
 import { useLtiBrand } from '@/components/LtiBrandProvider'
+import { ltiAccent } from '@/lib/brand'
 import { ChoiceCard } from '@/components/ChoiceCard'
 import { ContextPanel } from '@/components/ContextPanel'
 import { MetricChart } from '@/components/MetricChart'
@@ -145,8 +146,8 @@ function SimulationContent({
   const navigate = useNavigate()
   const builderPath = `/builder/${scenarioId}`
   const meta = trackMeta[scenario.track]
-  // tenant accent (LTI only) stands in for the track colour
-  const accent = useLtiBrand()?.accent ?? meta?.color
+  // the tenant's accent in a launch; the brand blue standalone
+  const accent = ltiAccent(useLtiBrand(), meta?.color)
 
   const auth = useAuth()
   // LTI learners have no Clerk session; the API stamps the real user id from
@@ -315,7 +316,7 @@ function SimulationContent({
               </p>
               <button
                 onClick={() => void sendLtiScore()}
-                className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
               >
                 Retry
               </button>
@@ -370,17 +371,17 @@ function SimulationContent({
   return (
     <div className="min-h-screen bg-surface flex flex-col">
       {isPreview && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 bg-[#1a1a1a] border-t border-amber-500/30">
+        <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 bg-surface-alt border-t border-amber-500/30">
           <div className="flex items-center gap-2.5">
             <span className="text-amber-400 text-[13px]">◈</span>
             <span className="text-[12px] font-semibold text-amber-400 uppercase tracking-widest">
               Preview Mode
             </span>
-            <span className="text-[12px] text-ink/30">— responses are not saved</span>
+            <span className="text-[12px] text-slate-mid">— responses are not saved</span>
           </div>
           <button
             onClick={() => navigate(builderPath)}
-            className="text-[12px] font-medium text-ink/40 hover:text-ink/70 transition-colors"
+            className="text-[12px] font-medium text-slate-mid hover:text-slate-light transition-colors"
           >
             ← Back to builder
           </button>
@@ -389,7 +390,7 @@ function SimulationContent({
       {ltiMode ? (
         <LtiNav trackLabel={meta?.label} stepLabel={stepLabel} />
       ) : (
-        <Nav trackLabel={meta?.label} stepLabel={stepLabel} />
+        <Nav trackLabel={meta?.label} stepLabel={stepLabel} wide />
       )}
 
       {hasPhases && <PhaseStepper phases={phaseViews} accentColor={accent} />}
@@ -415,7 +416,7 @@ function SimulationContent({
               <div className="max-w-2xl mx-auto px-6 py-16 animate-fade-in">
                 <div className="bg-surface-alt border border-edge/10 rounded-2xl p-8 mb-8">
                   <div
-                    className="text-[11px] font-bold uppercase tracking-widest mb-4"
+                    className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] mb-4"
                     style={{ color: accent }}
                   >
                     What happened next
@@ -427,7 +428,7 @@ function SimulationContent({
                 <div className="flex justify-end">
                   <button
                     onClick={advanceTransition}
-                    className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                    className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
                   >
                     Continue
                   </button>
@@ -463,7 +464,7 @@ function SimulationContent({
                   <div className="mt-6 flex justify-end">
                     <button
                       onClick={advanceQuant}
-                      className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                      className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
                     >
                       Continue
                     </button>
@@ -495,7 +496,7 @@ function SimulationContent({
                   <div className="mt-6 flex justify-end">
                     <button
                       onClick={advanceSql}
-                      className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+                      className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
                     >
                       Continue
                     </button>
@@ -528,7 +529,7 @@ function SimulationContent({
                       {display.alertBanner.icon}
                     </span>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1">
+                      <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-amber-400 mb-1">
                         {display.alertBanner.title}
                       </p>
                       <p className="text-[13px] text-fg/80 leading-relaxed">
@@ -540,8 +541,14 @@ function SimulationContent({
 
                 {/* Context display — full width above narrative */}
                 {currentNode.contextPanels && currentNode.contextPanels.length > 0 && (
-                  <div className="mb-6">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-ink/40 mb-3">
+                  <div
+                    className={
+                      ctxStyle === 'monitor'
+                        ? 'sim-dark bg-surface rounded-2xl p-4 sm:p-5 mb-6'
+                        : 'mb-6'
+                    }
+                  >
+                    <p className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-3">
                       {ctxLabel}
                     </p>
                     {currentNode.chart && <MetricChart config={currentNode.chart} />}
@@ -584,7 +591,7 @@ function SimulationContent({
                 </div>
 
                 <div>
-                  <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-3">
+                  <p className="text-[12px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-3">
                     What do you do?
                   </p>
                   <div className="space-y-3">
@@ -615,7 +622,7 @@ function SimulationContent({
                       font-display font-semibold text-[14px] px-7 py-3 rounded-lg transition-all
                       ${
                         selectedChoice
-                          ? 'bg-green hover:bg-green-light text-on-primary cursor-pointer'
+                          ? 'bg-primary hover:bg-accent text-on-primary cursor-pointer'
                           : 'bg-ink/10 text-slate-light cursor-not-allowed'
                       }
                     `}

@@ -183,12 +183,9 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
       <div className="flex flex-col gap-2">
         <SectionLabel label="Key Data tiles (optional)" />
         {panels.map((panel, i) => (
-          <div
-            key={i}
-            className="flex flex-col gap-2 p-3 border border-white/6 rounded-xl bg-white/1"
-          >
+          <div key={i} className="flex flex-col gap-2 p-3 border border-edge/6 rounded-xl bg-ink/1">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+              <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Tile {i + 1}
               </span>
               <RemoveButton onClick={() => removePanel(i)} />
@@ -222,7 +219,7 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
                 onChange={(e) => updatePanel(i, { hero: e.target.checked || undefined })}
                 className="accent-emerald-400"
               />
-              <span className="text-[11px] text-white/40">Hero tile — displays large</span>
+              <span className="text-[11px] text-slate-mid">Hero tile — displays large</span>
             </label>
           </div>
         ))}
@@ -238,11 +235,11 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
           return (
             <div
               key={choice.id}
-              className="flex flex-col gap-2 p-3 border border-white/6 rounded-xl bg-white/1"
+              className="flex flex-col gap-2 p-3 border border-edge/6 rounded-xl bg-ink/1"
             >
               {/* Row 1: badge + text */}
               <div className="flex items-start gap-2">
-                <span className="w-[22px] h-[22px] rounded-[6px] bg-white/6 border border-white/10 text-[11px] font-bold flex items-center justify-center flex-none mt-1.5">
+                <span className="w-[22px] h-[22px] rounded-[6px] bg-ink/6 border border-edge/10 text-[11px] font-bold flex items-center justify-center flex-none mt-1.5">
                   {choice.id}
                 </span>
                 <Textarea

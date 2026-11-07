@@ -16,7 +16,22 @@ export interface LtiBrand {
   text?: string
   textSoft?: string
   border?: string
+  /** One of BRAND_FONTS: the tenant's typeface for text and headings. */
+  font?: BrandFont
 }
+
+/** The typefaces a brand may name. A fixed list (all on Google Fonts), so a brand can never
+ *  inject CSS or load fonts from anywhere else. */
+export const BRAND_FONTS = [
+  'Inter',
+  'Manrope',
+  'Open Sans',
+  'Lato',
+  'Roboto',
+  'Source Sans 3',
+  'Montserrat',
+] as const
+export type BrandFont = (typeof BRAND_FONTS)[number]
 
 const COLOR_FIELDS = [
   'primary',
@@ -71,6 +86,9 @@ export function sanitizeBrand(input: unknown): LtiBrand | null {
   const logoUrl = cleanLogoUrl(src.logoUrl)
   if (logoUrl) brand.logoUrl = logoUrl
   if (src.scheme === 'light' || src.scheme === 'dark') brand.scheme = src.scheme
+  if (typeof src.font === 'string' && (BRAND_FONTS as readonly string[]).includes(src.font)) {
+    brand.font = src.font as BrandFont
+  }
   for (const f of COLOR_FIELDS) {
     const c = src[f]
     if (typeof c === 'string' && HEX_COLOR.test(c)) brand[f] = c.toLowerCase()

@@ -78,19 +78,19 @@ export function SqlWorkbench({
   }, [autoRun, db, value, run])
 
   return (
-    <div className="rounded-xl border border-edge/10 overflow-hidden bg-surface-deep">
+    <div className="sim-dark rounded-xl border border-edge/10 overflow-hidden bg-surface-deep">
       <div className="flex items-center justify-between px-3 py-2 border-b border-edge/8">
         <button
           onClick={run}
           disabled={!db || running || !value.trim()}
-          className="inline-flex items-center gap-2 pl-3 pr-3.5 py-1 rounded-full bg-green hover:bg-green-light text-[12px] font-semibold text-on-primary disabled:opacity-40 transition-colors"
+          className="inline-flex items-center gap-2 pl-3 pr-3.5 py-1 rounded-full bg-primary hover:bg-primary/90 text-[12px] font-semibold text-on-primary disabled:opacity-40 transition-colors"
         >
           <Play size={11} fill="currentColor" />
           {running ? 'Running…' : 'Run'}
-          <span className="font-mono text-[10px] text-ink/60">⌘↵</span>
+          <span className="font-mono text-[10px] text-slate-light">⌘↵</span>
         </button>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-[11px] text-ink/40">
+          <span className="font-mono text-[11px] text-slate-mid">
             {!db
               ? 'loading dataset…'
               : result
@@ -103,7 +103,7 @@ export function SqlWorkbench({
           <button
             onClick={() => setShowSchema((v) => !v)}
             className={`inline-flex items-center gap-1.5 text-[11px] font-semibold transition-colors ${
-              showSchema ? 'text-green-light' : 'text-slate-mid hover:text-fg'
+              showSchema ? 'text-accent' : 'text-slate-mid hover:text-fg'
             }`}
           >
             <Table2 size={12} /> Schema
@@ -117,7 +117,7 @@ export function SqlWorkbench({
             className="w-[220px] shrink-0 border-r border-edge/8 bg-surface px-3 py-3 overflow-y-auto"
             style={{ maxHeight: editorHeight + resultsHeight + 1 }}
           >
-            <p className="text-[10px] uppercase tracking-widest text-ink/30 mb-2">
+            <p className="text-[10px] uppercase tracking-widest text-slate-mid mb-2">
               Tables — click to insert
             </p>
             <SchemaTree tables={tables} onPick={insertAtCursor} />
@@ -146,7 +146,7 @@ export function SqlWorkbench({
             {result ? (
               <ResultsGrid result={result} />
             ) : !error ? (
-              <p className="px-4 py-4 text-[12px] text-ink/30">
+              <p className="px-4 py-4 text-[12px] text-slate-mid">
                 Run your query to check the output before moving on.
               </p>
             ) : null}

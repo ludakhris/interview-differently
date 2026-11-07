@@ -110,10 +110,10 @@ export function SegMatrixEditor({ exhibit, onDone }: Props) {
           {QUADRANTS.map(({ key, label }) => (
             <div
               key={key}
-              className="flex flex-col gap-1.5 p-3 border border-white/6 rounded-xl bg-white/1"
+              className="flex flex-col gap-1.5 p-3 border border-edge/6 rounded-xl bg-ink/1"
             >
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-white/30">
+                <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                   {label}
                 </span>
                 <div className="flex-1" />

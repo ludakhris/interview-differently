@@ -41,7 +41,7 @@ const toResult = (p: CheckpointPreview): SandboxResult => ({
 })
 
 const BTN_PRIMARY =
-  'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-green hover:bg-green-light text-[12px] font-semibold text-on-primary disabled:opacity-40 transition-colors'
+  'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary hover:bg-primary/90 text-[12px] font-semibold text-on-primary disabled:opacity-40 transition-colors'
 const BTN_SECONDARY =
   'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-edge/15 text-[12px] font-semibold text-fg hover:bg-ink/5 disabled:opacity-40 transition-colors'
 const BTN_QUIET =
@@ -172,7 +172,7 @@ export function CheckpointWorkbench({
 
   return (
     <section
-      className="grid gap-3 p-4 rounded-xl border border-edge/10 bg-surface-alt"
+      className="sim-dark grid gap-3 p-4 rounded-xl border border-edge/10 bg-surface"
       aria-label={`Workbench: replying to ${sender}`}
     >
       <header className="flex items-baseline justify-between gap-2 pb-2 border-b border-edge/10">
@@ -186,7 +186,7 @@ export function CheckpointWorkbench({
             <details key={t.table} className="text-[12px] px-2.5 py-1 rounded-lg bg-ink/5">
               <summary className="cursor-pointer font-mono font-semibold text-fg">
                 {t.table}{' '}
-                <span className="font-sans font-normal text-slate-mid">({t.rowCount})</span>
+                <span className="font-body font-normal text-slate-mid">({t.rowCount})</span>
               </summary>
               <span className="block max-w-[280px] mt-1 text-slate-mid font-mono">
                 {t.columns.map((c) => c.name).join(', ')}
@@ -198,10 +198,10 @@ export function CheckpointWorkbench({
 
       {want && (
         <div
-          className="grid gap-1.5 p-3 rounded-lg border border-dashed border-green-light/50 bg-green-light/5"
+          className="grid gap-1.5 p-3 rounded-lg border border-dashed border-accent/50 bg-accent/5"
           aria-label={`${wants}: ${shapeLabel(want)}`}
         >
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-green-light">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-accent">
             {task.from ? `${first} wants` : 'Wanted'}
           </span>
           <div className="flex flex-wrap gap-1.5">
@@ -267,7 +267,7 @@ export function CheckpointWorkbench({
         >
           <Play size={11} fill="currentColor" aria-hidden="true" />
           {busy === 'run' ? 'Running…' : 'Run'}
-          <span className="font-mono text-[10px] text-ink/40" aria-hidden="true">
+          <span className="font-mono text-[10px] text-slate-mid" aria-hidden="true">
             ⌘↵
           </span>
         </button>

@@ -139,8 +139,8 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
   }, [db, sql, submitting, spec, onSubmit, grader, node.nodeId])
 
   return (
-    <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6">
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40 mb-1">
+    <div className="sim-dark bg-surface rounded-2xl border border-edge/10 p-6">
+      <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
         Hands-on SQL
       </p>
       {spec.context && (
@@ -164,7 +164,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
       )}
 
       {(spec.ordered || spec.strictColumns) && !outcome && (
-        <p className="text-[11px] text-ink/40 mt-2">
+        <p className="text-[11px] text-slate-mid mt-2">
           {spec.ordered && 'Row order matters for this question. '}
           {spec.strictColumns && 'Column names must match the ones asked for.'}
         </p>
@@ -204,7 +204,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
                     setHintShown(true)
                     onHintUsed?.(node.nodeId)
                   }}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-edge/15 bg-ink/5 text-ink/65 hover:border-edge/25 hover:text-fg transition-colors"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-edge/15 bg-ink/5 text-slate-light hover:border-edge/25 hover:text-fg transition-colors"
                 >
                   <span aria-hidden>💡</span> Need a hint?
                 </button>
@@ -213,7 +213,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
           <button
             onClick={submit}
             disabled={!db || submitting || !sql.trim()}
-            className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-6 py-2.5 rounded-lg disabled:opacity-40 transition-colors"
+            className="bg-primary hover:bg-primary/90 text-on-primary font-display font-semibold text-[14px] px-6 py-2.5 rounded-lg disabled:opacity-40 transition-colors"
           >
             {submitting ? 'Checking…' : 'Submit answer'}
           </button>
@@ -228,7 +228,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
       {/* Outcome */}
       {outcome && (
         <div className="mt-5 space-y-4">
-          <p className="text-[11px] text-ink/40">
+          <p className="text-[11px] text-slate-mid">
             Submitted — this verdict is final. You can keep running queries above to explore, but
             they won't be re-graded.
           </p>
@@ -240,7 +240,7 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
             }`}
           >
             <p
-              className={`text-[11px] font-bold uppercase tracking-widest mb-0.5 ${outcome.correct ? 'text-emerald-400' : 'text-amber-400'}`}
+              className={`text-[11px] font-mono font-medium uppercase tracking-[0.14em] mb-0.5 ${outcome.correct ? 'text-emerald-400' : 'text-amber-400'}`}
             >
               {outcome.correct ? 'Matches the expected output' : 'Not quite'}
             </p>
@@ -253,11 +253,11 @@ export function SqlNode({ node, onSubmit, onHintUsed }: Props) {
 
           <div className="rounded-xl border border-edge/10 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2 bg-surface-deep border-b border-edge/8">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+              <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Expected output
               </p>
               <div className="flex items-center gap-3">
-                <span className="font-mono text-[11px] text-ink/40">
+                <span className="font-mono text-[11px] text-slate-mid">
                   {outcome.expected.rowCount} rows
                 </span>
                 <button

@@ -51,7 +51,7 @@ function NodeRow({
   }
 
   return (
-    <div className={depth > 0 ? 'pl-6 border-l border-white/6 ml-3' : ''}>
+    <div className={depth > 0 ? 'pl-6 border-l border-edge/6 ml-3' : ''}>
       <div className="flex gap-2 items-center mb-2">
         <TextInput
           value={node.label}
@@ -143,9 +143,9 @@ export function ProfitTreeEditor({ exhibit, onDone }: Props) {
       <div className="flex flex-col gap-2">
         <SectionLabel label="Tree" />
         {roots.map((root, i) => (
-          <div key={root.id} className="p-3 border border-white/6 rounded-xl bg-white/1">
+          <div key={root.id} className="p-3 border border-edge/6 rounded-xl bg-ink/1">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+              <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 {roots.length > 1 ? `Node ${i + 1}` : 'Root'}
               </span>
               {roots.length > 1 && <RemoveButton onClick={() => removeRoot(i)} />}

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { applyBrand, NO_BRAND } from '../brand'
+import { applyBrand, ltiAccent, NO_BRAND, STANDALONE_ACCENT, textOn } from '../brand'
 
 const ok = { name: 'Acme University' }
 
@@ -10,14 +10,78 @@ describe('applyBrand', () => {
       expect(applyBrand(input)).toEqual(NO_BRAND)
     }
     expect(NO_BRAND.cssVars).toEqual({})
-    expect(NO_BRAND.scheme).toBe('dark')
+    expect(NO_BRAND.scheme).toBe('light')
   })
 
-  it('a name-only dark brand changes no colours', () => {
+  it('a name-only brand keeps the standalone look', () => {
     const b = applyBrand(ok)
     expect(b.name).toBe('Acme University')
     expect(b.cssVars).toEqual({})
     expect(b.logoUrl).toBeNull()
+  })
+
+  it('a dark brand keeps the pre-rebrand dark look for every colour it leaves out', () => {
+    const b = applyBrand({ ...ok, scheme: 'dark' })
+    expect(b.cssVars['--ld-surface']).toBe('10 10 10')
+    expect(b.cssVars['--ld-text']).toBe('245 243 238')
+    expect(b.cssVars['--ld-ink']).toBe('255 255 255')
+    expect(b.cssVars['--ld-primary']).toBe('26 107 60')
+    expect(b.cssVars['--ld-accent']).toBe('45 158 95')
+    expect(b.cssVars['--ld-red-400']).toBe('248 113 113')
+  })
+
+  it('a branded launch sets every colour variable the theme reads', () => {
+    // index.css reads these with standalone fallbacks; a brand must set each so no
+    // standalone colour leaks into a tenant's screens.
+    const themeVars = [
+      'surface',
+      'surface-alt',
+      'surface-deep',
+      'surface-bar',
+      'text',
+      'ink',
+      'edge',
+      'on-primary',
+      'on-accent',
+      'mint',
+      'jade',
+      'azure',
+      'primary',
+      'accent',
+      'blue-soft',
+      'amber-200',
+      'amber-300',
+      'amber-400',
+      'red-300',
+      'red-400',
+      'emerald-300',
+      'emerald-400',
+      'violet-400',
+      'sky-400',
+      'soft',
+      'soft-light',
+      'border',
+    ]
+    for (const input of [
+      { ...ok, scheme: 'light' },
+      { ...ok, scheme: 'dark' },
+      { ...ok, primary: '#112233' },
+      {
+        ...ok,
+        scheme: 'light',
+        primary: '#05405c',
+        accent: '#d76f0f',
+        surface: '#ffffff',
+        surfaceAlt: '#f2f2f2',
+        text: '#353535',
+        textSoft: '#4a4a4a',
+        border: '#e5e5e5',
+      },
+    ]) {
+      const vars = applyBrand(input).cssVars
+      for (const v of themeVars)
+        expect(vars[`--ld-${v}`], `${v} for ${JSON.stringify(input)}`).toBeDefined()
+    }
   })
 
   it('applies a valid full brand as channel triplets', () => {
@@ -50,6 +114,16 @@ describe('applyBrand', () => {
     expect(b.cssVars['--ld-surface']).toBe('255 255 255')
     expect(b.cssVars['--ld-ink']).toBe(b.cssVars['--ld-text'])
     expect(b.cssVars['--ld-red-400']).toBeDefined()
+  })
+
+  it('keeps a font only from the allowed list, and never as a CSS variable', () => {
+    expect(applyBrand({ ...ok, font: 'Open Sans' }).font).toBe('Open Sans')
+    expect(applyBrand({ ...ok, font: 'Open Sans', scheme: 'light' }).font).toBe('Open Sans')
+    for (const font of ['open sans', 'Comic Sans MS', "Lato'; color:red", 'url(x)', 3]) {
+      expect(applyBrand({ ...ok, font }).font).toBeNull()
+    }
+    const vars = applyBrand({ ...ok, scheme: 'light', font: 'Lato' }).cssVars
+    for (const v of Object.values(vars)) expect(v).toMatch(/^[\d ]+$/)
   })
 
   it('picks a readable text colour for the primary button', () => {
@@ -104,7 +178,8 @@ describe('applyBrand', () => {
       }
     }
     const b = applyBrand({ name: 'A', primary: 'red', accent: '#010203' })
-    expect(b.cssVars['--ld-primary']).toBeUndefined()
+    // the invalid primary falls back to the dark baseline's
+    expect(b.cssVars['--ld-primary']).toBe('26 107 60')
     expect(b.cssVars['--ld-accent']).toBe('1 2 3')
   })
 
@@ -123,8 +198,8 @@ describe('applyBrand', () => {
   })
 
   it('falls back to defaults for an invalid scheme', () => {
-    expect(applyBrand({ ...ok, scheme: 'blue' }).scheme).toBe('dark')
-    expect(applyBrand({ ...ok, scheme: 'LIGHT' }).scheme).toBe('dark')
+    expect(applyBrand({ ...ok, scheme: 'blue' }).scheme).toBe('light')
+    expect(applyBrand({ ...ok, scheme: 'LIGHT', primary: '#112233' }).scheme).toBe('dark')
   })
 
   it('accepts https logos and localhost http only', () => {
@@ -157,5 +232,24 @@ describe('applyBrand', () => {
     expect(b.name).toBe('Acme University')
     expect(b.logoUrl).toBeNull()
     expect(b.cssVars['--ld-primary']).toBe('17 34 51')
+  })
+
+  it('a light brand without colours never falls back to the standalone blue', () => {
+    const b = applyBrand({ name: 'Acme University', scheme: 'light', surface: '#ffffff' })
+    expect(Object.keys(b.cssVars).length).toBeGreaterThan(0)
+    expect(Object.values(b.cssVars)).not.toContain('37 99 235')
+  })
+
+  it('textOn picks readable text for a colour', () => {
+    expect(textOn('#ffffff')).toBe('rgb(17 17 17)')
+    expect(textOn('#05405c')).toBe('rgb(255 255 255)')
+    expect(textOn('not a colour')).toBe('#ffffff')
+  })
+
+  it('ltiAccent is the brand blue standalone and with no brand, the tenant accent in a launch', () => {
+    expect(ltiAccent(null, '#1a6b3c')).toBe(STANDALONE_ACCENT)
+    expect(ltiAccent(NO_BRAND, '#1a6b3c')).toBe(STANDALONE_ACCENT)
+    const b = applyBrand({ name: 'Acme', scheme: 'light', accent: '#d76f0f' })
+    expect(ltiAccent(b, '#1a6b3c')).toBe('#d76f0f')
   })
 })

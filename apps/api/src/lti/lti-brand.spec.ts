@@ -11,6 +11,7 @@ const full = {
   text: '#353535',
   textSoft: '#4a4a4a',
   border: '#e5e5e5',
+  font: 'Open Sans',
 }
 
 describe('sanitizeBrand', () => {
@@ -27,6 +28,13 @@ describe('sanitizeBrand', () => {
       name: 'A',
       primary: '#abcdef',
     })
+  })
+
+  it('keeps a font only from the allowed list, exactly as written', () => {
+    expect(sanitizeBrand({ name: 'A', font: 'Lato' })).toEqual({ name: 'A', font: 'Lato' })
+    for (const font of ['lato', 'Comic Sans MS', "Lato'; color:red", 'url(x)', '', 5, null]) {
+      expect(sanitizeBrand({ name: 'A', font })).toEqual({ name: 'A' })
+    }
   })
 
   it('trims the name', () => {

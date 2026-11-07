@@ -103,7 +103,7 @@ function TextPlay() {
           </p>
           <button
             onClick={() => setAttempt((n) => n + 1)}
-            className="bg-green hover:bg-green-light text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
+            className="bg-primary hover:bg-accent text-on-primary font-display font-semibold text-[14px] px-8 py-3 rounded-lg transition-colors"
           >
             Try again
           </button>

@@ -13,7 +13,7 @@ export function AttemptReview({ review }: { review: ReviewSection[] }) {
           key={s.sectionId}
           className="bg-surface-deep rounded-2xl border border-edge/10 p-6"
         >
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
+          <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-4">
             {s.title}
           </p>
           <ol className="space-y-5">
@@ -21,7 +21,7 @@ export function AttemptReview({ review }: { review: ReviewSection[] }) {
               <li key={q.id} className="border-t border-edge/10 pt-4 first:border-t-0 first:pt-0">
                 <div className="flex items-start gap-3">
                   <span
-                    className={`mt-0.5 text-[11px] font-bold uppercase tracking-widest shrink-0 ${q.correct ? 'text-[#1f8a4c]' : 'text-[#c93636]'}`}
+                    className={`mt-0.5 text-[11px] font-mono font-medium uppercase tracking-[0.14em] shrink-0 ${q.correct ? 'text-emerald-400' : 'text-red-400'}`}
                   >
                     {q.correct ? 'Correct' : 'Wrong'}
                   </span>
@@ -35,7 +35,7 @@ export function AttemptReview({ review }: { review: ReviewSection[] }) {
                       return (
                         <li
                           key={o.key}
-                          className={`text-[12px] ${key ? 'text-[#1f8a4c]' : picked ? 'text-[#c93636]' : 'text-slate-light'}`}
+                          className={`text-[12px] ${key ? 'text-emerald-400' : picked ? 'text-red-400' : 'text-slate-light'}`}
                         >
                           {o.key}. {o.text}
                           {picked && <b className="ml-2 font-bold">[Your Answer]</b>}
@@ -44,13 +44,13 @@ export function AttemptReview({ review }: { review: ReviewSection[] }) {
                       )
                     })}
                     {!q.answer.trim() && (
-                      <li className="text-[12px] text-[#c93636]">No answer given</li>
+                      <li className="text-[12px] text-red-400">No answer given</li>
                     )}
                   </ul>
                 ) : (
                   <div className="mt-2 ml-[62px] space-y-2">
                     <Code label="[Your Answer]" text={q.answer.trim() ? q.answer : '(no answer)'} />
-                    {q.error && <p className="text-[12px] text-[#c93636]">{q.error}</p>}
+                    {q.error && <p className="text-[12px] text-red-400">{q.error}</p>}
                     {!q.correct && <Code label="[Correct Answer]" text={q.correctAnswer} />}
                   </div>
                 )}
@@ -70,10 +70,10 @@ function Key() {
   return (
     <ul className="flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-slate-light">
       <li>
-        <b className="text-[#1f8a4c]">[Correct Answer]</b> the right answer
+        <b className="text-primary">[Correct Answer]</b> the right answer
       </li>
       <li>
-        <b className="text-[#c93636]">[Your Answer]</b> your choice, in red when it was wrong
+        <b className="text-red-400">[Your Answer]</b> your choice, in red when it was wrong
       </li>
     </ul>
   )

@@ -25,7 +25,7 @@ export function AssessmentResultPage() {
   }, [getToken, attemptId])
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav trackLabel="Assessment" stepLabel="Result" />
       <div className="max-w-3xl mx-auto px-6 py-12">
         {error && (
@@ -38,7 +38,7 @@ export function AssessmentResultPage() {
         ) : (
           <>
             <div className="mb-8">
-              <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+              <p className="text-[12px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
                 {result.label} · submitted{' '}
                 {result.submittedAt &&
                   new Date(result.submittedAt).toLocaleString(undefined, {
@@ -46,7 +46,7 @@ export function AssessmentResultPage() {
                     timeStyle: 'short',
                   })}
               </p>
-              <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
+              <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
                 {result.title}
               </h1>
             </div>
@@ -62,7 +62,7 @@ export function AssessmentResultPage() {
             <div className="mt-6">
               <button
                 onClick={() => navigate('/tools/assessments')}
-                className="text-[12px] text-slate-mid hover:text-cream-light transition-colors"
+                className="text-[12px] text-slate-mid hover:text-fg transition-colors"
               >
                 ← Back to assessments
               </button>

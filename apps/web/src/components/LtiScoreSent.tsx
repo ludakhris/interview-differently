@@ -8,7 +8,7 @@ export function LtiScoreSent({ courseUrl }: { courseUrl: string | null }) {
         {courseUrl && (
           <>
             {' '}
-            <a href={courseUrl} className="text-green underline font-semibold">
+            <a href={courseUrl} className="text-primary underline font-semibold">
               Back to your course
             </a>
           </>

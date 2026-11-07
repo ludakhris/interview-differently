@@ -466,6 +466,7 @@ async function load(prisma: PrismaClient) {
     text: '#353535',
     textSoft: '#4a4a4a',
     border: '#e5e5e5',
+    font: 'Open Sans',
   }
   await prisma.institution.create({
     data: {

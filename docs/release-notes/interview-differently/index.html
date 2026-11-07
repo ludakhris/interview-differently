@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Interview Differently release notes</title>
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Interview Differently" />
+    <meta property="og:url" content="https://interviewdifferently.com/release-notes/" />
+    <meta property="og:title" content="Interview Differently release notes" />
+    <meta
+      property="og:description"
+      content="What's new in Interview Differently, in plain words: newest first, with screenshots."
+    />
+    <meta property="og:image" content="https://interviewdifferently.com/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="interview/differently: Practice the real job before the interview."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <!--
+  Interview Differently's own release notes, published at interviewdifferently.com/release-notes/
+  by the web build (apps/web/vite.config.ts). Learn Differently's are one folder up.
+
+  HOW TO ADD AN ENTRY
+  1. Copy one <article class="entry"> block (keep data-short = the short name and data-summary = one sentence: the timeline reads them) and paste it at the TOP of <main id="entries"> (newest first).
+  2. Set data-status to "review" or "shipped", the date, title, the two or three plain sentences, the
+     "Good to know" points, links, and screenshots. Screenshots live in docs/screenshots/<feature>/
+     (reference them as ../../screenshots/<feature>/NN-name.png). Use fictional data only.
+  3. When an entry that was "In review" ships, change its status chip and data-status.
+  This repo is public: no production configuration, contacts, funding or procurement details here.
+-->
+    <style>
+      :root {
+        --bg: #f6f6f4;
+        --card: #fff;
+        --ink: #14213a;
+        --soft: #3d4556;
+        --line: #e3e5ea;
+        --accent: #2563eb;
+        --ok: #176b2c;
+        --ok-bg: #e4f4e8;
+        --rev: #8a5a00;
+        --rev-bg: #fff2d6;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f1a30;
+          --card: #14213a;
+          --ink: #e8eaee;
+          --soft: #9aa6bd;
+          --line: #26365a;
+          --accent: #9fc2ff;
+          --ok: #7fd49a;
+          --ok-bg: #173a22;
+          --rev: #f1c46a;
+          --rev-bg: #3b2f12;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          16px/1.55 Inter,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      header,
+      main,
+      footer {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      header {
+        padding-top: 40px;
+        padding-bottom: 8px;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 32px;
+        line-height: 1.15;
+      }
+      .lede {
+        margin: 0;
+        color: var(--soft);
+      }
+      .tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 22px 0 6px;
+      }
+      .tools button {
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--ink);
+        border-radius: 999px;
+        padding: 7px 14px;
+        font: inherit;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .tools button[aria-pressed='true'] {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--bg);
+        font-weight: 600;
+      }
+      nav.timeline ol {
+        list-style: none;
+        margin: 26px 0 0;
+        padding: 0 0 0 24px;
+        border-left: 2px solid var(--line);
+      }
+      .tl-day {
+        position: relative;
+        margin: 22px 0 8px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--soft);
+      }
+      .tl-day:first-child {
+        margin-top: 0;
+      }
+      .tl-day::before {
+        content: '';
+        position: absolute;
+        left: -33px;
+        top: 1px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent);
+        border: 3px solid var(--bg);
+      }
+      .tl-item {
+        position: relative;
+        margin: 0 0 6px;
+        font-size: 15px;
+        line-height: 1.4;
+        display: grid;
+        grid-template-columns: 270px 92px minmax(0, 1fr);
+        align-items: baseline;
+        column-gap: 12px;
+      }
+      .tl-item::before {
+        content: '';
+        position: absolute;
+        left: -30px;
+        top: 6px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--ok);
+      }
+      .tl-item[data-status='review']::before {
+        background: var(--rev);
+      }
+      .tl-item a {
+        font-weight: 600;
+        color: var(--accent);
+        text-decoration: none;
+      }
+      .tl-item a:hover {
+        text-decoration: underline;
+      }
+      .tl-item .chip {
+        justify-self: start;
+        margin: 0;
+        vertical-align: baseline;
+      }
+      .tl-item .tl-sum {
+        color: var(--soft);
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      @media (max-width: 860px) {
+        .tl-item {
+          grid-template-columns: minmax(0, 1fr) auto;
+          row-gap: 0;
+          margin-bottom: 10px;
+        }
+        .tl-item .tl-sum {
+          grid-column: 1 / -1;
+          white-space: normal;
+        }
+      }
+      .tl-month {
+        position: relative;
+        margin: 14px 0 8px;
+      }
+      .tl-month > details > summary {
+        cursor: pointer;
+        list-style: none;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--soft);
+      }
+      .tl-month > details > summary::-webkit-details-marker {
+        display: none;
+      }
+      .tl-month > details > summary::before {
+        content: '\25b8';
+        display: inline-block;
+        margin-right: 8px;
+        color: var(--accent);
+        transition: transform 0.15s;
+      }
+      .tl-month > details[open] > summary::before {
+        transform: rotate(90deg);
+      }
+      .tl-month > details > summary small {
+        font-weight: 400;
+        letter-spacing: 0;
+        text-transform: none;
+        margin-left: 6px;
+      }
+      .tl-month ol {
+        list-style: none;
+        margin: 10px 0 0;
+        padding: 0;
+      }
+      .tl-month .tl-day {
+        margin-top: 14px;
+      }
+      .tl-month .tl-day::before {
+        left: -33px;
+      }
+      .search {
+        display: block;
+        width: 100%;
+        max-width: 420px;
+        margin: 12px 0 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 9px 12px;
+        background: var(--card);
+        color: var(--ink);
+        font: inherit;
+        font-size: 15px;
+      }
+      .empty-note {
+        margin: 24px 0;
+        color: var(--soft);
+      }
+      .top {
+        display: block;
+        margin-top: 18px;
+      }
+      .find {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 16px;
+        padding: 0;
+        border: 0;
+        background: none;
+      }
+      .find h2 {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      .find .tools {
+        margin: 0;
+      }
+      .find .search {
+        width: 280px;
+        max-width: 100%;
+        margin: 0;
+      }
+      .counts {
+        margin: 0;
+        font-size: 14px;
+        color: var(--soft);
+      }
+      .shots a {
+        cursor: zoom-in;
+      }
+      .lb {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: grid;
+        grid-template-rows: 1fr auto;
+        background: rgba(8, 12, 18, 0.96);
+        padding: 16px;
+      }
+      .lb[hidden] {
+        display: none;
+      }
+      .lb-stage {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 12px;
+        min-height: 0;
+      }
+      .lb-stage img {
+        justify-self: center;
+        max-width: 100%;
+        max-height: calc(100vh - 150px);
+        border-radius: 8px;
+        background: #fff;
+      }
+      .lb button {
+        border: 0;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.16);
+        color: #fff;
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+        cursor: pointer;
+      }
+      .lb button:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+      .lb button:disabled {
+        opacity: 0.3;
+        cursor: default;
+      }
+      .lb-close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+      }
+      .lb-cap {
+        text-align: center;
+        color: #e8eef5;
+        font-size: 15px;
+        padding: 8px 56px 4px;
+      }
+      .lb-cap small {
+        display: block;
+        color: #aebccb;
+        margin-top: 2px;
+      }
+      @media (max-width: 560px) {
+        .lb-stage {
+          grid-template-columns: 1fr;
+        }
+        .lb-prev,
+        .lb-next {
+          position: absolute;
+          bottom: 64px;
+        }
+        .lb-prev {
+          left: 16px;
+        }
+        .lb-next {
+          right: 16px;
+        }
+      }
+      main {
+        padding-top: 12px;
+        padding-bottom: 56px;
+      }
+      .entry {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 22px 24px;
+        margin: 20px 0;
+      }
+      .entry[hidden] {
+        display: none;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 4px;
+        font-size: 14px;
+        color: var(--soft);
+      }
+      .chip {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 2px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .chip.shipped {
+        background: var(--ok-bg);
+        color: var(--ok);
+      }
+      .chip.review {
+        background: var(--rev-bg);
+        color: var(--rev);
+      }
+      .entry h2 {
+        margin: 2px 0 8px;
+        font-size: 22px;
+        line-height: 1.25;
+      }
+      .entry p {
+        margin: 0 0 10px;
+      }
+      .know {
+        margin: 12px 0 0;
+        padding: 10px 14px;
+        border-left: 4px solid var(--accent);
+        background: color-mix(in srgb, var(--accent) 8%, transparent);
+        border-radius: 0 8px 8px 0;
+        font-size: 15px;
+      }
+      .know strong {
+        display: block;
+        margin-bottom: 2px;
+      }
+      .know ul {
+        margin: 4px 0 0;
+        padding-left: 20px;
+      }
+      .links {
+        margin-top: 12px;
+        font-size: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+      }
+      .links a {
+        color: var(--accent);
+      }
+      .shots {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 12px;
+        margin: 14px 0 0;
+      }
+      .shots figure {
+        margin: 0;
+      }
+      .shots img {
+        width: 100%;
+        height: auto;
+        display: block;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+      }
+      .shots figcaption {
+        margin-top: 5px;
+        font-size: 13px;
+        color: var(--soft);
+      }
+      footer {
+        padding-bottom: 40px;
+        color: var(--soft);
+        font-size: 14px;
+      }
+      a:focus-visible,
+      button:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 2px;
+      }
+      @media (max-width: 560px) {
+        h1 {
+          font-size: 26px;
+        }
+        .entry {
+          padding: 18px 16px;
+        }
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 24px;
+        color: var(--ink);
+        font-weight: 600;
+        font-size: 19px;
+        letter-spacing: -0.02em;
+        text-decoration: none;
+      }
+      .brand-mark {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: #2563eb;
+        box-shadow:
+          inset 0 0 0 5px var(--bg),
+          inset 0 0 0 8px var(--ink);
+      }
+      .brand .slash {
+        color: #2563eb;
+      }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/"
+        ><span class="brand-mark" aria-hidden="true"></span
+        ><span>interview<span class="slash">/</span>differently</span></a
+      >
+      <h1>Release notes</h1>
+      <p class="lede">
+        What changed in Interview Differently, newest first. Plain words, with screenshots. All data
+        shown is fictional.
+      </p>
+      <div class="top">
+        <aside class="find" aria-label="Find updates">
+          <h2>Find an update</h2>
+          <div class="tools" role="group" aria-label="Filter entries">
+            <button type="button" data-filter="all" aria-pressed="true">All</button>
+            <button type="button" data-filter="review" aria-pressed="false">In review</button>
+            <button type="button" data-filter="shipped" aria-pressed="false">Shipped</button>
+          </div>
+          <input
+            class="search"
+            id="q"
+            type="search"
+            placeholder="Search, e.g. landing"
+            aria-label="Search updates"
+          />
+          <p class="counts" id="counts"></p>
+        </aside>
+        <nav class="timeline" aria-label="Timeline"><ol id="toc"></ol></nav>
+      </div>
+    </header>
+
+    <main id="entries">
+      <p class="empty-note" id="none" hidden>No updates match. Clear the search or choose All.</p>
+      <!-- ======================= IN REVIEW (new look) ======================= -->
+
+      <article
+        class="entry"
+        id="new-look"
+        data-status="review"
+        data-short="A new look"
+        data-summary="Interview Differently has a new blue look, a new home page and a new logo, so it sits alongside Learn Differently as one family."
+      >
+        <div class="meta">
+          <span class="chip review">IN REVIEW</span><time datetime="2026-11-07">Nov 7, 2026</time>
+        </div>
+        <h2>A new look for Interview Differently</h2>
+        <p>
+          Interview Differently now looks like the rest of the Learn Differently family: a light
+          page, deep navy text and one blue accent, with the simulations themselves shown as dark
+          panels. There is a new home page, a new logo, and a header and footer like Learn
+          Differently's.
+        </p>
+        <div class="know">
+          <strong>Good to know</strong>
+          <ul>
+            <li>Nothing about how simulations work, or how they are scored, has changed.</li>
+            <li>
+              When a course in Learn Differently opens a simulation, it still shows in that
+              organization's colours and logo.
+            </li>
+            <li>Administrators get an Admin toolbox page that leads to each admin tool.</li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../../screenshots/id-rebrand/01-landing.png"
+              ><img
+                loading="lazy"
+                src="../../screenshots/id-rebrand/01-landing.png"
+                alt="The new Interview Differently home page: the headline Practice the real job before the interview, next to example simulation screens."
+            /></a>
+            <figcaption>The new home page.</figcaption>
+          </figure>
+          <figure>
+            <a href="../../screenshots/id-rebrand/07-admin-toolbox.png"
+              ><img
+                loading="lazy"
+                src="../../screenshots/id-rebrand/07-admin-toolbox.png"
+                alt="The Admin toolbox: one tile per admin tool"
+            /></a>
+            <figcaption>The Admin toolbox.</figcaption>
+          </figure>
+        </div>
+        <div class="links">
+          <a href="https://github.com/ludakhris/interview-differently/issues/104">Issue #104</a>
+        </div>
+      </article>
+
+      <!-- ======================= SHIPPED (launch) ======================= -->
+
+      <article
+        class="entry"
+        id="launch"
+        data-status="shipped"
+        data-short="Interview Differently launches"
+        data-summary="Practice the real job before the interview: AI simulations of real workplace decisions, scored on how you think."
+      >
+        <div class="meta">
+          <span class="chip shipped">SHIPPED</span><time datetime="2026-04-04">Apr 4, 2026</time>
+        </div>
+        <h2>Interview Differently launches</h2>
+        <p>
+          Interview Differently lets you practice the real job before the interview. Choose a
+          simulation track, read into a realistic workplace scenario, and make decisions step by
+          step. Every choice changes what happens next. At the end, AI scores how you handled it
+          across the skills that role needs, with written feedback on how you actually responded.
+        </p>
+        <div class="know">
+          <strong>What you can do</strong>
+          <ul>
+            <li>
+              Work through simulation tracks: business cases, data analytics, incident response,
+              business decisions, and risk and compliance.
+            </li>
+            <li>
+              Use the tools of the job inside each simulation: live monitors and charts in an
+              incident, exhibits and key data in a business case, and real SQL against a real
+              dataset in data analytics.
+            </li>
+            <li>
+              Read a briefing first: the situation, your role and what you will be evaluated on.
+            </li>
+            <li>Practice on your own in the SQL Sandbox, and take pre- and post-assessments.</li>
+            <li>
+              Build your own scenarios in the builder, or ask us for one with Request a scenario.
+            </li>
+          </ul>
+        </div>
+        <div class="shots">
+          <figure>
+            <a href="../../screenshots/id-rebrand/02-dashboard.png"
+              ><img
+                loading="lazy"
+                src="../../screenshots/id-rebrand/02-dashboard.png"
+                alt="The dashboard: simulation tracks, each with scenario cards and a Start link"
+            /></a>
+            <figcaption>Pick a track and a scenario.</figcaption>
+          </figure>
+          <figure>
+            <a href="../../screenshots/id-rebrand/03-briefing.png"
+              ><img
+                loading="lazy"
+                src="../../screenshots/id-rebrand/03-briefing.png"
+                alt="A briefing: the situation, your role, and what you will be evaluated on"
+            /></a>
+            <figcaption>Every simulation starts with a briefing.</figcaption>
+          </figure>
+          <figure>
+            <a href="../../screenshots/id-rebrand/04-incident.png"
+              ><img
+                loading="lazy"
+                src="../../screenshots/id-rebrand/04-incident.png"
+                alt="An incident response simulation: a live metrics console above the narrative and four choices"
+            /></a>
+            <figcaption>Incident response, with live monitors.</figcaption>
+          </figure>
+          <figure>
+            <a href="../../screenshots/id-rebrand/05-business-case.png"
+              ><img
+                loading="lazy"
+                src="../../screenshots/id-rebrand/05-business-case.png"
+                alt="A business case: a memo from the CFO, key data and the first decision"
+            /></a>
+            <figcaption>A business case with exhibits and key data.</figcaption>
+          </figure>
+          <figure>
+            <a href="../../screenshots/id-rebrand/08-data-analytics.png"
+              ><img
+                loading="lazy"
+                src="../../screenshots/id-rebrand/08-data-analytics.png"
+                alt="A data analytics simulation: a message from the marketing director and the data dictionary"
+            /></a>
+            <figcaption>Data analytics, answered with real SQL.</figcaption>
+          </figure>
+          <figure>
+            <a href="../../screenshots/id-rebrand/06-sql-sandbox.png"
+              ><img
+                loading="lazy"
+                src="../../screenshots/id-rebrand/06-sql-sandbox.png"
+                alt="The SQL Sandbox: a query in the editor and its results below"
+            /></a>
+            <figcaption>The SQL Sandbox.</figcaption>
+          </figure>
+        </div>
+        <p>Screenshots are shown in the November 2026 look. All data shown is fictional.</p>
+      </article>
+    </main>
+
+    <footer>
+      <p>Add new entries at the top of the list. See the comment at the top of this file.</p>
+    </footer>
+
+    <script src="../release-notes.js"></script>
+  </body>
+</html>

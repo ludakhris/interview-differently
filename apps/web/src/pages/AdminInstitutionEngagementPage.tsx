@@ -61,22 +61,22 @@ export function AdminInstitutionEngagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav />
       <div className="max-w-(--breakpoint-2xl) mx-auto px-6 py-12">
         <button
           onClick={() => navigate('/admin/institutions')}
-          className="text-[12px] text-slate-mid hover:text-cream-light transition-colors mb-3"
+          className="text-[12px] text-slate-mid hover:text-fg transition-colors mb-3"
         >
           ← Back to institutions
         </button>
 
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+            <p className="font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
               Analytics
             </p>
-            <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
+            <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
               {detail?.name ?? 'Institution analytics'}
             </h1>
           </div>
@@ -90,7 +90,7 @@ export function AdminInstitutionEngagementPage() {
                 id="cohort-filter"
                 value={cohortId}
                 onChange={(e) => setCohort(e.target.value)}
-                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
+                className="bg-surface-alt border border-edge/10 rounded-lg px-3 py-1.5 text-[13px] text-fg focus:outline-hidden focus:border-edge/30"
               >
                 <option value="">All cohorts</option>
                 {detail.cohorts.map((c) => (
@@ -139,15 +139,15 @@ function EngagementTable({ data }: { data: ScenarioEngagementResponse }) {
   const slug = filenameSlug(data.institution.name, data.cohort?.name ?? null, 'engagement')
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
+    <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+          <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             By scenario
           </h2>
           {data.cohort && (
             <p className="text-[12px] text-slate-mid mt-1">
-              Cohort: <span className="text-cream-light">{data.cohort.name}</span>
+              Cohort: <span className="text-fg">{data.cohort.name}</span>
             </p>
           )}
         </div>
@@ -180,7 +180,7 @@ function EngagementTable({ data }: { data: ScenarioEngagementResponse }) {
                 ]),
               })
             }
-            className="text-[11px] font-semibold text-slate-mid hover:text-cream-light transition-colors"
+            className="text-[11px] font-semibold text-slate-mid hover:text-fg transition-colors"
             title="Download as CSV"
           >
             ↓ CSV
@@ -196,7 +196,7 @@ function EngagementTable({ data }: { data: ScenarioEngagementResponse }) {
         <div className="overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-widest text-slate-mid border-b border-white/10">
+              <tr className="text-left text-[11px] uppercase tracking-widest text-slate-mid border-b border-edge/10">
                 <th className="font-semibold py-2 pr-3">Scenario</th>
                 <th className="font-semibold py-2 px-2 text-right">Starts</th>
                 <th className="font-semibold py-2 px-2 text-right">Completed</th>
@@ -220,9 +220,9 @@ function EngagementTable({ data }: { data: ScenarioEngagementResponse }) {
 
 function ScenarioRow({ row }: { row: ScenarioEngagementRow }) {
   return (
-    <tr className="border-b border-white/5 last:border-0 align-top">
+    <tr className="border-b border-edge/5 last:border-0 align-top">
       <td className="py-2 pr-3 max-w-[260px]">
-        <p className="text-cream-light truncate" title={row.scenarioTitle}>
+        <p className="text-fg truncate" title={row.scenarioTitle}>
           {row.scenarioTitle}
         </p>
         <p className="text-[10px] text-slate-mid font-mono truncate" title={row.scenarioId}>
@@ -250,15 +250,15 @@ function ScenarioRow({ row }: { row: ScenarioEngagementRow }) {
 }
 
 function rateColor(rate: number | null): string {
-  if (rate === null) return '#888'
-  if (rate >= 80) return '#2d9e5f'
-  if (rate >= 50) return '#d4830a'
+  if (rate === null) return '#5b6273'
+  if (rate >= 80) return '#1f8a55'
+  if (rate >= 50) return '#b45309'
   return '#c0392b'
 }
 
 function scoreColor(score: number | null): string {
-  if (score === null) return '#888'
-  if (score >= 80) return '#2d9e5f'
-  if (score >= 60) return '#d4830a'
+  if (score === null) return '#5b6273'
+  if (score >= 80) return '#1f8a55'
+  if (score >= 60) return '#b45309'
   return '#c0392b'
 }

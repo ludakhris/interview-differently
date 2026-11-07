@@ -16,14 +16,14 @@ export function ScoreSummary({
         <div>
           <p className="font-display font-extrabold text-[28px] text-fg leading-none">
             {overall.correct}
-            <span className="text-ink/30 text-[18px]"> / {overall.total}</span>
+            <span className="text-slate-mid text-[18px]"> / {overall.total}</span>
           </p>
           <p className="text-[13px] text-slate-mid mt-1">questions correct overall</p>
         </div>
       </div>
 
       <div className="bg-surface-deep rounded-2xl border border-edge/10 p-6 mb-6">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-4">
+        <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-4">
           By section
         </p>
         <ul className="space-y-4">
@@ -42,7 +42,12 @@ export function ScoreSummary({
                     className="h-full rounded-full transition-all"
                     style={{
                       width: `${pct}%`,
-                      backgroundColor: pct >= 70 ? '#2d9e5f' : pct >= 40 ? '#d4830a' : '#ef4444',
+                      backgroundColor:
+                        pct >= 70
+                          ? 'rgb(var(--ld-emerald-400, 4 120 87))'
+                          : pct >= 40
+                            ? 'rgb(var(--ld-amber-400, 146 64 14))'
+                            : 'rgb(var(--ld-red-400, 185 28 28))',
                     }}
                   />
                 </div>

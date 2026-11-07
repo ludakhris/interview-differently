@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useAuth } from '@clerk/react'
 import { Nav } from '@/components/Nav'
 import { downloadCsv } from '@/lib/csv'
+import { AdminCrumb } from '@/pages/AdminToolboxPage'
 import {
   fetchUsage,
   type UsageAssessment,
@@ -62,15 +63,16 @@ export function AdminUsagePage() {
   }, [refresh])
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav />
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+            <AdminCrumb />
+            <p className="font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
               Platform
             </p>
-            <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
+            <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
               Usage
             </h1>
           </div>
@@ -80,7 +82,7 @@ export function AdminUsagePage() {
               <select
                 value={range}
                 onChange={(e) => setRange(e.target.value as UsageRange)}
-                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
+                className="bg-surface-alt border border-edge/10 rounded-lg px-3 py-1.5 text-[13px] text-fg focus:outline-hidden focus:border-edge/30"
               >
                 {RANGES.map((r) => (
                   <option key={r.value} value={r.value}>
@@ -94,21 +96,21 @@ export function AdminUsagePage() {
                 type="checkbox"
                 checked={includeAdmins}
                 onChange={(e) => setIncludeAdmins(e.target.checked)}
-                className="accent-[#2d9e5f]"
+                className="accent-primary"
               />
               Include admin accounts
             </label>
             <button
               onClick={() => void refresh()}
               disabled={loading}
-              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-cream-light disabled:opacity-40 transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-ink/10 hover:bg-ink/15 text-[13px] font-semibold text-fg disabled:opacity-40 transition-colors"
             >
               {loading ? 'Refreshing…' : 'Refresh'}
             </button>
           </div>
         </div>
 
-        <div className="border-b border-white/10 mb-6">
+        <div className="border-b border-edge/10 mb-6">
           <nav className="flex items-center gap-1" aria-label="Usage sections">
             {TABS.map((t) => (
               <button
@@ -117,8 +119,8 @@ export function AdminUsagePage() {
                 aria-current={tab === t.key ? 'page' : undefined}
                 className={`px-4 py-2.5 text-[13px] font-semibold transition-colors border-b-2 -mb-px ${
                   tab === t.key
-                    ? 'text-cream-light border-green'
-                    : 'text-slate-mid hover:text-cream-light border-transparent'
+                    ? 'text-fg border-primary'
+                    : 'text-slate-mid hover:text-fg border-transparent'
                 }`}
               >
                 {t.label}
@@ -166,17 +168,18 @@ export function AdminUsagePage() {
 
 // ── Shared bits ────────────────────────────────────────────────────────────
 
-const card = 'bg-[#111111] rounded-xl border border-white/10'
-const th = 'text-left text-[11px] font-bold uppercase tracking-widest text-slate-mid px-4 py-2.5'
-const td = 'px-4 py-2.5 text-[13px] text-cream-light align-top'
+const card = 'bg-surface-alt rounded-xl border border-edge/10'
+const th =
+  'text-left text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid px-4 py-2.5'
+const td = 'px-4 py-2.5 text-[13px] text-fg align-top'
 
 function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
   return (
     <div className={`${card} px-5 py-4`}>
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">{label}</p>
-      <p className="font-display font-extrabold text-[28px] text-cream-light leading-tight mt-1">
-        {value}
+      <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
+        {label}
       </p>
+      <p className="font-display font-extrabold text-[28px] text-fg leading-tight mt-1">{value}</p>
       {sub && <p className="text-[12px] text-slate-mid mt-0.5">{sub}</p>}
     </div>
   )
@@ -194,7 +197,9 @@ function Section({
   return (
     <div className={`${card} p-6`}>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">{title}</h2>
+        <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
+          {title}
+        </h2>
         {action}
       </div>
       {children}
@@ -206,7 +211,7 @@ function CsvButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="text-[12px] font-semibold text-slate-mid hover:text-cream-light transition-colors"
+      className="text-[12px] font-semibold text-slate-mid hover:text-fg transition-colors"
     >
       Export CSV
     </button>
@@ -225,7 +230,7 @@ function Trend({ now, prev }: { now: number; prev: number | null }) {
   if (diff === 0) return <span className="ml-1.5 text-[11px] text-slate-mid">–</span>
   return (
     <span
-      className={`ml-1.5 text-[11px] whitespace-nowrap ${diff > 0 ? 'text-green' : 'text-red-400'}`}
+      className={`ml-1.5 text-[11px] whitespace-nowrap ${diff > 0 ? 'text-primary' : 'text-red-400'}`}
     >
       {diff > 0 ? '▲' : '▼'} {Math.abs(diff)}
     </span>
@@ -279,7 +284,7 @@ function Overview({ data }: { data: UsageReport }) {
                 <div
                   key={d.date}
                   title={`${d.date}: ${d.activeUsers} active, ${d.events} actions`}
-                  className="flex-1 bg-green/70 hover:bg-green rounded-t-sm min-h-[2px]"
+                  className="flex-1 bg-primary/70 hover:bg-primary rounded-t-sm min-h-[2px]"
                   style={{
                     height: `${(d.activeUsers / maxDay) * 100}%`,
                     opacity: d.activeUsers ? 1 : 0.15,
@@ -319,7 +324,7 @@ function Overview({ data }: { data: UsageReport }) {
                       <div
                         key={h}
                         title={`${DAYS[dow]} ${h}:00 — ${n} actions`}
-                        className="h-4 rounded-[2px] bg-green"
+                        className="h-4 rounded-[2px] bg-primary"
                         style={{ opacity: n ? 0.15 + 0.85 * (n / maxCell) : 0.05 }}
                       />
                     ))}
@@ -342,7 +347,7 @@ function Overview({ data }: { data: UsageReport }) {
                   : []),
               ] as [string, number][]
             ).map(([label, n]) => (
-              <li key={label} className="flex justify-between text-cream-light">
+              <li key={label} className="flex justify-between text-fg">
                 <span className="text-slate-mid">{label}</span>
                 <span className="font-semibold">{n.toLocaleString()}</span>
               </li>
@@ -381,9 +386,7 @@ function Scenarios({
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`px-2.5 py-1 rounded-lg text-[12px] font-semibold transition-colors ${
-                  filter === f
-                    ? 'bg-white/15 text-cream-light'
-                    : 'text-slate-mid hover:text-cream-light'
+                  filter === f ? 'bg-ink/15 text-fg' : 'text-slate-mid hover:text-fg'
                 }`}
               >
                 {f === 'all' ? 'All' : 'Not used'}
@@ -436,7 +439,7 @@ function Scenarios({
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/10">
+              <tr className="border-b border-edge/10">
                 <th className={th}>Scenario</th>
                 {tracking && <th className={th}>Viewed</th>}
                 <th className={th}>
@@ -449,7 +452,7 @@ function Scenarios({
                 <th className={th}>Last used</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-edge/5">
               {shown.map((r) => (
                 <tr key={r.scenarioId}>
                   <td className={td}>
@@ -472,7 +475,7 @@ function Scenarios({
                   <td className={td}>
                     <div className="flex items-center gap-2 min-w-[140px]">
                       <div
-                        className="h-1.5 rounded-full bg-green/80"
+                        className="h-1.5 rounded-full bg-primary/80"
                         style={{ width: `${Math.max(2, (r.starts / max) * 80)}px` }}
                       />
                       <span>{r.starts}</span>
@@ -533,14 +536,14 @@ function ToolCard({ tool, tracking }: { tool: UsageTool; tracking: boolean }) {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/10">
+              <tr className="border-b border-edge/10">
                 <th className={th}>Cohort</th>
                 <th className={th}>Members</th>
                 <th className={th}>Active users</th>
                 <th className={th}>{tool.key === 'sql-sandbox' ? 'Queries' : 'Attempts'}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-edge/5">
               {tool.cohorts.map((c) => (
                 <tr key={c.cohortId}>
                   <td className={td}>
@@ -567,12 +570,12 @@ function ToolCard({ tool, tracking }: { tool: UsageTool; tracking: boolean }) {
 
       {tool.datasets.length > 0 && (
         <div className="mt-5">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+          <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
             By dataset
           </p>
           <ul className="text-[13px] space-y-1">
             {tool.datasets.map((d) => (
-              <li key={d.slug} className="flex justify-between text-cream-light">
+              <li key={d.slug} className="flex justify-between text-fg">
                 <span>{d.slug}</span>
                 <span className="text-slate-mid">
                   {d.events.toLocaleString()} queries · {d.users} {d.users === 1 ? 'user' : 'users'}
@@ -633,7 +636,7 @@ function Assessments({ rows, range }: { rows: UsageAssessment[]; range: UsageRan
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/10">
+              <tr className="border-b border-edge/10">
                 <th className={th}>Assessment</th>
                 <th className={th}>Deliveries</th>
                 <th className={th}>
@@ -647,7 +650,7 @@ function Assessments({ rows, range }: { rows: UsageAssessment[]; range: UsageRan
                 <th className={th}>Last activity</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-edge/5">
               {rows.map((r) => (
                 <tr key={r.assessmentId}>
                   <td className={`${td} font-semibold`}>{r.title}</td>
@@ -655,7 +658,7 @@ function Assessments({ rows, range }: { rows: UsageAssessment[]; range: UsageRan
                   <td className={td}>
                     <div className="flex items-center gap-2 min-w-[120px]">
                       <div
-                        className="h-1.5 rounded-full bg-green/80"
+                        className="h-1.5 rounded-full bg-primary/80"
                         style={{ width: `${Math.max(2, (r.started / max) * 70)}px` }}
                       />
                       <span>{r.started}</span>
@@ -728,7 +731,7 @@ function Users({ rows, tracking }: { rows: UsageUser[]; tracking: boolean }) {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/10">
+              <tr className="border-b border-edge/10">
                 <th className={th}>User</th>
                 <th className={th}>Actions</th>
                 <th className={th}>Scenarios</th>
@@ -740,7 +743,7 @@ function Users({ rows, tracking }: { rows: UsageUser[]; tracking: boolean }) {
                 <th className={th}>Last active</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-edge/5">
               {rows.map((u) => (
                 <UserRow
                   key={u.userId}
@@ -771,7 +774,7 @@ function UserRow({
 }) {
   return (
     <>
-      <tr onClick={onToggle} className="cursor-pointer hover:bg-white/3">
+      <tr onClick={onToggle} className="cursor-pointer hover:bg-ink/3">
         <td className={td}>
           <p className="font-semibold">
             <span className="text-slate-mid mr-1.5">{open ? '▾' : '▸'}</span>
@@ -791,7 +794,7 @@ function UserRow({
         <td className={td}>{when(u.lastActiveAt)}</td>
       </tr>
       {open && (
-        <tr className="bg-white/2">
+        <tr className="bg-ink/2">
           <td colSpan={9} className="px-4 pb-4 pt-1">
             <p className="text-[12px] text-slate-mid mb-2 ml-4">First seen {when(u.firstSeenAt)}</p>
             <div className="grid md:grid-cols-3 gap-4 ml-4">
@@ -809,11 +812,13 @@ function UserRow({
 function TopList({ title, items }: { title: string; items: { label: string; count: number }[] }) {
   return (
     <div>
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-1">{title}</p>
+      <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
+        {title}
+      </p>
       {items.length === 0 ? (
         <p className="text-[12px] text-slate-mid">—</p>
       ) : (
-        <ul className="text-[12px] text-cream-light space-y-0.5">
+        <ul className="text-[12px] text-fg space-y-0.5">
           {items.map((i) => (
             <li key={i.label} className="flex justify-between gap-3">
               <span className="truncate">{i.label}</span>

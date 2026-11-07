@@ -38,13 +38,13 @@ export function InlineExhibits({
             style={{ backgroundColor: accentColor }}
           />
           <p
-            className="text-[11px] font-bold uppercase tracking-[0.18em]"
+            className="text-[11px] font-mono font-medium uppercase tracking-[0.14em]"
             style={{ color: accentColor }}
           >
             {label}
           </p>
           {resolved.length > 1 && (
-            <span className="ml-auto text-[11px] font-semibold text-ink/45 tabular-nums">
+            <span className="ml-auto text-[11px] font-semibold text-slate-mid tabular-nums">
               {resolved.length}
             </span>
           )}

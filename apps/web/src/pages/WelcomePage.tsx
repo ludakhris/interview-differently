@@ -38,20 +38,20 @@ export function WelcomePage() {
 
   if (!isLoaded || checking) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <p className="text-slate-mid text-[14px]">Loading…</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav />
       <div className="max-w-xl mx-auto px-6 py-12 animate-fade-in">
-        <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-2">
+        <p className="text-[12px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
           Welcome
         </p>
-        <h1 className="font-display font-extrabold text-[28px] text-cream-light tracking-tight mb-3">
+        <h1 className="font-display font-extrabold text-[28px] text-fg tracking-tight mb-3">
           {user?.firstName ? `Hi ${user.firstName} —` : "Glad you're here —"} let's get you set up
         </h1>
         <p className="text-[14px] text-slate-light leading-relaxed mb-8">
@@ -59,7 +59,7 @@ export function WelcomePage() {
           feed into their cohort analytics. You can change this later in Settings.
         </p>
 
-        <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
+        <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
           <MembershipsCard
             variant="welcome"
             onJoined={() => navigate(next, { replace: true })}

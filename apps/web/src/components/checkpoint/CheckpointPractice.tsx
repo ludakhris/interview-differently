@@ -7,7 +7,7 @@ import { practiceGate } from '@/lib/checkpoint'
 export const PENDING_POLL_MS = 20_000
 
 const BUTTON =
-  'px-4 py-2 rounded-full bg-green hover:bg-green-light text-[13px] font-semibold text-on-primary disabled:opacity-50 transition-colors'
+  'px-4 py-2 rounded-full bg-primary hover:bg-accent text-[13px] font-semibold text-on-primary disabled:opacity-50 transition-colors'
 
 /**
  * A practice slot before its requests can be shown: the practice is being written (asked for on arrival, since the

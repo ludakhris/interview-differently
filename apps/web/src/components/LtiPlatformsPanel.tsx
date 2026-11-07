@@ -23,10 +23,10 @@ import {
 } from '@/services/ltiPlatformsService'
 
 const CHIP: Record<StatusTone, string> = {
-  on: 'bg-green/20 text-green-light',
-  off: 'bg-ink/10 text-ink/60',
+  on: 'bg-primary/20 text-accent',
+  off: 'bg-ink/10 text-slate-light',
   waiting: 'bg-amber-400/15 text-amber-300',
-  builtin: 'bg-ink/10 text-ink/60',
+  builtin: 'bg-ink/10 text-slate-light',
 }
 
 const FORBIDDEN = 'Only full administrators can manage platforms.'
@@ -112,7 +112,7 @@ export function LtiPlatformsPanel({
             <button
               type="button"
               onClick={onHowItWorks}
-              className="mt-3 text-[13px] font-semibold text-green-light hover:text-green underline underline-offset-2 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-light rounded-sm"
+              className="mt-3 text-[13px] font-semibold text-accent hover:text-primary underline underline-offset-2 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-sm"
             >
               How does this work?
             </button>
@@ -206,12 +206,12 @@ function PlatformCard({
             {p.name}
           </h2>
           <span
-            className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm ${CHIP[status.tone]}`}
+            className={`text-[10px] font-mono font-medium uppercase tracking-[0.14em] px-2 py-0.5 rounded-sm ${CHIP[status.tone]}`}
           >
             {status.label}
           </span>
           {p.source === 'built-in' && (
-            <span className="text-[13px] text-ink/70">Always on, cannot be changed</span>
+            <span className="text-[13px] text-slate-light">Always on, cannot be changed</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -222,7 +222,7 @@ function PlatformCard({
               disabled={busy}
               aria-describedby={`platform-${p.id}`}
               onClick={() => void reject()}
-              className="px-4 py-2 rounded-lg border border-red-400/30 text-[13px] font-semibold text-red-300 hover:bg-red-500/10 transition-colors disabled:opacity-50 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-light"
+              className="px-4 py-2 rounded-lg border border-red-400/30 text-[13px] font-semibold text-red-300 hover:bg-red-500/10 transition-colors disabled:opacity-50 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               Reject
             </button>
@@ -234,10 +234,10 @@ function PlatformCard({
               disabled={busy}
               aria-describedby={`platform-${p.id}`}
               onClick={() => void toggle()}
-              className={`px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors disabled:opacity-50 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-light ${
+              className={`px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors disabled:opacity-50 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
                 p.enabled
-                  ? 'border border-edge/15 text-ink/70 hover:text-ink hover:border-edge/30'
-                  : 'bg-green hover:bg-green-light text-on-primary'
+                  ? 'border border-edge/15 text-slate-light hover:text-ink hover:border-edge/30'
+                  : 'bg-primary hover:bg-accent text-on-primary'
               }`}
             >
               {busy ? 'Saving…' : p.enabled ? 'Disable' : 'Enable'}
@@ -303,7 +303,7 @@ function History({ platform }: { platform: LtiPlatform }) {
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((o) => !o)}
-        className="text-[12px] font-semibold text-green-light hover:text-green transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-light rounded-sm"
+        className="text-[12px] font-semibold text-accent hover:text-primary transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-sm"
       >
         {open ? 'Hide history' : 'Show history'}
       </button>
@@ -325,7 +325,7 @@ function History({ platform }: { platform: LtiPlatform }) {
           ) : (
             <ul className="space-y-1">
               {changes.map((c) => (
-                <li key={c.id} className="text-[12px] text-ink/70">
+                <li key={c.id} className="text-[12px] text-slate-light">
                   {describeChange(c)}
                   <span className="text-slate-mid"> · {formatDate(c.createdAt)}</span>
                 </li>

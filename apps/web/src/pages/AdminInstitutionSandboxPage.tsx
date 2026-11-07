@@ -95,22 +95,22 @@ export function AdminInstitutionSandboxPage() {
   }, [auto, autoSec, refresh])
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav />
       <div className="max-w-(--breakpoint-2xl) mx-auto px-6 py-12">
         <button
           onClick={() => navigate('/admin/institutions')}
-          className="text-[12px] text-slate-mid hover:text-cream-light transition-colors mb-3"
+          className="text-[12px] text-slate-mid hover:text-fg transition-colors mb-3"
         >
           ← Back to institutions
         </button>
 
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+            <p className="font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
               Analytics
             </p>
-            <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
+            <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
               {detail?.name ?? 'SQL activity'}
             </h1>
           </div>
@@ -124,7 +124,7 @@ export function AdminInstitutionSandboxPage() {
                 id="cohort-filter"
                 value={cohortId}
                 onChange={(e) => setSearchParams({ cohortId: e.target.value }, { replace: true })}
-                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
+                className="bg-surface-alt border border-edge/10 rounded-lg px-3 py-1.5 text-[13px] text-fg focus:outline-hidden focus:border-edge/30"
               >
                 {cohorts.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -154,7 +154,7 @@ export function AdminInstitutionSandboxPage() {
           <button
             onClick={() => refresh()}
             disabled={loading || !cohortId}
-            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-cream-light disabled:opacity-40 transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-ink/10 hover:bg-ink/15 text-[13px] font-semibold text-fg disabled:opacity-40 transition-colors"
           >
             {loading ? 'Refreshing…' : 'Refresh'}
           </button>
@@ -163,7 +163,7 @@ export function AdminInstitutionSandboxPage() {
               type="checkbox"
               checked={auto}
               onChange={(e) => setAuto(e.target.checked)}
-              className="accent-[#2d9e5f]"
+              className="accent-primary"
             />
             Auto-refresh every
           </label>
@@ -171,7 +171,7 @@ export function AdminInstitutionSandboxPage() {
             aria-label="Auto-refresh interval"
             value={autoSec}
             onChange={(e) => setAutoSec(Number(e.target.value))}
-            className="bg-[#111111] border border-white/10 rounded-lg px-2 py-1 text-[12px] text-cream-light focus:outline-hidden focus:border-white/30"
+            className="bg-surface-alt border border-edge/10 rounded-lg px-2 py-1 text-[12px] text-fg focus:outline-hidden focus:border-edge/30"
           >
             {AUTO_REFRESH_OPTIONS.map((sec) => (
               <option key={sec} value={sec}>
@@ -185,7 +185,7 @@ export function AdminInstitutionSandboxPage() {
               aria-label="Queries shown per student"
               value={visibleQueries}
               onChange={(e) => setVisibleQueries(Number(e.target.value))}
-              className="bg-[#111111] border border-white/10 rounded-lg px-2 py-1 text-[12px] text-cream-light focus:outline-hidden focus:border-white/30"
+              className="bg-surface-alt border border-edge/10 rounded-lg px-2 py-1 text-[12px] text-fg focus:outline-hidden focus:border-edge/30"
             >
               {VISIBLE_QUERY_OPTIONS.map((n) => (
                 <option key={n} value={n}>
@@ -196,13 +196,13 @@ export function AdminInstitutionSandboxPage() {
           </label>
           <button
             onClick={() => setBulk((b) => ({ open: true, seq: (b?.seq ?? 0) + 1 }))}
-            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-cream-light transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-ink/10 hover:bg-ink/15 text-[13px] font-semibold text-fg transition-colors"
           >
             Expand all
           </button>
           <button
             onClick={() => setBulk((b) => ({ open: false, seq: (b?.seq ?? 0) + 1 }))}
-            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-cream-light transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-ink/10 hover:bg-ink/15 text-[13px] font-semibold text-fg transition-colors"
           >
             Collapse all
           </button>
@@ -236,7 +236,7 @@ export function AdminInstitutionSandboxPage() {
             </div>
             {data.unassigned.length > 0 && (
               <div className="mt-8">
-                <h2 className="text-[11px] font-bold uppercase tracking-widest text-amber-400 mb-1">
+                <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-amber-400 mb-1">
                   Not in a cohort
                 </h2>
                 <p className="text-[12px] text-slate-mid mb-3">
@@ -280,10 +280,10 @@ function StudentCard({
     <details
       ref={ref}
       open={s.queryCount > 0}
-      className="bg-[#111111] rounded-xl border border-white/10"
+      className="bg-surface-alt rounded-xl border border-edge/10"
     >
       <summary className="cursor-pointer px-5 py-3 flex items-center justify-between gap-4">
-        <span className="text-[14px] font-semibold text-cream-light">
+        <span className="text-[14px] font-semibold text-fg">
           {s.name}
           {s.email && s.email !== s.name && (
             <span className="ml-2 text-[12px] font-normal text-slate-mid">{s.email}</span>
@@ -303,11 +303,11 @@ function StudentCard({
       {s.queries.length === 0 ? (
         <p className="px-5 pb-4 text-[12px] text-slate-mid">No queries yet.</p>
       ) : (
-        <ul className="border-t border-white/10 divide-y divide-white/5">
+        <ul className="border-t border-edge/10 divide-y divide-edge/5">
           {shown.map((q) => (
             <li key={q.id} className="px-5 py-3">
               <div className="flex items-center gap-2 text-[11px] text-slate-mid mb-1.5">
-                <span className={q.ok ? 'text-green' : 'text-red-400'}>
+                <span className={q.ok ? 'text-primary' : 'text-red-400'}>
                   {q.ok ? '● ok' : '● error'}
                 </span>
                 <span>{new Date(q.createdAt).toLocaleString()}</span>
@@ -319,7 +319,7 @@ function StudentCard({
                 )}
                 {q.durationMs != null && <span>· {q.durationMs} ms</span>}
               </div>
-              <pre className="text-[12px] text-cream-light font-mono whitespace-pre-wrap wrap-break-word">
+              <pre className="text-[12px] text-fg font-mono whitespace-pre-wrap wrap-break-word">
                 {q.queryText}
               </pre>
               {q.errorMessage && (
@@ -332,7 +332,7 @@ function StudentCard({
       {hidden > 0 && (
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="w-full border-t border-white/10 px-5 py-2 text-left text-[12px] font-semibold text-slate-mid hover:text-cream-light transition-colors"
+          className="w-full border-t border-edge/10 px-5 py-2 text-left text-[12px] font-semibold text-slate-mid hover:text-fg transition-colors"
         >
           {expanded ? 'Show fewer' : `Show ${hidden} older ${hidden === 1 ? 'query' : 'queries'}`}
         </button>

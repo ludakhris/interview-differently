@@ -13,7 +13,7 @@ export function NarrationPlayer({ isPlaying, isMuted, onToggleMute, onReplay }: 
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
-            className={`w-[4px] rounded-full bg-green transition-all ${
+            className={`w-[4px] rounded-full bg-primary transition-all ${
               isPlaying && !isMuted ? 'animate-pulse' : 'opacity-20'
             }`}
             style={{

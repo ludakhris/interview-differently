@@ -26,23 +26,23 @@ export function IssuesPanel({ issues, status, publishing, onJump, onPublish, onC
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#111] shadow-2xl"
+        className="w-full max-w-lg rounded-2xl border border-edge/10 bg-surface-alt shadow-2xl"
         role="dialog"
         aria-labelledby="issues-title"
       >
-        <div className="px-6 py-5 border-b border-white/10">
+        <div className="px-6 py-5 border-b border-edge/10">
           <div className="flex items-center gap-3">
             <span className={`text-[20px] ${canPublish ? 'text-emerald-400' : 'text-amber-400'}`}>
               {canPublish ? '✓' : '⚠'}
             </span>
-            <h2 id="issues-title" className="font-display font-bold text-[16px] text-cream-light">
+            <h2 id="issues-title" className="font-display font-bold text-[16px] text-fg">
               {canPublish
                 ? status === 'published'
                   ? 'Ready to re-publish'
@@ -52,12 +52,12 @@ export function IssuesPanel({ issues, status, publishing, onJump, onPublish, onC
             <div className="flex-1" />
             <button
               onClick={onClose}
-              className="text-white/30 hover:text-white/60 text-[18px] leading-none"
+              className="text-slate-mid hover:text-slate-light text-[18px] leading-none"
             >
               ×
             </button>
           </div>
-          <p className="text-[12px] text-white/40 mt-1 ml-9">
+          <p className="text-[12px] text-slate-mid mt-1 ml-9">
             {canPublish
               ? warnings.length
                 ? 'A few warnings below — publishing is still allowed.'
@@ -67,21 +67,21 @@ export function IssuesPanel({ issues, status, publishing, onJump, onPublish, onC
         </div>
 
         {issues.length > 0 && (
-          <ul className="max-h-[50vh] overflow-auto px-3 py-2 divide-y divide-white/5">
+          <ul className="max-h-[50vh] overflow-auto px-3 py-2 divide-y divide-edge/5">
             {[...errors, ...warnings].map((issue, i) => (
               <li key={i}>
                 <button
                   type="button"
                   disabled={!issue.where}
                   onClick={() => issue.where && onJump(issue.where)}
-                  className="w-full text-left flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-white/4 disabled:cursor-default transition-colors"
+                  className="w-full text-left flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-ink/4 disabled:cursor-default transition-colors"
                 >
                   <span
-                    className={`mt-1 w-1.5 h-1.5 rounded-full flex-none ${issue.level === 'error' ? 'bg-amber-400' : 'bg-white/30'}`}
+                    className={`mt-1 w-1.5 h-1.5 rounded-full flex-none ${issue.level === 'error' ? 'bg-amber-400' : 'bg-ink/30'}`}
                   />
-                  <span className="text-[13px] text-white/80 leading-snug">{issue.message}</span>
+                  <span className="text-[13px] text-ink/80 leading-snug">{issue.message}</span>
                   {issue.where && (
-                    <span className="ml-auto text-[11px] text-white/25 flex-none">→</span>
+                    <span className="ml-auto text-[11px] text-slate-mid flex-none">→</span>
                   )}
                 </button>
               </li>
@@ -89,10 +89,10 @@ export function IssuesPanel({ issues, status, publishing, onJump, onPublish, onC
           </ul>
         )}
 
-        <div className="px-6 py-4 border-t border-white/10 flex gap-3">
+        <div className="px-6 py-4 border-t border-edge/10 flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-lg border border-white/10 text-[13px] text-white/50 hover:text-white/70 hover:border-white/20 transition-all"
+            className="flex-1 py-2.5 rounded-lg border border-edge/10 text-[13px] text-slate-mid hover:text-slate-light hover:border-edge/20 transition-all"
           >
             {canPublish ? 'Not yet' : 'Fix issues'}
           </button>

@@ -109,8 +109,8 @@ export function BuilderV2Page() {
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <p className="text-[13px] text-white/30">Loading scenario…</p>
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <p className="text-[13px] text-slate-mid">Loading scenario…</p>
       </div>
     )
   }
@@ -118,8 +118,8 @@ export function BuilderV2Page() {
   // ── Not found ──────────────────────────────────────────────────────────────
   if (!scenario || !scenarioId) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center flex-col gap-4">
-        <p className="text-[14px] text-white">Scenario not found.</p>
+      <div className="min-h-screen bg-surface flex items-center justify-center flex-col gap-4">
+        <p className="text-[14px] text-ink">Scenario not found.</p>
         <button
           onClick={() => navigate('/builder')}
           className="text-[13px] text-emerald-400 underline"
@@ -169,7 +169,7 @@ export function BuilderV2Page() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-black overflow-hidden">
+    <div className="h-screen flex flex-col bg-surface overflow-hidden">
       <V2Toolbar
         title={scenario.title}
         saveStatus={saveStatus}

@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useParams, useSearchParams } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { SignIn, SignUp } from '@clerk/react'
 import { LandingPage } from '@/pages/LandingPage'
 import { DashboardPage } from '@/pages/DashboardPage'
@@ -33,6 +33,7 @@ import { AssessmentsPage } from '@/pages/AssessmentsPage'
 import { AssessmentAttemptPage } from '@/pages/AssessmentAttemptPage'
 import { AssessmentResultPage } from '@/pages/AssessmentResultPage'
 import { AdminAssessmentsPage } from '@/pages/AdminAssessmentsPage'
+import { AdminToolboxPage } from '@/pages/AdminToolboxPage'
 import { InvitePage } from '@/pages/InvitePage'
 import { RequestScenarioPage } from '@/pages/RequestScenarioPage'
 import { ExhibitGalleryPage } from '@/pages/dev/ExhibitGalleryPage'
@@ -43,6 +44,7 @@ import { useUserSync } from '@/hooks/useUserSync'
 import { useRegisterToken } from '@/hooks/useRegisterToken'
 import { usePageViewTracking } from '@/hooks/usePageViewTracking'
 import { ConfirmProvider } from '@/components/ConfirmDialog'
+import { Footer } from '@/components/Footer'
 
 function BuilderV2Redirect() {
   const { scenarioId } = useParams()
@@ -65,7 +67,7 @@ function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
       : `/welcome?next=${encodeURIComponent(redirectUrl)}`
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
+    <div className="min-h-screen bg-surface flex items-center justify-center">
       {mode === 'sign-in' ? (
         <SignIn routing="path" path="/sign-in" forceRedirectUrl={redirectUrl} />
       ) : (
@@ -73,6 +75,23 @@ function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
       )}
     </div>
   )
+}
+
+// Screens where the footer stays out of the way: LTI launches (a tenant's brand, never ours),
+// live simulations and attempts, and full-height editors.
+const NO_FOOTER = [
+  /^\/lti\//,
+  /^\/scenario\/[^/]+\/(play|immersive)(\/[^/]+)?$/,
+  /^\/builder\/(?!new$)[^/]+/,
+  /^\/simulations\//,
+  /^\/tools\/assessments\/attempt\/[^/]+$/,
+  /^\/tools\/sql$/,
+  /^\/(sign-in|sign-up)/,
+]
+
+function SiteFooter() {
+  const { pathname } = useLocation()
+  return NO_FOOTER.some((r) => r.test(pathname)) ? null : <Footer />
 }
 
 export default function App() {
@@ -223,6 +242,14 @@ export default function App() {
         {/* Legacy alias — old admin-only path now goes to the unified settings page */}
         <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />
         <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminToolboxPage />
+            </AdminRoute>
+          }
+        />
+        <Route
           path="/admin/usage"
           element={
             <AdminRoute>
@@ -329,6 +356,7 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <SiteFooter />
     </ConfirmProvider>
   )
 }

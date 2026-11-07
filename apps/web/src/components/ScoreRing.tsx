@@ -10,7 +10,12 @@ export function ScoreRing({ score, size = 120, strokeWidth = 10, label }: Props)
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (score / 100) * circumference
 
-  const color = score >= 80 ? '#1a6b3c' : score >= 60 ? '#d4830a' : '#c0392b'
+  const color =
+    score >= 80
+      ? 'rgb(var(--ld-emerald-400, 4 120 87))'
+      : score >= 60
+        ? 'rgb(var(--ld-amber-400, 146 64 14))'
+        : 'rgb(var(--ld-red-400, 185 28 28))'
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -21,7 +26,7 @@ export function ScoreRing({ score, size = 120, strokeWidth = 10, label }: Props)
             cy={size / 2}
             r={radius}
             fill="none"
-            stroke="#e0dbd2"
+            stroke="rgb(var(--ld-ink, 20 33 58) / 0.1)"
             strokeWidth={strokeWidth}
           />
           <circle

@@ -14,8 +14,10 @@
   "dependencies": {
     "@clerk/react": "^6.17.8",
     "@codemirror/lang-sql": "^6.10.0",
+    "@codemirror/language": "~6.12.4",
     "@electric-sql/pglite": "^0.5.8",
     "@id/types": "*",
+    "@lezer/highlight": "~1.2.3",
     "@uiw/react-codemirror": "^4.25.11",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",

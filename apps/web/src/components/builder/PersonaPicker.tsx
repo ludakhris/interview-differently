@@ -70,7 +70,7 @@ export function PersonaPicker({ value, onChange }: PersonaPickerProps) {
   }
 
   if (loading) {
-    return <p className="text-[11px] text-white/30 py-3">Loading presenters…</p>
+    return <p className="text-[11px] text-slate-mid py-3">Loading presenters…</p>
   }
 
   if (error) {
@@ -88,12 +88,12 @@ export function PersonaPicker({ value, onChange }: PersonaPickerProps) {
               onClick={() => pickPresenter(p)}
               className={`p-1.5 rounded-xl border transition-all text-left ${
                 selected
-                  ? 'border-[#2d9e5f]/60 bg-[#2d9e5f]/10'
-                  : 'border-white/10 bg-[#111111] hover:border-white/20'
+                  ? 'border-accent/60 bg-accent/10'
+                  : 'border-edge/10 bg-surface-alt hover:border-edge/20'
               }`}
               title={`${p.name} (${p.gender})`}
             >
-              <div className="aspect-square w-full rounded-lg overflow-hidden bg-black/50 mb-1.5">
+              <div className="aspect-square w-full rounded-lg overflow-hidden bg-ink/50 mb-1.5">
                 <img
                   src={p.image_url}
                   alt={p.name}
@@ -102,7 +102,7 @@ export function PersonaPicker({ value, onChange }: PersonaPickerProps) {
                 />
               </div>
               <p
-                className={`text-[10px] font-semibold truncate ${selected ? 'text-[#2d9e5f]' : 'text-cream-light'}`}
+                className={`text-[10px] font-semibold truncate ${selected ? 'text-accent' : 'text-fg'}`}
               >
                 {p.name}
               </p>
@@ -115,7 +115,7 @@ export function PersonaPicker({ value, onChange }: PersonaPickerProps) {
         <div>
           <label
             htmlFor={voiceSelectId}
-            className="block text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1.5"
+            className="block text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-1.5"
           >
             Voice
           </label>
@@ -123,7 +123,7 @@ export function PersonaPicker({ value, onChange }: PersonaPickerProps) {
             id={voiceSelectId}
             value={value?.voiceId ?? voiceOptions[0]?.id}
             onChange={(e) => pickVoice(e.target.value)}
-            className="w-full bg-[#111111] border border-white/10 rounded-lg px-3 py-2 text-[12px] text-cream-light focus:outline-hidden focus:border-white/30"
+            className="w-full bg-surface-alt border border-edge/10 rounded-lg px-3 py-2 text-[12px] text-fg focus:outline-hidden focus:border-edge/30"
           >
             {voiceOptions.map((v) => (
               <option key={v.id} value={v.id}>

@@ -61,27 +61,27 @@ export function AdminInstitutionAssessmentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav />
       <div className="max-w-(--breakpoint-2xl) mx-auto px-6 py-12">
         <button
           onClick={() => navigate('/admin/institutions')}
-          className="text-[12px] text-slate-mid hover:text-cream-light transition-colors mb-3"
+          className="text-[12px] text-slate-mid hover:text-fg transition-colors mb-3"
         >
           ← Back to institutions
         </button>
 
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+            <p className="font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
               Analytics
             </p>
-            <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
+            <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
               {detail?.name ?? 'Institution analytics'}
             </h1>
             {data?.cohort && (
               <p className="text-[12px] text-slate-mid mt-1">
-                Cohort: <span className="text-cream-light">{data.cohort.name}</span>
+                Cohort: <span className="text-fg">{data.cohort.name}</span>
               </p>
             )}
           </div>
@@ -94,7 +94,7 @@ export function AdminInstitutionAssessmentsPage() {
                 id="cohort-filter"
                 value={cohortId}
                 onChange={(e) => patchParams({ cohortId: e.target.value || null })}
-                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
+                className="bg-surface-alt border border-edge/10 rounded-lg px-3 py-1.5 text-[13px] text-fg focus:outline-hidden focus:border-edge/30"
               >
                 <option value="">All cohorts</option>
                 {detail.cohorts.map((c) => (
@@ -130,7 +130,7 @@ export function AdminInstitutionAssessmentsPage() {
         {loading ? (
           <p className="text-[13px] text-slate-mid">Loading…</p>
         ) : !data || data.pairs.length === 0 ? (
-          <div className="bg-[#111111] rounded-xl border border-white/10 px-6 py-12 text-center">
+          <div className="bg-surface-alt rounded-xl border border-edge/10 px-6 py-12 text-center">
             <p className="text-[13px] text-slate-mid">
               No assessment deliveries for {data?.cohort ? 'this cohort' : 'this institution'} yet.
               Schedule one under Tools ▾ → Assessments.
@@ -143,7 +143,7 @@ export function AdminInstitutionAssessmentsPage() {
                 type="checkbox"
                 checked={showNames}
                 onChange={(e) => patchParams({ names: e.target.checked ? '1' : null })}
-                className="accent-green"
+                className="accent-primary"
               />
               Show names &amp; emails
             </label>
@@ -205,15 +205,15 @@ function PairCard({
     })
 
   return (
-    <section className="bg-[#111111] rounded-2xl border border-white/10 overflow-hidden">
-      <div className="h-1.5 w-full bg-[#2d9e5f]" />
+    <section className="bg-surface-alt rounded-2xl border border-edge/10 overflow-hidden">
+      <div className="h-1.5 w-full bg-accent" />
       <div className="p-6">
         <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#2d9e5f]">
+            <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-accent">
               {pair.cohort.name}
             </p>
-            <h2 className="font-display font-bold text-[18px] text-cream-light mt-0.5">
+            <h2 className="font-display font-bold text-[18px] text-fg mt-0.5">
               {pair.assessmentTitle}
             </h2>
             <p className="text-[12px] text-slate-mid mt-1">
@@ -227,12 +227,12 @@ function PairCard({
           </div>
           <div className="flex items-center gap-6">
             <Stat label="Pre" value={pair.averages.pre.overall} tone="text-amber" />
-            <Stat label="Post" value={pair.averages.post.overall} tone="text-[#2d9e5f]" />
+            <Stat label="Post" value={pair.averages.post.overall} tone="text-accent" />
             <Stat label="% Improvement" value={pair.averages.delta.overall} delta />
           </div>
         </div>
 
-        <p className="text-[11px] text-white/40 mb-4">
+        <p className="text-[11px] text-slate-mid mb-4">
           % Improvement = post score − pre score, in percentage points, averaged over the{' '}
           {pair.averages.pairedCount} student
           {pair.averages.pairedCount === 1 ? '' : 's'} who completed both.
@@ -240,7 +240,7 @@ function PairCard({
             <span className="inline-block w-3 h-1.5 rounded-full bg-amber" /> pre
           </span>
           <span className="ml-2 inline-flex items-center gap-1.5">
-            <span className="inline-block w-3 h-1.5 rounded-full bg-[#2d9e5f]" /> post
+            <span className="inline-block w-3 h-1.5 rounded-full bg-accent" /> post
           </span>
         </p>
 
@@ -262,10 +262,10 @@ function PairCard({
                 const q = pair.averages.post[s.id]
                 const d = pair.averages.delta[s.id]
                 return (
-                  <tr key={s.id} className="border-t border-white/5">
-                    <td className="py-2 pr-4 text-cream-light">{s.title}</td>
+                  <tr key={s.id} className="border-t border-edge/5">
+                    <td className="py-2 pr-4 text-fg">{s.title}</td>
                     <td className="text-right py-2 px-3 font-mono text-amber">{pct(p)}</td>
-                    <td className="text-right py-2 px-3 font-mono text-[#2d9e5f]">{pct(q)}</td>
+                    <td className="text-right py-2 px-3 font-mono text-accent">{pct(q)}</td>
                     <td className={`text-right py-2 pl-3 font-mono font-semibold ${deltaCls(d)}`}>
                       {signed(d)}
                     </td>
@@ -283,10 +283,12 @@ function PairCard({
 
         {/* Students */}
         <div className="flex items-center justify-between mb-2">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">Students</p>
+          <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
+            Students
+          </p>
           <button
             onClick={exportCsv}
-            className="text-[11px] font-semibold text-slate-mid hover:text-cream-light transition-colors"
+            className="text-[11px] font-semibold text-slate-mid hover:text-fg transition-colors"
           >
             ↓ CSV
           </button>
@@ -314,22 +316,20 @@ function PairCard({
               </thead>
               <tbody>
                 {pair.students.map((s) => (
-                  <tr key={s.userId} className="border-t border-white/5">
+                  <tr key={s.userId} className="border-t border-edge/5">
                     <td className="py-2 pr-4">
-                      <p className="text-cream-light">{label(s)}</p>
+                      <p className="text-fg">{label(s)}</p>
                       {showNames && s.displayName && s.email && (
-                        <p className="text-[11px] text-white/40">{s.email}</p>
+                        <p className="text-[11px] text-slate-mid">{s.email}</p>
                       )}
                     </td>
                     {keys.map((k) => (
                       <td key={k.id} className="text-right py-2 px-2 font-mono whitespace-nowrap">
-                        <span className={s.pre?.[k.id] == null ? 'text-white/25' : 'text-amber'}>
+                        <span className={s.pre?.[k.id] == null ? 'text-slate-mid' : 'text-amber'}>
                           {pct(s.pre?.[k.id] ?? null)}
                         </span>
-                        <span className="text-white/25"> → </span>
-                        <span
-                          className={s.post?.[k.id] == null ? 'text-white/25' : 'text-[#2d9e5f]'}
-                        >
+                        <span className="text-slate-mid"> → </span>
+                        <span className={s.post?.[k.id] == null ? 'text-slate-mid' : 'text-accent'}>
                           {pct(s.post?.[k.id] ?? null)}
                         </span>
                       </td>
@@ -340,14 +340,14 @@ function PairCard({
                       {signed(s.delta)}
                     </td>
                     <td className="text-right py-2 pl-3 font-mono whitespace-nowrap">
-                      <span className={s.preMinutes == null ? 'text-white/25' : 'text-amber'}>
+                      <span className={s.preMinutes == null ? 'text-slate-mid' : 'text-amber'}>
                         {s.preMinutes ?? '—'}
                       </span>
-                      <span className="text-white/25"> → </span>
-                      <span className={s.postMinutes == null ? 'text-white/25' : 'text-[#2d9e5f]'}>
+                      <span className="text-slate-mid"> → </span>
+                      <span className={s.postMinutes == null ? 'text-slate-mid' : 'text-accent'}>
                         {s.postMinutes ?? '—'}
                       </span>
-                      <span className="text-white/40"> min</span>
+                      <span className="text-slate-mid"> min</span>
                     </td>
                   </tr>
                 ))}
@@ -373,9 +373,9 @@ function Stat({
 }) {
   return (
     <div className="text-right">
-      <p className="text-[10px] uppercase tracking-widest text-white/40">{label}</p>
+      <p className="text-[10px] uppercase tracking-widest text-slate-mid">{label}</p>
       <p
-        className={`font-display font-extrabold text-[22px] leading-none mt-0.5 ${delta ? deltaCls(value) : (tone ?? 'text-cream-light')}`}
+        className={`font-display font-extrabold text-[22px] leading-none mt-0.5 ${delta ? deltaCls(value) : (tone ?? 'text-fg')}`}
       >
         {delta ? (value == null ? '—' : `${value > 0 ? '+' : ''}${value}%`) : pct(value)}
       </p>
@@ -386,11 +386,11 @@ function Stat({
 function Bars({ pre, post }: { pre: number | null; post: number | null }) {
   return (
     <div className="space-y-1">
-      <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
+      <div className="h-1.5 rounded-full bg-ink/8 overflow-hidden">
         <div className="h-full bg-amber" style={{ width: `${pre ?? 0}%` }} />
       </div>
-      <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
-        <div className="h-full bg-[#2d9e5f]" style={{ width: `${post ?? 0}%` }} />
+      <div className="h-1.5 rounded-full bg-ink/8 overflow-hidden">
+        <div className="h-full bg-accent" style={{ width: `${post ?? 0}%` }} />
       </div>
     </div>
   )
@@ -406,7 +406,7 @@ function signed(v: number | null | undefined): string {
 }
 
 function deltaCls(v: number | null | undefined): string {
-  if (v == null) return 'text-white/30'
+  if (v == null) return 'text-slate-mid'
   if (v > 0) return 'text-emerald-400'
   if (v < 0) return 'text-red-400'
   return 'text-slate-light'

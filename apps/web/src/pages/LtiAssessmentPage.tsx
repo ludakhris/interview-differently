@@ -75,7 +75,7 @@ function Message({
 }
 
 const BUTTON =
-  'px-4 py-2 rounded-md bg-green hover:bg-green-light text-[13px] font-semibold text-on-primary disabled:opacity-50 transition-colors'
+  'px-4 py-2 rounded-md bg-primary hover:bg-accent text-[13px] font-semibold text-on-primary disabled:opacity-50 transition-colors'
 
 /**
  * Opened from the course after the learner used all their attempts: shows the submitted attempt's
@@ -102,7 +102,7 @@ function LtiReview({ token }: { token: string | null }) {
           We could not open the answers. Go back to your course and try again.
         </p>
         {courseUrl && (
-          <a href={courseUrl} className="text-green underline font-semibold text-[14px]">
+          <a href={courseUrl} className="text-primary underline font-semibold text-[14px]">
             Back to your course
           </a>
         )}
@@ -126,7 +126,7 @@ function LtiReview({ token }: { token: string | null }) {
             {result.overall.percent}%
           </h1>
           {courseUrl && (
-            <a href={courseUrl} className="text-green underline font-semibold text-[13px]">
+            <a href={courseUrl} className="text-primary underline font-semibold text-[13px]">
               {result.learner ? 'Back to the cohort' : 'Back to your course'}
             </a>
           )}

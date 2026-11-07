@@ -67,7 +67,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       {children}
       {pending && (
         <div
-          className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-100 flex items-center justify-center bg-ink/70 p-4"
           role="presentation"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) close(false)
@@ -84,7 +84,9 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 {pending.title}
               </h2>
               {pending.body && (
-                <div className="mt-2 text-[13px] text-ink/60 leading-relaxed">{pending.body}</div>
+                <div className="mt-2 text-[13px] text-slate-light leading-relaxed">
+                  {pending.body}
+                </div>
               )}
             </div>
             <div className="px-6 pb-5 flex gap-2 justify-end">
@@ -92,7 +94,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={() => close(false)}
-                  className="px-3 py-2 rounded-lg border border-edge/10 text-[13px] text-ink/60 hover:text-ink/85 hover:border-edge/25 transition-colors"
+                  className="px-3 py-2 rounded-lg border border-edge/10 text-[13px] text-slate-light hover:text-ink/85 hover:border-edge/25 transition-colors"
                 >
                   {pending.cancelLabel ?? 'Cancel'}
                 </button>
@@ -104,7 +106,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 className={`px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors ${
                   pending.danger
                     ? 'bg-red-500/20 text-red-300 border border-red-400/30 hover:bg-red-500/40 hover:text-ink'
-                    : 'bg-green hover:bg-green-light text-on-primary'
+                    : 'bg-primary hover:bg-accent text-on-primary'
                 }`}
               >
                 {pending.confirmLabel ?? (pending.notice ? 'OK' : 'Confirm')}

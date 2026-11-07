@@ -82,9 +82,9 @@ export function WorkSimulationCards({
           type="button"
           disabled={opening !== null}
           onClick={() => void open(s.bankSlug)}
-          className="text-left bg-[#111111] rounded-2xl border border-white/10 hover:border-white/20 transition-all hover:-translate-y-0.5 overflow-hidden group disabled:opacity-60"
+          className="text-left bg-surface-alt rounded-2xl border border-edge/10 hover:border-edge/20 transition-all hover:-translate-y-0.5 overflow-hidden group disabled:opacity-60"
         >
-          <div className="h-1.5 w-full" style={{ backgroundColor: color }} />
+          <div className="h-2 w-full" style={{ backgroundColor: color }} />
           <div className="p-5">
             <div className="flex items-start gap-3 mb-2">
               <div
@@ -94,20 +94,17 @@ export function WorkSimulationCards({
                 <MessagesSquare size={20} aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color }}>
+                <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-slate-mid">
                   Chat with your team
                 </p>
-                <h4 className="mt-0.5 font-display font-bold text-[15px] text-cream-light leading-snug">
+                <h4 className="mt-0.5 font-display font-bold text-[15px] text-fg leading-snug">
                   {s.title}
                 </h4>
               </div>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-slate-light">{simulationStatus(s)}</span>
-              <span
-                className="text-[11px] font-semibold group-hover:translate-x-1 transition-transform inline-block"
-                style={{ color }}
-              >
+              <span className="text-[12px] font-semibold text-primary group-hover:translate-x-1 transition-transform inline-block">
                 {opening === s.bankSlug
                   ? 'Opening…'
                   : s.done

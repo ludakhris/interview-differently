@@ -12,33 +12,31 @@ export function SqlResultPanel({ result }: Props) {
     ? { label: 'Correct', className: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' }
     : { label: 'Incorrect', className: 'bg-red-500/10 border-red-500/30 text-red-300' }
   return (
-    <div className="bg-[#0d0d0d] border border-white/10 rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-white/8 bg-white/3">
+    <div className="bg-surface-deep border border-edge/10 rounded-xl overflow-hidden">
+      <div className="px-4 py-3 border-b border-edge/8 bg-ink/3">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
+          <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             SQL submission
           </p>
           <div className="flex items-center gap-2">
             {result.hintUsed && (
               <span
-                className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border border-amber-500/35 bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded-full"
+                className="inline-flex items-center gap-1.5 text-[10px] font-mono font-medium uppercase tracking-[0.14em] border border-amber-500/35 bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded-full"
                 title="Candidate revealed the hint; signal capped at Proficient."
               >
                 💡 Hint used
               </span>
             )}
             <span
-              className={`text-[10px] font-bold uppercase tracking-widest border px-2 py-0.5 rounded-full ${tone.className}`}
+              className={`text-[10px] font-mono font-medium uppercase tracking-[0.14em] border px-2 py-0.5 rounded-full ${tone.className}`}
             >
               {tone.label}
             </span>
           </div>
         </div>
-        <p className="mt-0.5 text-[13px] font-medium text-cream-light leading-snug">
-          {result.prompt}
-        </p>
+        <p className="mt-0.5 text-[13px] font-medium text-fg leading-snug">{result.prompt}</p>
       </div>
-      <pre className="px-4 py-3 font-mono text-[12px] text-cream-light/85 whitespace-pre-wrap">
+      <pre className="px-4 py-3 font-mono text-[12px] text-fg/85 whitespace-pre-wrap">
         {result.sql}
       </pre>
       {!result.correct && result.reason && (

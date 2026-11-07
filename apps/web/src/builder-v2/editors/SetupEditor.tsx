@@ -197,11 +197,11 @@ export function SetupEditor({ scenario, onDone }: Props) {
                 className={`p-3 rounded-lg border text-left transition-all ${
                   mode === opt.value
                     ? 'border-emerald-400/50 bg-emerald-400/10'
-                    : 'border-white/10 bg-black hover:border-white/20'
+                    : 'border-edge/10 bg-surface hover:border-edge/20'
                 }`}
               >
-                <p className="text-[13px] font-semibold text-white/85">{opt.label}</p>
-                <p className="text-[11px] text-white/35 mt-0.5 leading-snug">{opt.hint}</p>
+                <p className="text-[13px] font-semibold text-ink/85">{opt.label}</p>
+                <p className="text-[11px] text-slate-mid mt-0.5 leading-snug">{opt.hint}</p>
               </button>
             ))}
           </div>
@@ -283,7 +283,7 @@ export function SetupEditor({ scenario, onDone }: Props) {
             onClick={() => setDimensions((prev) => [...prev, { name: '', description: '' }])}
           />
         )}
-        <p className="text-[11px] text-white/30">
+        <p className="text-[11px] text-slate-mid">
           Renaming a dimension doesn't rename it on phases or options — re-tick those chips after a
           rename.
         </p>
@@ -294,7 +294,7 @@ export function SetupEditor({ scenario, onDone }: Props) {
         {sidebar.map((section, si) => (
           <div
             key={si}
-            className="border border-white/10 rounded-lg p-3 bg-black/60 flex flex-col gap-2"
+            className="border border-edge/10 rounded-lg p-3 bg-surface flex flex-col gap-2"
           >
             <div className="grid grid-cols-[1fr_130px_auto] gap-2 items-center">
               <TextInput
@@ -352,13 +352,13 @@ export function SetupEditor({ scenario, onDone }: Props) {
       <button
         type="button"
         onClick={() => setShowAdvanced((v) => !v)}
-        className="text-[11px] font-semibold text-white/40 hover:text-white/70 text-left transition-colors"
+        className="text-[11px] font-semibold text-slate-mid hover:text-slate-light text-left transition-colors"
       >
         {showAdvanced ? '▾' : '▸'} Advanced display — context style, alert banner, incident header
         (ops / risk tracks)
       </button>
       {showAdvanced && (
-        <div className="flex flex-col gap-3 pl-3 border-l border-white/10">
+        <div className="flex flex-col gap-3 pl-3 border-l border-edge/10">
           <Field label="Context panel style">
             <SelectInput
               value={contextStyle ?? 'monitor'}

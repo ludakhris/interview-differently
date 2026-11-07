@@ -16,7 +16,20 @@ if (!PUBLISHABLE_KEY || PUBLISHABLE_KEY === 'pk_test_replace_me') {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/dashboard">
+    <ClerkProvider
+      publishableKey={PUBLISHABLE_KEY}
+      afterSignOutUrl="/dashboard"
+      appearance={{
+        // the interview/differently brand (index.css): blue accent, navy ink, Inter
+        variables: {
+          colorPrimary: '#2563eb',
+          colorForeground: '#14213a',
+          colorBackground: '#ffffff',
+          fontFamily: 'Inter, sans-serif',
+          borderRadius: '10px',
+        },
+      }}
+    >
       <BrowserRouter>
         <App />
         <EnvironmentBanner />

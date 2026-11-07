@@ -27,13 +27,13 @@ export function LtiNav({ trackLabel, stepLabel }: { trackLabel?: string; stepLab
               {brand.name}
             </span>
           )}
-          <span className="hidden sm:inline text-[10px] tracking-wide text-ink/40 whitespace-nowrap">
+          <span className="hidden sm:inline text-[10px] tracking-wide text-slate-mid whitespace-nowrap">
             Powered by Interview Differently
           </span>
         </span>
       ) : (
         <span className="font-display font-extrabold text-[17px] text-fg tracking-tight">
-          Interview<span className="text-green-light">Differently</span>
+          Interview<span className="text-accent">Differently</span>
         </span>
       )}
       <span className="flex items-center gap-4">
@@ -48,7 +48,7 @@ export function LtiNav({ trackLabel, stepLabel }: { trackLabel?: string; stepLab
         {trackLabel && (
           <span className="text-[11px] font-medium tracking-widest uppercase text-slate-light bg-ink/8 px-3 py-1 rounded-full border border-edge/10">
             {trackLabel}
-            {stepLabel && <span className="text-ink/40 ml-2">{stepLabel}</span>}
+            {stepLabel && <span className="text-slate-mid ml-2">{stepLabel}</span>}
           </span>
         )}
       </span>

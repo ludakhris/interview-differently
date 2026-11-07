@@ -61,22 +61,22 @@ export function AdminInstitutionAnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav />
       <div className="max-w-(--breakpoint-2xl) mx-auto px-6 py-12">
         <button
           onClick={() => navigate('/admin/institutions')}
-          className="text-[12px] text-slate-mid hover:text-cream-light transition-colors mb-3"
+          className="text-[12px] text-slate-mid hover:text-fg transition-colors mb-3"
         >
           ← Back to institutions
         </button>
 
         <div className="flex items-end justify-between flex-wrap gap-4 mb-8">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+            <p className="font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
               Analytics
             </p>
-            <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
+            <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
               {detail?.name ?? 'Institution analytics'}
             </h1>
           </div>
@@ -90,7 +90,7 @@ export function AdminInstitutionAnalyticsPage() {
                 id="cohort-filter"
                 value={cohortId}
                 onChange={(e) => setCohort(e.target.value)}
-                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
+                className="bg-surface-alt border border-edge/10 rounded-lg px-3 py-1.5 text-[13px] text-fg focus:outline-hidden focus:border-edge/30"
               >
                 <option value="">All cohorts</option>
                 {detail.cohorts.map((c) => (
@@ -145,14 +145,14 @@ function AnalyticsSections({ analytics }: { analytics: InstitutionAnalytics }) {
       {isFiltered && analytics.cohort && (
         <p className="text-[13px] text-slate-light">
           Showing data for cohort{' '}
-          <span className="font-semibold text-cream-light">{analytics.cohort.name}</span>.
+          <span className="font-semibold text-fg">{analytics.cohort.name}</span>.
         </p>
       )}
 
       {/* Stat cards */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+          <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             Overview
           </h2>
           <CsvButton
@@ -273,7 +273,7 @@ function CsvButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="text-[11px] font-semibold text-slate-mid hover:text-cream-light transition-colors"
+      className="text-[11px] font-semibold text-slate-mid hover:text-fg transition-colors"
       title="Download as CSV"
     >
       ↓ CSV
@@ -293,9 +293,11 @@ function StatCard({
   sublabel?: string
 }) {
   return (
-    <div className="bg-[#111111] rounded-xl border border-white/10 p-4">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-mid mb-2">{label}</p>
-      <p className="font-display font-extrabold text-[28px]" style={{ color: accent ?? '#f5f3ee' }}>
+    <div className="bg-surface-alt rounded-xl border border-edge/10 p-4">
+      <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
+        {label}
+      </p>
+      <p className="font-display font-extrabold text-[28px]" style={{ color: accent ?? '#14213a' }}>
         {value}
       </p>
       {sublabel && <p className="text-[11px] text-slate-mid mt-1">{sublabel}</p>}
@@ -317,9 +319,11 @@ function BreakdownTable({
   onExport?: () => void
 }) {
   return (
-    <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
+    <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">{title}</h2>
+        <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
+          {title}
+        </h2>
         {onExport && rows.length > 0 && <CsvButton onClick={onExport} />}
       </div>
       {rows.length === 0 ? (
@@ -328,7 +332,7 @@ function BreakdownTable({
         <div className="overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-widest text-slate-mid border-b border-white/10">
+              <tr className="text-left text-[11px] uppercase tracking-widest text-slate-mid border-b border-edge/10">
                 <th className="font-semibold py-2">{rowKey}</th>
                 <th className="font-semibold py-2 text-right">Count</th>
                 <th className="font-semibold py-2 text-right">Avg score</th>
@@ -336,8 +340,8 @@ function BreakdownTable({
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.key} className="border-b border-white/5 last:border-0">
-                  <td className="py-2 text-cream-light capitalize">{r.key}</td>
+                <tr key={r.key} className="border-b border-edge/5 last:border-0">
+                  <td className="py-2 text-fg capitalize">{r.key}</td>
                   <td className="py-2 text-right text-slate-light">{r.count}</td>
                   <td
                     className="py-2 text-right font-semibold"
@@ -380,9 +384,9 @@ function CohortBreakdownTable({
   )
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-white/10 p-6">
+    <div className="bg-surface-alt rounded-xl border border-edge/10 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-mid">
+        <h2 className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
           By cohort
         </h2>
         {onExport && sorted.length > 0 && <CsvButton onClick={onExport} />}
@@ -393,7 +397,7 @@ function CohortBreakdownTable({
         <div className="overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-widest text-slate-mid border-b border-white/10">
+              <tr className="text-left text-[11px] uppercase tracking-widest text-slate-mid border-b border-edge/10">
                 <th className="font-semibold py-2">Cohort</th>
                 <th className="font-semibold py-2 text-right">Students</th>
                 <th className="font-semibold py-2 text-right">Completed sims</th>
@@ -402,9 +406,9 @@ function CohortBreakdownTable({
             </thead>
             <tbody>
               {sorted.map((r) => (
-                <tr key={r.cohortId ?? 'none'} className="border-b border-white/5 last:border-0">
+                <tr key={r.cohortId ?? 'none'} className="border-b border-edge/5 last:border-0">
                   <td
-                    className={`py-2 ${r.cohortId === null ? 'italic text-slate-mid' : 'text-cream-light'}`}
+                    className={`py-2 ${r.cohortId === null ? 'italic text-slate-mid' : 'text-fg'}`}
                   >
                     {r.name}
                   </td>
@@ -428,8 +432,8 @@ function CohortBreakdownTable({
 
 // Same thresholds the dashboard's competency profile uses.
 function scoreColor(score: number | null): string {
-  if (score === null) return '#888'
-  if (score >= 80) return '#2d9e5f'
-  if (score >= 60) return '#d4830a'
+  if (score === null) return '#5b6273'
+  if (score >= 80) return '#1f8a55'
+  if (score >= 60) return '#b45309'
   return '#c0392b'
 }

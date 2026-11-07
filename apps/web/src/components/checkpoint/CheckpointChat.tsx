@@ -103,7 +103,7 @@ export function CheckpointChat({
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-start">
       <section
-        className={`grid gap-3 p-4 rounded-xl border border-edge/10 bg-surface-alt ${
+        className={`sim-dark grid gap-3 p-4 rounded-xl border border-edge/10 bg-surface ${
           framed ? '' : 'lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-auto'
         }`}
         aria-label="Requests from colleagues"
@@ -116,7 +116,7 @@ export function CheckpointChat({
         </header>
         <ol className="grid gap-2.5" ref={thread} aria-live="polite" aria-relevant="additions text">
           {opening && (
-            <li className="px-3.5 py-3 rounded-lg border-l-4 border-green-light bg-green-light/10 text-[14px] text-fg leading-relaxed">
+            <li className="px-3.5 py-3 rounded-lg border-l-4 border-accent bg-accent/10 text-[14px] text-fg leading-relaxed">
               {opening}
             </li>
           )}
@@ -340,7 +340,7 @@ function Bubble({
     >
       {!mine && !plain && (
         <span
-          className="flex-none grid place-items-center w-[30px] h-[30px] rounded-full bg-green-light text-on-accent text-[11px] font-extrabold"
+          className="flex-none grid place-items-center w-[30px] h-[30px] rounded-full bg-accent text-on-accent text-[11px] font-extrabold"
           aria-hidden="true"
         >
           {initials(who)}
@@ -349,7 +349,7 @@ function Bubble({
       <div
         className={`min-w-0 px-3 py-2 ${
           mine
-            ? 'rounded-[14px_14px_4px_14px] bg-green text-on-primary'
+            ? 'rounded-[14px_14px_4px_14px] bg-primary text-on-primary'
             : 'rounded-[14px_14px_14px_4px] bg-ink/6 text-fg'
         }`}
       >

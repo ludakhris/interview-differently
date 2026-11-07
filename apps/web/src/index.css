@@ -1,54 +1,65 @@
 @import 'tailwindcss';
 
+/*
+  Interview Differently brand (blue interview/differently, Nov 2026, issue #104).
+  Every colour is an `--ld-*` variable with the standalone look as its fallback. An LTI launch
+  sets the variables from the launching tenant's brand (src/lib/brand.ts) on its own wrapper,
+  so a branded launch overrides every colour here and an unbranded one gets this look.
+  Brand values: paper #f6f6f4, surface #ffffff, ink #14213a, ink-muted #3d4556,
+  ink-subtle #5b6273, line #e3e5ea, blue #2563eb (hover #1d4fd8), blue-soft #9fc2ff.
+*/
 @theme inline {
   --color-black: #0a0a0a;
-  --color-cream: #f0ede6;
-  --color-cream-light: #f5f3ee;
+  --color-cream: rgb(var(--ld-surface, 246 246 244));
+  --color-cream-light: rgb(var(--ld-surface, 246 246 244));
 
-  --color-surface: rgb(var(--ld-surface, 10 10 10));
-  --color-surface-alt: rgb(var(--ld-surface-alt, 17 17 17));
-  --color-surface-deep: rgb(var(--ld-surface-deep, 13 13 13));
-  --color-surface-bar: rgb(var(--ld-surface-bar, 15 15 15));
+  --color-surface: rgb(var(--ld-surface, 246 246 244));
+  --color-surface-alt: rgb(var(--ld-surface-alt, 255 255 255));
+  --color-surface-deep: rgb(var(--ld-surface-deep, 251 251 250));
+  --color-surface-bar: rgb(var(--ld-surface-bar, 255 255 255));
 
-  --color-fg: rgb(var(--ld-text, 245 243 238));
-  --color-ink: rgb(var(--ld-ink, 255 255 255));
-  --color-edge: rgb(var(--ld-edge, 255 255 255) / calc(1 * var(--ld-edge-k, 1)));
+  --color-fg: rgb(var(--ld-text, 20 33 58));
+  --color-ink: rgb(var(--ld-ink, 20 33 58));
+  --color-edge: rgb(var(--ld-edge, 20 33 58) / calc(1 * var(--ld-edge-k, 1)));
   --color-on-primary: rgb(var(--ld-on-primary, 255 255 255));
   --color-on-accent: rgb(var(--ld-on-accent, 255 255 255));
-  --color-mint: rgb(var(--ld-mint, 127 200 178));
-  --color-jade: rgb(var(--ld-jade, 78 165 138));
-  --color-azure: rgb(var(--ld-azure, 15 91 137));
+  --color-mint: rgb(var(--ld-mint, 37 99 235));
+  --color-jade: rgb(var(--ld-jade, 37 99 235));
+  --color-azure: rgb(var(--ld-azure, 29 79 216));
 
-  --color-green: rgb(var(--ld-primary, 26 107 60));
-  --color-green-light: rgb(var(--ld-accent, 45 158 95));
-  --color-green-pale: #e8f5ee;
+  --color-primary: rgb(var(--ld-primary, 37 99 235));
+  --color-accent: rgb(var(--ld-accent, 29 79 216));
+  --color-primary-pale: rgb(var(--ld-primary, 37 99 235) / 0.1);
+  --color-blue-soft: rgb(var(--ld-blue-soft, 159 194 255));
 
-  --color-amber-200: rgb(var(--ld-amber-200, 253 230 138));
-  --color-amber-300: rgb(var(--ld-amber-300, 252 211 77));
-  --color-amber-400: rgb(var(--ld-amber-400, 251 191 36));
-  --color-amber: #d4830a;
+  --color-amber-200: rgb(var(--ld-amber-200, 146 64 14));
+  --color-amber-300: rgb(var(--ld-amber-300, 146 64 14));
+  --color-amber-400: rgb(var(--ld-amber-400, 146 64 14));
+  --color-amber: rgb(var(--ld-amber-400, 146 64 14));
   --color-amber-pale: #fef3e0;
 
-  --color-red-300: rgb(var(--ld-red-300, 252 165 165));
-  --color-red-400: rgb(var(--ld-red-400, 248 113 113));
+  --color-red-300: rgb(var(--ld-red-300, 153 27 27));
+  --color-red-400: rgb(var(--ld-red-400, 185 28 28));
 
-  --color-emerald-300: rgb(var(--ld-emerald-300, 110 231 183));
-  --color-emerald-400: rgb(var(--ld-emerald-400, 52 211 153));
+  --color-emerald-300: rgb(var(--ld-emerald-300, 6 95 70));
+  --color-emerald-400: rgb(var(--ld-emerald-400, 4 120 87));
 
-  --color-violet-400: rgb(var(--ld-violet-400, 167 139 250));
+  --color-violet-400: rgb(var(--ld-violet-400, 124 58 237));
 
-  --color-sky-400: rgb(var(--ld-sky-400, 56 189 248));
+  --color-sky-400: rgb(var(--ld-sky-400, 3 105 161));
 
-  --color-slate: #2c3e50;
-  --color-slate-mid: rgb(var(--ld-soft, 84 110 122));
-  --color-slate-light: rgb(var(--ld-soft-light, 176 190 197));
+  --color-slate: #14213a;
+  --color-slate-mid: rgb(var(--ld-soft, 91 98 115));
+  --color-slate-light: rgb(var(--ld-soft-light, 61 69 86));
 
-  --color-border: #e0dbd2;
+  --color-border: rgb(var(--ld-border, 227 229 234));
 
-  --font-body: Inter, sans-serif;
+  --font-body: var(--ld-font, Inter), sans-serif;
+  --font-display: var(--ld-font, Inter), sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
-  --shadow-card-lg: 0 12px 48px rgba(0, 0, 0, 0.14);
+  --shadow-card: 0 16px 34px -16px rgba(20, 33, 58, 0.35);
+  --shadow-card-lg: 0 24px 48px -20px rgba(20, 33, 58, 0.45);
 }
 
 /*
@@ -70,7 +81,7 @@
 }
 
 @utility font-display {
-  font-family: 'Syne', sans-serif;
+  font-family: var(--ld-font, Inter), sans-serif;
 }
 
 @utility animate-fade-in {
@@ -81,6 +92,104 @@
   animation: slideUp 0.4s ease forwards;
 }
 
+/*
+  Simulation panels (incident consoles, SQL editors, interviewer chat, exhibits) are dark navy
+  panels floating on the paper page. `.sim-dark` re-points the theme variables inside a panel, so
+  the components in it keep using the same token classes. A branded LTI launch keeps the tenant's
+  colours: there every variable inherits from the brand wrapper instead.
+*/
+.sim-dark {
+  --ld-surface: 20 33 58;
+  --ld-surface-alt: 27 39 66;
+  --ld-surface-deep: 15 26 48;
+  --ld-surface-bar: 27 39 66;
+  --ld-text: 232 234 238;
+  --ld-ink: 232 234 238;
+  --ld-edge: 232 234 238;
+  --ld-edge-k: 1;
+  --ld-border: 38 54 90;
+  --ld-soft: 154 166 189;
+  --ld-soft-light: 196 204 218;
+  --ld-primary: 37 99 235;
+  --ld-on-primary: 255 255 255;
+  --ld-accent: 159 194 255;
+  --ld-on-accent: 20 33 58;
+  --ld-mint: 159 194 255;
+  --ld-jade: 159 194 255;
+  --ld-azure: 159 194 255;
+  --ld-blue-soft: 159 194 255;
+  --ld-amber-200: 255 220 160;
+  --ld-amber-300: 255 197 107;
+  --ld-amber-400: 255 197 107;
+  --ld-red-300: 255 170 172;
+  --ld-red-400: 255 141 144;
+  --ld-emerald-300: 170 235 196;
+  --ld-emerald-400: 143 224 176;
+  --ld-violet-400: 196 181 253;
+  --ld-sky-400: 125 211 252;
+  color-scheme: dark;
+  color: rgb(var(--ld-text));
+}
+/* A brand's typeface (BRAND_FONTS in src/lib/brand.ts): text and headings inside the LTI wrapper. */
+[data-lti-font='Inter'] {
+  --ld-font: 'Inter';
+}
+[data-lti-font='Manrope'] {
+  --ld-font: 'Manrope';
+}
+[data-lti-font='Open Sans'] {
+  --ld-font: 'Open Sans';
+}
+[data-lti-font='Lato'] {
+  --ld-font: 'Lato';
+}
+[data-lti-font='Roboto'] {
+  --ld-font: 'Roboto';
+}
+[data-lti-font='Source Sans 3'] {
+  --ld-font: 'Source Sans 3';
+}
+[data-lti-font='Montserrat'] {
+  --ld-font: 'Montserrat';
+}
+/* var() is resolved here, inside the wrapper, so the brand's --ld-font applies. */
+[data-lti-font] {
+  font-family: var(--ld-font, Inter), sans-serif;
+}
+
+[data-lti-brand='light'] .sim-dark,
+[data-lti-brand='dark'] .sim-dark {
+  --ld-surface: inherit;
+  --ld-surface-alt: inherit;
+  --ld-surface-deep: inherit;
+  --ld-surface-bar: inherit;
+  --ld-text: inherit;
+  --ld-ink: inherit;
+  --ld-edge: inherit;
+  --ld-edge-k: inherit;
+  --ld-border: inherit;
+  --ld-soft: inherit;
+  --ld-soft-light: inherit;
+  --ld-primary: inherit;
+  --ld-on-primary: inherit;
+  --ld-accent: inherit;
+  --ld-on-accent: inherit;
+  --ld-mint: inherit;
+  --ld-jade: inherit;
+  --ld-azure: inherit;
+  --ld-blue-soft: inherit;
+  --ld-amber-200: inherit;
+  --ld-amber-300: inherit;
+  --ld-amber-400: inherit;
+  --ld-red-300: inherit;
+  --ld-red-400: inherit;
+  --ld-emerald-300: inherit;
+  --ld-emerald-400: inherit;
+  --ld-violet-400: inherit;
+  --ld-sky-400: inherit;
+  color-scheme: inherit;
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -89,9 +198,9 @@
   }
 
   body {
-    font-family: 'DM Sans', sans-serif;
-    background: #f0ede6;
-    color: #0a0a0a;
+    font-family: var(--ld-font, Inter), sans-serif;
+    background: rgb(var(--ld-surface, 246 246 244));
+    color: rgb(var(--ld-text, 20 33 58));
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -102,7 +211,7 @@
   h4,
   h5,
   h6 {
-    font-family: 'Syne', sans-serif;
+    font-family: var(--ld-font, Inter), sans-serif;
   }
 }
 
@@ -159,12 +268,12 @@
 
 .choice-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 16px 34px -16px rgba(20, 33, 58, 0.35);
 }
 
 .choice-card.selected {
-  border-color: #1a6b3c !important;
-  background: #e8f5ee !important;
+  border-color: rgb(var(--ld-primary, 37 99 235)) !important;
+  background: rgb(var(--ld-primary, 37 99 235) / 0.1) !important;
 }
 
 /* Scrollbar */
@@ -175,7 +284,7 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #b0bec5;
+  background: rgb(var(--ld-soft-light, 61 69 86) / 0.35);
   border-radius: 3px;
 }
 

@@ -3,7 +3,6 @@ import { useAuth, useUser } from '@clerk/react'
 import { useEffect, useMemo, useState } from 'react'
 import { ClipboardCheck, Database } from 'lucide-react'
 import { Nav } from '@/components/Nav'
-import { Footer } from '@/components/Footer'
 import { TrackIcon } from '@/components/TrackIcon'
 import {
   WorkSimulationCards,
@@ -93,7 +92,7 @@ function groupScenarios(scenarios: Scenario[]) {
 }
 
 // Accent for tool cards — sits alongside the per-track colours from trackMeta.
-const TOOL_COLOR = '#2d9e5f'
+const TOOL_COLOR = '#2563eb'
 
 function subcategoryLabel(key: string): string {
   if (key === 'uncategorized') return 'Other'
@@ -149,7 +148,7 @@ export function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <p className="text-slate-mid text-[14px]">Loading simulations...</p>
       </div>
     )
@@ -157,14 +156,14 @@ export function DashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <p className="text-red-400 text-[14px]">Failed to load simulations. Please try again.</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
+    <div className="min-h-screen bg-surface flex flex-col">
       <Nav />
 
       <div className="max-w-5xl mx-auto px-6 py-12">
@@ -173,7 +172,7 @@ export function DashboardPage() {
             <p className="text-[12px] font-medium tracking-widest uppercase text-slate-mid mb-1">
               {isSignedIn ? 'Welcome back' : 'Explore simulations'}
             </p>
-            <h2 className="font-display font-extrabold text-[32px] text-cream-light tracking-tight">
+            <h2 className="font-display font-extrabold text-[32px] text-fg tracking-tight">
               {isSignedIn ? (user?.fullName ?? user?.firstName ?? 'Welcome') : 'Choose a scenario'}
             </h2>
           </div>
@@ -190,15 +189,15 @@ export function DashboardPage() {
             return (
               <section key={track}>
                 {/* Track header */}
-                <div className="flex items-start gap-3 mb-5">
-                  <div className="mt-0.5">
-                    <TrackIcon name={meta.icon} size={22} color={meta.color} />
+                <div className="flex items-start gap-4 mb-5">
+                  <div
+                    className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center"
+                    style={{ backgroundColor: meta.color }}
+                  >
+                    <TrackIcon name={meta.icon} size={22} color="#ffffff" />
                   </div>
                   <div className="flex-1">
-                    <h4
-                      className="font-display font-extrabold text-[20px] text-cream-light leading-tight"
-                      style={{ color: meta.color }}
-                    >
+                    <h4 className="font-display font-extrabold text-[20px] text-fg tracking-[-0.02em] leading-tight">
                       {meta.label}
                     </h4>
                     <p className="text-[13px] text-slate-mid leading-relaxed mt-1 max-w-3xl">
@@ -217,9 +216,9 @@ export function DashboardPage() {
                       <Link
                         key={scenario.scenarioId}
                         to={`/scenario/${scenario.scenarioId}/briefing`}
-                        className="block bg-[#111111] rounded-2xl border border-white/10 hover:border-white/20 transition-all hover:-translate-y-0.5 overflow-hidden cursor-pointer group"
+                        className="block bg-surface-alt rounded-2xl border border-edge/10 hover:border-edge/20 transition-all hover:-translate-y-0.5 overflow-hidden cursor-pointer group"
                       >
-                        <div className="h-1.5 w-full" style={{ backgroundColor: meta.color }} />
+                        <div className="h-2 w-full" style={{ backgroundColor: meta.color }} />
                         <div className="p-5">
                           <div className="flex items-start gap-3 mb-2">
                             <div
@@ -230,14 +229,11 @@ export function DashboardPage() {
                             </div>
                             <div className="min-w-0 flex-1">
                               {scenario.subcategory && (
-                                <p
-                                  className="text-[10px] font-bold uppercase tracking-[0.18em]"
-                                  style={{ color: meta.color }}
-                                >
+                                <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-slate-mid">
                                   {subcategoryLabel(scenario.subcategory)}
                                 </p>
                               )}
-                              <h4 className="mt-0.5 font-display font-bold text-[15px] text-cream-light leading-snug">
+                              <h4 className="mt-0.5 font-display font-bold text-[15px] text-fg leading-snug">
                                 {scenario.title}
                               </h4>
                             </div>
@@ -246,10 +242,7 @@ export function DashboardPage() {
                             <span className="text-[11px] text-slate-light">
                               ~{scenario.estimatedMinutes} min
                             </span>
-                            <span
-                              className="text-[11px] font-semibold group-hover:translate-x-1 transition-transform inline-block"
-                              style={{ color: meta.color }}
-                            >
+                            <span className="text-[12px] font-semibold text-primary group-hover:translate-x-1 transition-transform inline-block">
                               Start →
                             </span>
                           </div>
@@ -269,29 +262,29 @@ export function DashboardPage() {
         {/* ── Custom-scenario CTA ── */}
         <button
           onClick={() => navigate('/request-scenario')}
-          className="w-full mb-10 rounded-2xl border border-dashed border-white/15 hover:border-green/40 bg-[#0d0d0d] hover:bg-[#101510] transition-all px-6 py-5 text-left flex items-center justify-between gap-4 group"
+          className="w-full mb-10 rounded-2xl border border-dashed border-edge/15 hover:border-primary/40 bg-surface-deep hover:bg-primary-pale transition-all px-6 py-5 text-left flex items-center justify-between gap-4 group"
         >
           <div>
-            <p className="font-display font-bold text-[15px] text-cream-light mb-1">
+            <p className="font-display font-bold text-[15px] text-fg mb-1">
               Don't see what you need?
             </p>
             <p className="text-[13px] text-slate-mid leading-relaxed">
               Tell us about your scenario and we'll build a custom one for you.
             </p>
           </div>
-          <span className="text-[13px] font-semibold text-green group-hover:translate-x-1 transition-transform whitespace-nowrap">
+          <span className="text-[13px] font-semibold text-primary group-hover:translate-x-1 transition-transform whitespace-nowrap">
             Request a scenario →
           </span>
         </button>
 
         {/* ── Competency Profile ── */}
-        <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
+        <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6 mb-6">
           <h3 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid mb-5">
             Competency Profile
           </h3>
           {!isSignedIn ? (
             <div className="flex items-center gap-3 text-slate-mid">
-              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[16px]">
+              <div className="w-8 h-8 rounded-lg bg-ink/5 flex items-center justify-center text-[16px]">
                 📈
               </div>
               <p className="text-[14px]">Sign in to track your competency scores.</p>
@@ -300,7 +293,7 @@ export function DashboardPage() {
             <p className="text-[13px] text-slate-mid">Loading profile...</p>
           ) : competencies.length === 0 ? (
             <div className="flex items-center gap-3 text-slate-mid">
-              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[16px]">
+              <div className="w-8 h-8 rounded-lg bg-ink/5 flex items-center justify-center text-[16px]">
                 📈
               </div>
               <p className="text-[14px]">
@@ -312,21 +305,19 @@ export function DashboardPage() {
               {competencies.map((dim) => {
                 const color =
                   dim.averageScore >= 80
-                    ? '#2d9e5f'
+                    ? '#1f8a55'
                     : dim.averageScore >= 60
-                      ? '#d4830a'
+                      ? '#b45309'
                       : '#c0392b'
                 return (
                   <div key={dim.dimension}>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[13px] font-semibold text-cream-light">
-                        {dim.dimension}
-                      </span>
+                      <span className="text-[13px] font-semibold text-fg">{dim.dimension}</span>
                       <span className="text-[13px] font-bold" style={{ color }}>
                         {dim.averageScore}
                       </span>
                     </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-2 bg-ink/10 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-700"
                         style={{ width: `${dim.averageScore}%`, backgroundColor: color }}
@@ -341,7 +332,7 @@ export function DashboardPage() {
 
         {/* ── Simulation History ── */}
         {isSignedIn && profile && profile.history.length > 0 && (
-          <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
+          <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6 mb-6">
             <h3 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid mb-5">
               Simulation History
             </h3>
@@ -350,9 +341,9 @@ export function DashboardPage() {
                 const meta = trackMeta[item.track]
                 const color =
                   item.overallScore >= 80
-                    ? '#2d9e5f'
+                    ? '#1f8a55'
                     : item.overallScore >= 60
-                      ? '#d4830a'
+                      ? '#b45309'
                       : '#c0392b'
                 const date = new Date(item.completedAt).toLocaleDateString('en-GB', {
                   day: 'numeric',
@@ -362,17 +353,15 @@ export function DashboardPage() {
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between py-3 border-b border-white/5 last:border-0"
+                    className="flex items-center justify-between py-3 border-b border-edge/5 last:border-0"
                   >
                     <div className="flex items-center gap-3">
                       <div
                         className="h-2 w-2 rounded-full shrink-0"
-                        style={{ backgroundColor: meta?.color ?? '#888' }}
+                        style={{ backgroundColor: meta?.color ?? '#5b6273' }}
                       />
                       <div>
-                        <p className="text-[13px] font-semibold text-cream-light">
-                          {item.scenarioTitle}
-                        </p>
+                        <p className="text-[13px] font-semibold text-fg">{item.scenarioTitle}</p>
                         <p className="text-[11px] text-slate-mid">{date}</p>
                       </div>
                     </div>
@@ -382,13 +371,13 @@ export function DashboardPage() {
                       </span>
                       <button
                         onClick={() => navigate(`/scenario/${item.scenarioId}/feedback/${item.id}`)}
-                        className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
+                        className="text-[11px] text-slate-mid hover:text-fg transition-colors"
                       >
                         View →
                       </button>
                       <button
                         onClick={() => navigate(`/scenario/${item.scenarioId}/briefing`)}
-                        className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
+                        className="text-[11px] text-slate-mid hover:text-fg transition-colors"
                       >
                         Retry →
                       </button>
@@ -402,7 +391,7 @@ export function DashboardPage() {
 
         {/* ── Immersive Interview History ── */}
         {isSignedIn && immersiveSessions.length > 0 && (
-          <div className="bg-[#111111] rounded-2xl border border-white/10 p-6 mb-6">
+          <div className="bg-surface-alt rounded-2xl border border-edge/10 p-6 mb-6">
             <h3 className="font-display font-bold text-[13px] uppercase tracking-widest text-slate-mid mb-5">
               Interview Practice History
             </h3>
@@ -413,18 +402,16 @@ export function DashboardPage() {
                   month: 'short',
                   year: 'numeric',
                 })
-                const statusColor = session.status === 'completed' ? '#2d9e5f' : '#888'
+                const statusColor = session.status === 'completed' ? '#1f8a55' : '#5b6273'
                 return (
                   <div
                     key={session.id}
-                    className="flex items-center justify-between py-3 border-b border-white/5 last:border-0"
+                    className="flex items-center justify-between py-3 border-b border-edge/5 last:border-0"
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-[14px]">🎙</span>
                       <div>
-                        <p className="text-[13px] font-semibold text-cream-light">
-                          {session.scenarioId}
-                        </p>
+                        <p className="text-[13px] font-semibold text-fg">{session.scenarioId}</p>
                         <p className="text-[11px] text-slate-mid">
                           {date} · {session._count.responses} response
                           {session._count.responses !== 1 ? 's' : ''}
@@ -445,14 +432,14 @@ export function DashboardPage() {
                               `/scenario/${session.scenarioId}/immersive/${session.id}/feedback`
                             )
                           }
-                          className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
+                          className="text-[11px] text-slate-mid hover:text-fg transition-colors"
                         >
                           View →
                         </button>
                       )}
                       <button
                         onClick={() => navigate(`/scenario/${session.scenarioId}/immersive`)}
-                        className="text-[11px] text-slate-mid hover:text-cream-light transition-colors"
+                        className="text-[11px] text-slate-mid hover:text-fg transition-colors"
                       >
                         Retry →
                       </button>
@@ -483,9 +470,9 @@ export function DashboardPage() {
                     : key === 'sql-sandbox'
                       ? 'No datasets assigned to your cohorts yet.'
                       : meta.description
-                const cls = `bg-[#111111] rounded-2xl border border-white/10 overflow-hidden transition-all group ${
+                const cls = `bg-surface-alt rounded-2xl border border-edge/10 overflow-hidden transition-all group ${
                   available
-                    ? 'hover:border-white/20 hover:-translate-y-0.5 cursor-pointer'
+                    ? 'hover:border-edge/20 hover:-translate-y-0.5 cursor-pointer'
                     : 'opacity-60'
                 }`
                 const body = (
@@ -501,12 +488,12 @@ export function DashboardPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p
-                            className="text-[10px] font-bold uppercase tracking-[0.18em]"
+                            className="text-[10px] font-mono font-medium uppercase tracking-[0.14em]"
                             style={{ color: TOOL_COLOR }}
                           >
                             {available ? 'Tool' : 'Coming soon'}
                           </p>
-                          <h4 className="mt-0.5 font-display font-bold text-[15px] text-cream-light leading-snug">
+                          <h4 className="mt-0.5 font-display font-bold text-[15px] text-fg leading-snug">
                             {meta.label}
                           </h4>
                         </div>
@@ -543,7 +530,7 @@ export function DashboardPage() {
           <div className="flex justify-end">
             <button
               onClick={() => navigate('/builder')}
-              className="text-[13px] font-semibold text-[#2d9e5f] hover:text-[#2d9e5f]/80 transition-colors underline-offset-2 hover:underline"
+              className="text-[13px] font-semibold text-accent hover:text-accent/80 transition-colors underline-offset-2 hover:underline"
             >
               Build a scenario →
             </button>
@@ -552,7 +539,6 @@ export function DashboardPage() {
       </div>
 
       <div className="flex-1" />
-      <Footer />
     </div>
   )
 }

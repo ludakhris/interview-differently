@@ -24,7 +24,7 @@ export function ContextCards({ panels }: { panels: ContextPanel[] }) {
                 {p.value}
               </p>
               {p.unit && (
-                <span className="text-[12px] text-ink/55 whitespace-nowrap">{p.unit}</span>
+                <span className="text-[12px] text-slate-mid whitespace-nowrap">{p.unit}</span>
               )}
             </div>
 
@@ -41,7 +41,9 @@ export function ContextCards({ panels }: { panels: ContextPanel[] }) {
               </div>
             )}
 
-            {p.caption && <p className="mt-2 text-[13px] leading-snug text-ink/55">{p.caption}</p>}
+            {p.caption && (
+              <p className="mt-2 text-[13px] leading-snug text-slate-mid">{p.caption}</p>
+            )}
           </div>
         )
       })}

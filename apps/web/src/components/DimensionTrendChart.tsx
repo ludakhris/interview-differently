@@ -15,8 +15,8 @@ export interface DimensionTrendChartProps {
 }
 
 const PALETTE = [
-  '#2d9e5f',
-  '#d4830a',
+  '#1f8a55',
+  '#b45309',
   '#5b8def',
   '#b67edb',
   '#c0392b',
@@ -118,7 +118,7 @@ export function DimensionTrendChart({ series, height = 220 }: DimensionTrendChar
           const path = points
             .map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(p.t).toFixed(1)} ${y(p.score).toFixed(1)}`)
             .join(' ')
-          const color = colorByDim.get(dim) ?? '#888'
+          const color = colorByDim.get(dim) ?? '#5b6273'
           const isOther = focused !== null && focused !== dim
           return (
             <g key={dim} opacity={isOther ? 0.15 : 1} style={{ transition: 'opacity 120ms' }}>
@@ -140,7 +140,7 @@ export function DimensionTrendChart({ series, height = 220 }: DimensionTrendChar
             onMouseLeave={() => setFocused(null)}
             onFocus={() => setFocused(dim)}
             onBlur={() => setFocused(null)}
-            className="flex items-center gap-1.5 text-[11px] text-slate-light hover:text-cream-light transition-colors"
+            className="flex items-center gap-1.5 text-[11px] text-slate-light hover:text-fg transition-colors"
           >
             <span
               className="inline-block w-3 h-3 rounded-xs"

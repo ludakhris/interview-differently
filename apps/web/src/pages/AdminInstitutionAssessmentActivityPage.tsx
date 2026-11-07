@@ -87,22 +87,22 @@ export function AdminInstitutionAssessmentActivityPage() {
   }, [auto, autoSec, refresh])
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface">
       <Nav />
       <div className="max-w-(--breakpoint-2xl) mx-auto px-6 py-12">
         <button
           onClick={() => navigate('/admin/institutions')}
-          className="text-[12px] text-slate-mid hover:text-cream-light transition-colors mb-3"
+          className="text-[12px] text-slate-mid hover:text-fg transition-colors mb-3"
         >
           ← Back to institutions
         </button>
 
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
-            <p className="text-[12px] font-bold uppercase tracking-widest text-slate-mid mb-1">
+            <p className="font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-slate-mid mb-1">
               Analytics
             </p>
-            <h1 className="font-display font-extrabold text-[24px] text-cream-light tracking-tight">
+            <h1 className="font-display font-extrabold text-[24px] text-fg tracking-tight">
               {detail?.name ?? 'Assessment activity'}
             </h1>
           </div>
@@ -116,7 +116,7 @@ export function AdminInstitutionAssessmentActivityPage() {
                 id="cohort-filter"
                 value={cohortId}
                 onChange={(e) => setSearchParams({ cohortId: e.target.value }, { replace: true })}
-                className="bg-[#111111] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-cream-light focus:outline-hidden focus:border-white/30"
+                className="bg-surface-alt border border-edge/10 rounded-lg px-3 py-1.5 text-[13px] text-fg focus:outline-hidden focus:border-edge/30"
               >
                 {detail.cohorts.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -146,7 +146,7 @@ export function AdminInstitutionAssessmentActivityPage() {
           <button
             onClick={() => void refresh()}
             disabled={loading || !cohortId}
-            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-cream-light disabled:opacity-40 transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-ink/10 hover:bg-ink/15 text-[13px] font-semibold text-fg disabled:opacity-40 transition-colors"
           >
             {loading ? 'Refreshing…' : 'Refresh'}
           </button>
@@ -155,7 +155,7 @@ export function AdminInstitutionAssessmentActivityPage() {
               type="checkbox"
               checked={auto}
               onChange={(e) => setAuto(e.target.checked)}
-              className="accent-[#2d9e5f]"
+              className="accent-primary"
             />
             Auto-refresh every
           </label>
@@ -163,7 +163,7 @@ export function AdminInstitutionAssessmentActivityPage() {
             aria-label="Auto-refresh interval"
             value={autoSec}
             onChange={(e) => setAutoSec(Number(e.target.value))}
-            className="bg-[#111111] border border-white/10 rounded-lg px-2 py-1 text-[12px] text-cream-light focus:outline-hidden focus:border-white/30"
+            className="bg-surface-alt border border-edge/10 rounded-lg px-2 py-1 text-[12px] text-fg focus:outline-hidden focus:border-edge/30"
           >
             {AUTO_REFRESH_OPTIONS.map((sec) => (
               <option key={sec} value={sec}>
@@ -209,10 +209,10 @@ export function AdminInstitutionAssessmentActivityPage() {
 function DeliveryPanel({ delivery: d }: { delivery: AssessmentActivity['deliveries'][number] }) {
   const total = d.students.length
   return (
-    <section className="bg-[#111111] rounded-xl border border-white/10">
+    <section className="bg-surface-alt rounded-xl border border-edge/10">
       <header className="px-5 py-4 flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-[15px] font-semibold text-cream-light">
+          <h2 className="text-[15px] font-semibold text-fg">
             {d.assessmentTitle} <span className="font-normal text-slate-mid">· {d.label}</span>
           </h2>
           {(d.opensAt || d.closesAt || d.timeLimitMinutes) && (
@@ -224,7 +224,7 @@ function DeliveryPanel({ delivery: d }: { delivery: AssessmentActivity['deliveri
           )}
         </div>
         <p className="text-[12px] text-slate-mid whitespace-nowrap">
-          <span className="text-green">{d.counts.submitted} submitted</span> ·{' '}
+          <span className="text-primary">{d.counts.submitted} submitted</span> ·{' '}
           <span className="text-amber-400">{d.counts.inProgress} in progress</span> ·{' '}
           {d.counts.notStarted} not started
         </p>
@@ -232,7 +232,7 @@ function DeliveryPanel({ delivery: d }: { delivery: AssessmentActivity['deliveri
       {total === 0 ? (
         <p className="px-5 pb-4 text-[12px] text-slate-mid">No students in this cohort.</p>
       ) : (
-        <ul className="border-t border-white/10 divide-y divide-white/5">
+        <ul className="border-t border-edge/10 divide-y divide-edge/5">
           {d.students.map((s) => (
             <StudentRow key={s.userId} s={s} />
           ))}
@@ -249,10 +249,10 @@ function StudentRow({ s }: { s: AssessmentActivityStudent }) {
       : s.questionCount > 0
         ? Math.round((s.answeredCount / s.questionCount) * 100)
         : 0
-  const color = s.status === 'submitted' ? 'bg-green' : 'bg-amber-400'
+  const color = s.status === 'submitted' ? 'bg-primary' : 'bg-amber-400'
   return (
     <li className="px-5 py-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)] items-center gap-4">
-      <span className="text-[13px] text-cream-light truncate">
+      <span className="text-[13px] text-fg truncate">
         {s.name}
         {s.email && s.email !== s.name && (
           <span className="ml-2 text-[12px] text-slate-mid">{s.email}</span>
@@ -260,7 +260,7 @@ function StudentRow({ s }: { s: AssessmentActivityStudent }) {
       </span>
       <div className="flex items-center gap-3">
         <div
-          className="h-2 flex-1 rounded-full bg-white/10 overflow-hidden"
+          className="h-2 flex-1 rounded-full bg-ink/10 overflow-hidden"
           role="progressbar"
           aria-label={`${s.name} progress`}
           aria-valuenow={pct}

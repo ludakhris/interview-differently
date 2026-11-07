@@ -70,7 +70,7 @@ export function ExhibitBlock({
             'text-[11px] font-semibold border rounded-full px-2.5 py-0.5 transition-all',
             isShared
               ? 'text-emerald-300 bg-emerald-400/10 border-emerald-400/30 hover:bg-emerald-400/5'
-              : 'text-white/30 border-white/10 hover:text-white/50 hover:border-white/20',
+              : 'text-slate-mid border-edge/10 hover:text-slate-mid hover:border-edge/20',
           ].join(' ')}
         >
           ↻ show again later
@@ -179,14 +179,16 @@ function DecisionBlock({
     <BlockShell emoji="🔀" kindLabel="Decision" onEditRequest={onEditRequest}>
       {/* Immersive: what the interviewer says + render state (#24 Phase H) */}
       {immersive && (
-        <div className="mb-3 pb-3 border-b border-white/6">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">
+        <div className="mb-3 pb-3 border-b border-edge/6">
+          <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
             🎙 Interviewer says
           </span>
           {node.audioScript?.trim() ? (
-            <p className="text-[13px] text-white/70 leading-relaxed mt-0.5">{node.audioScript}</p>
+            <p className="text-[13px] text-slate-light leading-relaxed mt-0.5">
+              {node.audioScript}
+            </p>
           ) : (
-            <p className="text-[12px] text-white/30 italic mt-0.5">
+            <p className="text-[12px] text-slate-mid italic mt-0.5">
               No audio script — the narrative is spoken instead.
             </p>
           )}
@@ -203,7 +205,7 @@ function DecisionBlock({
       )}
       {/* Key Data (contextPanels) */}
       {(node.contextPanels ?? []).length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-white/6">
+        <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-edge/6">
           {(node.contextPanels ?? []).map((panel, i) => (
             <div
               key={i}
@@ -211,25 +213,27 @@ function DecisionBlock({
                 'flex flex-col px-3 py-2 rounded-lg border',
                 panel.hero
                   ? 'border-emerald-400/30 bg-emerald-400/[0.07] min-w-[120px]'
-                  : 'border-white/8 bg-white/3',
+                  : 'border-edge/8 bg-ink/3',
               ].join(' ')}
             >
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+              <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 {panel.label}
               </span>
               <span
                 className={[
                   'font-bold tabular-nums',
-                  panel.hero ? 'text-[20px] text-emerald-300' : 'text-[15px] text-white/80',
+                  panel.hero ? 'text-[20px] text-emerald-300' : 'text-[15px] text-ink/80',
                 ].join(' ')}
               >
                 {panel.value}
                 {panel.unit ? (
-                  <span className="text-[11px] font-normal ml-0.5 text-white/40">{panel.unit}</span>
+                  <span className="text-[11px] font-normal ml-0.5 text-slate-mid">
+                    {panel.unit}
+                  </span>
                 ) : null}
               </span>
               {panel.caption && (
-                <span className="text-[10px] text-white/30 mt-0.5 leading-tight">
+                <span className="text-[10px] text-slate-mid mt-0.5 leading-tight">
                   {panel.caption}
                 </span>
               )}
@@ -238,8 +242,8 @@ function DecisionBlock({
         </div>
       )}
       {/* Narrative */}
-      <p className="text-[14px] text-white/85 leading-relaxed mb-3 font-medium">
-        {node.narrative || <span className="italic text-white/30">No question text yet</span>}
+      <p className="text-[14px] text-ink/85 leading-relaxed mb-3 font-medium">
+        {node.narrative || <span className="italic text-slate-mid">No question text yet</span>}
       </p>
       {/* Options */}
       <div className="flex flex-col gap-1.5">
@@ -263,13 +267,13 @@ function DecisionBlock({
           return (
             <div
               key={choice.id}
-              className="flex items-start gap-2.5 px-3 py-2.5 border border-white/6 rounded-lg bg-white/2"
+              className="flex items-start gap-2.5 px-3 py-2.5 border border-edge/6 rounded-lg bg-ink/2"
             >
-              <span className="flex-none mt-px w-[22px] h-[22px] rounded-[6px] flex items-center justify-center text-[11px] font-bold bg-white/6 border border-white/10">
+              <span className="flex-none mt-px w-[22px] h-[22px] rounded-[6px] flex items-center justify-center text-[11px] font-bold bg-ink/6 border border-edge/10">
                 {choice.id}
               </span>
-              <span className="flex-1 text-[13px] leading-normal text-white/85">
-                {choice.text || <span className="italic text-white/30">No option text</span>}
+              <span className="flex-1 text-[13px] leading-normal text-ink/85">
+                {choice.text || <span className="italic text-slate-mid">No option text</span>}
               </span>
               {signal && (
                 <span
@@ -278,14 +282,14 @@ function DecisionBlock({
                   {quality}
                 </span>
               )}
-              <span className="flex-none text-[11px] text-white/30 font-medium whitespace-nowrap">
+              <span className="flex-none text-[11px] text-slate-mid font-medium whitespace-nowrap">
                 {targetLabel}
               </span>
             </div>
           )
         })}
         {(!node.choices || node.choices.length === 0) && (
-          <p className="text-[12px] italic text-white/30 px-1">No options yet</p>
+          <p className="text-[12px] italic text-slate-mid px-1">No options yet</p>
         )}
       </div>
     </BlockShell>
@@ -305,8 +309,8 @@ function TransitionBlock({
   const targetText = targetNode?.narrative?.trim()
   return (
     <BlockShell emoji="↩" kindLabel="Redirect / Transition" onEditRequest={onEditRequest}>
-      <p className="text-[14px] text-white/70 leading-relaxed italic">
-        {node.narrative || <span className="text-white/30">No bridge narrative yet</span>}
+      <p className="text-[14px] text-slate-light leading-relaxed italic">
+        {node.narrative || <span className="text-slate-mid">No bridge narrative yet</span>}
       </p>
       {node.nextNodeId && (
         <div className="mt-2">
@@ -325,8 +329,8 @@ function TransitionBlock({
 function FeedbackBlock({ node, onEditRequest }: { node: ScenarioNode; onEditRequest: () => void }) {
   return (
     <BlockShell emoji="🏁" kindLabel="Ending" onEditRequest={onEditRequest}>
-      <p className="text-[14px] text-white/70 leading-relaxed">
-        {node.narrative || <span className="italic text-white/30">No feedback narrative yet</span>}
+      <p className="text-[14px] text-slate-light leading-relaxed">
+        {node.narrative || <span className="italic text-slate-mid">No feedback narrative yet</span>}
       </p>
     </BlockShell>
   )
@@ -343,14 +347,14 @@ function QuantBlock({ node, onEditRequest }: { node: ScenarioNode; onEditRequest
       kindLabel={isStructured ? 'Structured Quant' : 'Numeric Range'}
       onEditRequest={onEditRequest}
     >
-      <p className="text-[14px] text-white/85 leading-relaxed mb-3">
+      <p className="text-[14px] text-ink/85 leading-relaxed mb-3">
         {spec.prompt || node.narrative || (
-          <span className="italic text-white/30">No prompt yet</span>
+          <span className="italic text-slate-mid">No prompt yet</span>
         )}
       </p>
       {spec.formula?.display && (
         <div className="mb-3 px-3 py-2 rounded-lg bg-[#1a5a8a]/10 border border-[#1a5a8a]/30">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-[#1a5a8a]/80 mb-1">
+          <p className="text-[11px] font-mono font-medium uppercase tracking-[0.14em] text-[#1a5a8a]/80 mb-1">
             Formula
           </p>
           <p className="text-[13px] text-sky-300 font-mono">{spec.formula.display}</p>
@@ -380,15 +384,15 @@ function SqlBlock({ node, onEditRequest }: { node: ScenarioNode; onEditRequest: 
   if (!spec) return null
   return (
     <BlockShell emoji="🗄️" kindLabel="SQL Question" onEditRequest={onEditRequest}>
-      <p className="text-[14px] text-white/85 leading-relaxed mb-3">
-        {spec.prompt || <span className="italic text-white/30">No prompt yet</span>}
+      <p className="text-[14px] text-ink/85 leading-relaxed mb-3">
+        {spec.prompt || <span className="italic text-slate-mid">No prompt yet</span>}
       </p>
-      <div className="flex items-center gap-2 mb-2 text-[11px] text-white/40">
-        <span className="font-mono px-1.5 py-0.5 rounded-sm bg-white/5">{spec.datasetSlug}</span>
+      <div className="flex items-center gap-2 mb-2 text-[11px] text-slate-mid">
+        <span className="font-mono px-1.5 py-0.5 rounded-sm bg-ink/5">{spec.datasetSlug}</span>
         {spec.ordered && <span>· ordered</span>}
         {spec.strictColumns && <span>· strict columns</span>}
       </div>
-      <pre className="px-3 py-2 rounded-lg bg-white/2 border border-white/6 font-mono text-[12px] text-sky-300/90 whitespace-pre-wrap">
+      <pre className="px-3 py-2 rounded-lg bg-ink/2 border border-edge/6 font-mono text-[12px] text-sky-300/90 whitespace-pre-wrap">
         {spec.referenceSql}
       </pre>
       {spec.hint && (
@@ -402,15 +406,15 @@ function SqlBlock({ node, onEditRequest }: { node: ScenarioNode; onEditRequest: 
 
 function BandRow({ label, unit, ideal }: { label: string; unit?: string; ideal?: number }) {
   return (
-    <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/2 border border-white/6">
-      <span className="flex-1 text-[13px] text-white/75">{label}</span>
+    <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-ink/2 border border-edge/6">
+      <span className="flex-1 text-[13px] text-ink/75">{label}</span>
       {ideal !== undefined && (
         <span className="text-[12px] font-semibold text-emerald-300">
           {ideal}
           {unit ? ` ${unit}` : ''} ideal
         </span>
       )}
-      <div className="w-24 h-1.5 rounded-full bg-white/[0.07] relative">
+      <div className="w-24 h-1.5 rounded-full bg-ink/[0.07] relative">
         <span className="absolute left-[30%] right-[25%] inset-y-0 rounded-full bg-emerald-400/25" />
         <span className="absolute left-[43%] right-[40%] -top-px -bottom-px rounded-full bg-emerald-400" />
       </div>
@@ -457,7 +461,7 @@ export function SetupBlock({
         {chips.map((c) => (
           <span
             key={c}
-            className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/6 text-white/60 border border-white/10"
+            className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-ink/6 text-slate-light border border-edge/10"
           >
             {c}
           </span>
@@ -467,30 +471,30 @@ export function SetupBlock({
         {facts.map(({ label, value }) =>
           value ? (
             <div key={label}>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">
+              <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
                 {label}
               </span>
-              <p className="text-[13px] text-white/75 mt-0.5">{value}</p>
+              <p className="text-[13px] text-ink/75 mt-0.5">{value}</p>
             </div>
           ) : null
         )}
       </div>
       {briefing.situation ? (
-        <p className="text-[13px] text-white/65 leading-relaxed border-t border-white/6 pt-3 mt-1">
+        <p className="text-[13px] text-slate-light leading-relaxed border-t border-edge/6 pt-3 mt-1">
           {briefing.situation.slice(0, 220)}
           {briefing.situation.length > 220 ? '…' : ''}
         </p>
       ) : (
-        <p className="text-[12px] text-white/30 italic border-t border-white/6 pt-3 mt-1">
+        <p className="text-[12px] text-slate-mid italic border-t border-edge/6 pt-3 mt-1">
           No situation written yet — click ✎ Edit.
         </p>
       )}
-      <div className="border-t border-white/6 pt-3 mt-3">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">
+      <div className="border-t border-edge/6 pt-3 mt-3">
+        <span className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid">
           Scored on
         </span>
         {dims.length === 0 ? (
-          <p className="text-[12px] text-white/30 italic mt-1">No rubric dimensions yet.</p>
+          <p className="text-[12px] text-slate-mid italic mt-1">No rubric dimensions yet.</p>
         ) : (
           <div className="flex flex-wrap gap-1.5 mt-1.5">
             {dims.map((d) => (
@@ -517,14 +521,14 @@ export function SidebarBlock({ sidebar }: { sidebar: SidebarSection[] }) {
       <div className="flex flex-wrap gap-6">
         {sidebar.map((section, si) => (
           <div key={si} className="min-w-[160px]">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-2">
+            <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-slate-mid mb-2">
               {section.title}
             </p>
             <div className="flex flex-col gap-1.5">
               {section.items.map((item, ii) => (
                 <div key={ii} className="flex items-baseline justify-between gap-4">
-                  <span className="text-[12px] text-white/40">{item.label}</span>
-                  <span className="text-[12px] font-semibold text-white/80 text-right">
+                  <span className="text-[12px] text-slate-mid">{item.label}</span>
+                  <span className="text-[12px] font-semibold text-ink/80 text-right">
                     {item.value}
                   </span>
                 </div>
@@ -553,10 +557,10 @@ function BlockShell({
   children: React.ReactNode
 }) {
   return (
-    <div className="group border border-white/10 rounded-[14px] bg-[#111] p-4 hover:border-white/20 transition-colors">
+    <div className="group border border-edge/10 rounded-[14px] bg-surface-alt p-4 hover:border-edge/20 transition-colors">
       <div className="flex items-center gap-2 mb-3">
         <span className="text-[14px]">{emoji}</span>
-        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/30">
+        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-mid">
           {kindLabel}
         </span>
         <div className="flex-1" />
