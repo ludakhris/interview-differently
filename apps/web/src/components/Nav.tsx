@@ -31,9 +31,9 @@ export function Nav({ trackLabel, stepLabel }: NavProps) {
           <Wordmark />
         </button>
 
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-5 sm:gap-x-6 gap-y-2">
           {trackLabel && (
-            <span className="font-mono text-[11px] font-medium tracking-[0.14em] uppercase text-slate-mid bg-surface-alt px-3 py-1 rounded-full border border-edge/10">
+            <span className="font-mono text-[11px] font-medium tracking-[0.14em] uppercase text-slate-mid bg-surface-alt px-3 hidden sm:inline py-1 rounded-full border border-edge/10">
               {trackLabel}
               {stepLabel && <span className="text-slate-mid ml-2">{stepLabel}</span>}
             </span>
