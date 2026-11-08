@@ -716,14 +716,12 @@ export class AssessmentsService {
    * plus anything they already attempted (so results outlive the cohort).
    * Admins see all.
    */
+  // Admins get the learner's list too: every delivery lives under Admin → Assessments.
   async listForUser(userId: string) {
-    const isAdmin = await this.clerk.isAdmin(userId)
     const rows = await this.prisma.assessmentDelivery.findMany({
-      where: isAdmin
-        ? {}
-        : {
-            OR: [{ cohort: this.assessmentsCohortFor(userId) }, { attempts: { some: { userId } } }],
-          },
+      where: {
+        OR: [{ cohort: this.assessmentsCohortFor(userId) }, { attempts: { some: { userId } } }],
+      },
       orderBy: [{ opensAt: 'asc' }, { createdAt: 'asc' }],
       include: {
         assessment: { select: { title: true, sections: true } },

@@ -99,7 +99,7 @@ export function IssuesPanel({ issues, status, publishing, onJump, onPublish, onC
           <button
             onClick={onPublish}
             disabled={!canPublish || publishing}
-            className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-[13px] font-bold text-black disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 py-2.5 rounded-lg bg-primary hover:bg-primary text-[13px] font-bold text-black disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {publishing ? 'Publishing…' : status === 'published' ? 'Re-publish' : 'Publish'}
           </button>

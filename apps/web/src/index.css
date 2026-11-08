@@ -197,6 +197,12 @@
     padding: 0;
   }
 
+  /* Tailwind 4 gives buttons the arrow cursor; show the hand like links do. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+
   body {
     font-family: var(--ld-font, Inter), sans-serif;
     background: rgb(var(--ld-surface, 246 246 244));

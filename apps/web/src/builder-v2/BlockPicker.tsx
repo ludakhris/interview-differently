@@ -35,7 +35,7 @@ function DecisionPreview() {
               id: 'B',
               text: 'Cost structure first, then revenue side.',
               quality: 'Proficient',
-              color: 'text-teal-300 bg-teal-400/10 border-teal-400/30',
+              color: 'text-teal-700 bg-teal-500/10 border-teal-600/30',
             },
             {
               id: 'C',
@@ -181,7 +181,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
               className={[
                 'px-3 py-2.5 text-[12.5px] font-semibold border-b-2 -mb-px transition-colors',
                 activeGroup === tab.id
-                  ? 'border-emerald-400 text-emerald-300'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-slate-light hover:text-ink/85',
               ].join(' ')}
             >
@@ -199,7 +199,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
               className={[
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold whitespace-nowrap transition-all flex-none',
                 selectedKind === desc.kind
-                  ? 'bg-emerald-400/15 border border-emerald-400/50 text-emerald-300'
+                  ? 'bg-primary/15 border border-primary/50 text-primary'
                   : 'bg-ink/4 border border-edge/8 text-slate-mid hover:text-ink/75 hover:border-edge/20',
               ].join(' ')}
             >
@@ -235,7 +235,7 @@ export function BlockPicker({ onPick, onClose }: Props) {
           </div>
           <button
             onClick={() => onPick(selected.kind)}
-            className="flex-none px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[13px] font-bold text-black transition-colors"
+            className="flex-none px-5 py-2.5 rounded-xl bg-primary hover:bg-primary text-[13px] font-bold text-black transition-colors"
           >
             ＋ Insert {selected.label}
           </button>

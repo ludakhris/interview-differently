@@ -28,7 +28,7 @@ import { NodeRenderStatus } from '@/components/builder/NodeRenderStatus'
 
 const QUALITY_COLORS: Record<string, string> = {
   strong: 'text-emerald-300 bg-emerald-400/10 border-emerald-400/30',
-  proficient: 'text-teal-300 bg-teal-400/10 border-teal-400/30',
+  proficient: 'text-teal-700 bg-teal-500/10 border-teal-600/30',
   developing: 'text-amber-300 bg-amber-400/10 border-amber-400/30',
 }
 
@@ -69,7 +69,7 @@ export function ExhibitBlock({
           className={[
             'text-[11px] font-semibold border rounded-full px-2.5 py-0.5 transition-all',
             isShared
-              ? 'text-emerald-300 bg-emerald-400/10 border-emerald-400/30 hover:bg-emerald-400/5'
+              ? 'text-primary bg-primary/10 border-primary/30 hover:bg-primary/5'
               : 'text-slate-mid border-edge/10 hover:text-slate-mid hover:border-edge/20',
           ].join(' ')}
         >
@@ -212,7 +212,7 @@ function DecisionBlock({
               className={[
                 'flex flex-col px-3 py-2 rounded-lg border',
                 panel.hero
-                  ? 'border-emerald-400/30 bg-emerald-400/[0.07] min-w-[120px]'
+                  ? 'border-primary/30 bg-primary/[0.07] min-w-[120px]'
                   : 'border-edge/8 bg-ink/3',
               ].join(' ')}
             >
@@ -222,7 +222,7 @@ function DecisionBlock({
               <span
                 className={[
                   'font-bold tabular-nums',
-                  panel.hero ? 'text-[20px] text-emerald-300' : 'text-[15px] text-ink/80',
+                  panel.hero ? 'text-[20px] text-primary' : 'text-[15px] text-ink/80',
                 ].join(' ')}
               >
                 {panel.value}
@@ -501,7 +501,7 @@ export function SetupBlock({
               <span
                 key={d.name}
                 title={d.description}
-                className="text-[11px] px-2 py-0.5 rounded-md bg-emerald-400/8 text-emerald-200/80 border border-emerald-400/20"
+                className="text-[11px] px-2 py-0.5 rounded-md bg-primary/8 text-primary/80 border border-primary/20"
               >
                 {d.name}
               </span>
@@ -568,7 +568,7 @@ function BlockShell({
         {onEditRequest && (
           <button
             onClick={onEditRequest}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold text-yellow-400/50 hover:text-yellow-300 hover:bg-yellow-400/10 border border-yellow-400/20 hover:border-yellow-400/40 transition-all"
+            className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold text-primary/80 hover:text-accent hover:bg-primary/10 border border-primary/25 hover:border-primary/50 transition-all"
             title="Edit"
           >
             ✎ Edit

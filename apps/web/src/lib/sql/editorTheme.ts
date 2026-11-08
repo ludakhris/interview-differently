@@ -27,7 +27,7 @@ export const sandboxEditorTheme = EditorView.theme(
       backgroundColor: `rgb(var(--ld-accent, 29 79 216) / 0.25) !important`,
     },
     '.cm-cursor': { borderLeftColor: 'rgb(var(--ld-text, 20 33 58))' },
-    '.cm-placeholder': { color: `${ink(0.2)}` },
+    '.cm-placeholder': { color: `${ink(0.55)}` },
     // Autocomplete popup
     '.cm-tooltip': {
       backgroundColor: `${raised} !important`,

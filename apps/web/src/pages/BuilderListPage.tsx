@@ -570,7 +570,7 @@ export function BuilderListPage() {
               onChange={(e) =>
                 setSort(e.target.checked ? { key: 'track', dir: 1 } : { key: 'edited', dir: -1 })
               }
-              className="accent-emerald-400"
+              className="accent-primary"
             />
             Group by track
           </label>
@@ -609,7 +609,7 @@ export function BuilderListPage() {
                   setStatusFilter('all')
                   setOwnerFilter('')
                 }}
-                className="text-emerald-400 hover:underline"
+                className="text-primary hover:underline"
               >
                 clear filters
               </button>

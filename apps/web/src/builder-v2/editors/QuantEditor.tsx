@@ -176,7 +176,7 @@ function FormulaSection({
           type="checkbox"
           checked={enabled}
           onChange={(e) => toggleEnabled(e.target.checked)}
-          className="accent-emerald-400"
+          className="accent-primary"
         />
         <span className="text-[12px] text-slate-light font-medium">Enable formula</span>
       </label>
@@ -212,7 +212,7 @@ function FormulaSection({
                     : undefined
                 return (
                   <div key={v.name} className="flex flex-wrap gap-2 items-center">
-                    <span className="text-[12px] font-mono text-emerald-300/70 w-24 flex-none">{`{${v.name}}`}</span>
+                    <span className="text-[12px] font-mono text-primary/70 w-24 flex-none">{`{${v.name}}`}</span>
                     <TextInput
                       value={v.label}
                       onChange={(e) => updateVar(i, { label: e.target.value })}

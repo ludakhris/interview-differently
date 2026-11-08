@@ -3,7 +3,7 @@ import type { SandboxResult } from '@/lib/sql/sandboxDb'
 const NUMERIC_RE = /^-?\d+(\.\d+)?$/
 
 /**
- * Mono data grid for query results: zebra rows, right-aligned numerics, sticky header.
+ * Mono data grid for query results: ruled rows and columns, right-aligned numerics, sticky blue header.
  * `limit` shows that many rows from the full result; without it, the capped `rows`.
  * `marks` (one per shown row, from a server check) adds a ✓/✗ column and tints each row right or wrong.
  */
@@ -30,7 +30,9 @@ export function ResultsGrid({
   )
   return (
     <table className="min-w-full text-[12px] font-mono border-collapse">
-      <thead className="sticky top-0 z-10 bg-surface-alt shadow-[0_1px_0_rgb(var(--ld-edge,20_33_58)/0.08)]">
+      <thead
+        className={`sticky top-0 z-10 bg-[color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface-alt))] shadow-[0_1px_0_rgb(var(--ld-primary,37_99_235)/0.35)]`}
+      >
         <tr>
           {marks && (
             <th className="px-2 py-2 w-6">
@@ -41,7 +43,7 @@ export function ResultsGrid({
           {result.columns.map((c, i) => (
             <th
               key={i}
-              className={`px-3 py-2 text-[10px] uppercase tracking-widest text-slate-light font-bold whitespace-nowrap ${
+              className={`px-3 py-2 text-[10px] uppercase tracking-widest text-accent border-r border-primary/12 last:border-r-0 font-bold whitespace-nowrap ${
                 numeric[i] ? 'text-right' : 'text-left'
               }`}
             >
@@ -59,7 +61,7 @@ export function ResultsGrid({
                 ? marks[ri]
                   ? 'bg-emerald-400/10'
                   : 'bg-red-400/6'
-                : 'odd:bg-ink/2 hover:bg-accent/10'
+                : 'border-b border-edge/8 hover:bg-primary/6'
             }
           >
             {marks && (
@@ -70,11 +72,15 @@ export function ResultsGrid({
                 <span className="sr-only">{marks[ri] ? 'right row' : 'wrong row'}</span>
               </td>
             )}
-            <td className="px-3 py-1.5 text-right text-slate-mid">{ri + 1}</td>
+            <td
+              className={`px-3 py-1.5 text-right text-slate-mid bg-surface border-r border-edge/8`}
+            >
+              {ri + 1}
+            </td>
             {row.map((v, ci) => (
               <td
                 key={ci}
-                className={`px-3 py-1.5 whitespace-nowrap ${numeric[ci] ? 'text-right text-fg' : 'text-left text-fg/85'}`}
+                className={`px-3 py-1.5 whitespace-nowrap border-r border-edge/8 last:border-r-0 ${numeric[ci] ? 'text-right text-fg' : 'text-left text-fg/85'}`}
               >
                 {formatCell(v)}
               </td>

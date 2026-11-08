@@ -173,8 +173,8 @@ export function BriefingPage({
           </div>
         )}
 
-        <div className="bg-amber/10 border border-amber/20 rounded-xl p-4 mb-8">
-          <p className="text-[13px] text-amber leading-relaxed">
+        <div className="bg-primary/6 border border-primary/20 rounded-xl p-4 mb-8">
+          <p className="text-[13px] text-slate-light leading-relaxed">
             <strong>How it works:</strong> You will move through a real workplace scenario and make
             decisions at each step. There are no trick questions. The AI evaluates the reasoning
             behind your choices, not just which answer you pick.

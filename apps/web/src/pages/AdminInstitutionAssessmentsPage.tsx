@@ -226,8 +226,8 @@ function PairCard({
             </p>
           </div>
           <div className="flex items-center gap-6">
-            <Stat label="Pre" value={pair.averages.pre.overall} tone="text-amber" />
-            <Stat label="Post" value={pair.averages.post.overall} tone="text-accent" />
+            <Stat label="Pre" value={pair.averages.pre.overall} tone="text-[#6b7280]" />
+            <Stat label="Post" value={pair.averages.post.overall} tone="text-primary" />
             <Stat label="% Improvement" value={pair.averages.delta.overall} delta />
           </div>
         </div>
@@ -237,10 +237,10 @@ function PairCard({
           {pair.averages.pairedCount} student
           {pair.averages.pairedCount === 1 ? '' : 's'} who completed both.
           <span className="ml-3 inline-flex items-center gap-1.5">
-            <span className="inline-block w-3 h-1.5 rounded-full bg-amber" /> pre
+            <span className="inline-block w-3 h-1.5 rounded-full bg-[#6b7280]" /> pre
           </span>
           <span className="ml-2 inline-flex items-center gap-1.5">
-            <span className="inline-block w-3 h-1.5 rounded-full bg-accent" /> post
+            <span className="inline-block w-3 h-1.5 rounded-full bg-primary" /> post
           </span>
         </p>
 
@@ -264,8 +264,8 @@ function PairCard({
                 return (
                   <tr key={s.id} className="border-t border-edge/5">
                     <td className="py-2 pr-4 text-fg">{s.title}</td>
-                    <td className="text-right py-2 px-3 font-mono text-amber">{pct(p)}</td>
-                    <td className="text-right py-2 px-3 font-mono text-accent">{pct(q)}</td>
+                    <td className="text-right py-2 px-3 font-mono text-[#6b7280]">{pct(p)}</td>
+                    <td className="text-right py-2 px-3 font-mono text-primary">{pct(q)}</td>
                     <td className={`text-right py-2 pl-3 font-mono font-semibold ${deltaCls(d)}`}>
                       {signed(d)}
                     </td>
@@ -325,11 +325,15 @@ function PairCard({
                     </td>
                     {keys.map((k) => (
                       <td key={k.id} className="text-right py-2 px-2 font-mono whitespace-nowrap">
-                        <span className={s.pre?.[k.id] == null ? 'text-slate-mid' : 'text-amber'}>
+                        <span
+                          className={s.pre?.[k.id] == null ? 'text-slate-mid' : 'text-[#6b7280]'}
+                        >
                           {pct(s.pre?.[k.id] ?? null)}
                         </span>
                         <span className="text-slate-mid"> → </span>
-                        <span className={s.post?.[k.id] == null ? 'text-slate-mid' : 'text-accent'}>
+                        <span
+                          className={s.post?.[k.id] == null ? 'text-slate-mid' : 'text-primary'}
+                        >
                           {pct(s.post?.[k.id] ?? null)}
                         </span>
                       </td>
@@ -340,11 +344,11 @@ function PairCard({
                       {signed(s.delta)}
                     </td>
                     <td className="text-right py-2 pl-3 font-mono whitespace-nowrap">
-                      <span className={s.preMinutes == null ? 'text-slate-mid' : 'text-amber'}>
+                      <span className={s.preMinutes == null ? 'text-slate-mid' : 'text-[#6b7280]'}>
                         {s.preMinutes ?? '—'}
                       </span>
                       <span className="text-slate-mid"> → </span>
-                      <span className={s.postMinutes == null ? 'text-slate-mid' : 'text-accent'}>
+                      <span className={s.postMinutes == null ? 'text-slate-mid' : 'text-primary'}>
                         {s.postMinutes ?? '—'}
                       </span>
                       <span className="text-slate-mid"> min</span>
@@ -387,10 +391,10 @@ function Bars({ pre, post }: { pre: number | null; post: number | null }) {
   return (
     <div className="space-y-1">
       <div className="h-1.5 rounded-full bg-ink/8 overflow-hidden">
-        <div className="h-full bg-amber" style={{ width: `${pre ?? 0}%` }} />
+        <div className="h-full bg-[#6b7280]" style={{ width: `${pre ?? 0}%` }} />
       </div>
       <div className="h-1.5 rounded-full bg-ink/8 overflow-hidden">
-        <div className="h-full bg-accent" style={{ width: `${post ?? 0}%` }} />
+        <div className="h-full bg-primary" style={{ width: `${post ?? 0}%` }} />
       </div>
     </div>
   )

@@ -25,7 +25,7 @@ const QUALITY_OPTIONS = [
 
 const QUALITY_COLORS: Record<string, string> = {
   strong: 'text-emerald-300',
-  proficient: 'text-teal-300',
+  proficient: 'text-teal-700',
   developing: 'text-amber-300',
 }
 
@@ -217,7 +217,7 @@ export function DecisionEditor({ node, allNodes, onDone }: Props) {
                 type="checkbox"
                 checked={panel.hero ?? false}
                 onChange={(e) => updatePanel(i, { hero: e.target.checked || undefined })}
-                className="accent-emerald-400"
+                className="accent-primary"
               />
               <span className="text-[11px] text-slate-mid">Hero tile — displays large</span>
             </label>

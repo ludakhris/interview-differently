@@ -166,7 +166,7 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
             type="checkbox"
             checked={ordered}
             onChange={(e) => setOrdered(e.target.checked)}
-            className="accent-emerald-400"
+            className="accent-primary"
           />
           Row order must match
         </label>
@@ -175,7 +175,7 @@ export function SqlQuestionEditor({ node, onDone }: Props) {
             type="checkbox"
             checked={strictColumns}
             onChange={(e) => setStrictColumns(e.target.checked)}
-            className="accent-emerald-400"
+            className="accent-primary"
           />
           Column names must match
         </label>

@@ -212,7 +212,7 @@ export function DataTableEditor({ exhibit, onDone }: Props) {
                       <input
                         value={String(totalRow?.[col.key] ?? '')}
                         onChange={(e) => updateTotalCell(col.key, e.target.value)}
-                        className={`${inputCls} py-1.5 px-2 text-[12px] font-semibold border-emerald-400/30`}
+                        className={`${inputCls} py-1.5 px-2 text-[12px] font-semibold border-primary/30`}
                         placeholder={ci === 0 ? 'Total' : col.label || '—'}
                       />
                     </td>
@@ -232,7 +232,7 @@ export function DataTableEditor({ exhibit, onDone }: Props) {
           type="checkbox"
           checked={showTotal}
           onChange={(e) => setShowTotal(e.target.checked)}
-          className="accent-emerald-400"
+          className="accent-primary"
         />
         <span className="text-[12px] text-slate-light font-medium">Show total row</span>
       </label>

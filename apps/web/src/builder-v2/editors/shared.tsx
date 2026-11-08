@@ -10,7 +10,7 @@ import type {
 // ── Base input styles ─────────────────────────────────────────────────────────
 
 export const inputCls =
-  'w-full bg-surface border border-edge/12 rounded-lg px-3 py-2 text-[13px] text-ink/85 outline-hidden focus:border-emerald-400/50 transition-colors placeholder:text-slate-mid'
+  'w-full bg-surface border border-edge/12 rounded-lg px-3 py-2 text-[13px] text-ink/85 outline-hidden focus:border-primary/50 transition-colors placeholder:text-slate-mid'
 
 // ── Primitives ────────────────────────────────────────────────────────────────
 
@@ -76,7 +76,7 @@ export function AddButton({ onClick, label }: { onClick: () => void; label: stri
     <button
       type="button"
       onClick={onClick}
-      className="text-[12px] font-semibold text-emerald-400/70 hover:text-emerald-300 border border-dashed border-emerald-400/25 hover:border-emerald-400/50 rounded-lg px-3 py-1.5 transition-all w-fit"
+      className="text-[12px] font-semibold text-primary/70 hover:text-accent border border-dashed border-primary/25 hover:border-primary/50 rounded-lg px-3 py-1.5 transition-all w-fit"
     >
       ＋ {label}
     </button>
@@ -116,18 +116,18 @@ export function EditShell({
   children: ReactNode
 }) {
   return (
-    <div className="border border-emerald-400/40 rounded-[14px] bg-[#0d1a12] ring-1 ring-emerald-400/8">
+    <div className="border border-primary/40 rounded-[14px] bg-surface-alt ring-1 ring-primary/8">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-400/12">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-primary/12">
         <span className="text-[14px]">{emoji}</span>
-        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-300/60">
+        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary/60">
           Editing {kindLabel}
         </span>
         <div className="flex-1" />
         <button
           type="button"
           onClick={onDone}
-          className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-[12px] font-bold rounded-lg transition-colors"
+          className="px-3 py-1.5 bg-primary hover:bg-accent text-on-primary text-[12px] font-bold rounded-lg transition-colors"
         >
           ✓ Done
         </button>
