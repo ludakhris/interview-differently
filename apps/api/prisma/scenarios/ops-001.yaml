@@ -70,7 +70,7 @@ nodes:
   - id: ops-001-n1
     type: decision
     narrative: >
-      It's 2:47 PM on a Tuesday. You're three weeks into your role as a junior operations
+      It's 2:47 PM on a Tuesday. You're three months into your role as a junior operations
       analyst at a fintech company. Your monitor lights up: payment API error rates have
       climbed to 14% in the last four minutes. Simultaneously, the auth service is showing
       elevated latency. The database connection pool shows a spike to 94% utilization. Your

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { ChartConfig } from '@id/types'
 
 const palette = {
@@ -36,8 +37,19 @@ export function MetricChart({ config }: Props) {
   const gradId = `chart-grad-${config.color}`
 
   // ── Layout constants ──────────────────────────────────────────────────────
-  const VW = 520
+  // The chart is drawn at a fixed 100px height; its viewBox width follows the
+  // box it sits in, so the line fills the panel instead of shrinking to fit.
   const VH = 110
+  const svgRef = useRef<SVGSVGElement>(null)
+  const [boxWidth, setBoxWidth] = useState(0)
+  useEffect(() => {
+    const el = svgRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => setBoxWidth(e.contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const VW = boxWidth > 0 ? Math.max(320, Math.round((boxWidth * VH) / 100)) : 520
   const PAD = { l: 38, r: 14, t: 22, b: 24 }
   const CW = VW - PAD.l - PAD.r // chart width
   const CH = VH - PAD.t - PAD.b // chart height
@@ -95,6 +107,7 @@ export function MetricChart({ config }: Props) {
 
       {/* SVG chart */}
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${VW} ${VH}`}
         className="w-full block"
         style={{ height: 100 }}
