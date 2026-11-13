@@ -46,6 +46,7 @@ function setup({ ai = true, url = 'https://spark.example.test/' as string | null
   let t = Date.UTC(2026, 9, 15, 15, 0)
   s.now = () => t
   jest.spyOn(s['logger'], 'error').mockImplementation(() => undefined)
+  jest.spyOn(s['logger'], 'warn').mockImplementation(() => undefined)
   const c = new SparkHealthController(s)
   const res = { status: jest.fn() }
   return { s, c, log, spark, fetch, res, later: (ms: number) => (t += ms) }
@@ -117,7 +118,7 @@ describe('SparkHealthService.player ("Video player")', () => {
 
   it('fails with the status when the player answers with an error', async () => {
     const { s, fetch } = setup()
-    fetch.mockResolvedValueOnce(new Response('bad gateway', { status: 502 }))
+    fetch.mockResolvedValue(new Response('bad gateway', { status: 502 }))
     expect(await s.player()).toMatchObject({
       status: 'failing',
       reason: 'The video player answered 502.',
@@ -126,7 +127,7 @@ describe('SparkHealthService.player ("Video player")', () => {
 
   it('fails when the player cannot be reached', async () => {
     const { s, fetch } = setup()
-    fetch.mockRejectedValueOnce(new TypeError('fetch failed'))
+    fetch.mockRejectedValue(new TypeError('fetch failed'))
     expect(await s.player()).toMatchObject({
       status: 'failing',
       reason: 'Could not reach the video player: fetch failed',
@@ -137,7 +138,7 @@ describe('SparkHealthService.player ("Video player")', () => {
     const { s, fetch } = setup()
     s.timeoutMs = 20
     // a player that never answers: only the timeout's abort ends the request
-    fetch.mockImplementationOnce(
+    fetch.mockImplementation(
       (_url: unknown, init: unknown) =>
         new Promise((_resolve, reject) =>
           (init as RequestInit).signal!.addEventListener('abort', () =>
@@ -151,16 +152,40 @@ describe('SparkHealthService.player ("Video player")', () => {
     })
   })
 
+  it('tries a failed request once more, and is ok when the second answers', async () => {
+    const { s, fetch } = setup()
+    fetch.mockRejectedValueOnce(new TypeError('fetch failed'))
+    expect(await s.player()).toEqual({
+      status: 'ok',
+      reason: null,
+      checkedAt: '2026-10-15T15:00:00.000Z',
+    })
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('fails with the second reason when both requests fail', async () => {
+    const { s, fetch } = setup()
+    fetch
+      .mockRejectedValueOnce(new TypeError('fetch failed'))
+      .mockResolvedValueOnce(new Response('', { status: 503 }))
+    expect(await s.player()).toMatchObject({
+      status: 'failing',
+      reason: 'The video player answered 503.',
+    })
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
   it('reuses an answer for five minutes, then checks again', async () => {
     const { s, fetch, later } = setup()
     await s.player()
     later(PLAYER_CHECK_TTL_MS - 1)
-    fetch.mockResolvedValueOnce(new Response('', { status: 500 }))
+    fetch.mockResolvedValue(new Response('', { status: 500 }))
     expect((await s.player()).status).toBe('ok')
     expect(fetch).toHaveBeenCalledTimes(1)
     later(1)
     expect((await s.player()).status).toBe('failing')
-    expect(fetch).toHaveBeenCalledTimes(2)
+    // the first request and its one retry
+    expect(fetch).toHaveBeenCalledTimes(3)
   })
 
   it('runs one check for callers who ask at the same time', async () => {
@@ -191,7 +216,7 @@ describe('GET /health/videos/setup', () => {
 
   it('answers 503 when the player fails or is not set up', async () => {
     const failing = setup()
-    failing.fetch.mockResolvedValueOnce(new Response('', { status: 404 }))
+    failing.fetch.mockResolvedValue(new Response('', { status: 404 }))
     expect((await failing.c.setup(failing.res as never)).status).toBe('failing')
     expect(failing.res.status).toHaveBeenCalledWith(503)
     const none = setup({ url: null })

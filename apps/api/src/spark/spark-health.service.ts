@@ -87,14 +87,24 @@ export class SparkHealthService implements StatusPort<SparkStatus> {
     return { setup: this.setup(), player, lessons }
   }
 
+  /**
+   * One failed request is tried once more before the check counts as failing: the answer is kept for five minutes, so
+   * a single dropped request would otherwise mark videos down until the next check.
+   */
   private async runPlayer(url: string): Promise<PlayerCheck> {
     const started = this.now()
-    const done = (status: PlayerCheck['status'], reason: string | null): PlayerCheck => ({
-      status,
-      reason,
-      checkedAt: new Date(started).toISOString(),
-    })
-    let check: PlayerCheck
+    let attempt = await this.askPlayer(url)
+    if (attempt.status === 'failing') {
+      this.logger.warn(`Video player check failed, trying once more: ${attempt.reason}`)
+      attempt = await this.askPlayer(url)
+    }
+    const check: PlayerCheck = { ...attempt, checkedAt: new Date(started).toISOString() }
+    if (check.status === 'failing') this.logger.error(`Video player check failed: ${check.reason}`)
+    this.last = { at: started, check }
+    return check
+  }
+
+  private async askPlayer(url: string): Promise<Omit<PlayerCheck, 'checkedAt'>> {
     try {
       const res = await this.fetch(url, {
         method: 'GET',
@@ -102,21 +112,18 @@ export class SparkHealthService implements StatusPort<SparkStatus> {
       })
       // only the status matters: let the body go
       await res.body?.cancel().catch(() => undefined)
-      check = res.ok
-        ? done('ok', null)
-        : done('failing', `The video player answered ${res.status}.`)
+      return res.ok
+        ? { status: 'ok', reason: null }
+        : { status: 'failing', reason: `The video player answered ${res.status}.` }
     } catch (err) {
       const e = err as Error
-      check =
-        e.name === 'TimeoutError' || e.name === 'AbortError'
-          ? done(
-              'failing',
-              `The video player did not answer within ${this.timeoutMs / 1000} seconds.`
-            )
-          : done('failing', `Could not reach the video player: ${e.message}`)
+      return {
+        status: 'failing',
+        reason:
+          e.name === 'TimeoutError' || e.name === 'AbortError'
+            ? `The video player did not answer within ${this.timeoutMs / 1000} seconds.`
+            : `Could not reach the video player: ${e.message}`,
+      }
     }
-    if (check.status === 'failing') this.logger.error(`Video player check failed: ${check.reason}`)
-    this.last = { at: started, check }
-    return check
   }
 }
